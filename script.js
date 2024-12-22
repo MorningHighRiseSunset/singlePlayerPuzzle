@@ -829,17 +829,27 @@ class ScrabbleGame {
             const letter = word[i];
             let letterScore = this.tileValues[letter];
     
-            // Apply premium square multipliers
-            const premium = this.getPremiumSquareType(row, col);
-            if (premium === 'dl') letterScore *= 2;
-            if (premium === 'tl') letterScore *= 3;
-            if (premium === 'dw') wordMultiplier *= 2;
-            if (premium === 'tw') wordMultiplier *= 3;
+            // Only apply premium squares for empty positions
+            if (!this.board[row][col]) {
+                const premium = this.getPremiumSquareType(row, col);
+                if (premium === 'dl') letterScore *= 2;
+                if (premium === 'tl') letterScore *= 3;
+                if (premium === 'dw') wordMultiplier *= 2;
+                if (premium === 'tw') wordMultiplier *= 3;
+            }
     
             score += letterScore;
         }
     
-        return score * wordMultiplier;
+        // Apply word multiplier after summing all letters
+        score *= wordMultiplier;
+    
+        // Add bonus for using 7 tiles
+        if (word.length === 7) {
+            score += 50;
+        }
+    
+        return score;
     }
 
     playAIMove(move) {
@@ -1544,36 +1554,40 @@ class ScrabbleGame {
             for (let i = 0; i < word.length; i++) {
                 const currentRow = isHorizontal ? startRow : startRow + i;
                 const currentCol = isHorizontal ? startCol + i : startCol;
-                const posKey = `${currentRow},${currentCol}`;
+                const currentTile = this.board[currentRow][currentCol];
                 
-                // Only count tile premium bonuses for newly placed tiles
+                // Base letter score
+                let letterScore = currentTile.value;  // Use the tile's value, not tileValues lookup
+                
+                // Only apply premium squares for newly placed tiles
                 const isNewTile = this.placedTiles.some(t => 
                     t.row === currentRow && t.col === currentCol
                 );
                 
-                if (isNewTile && !processedPositions.has(posKey)) {
-                    processedPositions.add(posKey);
-                    let letterScore = this.tileValues[this.board[currentRow][currentCol].letter];
-                    
-                    // Apply premium square bonuses
+                if (isNewTile) {
                     const premium = this.getPremiumSquareType(currentRow, currentCol);
                     if (premium === 'dl') letterScore *= 2;
                     if (premium === 'tl') letterScore *= 3;
                     if (premium === 'dw') wordMultiplier *= 2;
                     if (premium === 'tw') wordMultiplier *= 3;
-                    
-                    wordScore += letterScore;
-                } else {
-                    // Add base value for existing tiles
-                    wordScore += this.tileValues[this.board[currentRow][currentCol].letter];
                 }
+                
+                wordScore += letterScore;
             }
             
-            totalScore += wordScore * wordMultiplier;
+            // Apply word multiplier after summing all letters
+            wordScore *= wordMultiplier;
+            totalScore += wordScore;
         });
+        
+        // Bonus for using all 7 tiles
+        if (this.placedTiles.length === 7) {
+            totalScore += 50;
+        }
         
         return totalScore;
     }
+    
 
     findWordPosition(word) {
         // Search the board for the starting position of the word
