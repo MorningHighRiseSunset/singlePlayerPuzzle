@@ -842,16 +842,31 @@ class ScrabbleGame {
     
 
     calculatePotentialScore(word, startRow, startCol, horizontal) {
-        let score = 0;
+        let totalScore = 0;
         let wordMultiplier = 1;
+        let tempBoard = JSON.parse(JSON.stringify(this.board));
+        
+        // First, place the word temporarily on our temp board
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+            if (!tempBoard[row][col]) {
+                tempBoard[row][col] = {
+                    letter: word[i],
+                    value: this.tileValues[word[i]]
+                };
+            }
+        }
     
+        // Score the main word
+        let mainWordScore = 0;
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
             const letter = word[i];
             let letterScore = this.tileValues[letter];
     
-            // Only apply premium squares for empty positions
+            // Only apply premium squares for empty positions on the real board
             if (!this.board[row][col]) {
                 const premium = this.getPremiumSquareType(row, col);
                 if (premium === 'dl') letterScore *= 2;
@@ -860,19 +875,114 @@ class ScrabbleGame {
                 if (premium === 'tw') wordMultiplier *= 3;
             }
     
-            score += letterScore;
+            mainWordScore += letterScore;
+        }
+        totalScore += mainWordScore * wordMultiplier;
+    
+        // Now check for cross words at each position
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+            
+            // Skip if this position already had a tile
+            if (this.board[row][col]) continue;
+    
+            // Check for cross words
+            let crossWord = '';
+            let crossWordScore = 0;
+            let crossWordMultiplier = 1;
+    
+            if (horizontal) {
+                // Check vertical cross word
+                let r = row;
+                let hasAdjacentTile = false;
+                
+                // Get letters above
+                while (r > 0 && (tempBoard[r - 1][col] || this.board[r - 1][col])) {
+                    hasAdjacentTile = true;
+                    crossWord = (tempBoard[r - 1][col] || this.board[r - 1][col]).letter + crossWord;
+                    crossWordScore += (tempBoard[r - 1][col] || this.board[r - 1][col]).value;
+                    r--;
+                }
+                
+                // Add current letter
+                if (hasAdjacentTile || r < 14 && (tempBoard[r + 1][col] || this.board[r + 1][col])) {
+                    crossWord += word[i];
+                    let letterScore = this.tileValues[word[i]];
+                    const premium = this.getPremiumSquareType(row, col);
+                    if (premium === 'dl') letterScore *= 2;
+                    if (premium === 'tl') letterScore *= 3;
+                    if (premium === 'dw') crossWordMultiplier *= 2;
+                    if (premium === 'tw') crossWordMultiplier *= 3;
+                    crossWordScore += letterScore;
+                }
+                
+                // Get letters below
+                r = row;
+                while (r < 14 && (tempBoard[r + 1][col] || this.board[r + 1][col])) {
+                    hasAdjacentTile = true;
+                    crossWord += (tempBoard[r + 1][col] || this.board[r + 1][col]).letter;
+                    crossWordScore += (tempBoard[r + 1][col] || this.board[r + 1][col]).value;
+                    r++;
+                }
+    
+                // If we formed a cross word of length > 1, add its score
+                if (crossWord.length > 1) {
+                    console.log(`Cross word formed: ${crossWord} for ${crossWordScore * crossWordMultiplier} points`);
+                    totalScore += crossWordScore * crossWordMultiplier;
+                }
+            } else {
+                // Check horizontal cross word
+                let c = col;
+                let hasAdjacentTile = false;
+                
+                // Get letters to the left
+                while (c > 0 && (tempBoard[row][c - 1] || this.board[row][c - 1])) {
+                    hasAdjacentTile = true;
+                    crossWord = (tempBoard[row][c - 1] || this.board[row][c - 1]).letter + crossWord;
+                    crossWordScore += (tempBoard[row][c - 1] || this.board[row][c - 1]).value;
+                    c--;
+                }
+                
+                // Add current letter
+                if (hasAdjacentTile || c < 14 && (tempBoard[row][c + 1] || this.board[row][c + 1])) {
+                    crossWord += word[i];
+                    let letterScore = this.tileValues[word[i]];
+                    const premium = this.getPremiumSquareType(row, col);
+                    if (premium === 'dl') letterScore *= 2;
+                    if (premium === 'tl') letterScore *= 3;
+                    if (premium === 'dw') crossWordMultiplier *= 2;
+                    if (premium === 'tw') crossWordMultiplier *= 3;
+                    crossWordScore += letterScore;
+                }
+                
+                // Get letters to the right
+                c = col;
+                while (c < 14 && (tempBoard[row][c + 1] || this.board[row][c + 1])) {
+                    hasAdjacentTile = true;
+                    crossWord += (tempBoard[row][c + 1] || this.board[row][c + 1]).letter;
+                    crossWordScore += (tempBoard[row][c + 1] || this.board[row][c + 1]).value;
+                    c++;
+                }
+    
+                // If we formed a cross word of length > 1, add its score
+                if (crossWord.length > 1) {
+                    console.log(`Cross word formed: ${crossWord} for ${crossWordScore * crossWordMultiplier} points`);
+                    totalScore += crossWordScore * crossWordMultiplier;
+                }
+            }
         }
     
-        // Apply word multiplier after summing all letters
-        score *= wordMultiplier;
-    
-        // Add bonus for using 7 tiles
+        // Add bonus for using all 7 tiles
         if (word.length === 7) {
-            score += 50;
+            totalScore += 50;
+            console.log("Added 50 point bonus for using all 7 tiles");
         }
     
-        return score;
+        console.log(`Total score for ${word}: ${totalScore}`);
+        return totalScore;
     }
+    
 
     playAIMove(move) {
         console.log("AI playing move:", move);
