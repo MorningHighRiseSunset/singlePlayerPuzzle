@@ -365,3 +365,7 @@ button:hover {
     font-size: 16px;
     color: #333;
 }
+
+.tile-rack.ai-rack {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);  /* Lighter blue gradient */
+}
