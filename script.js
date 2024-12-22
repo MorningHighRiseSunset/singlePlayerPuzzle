@@ -805,47 +805,32 @@ class ScrabbleGame {
     }
 
     
-isAbbreviation(word) {
-    // Common abbreviations to explicitly exclude
-    const commonAbbreviations = new Set([
-        'SAE', 'USA', 'UK', 'TV', 'FBI', 'CIA', 'NASA', 'DNA', 'PhD', 'AM', 'PM',
-        'Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Sr', 'Jr', 'Corp', 'Inc', 'Ltd', 'St',
-        'Ave', 'Rd', 'Blvd', 'APT', 'DOB', 'SSN', 'PIN', 'ATM', 'PC', 'USB', 'RAM',
-        'ROM', 'CEO', 'CFO', 'CTO', 'HR', 'ID', 'VP', 'FAQ', 'ASAP', 'VIP', 'PDQ',
-        'MPH', 'RPM', 'MPG', 'ESP', 'HIV', 'ICU', 'ER', 'RX', 'MRI', 'CT', 'ABC',
-        'XYZ', 'BBC', 'CNN', 'NBA', 'NFL', 'NHL', 'MLB', 'GPS', 'RSS', 'DOS', 'IRC',
-        'ISP', 'VHS', 'CD', 'DVD', 'MP3', 'AAA', 'AA', 'HDTV', 'LCD', 'LED', 'iOS',
-        'PhD', 'BSc', 'MSc', 'BA', 'MA', 'MD', 'DDS', 'ESQ', 'LLC', 'PDF', 'PNG',
-        'JPG', 'GIF', 'URL', 'HTTP', 'WWW', 'SMS', 'SIM', 'PIN', 'ATM', 'OK'
-    ]);
-
-    // Convert to uppercase for checking
-    const upperWord = word.toUpperCase();
-
-    // Check if word is in our abbreviations list
-    if (commonAbbreviations.has(upperWord)) {
-        console.log(`${word} is a known abbreviation - skipping`);
-        return true;
-    }
-
-    // Check if word is all capitals (likely an abbreviation)
-    if (word === word.toUpperCase() && word.length <= 3) {
-        // Exception for common short words
-        const commonShortWords = new Set(['A', 'I', 'O', 'AN', 'AS', 'AT', 'BE', 'BY', 'DO', 'GO', 'HE', 'IF', 'IN', 'IS', 'IT', 'ME', 'MY', 'NO', 'OF', 'ON', 'OR', 'SO', 'TO', 'UP', 'US', 'WE']);
-        if (!commonShortWords.has(upperWord)) {
-            console.log(`${word} appears to be an abbreviation (all caps) - skipping`);
+    isAbbreviation(word) {
+        // Common abbreviations to explicitly exclude
+        const commonAbbreviations = new Set([
+            'USA', 'UK', 'TV', 'FBI', 'CIA', 'NASA', 'DNA', 'PhD',
+            'Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Sr', 'Jr', 'Corp', 'Inc', 'Ltd',
+            'ATM', 'PC', 'USB', 'RAM', 'ROM', 'CEO', 'CFO', 'CTO', 'HR', 'VP'
+        ]);
+    
+        // Convert to uppercase for checking
+        const upperWord = word.toUpperCase();
+    
+        // Check if word is in our abbreviations list
+        if (commonAbbreviations.has(upperWord)) {
+            console.log(`${word} is a known abbreviation - skipping`);
             return true;
         }
+    
+        // Remove the all-caps check for short words since many are valid
+        // Check for mixed case with periods (e.g., "Ph.D.")
+        if (word.includes('.')) {
+            console.log(`${word} contains periods - likely an abbreviation`);
+            return true;
+        }
+    
+        return false;
     }
-
-    // Check for mixed case with periods (e.g., "Ph.D.")
-    if (word.includes('.')) {
-        console.log(`${word} contains periods - likely an abbreviation`);
-        return true;
-    }
-
-    return false;
-}
     
     getExistingWords() {
         const words = new Set();
@@ -1309,15 +1294,6 @@ isAbbreviation(word) {
             return row === 7 && col === 7;
         }
     
-        // If it's the second tile of the first move
-        if (this.isFirstMove && this.placedTiles.length === 1) {
-            const firstTile = this.placedTiles[0];
-            return (
-                (Math.abs(row - firstTile.row) === 1 && col === firstTile.col) || // vertical
-                (Math.abs(col - firstTile.col) === 1 && row === firstTile.row)    // horizontal
-            );
-        }
-    
         // If there are already placed tiles in this turn
         if (this.placedTiles.length > 0) {
             // Get the direction from the already placed tiles
@@ -1336,21 +1312,21 @@ isAbbreviation(word) {
         }
     
         // For a new word with no tiles placed this turn yet,
-        // check if it connects to any existing tiles
-        return this.checkValidStartingPosition(row, col);
+        // just check if it connects to any existing tiles
+        return this.isFirstMove || this.checkAdjacentTiles(row, col);
     }
 
     checkValidStartingPosition(row, col) {
-        // Check if this position is adjacent to or part of any existing word
-        const adjacentOrConnected = this.checkAdjacentTiles(row, col) || 
-                                   this.checkExistingWordConnection(row, col);
-    
-        if (!adjacentOrConnected) {
-            return false;
+        // On first move, any position is valid as long as it forms valid words
+        if (this.isFirstMove) {
+            return true;
         }
     
-        return true;
+        // Check if this position is adjacent to or part of any existing word
+        return this.checkAdjacentTiles(row, col) || 
+               this.checkExistingWordConnection(row, col);
     }
+    
 
     checkExistingWordConnection(row, col) {
         // Check if this position would be part of an existing word
@@ -1552,7 +1528,6 @@ checkAdjacentTiles(row, col) {
         }
     }
     
-
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
     
@@ -1616,14 +1591,9 @@ checkAdjacentTiles(row, col) {
         // Get all formed words (main word and crossing words)
         const words = new Set(); 
         
-        // Get the main word based on tile placement direction
+        // Get all words formed by this play
         const mainWord = this.getMainWord();
         if (mainWord.length > 1) {
-            // Check for abbreviations
-            if (this.isAbbreviation(mainWord)) {
-                console.log(`Invalid word: ${mainWord} (abbreviation)`);
-                return false;
-            }
             words.add(mainWord);
         }
     
@@ -1631,19 +1601,21 @@ checkAdjacentTiles(row, col) {
         for (const {row, col} of this.placedTiles) {
             const crossWords = this.getCrossWords(row, col);
             for (const word of crossWords) {
-                if (word.length > 1) {
-                    // Check for abbreviations
-                    if (this.isAbbreviation(word)) {
-                        console.log(`Invalid word: ${word} (abbreviation)`);
-                        return false;
-                    }
+                if (word && word.length > 1) {
                     words.add(word);
                 }
             }
         }
     
+        // If no valid words are formed, return false
+        if (words.size === 0) {
+            console.log('No valid words formed');
+            return false;
+        }
+    
         // Validate each word
         return Array.from(words).every(word => {
+            // Skip abbreviation check for common short words
             const isValid = this.dictionary.has(word.toLowerCase());
             if (!isValid) {
                 console.log(`Invalid word: ${word}`);
