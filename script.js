@@ -1030,32 +1030,152 @@ class ScrabbleGame {
 
 
     placeTile(tile, row, col) {
-        // Check if the cell is already occupied
         if (this.board[row][col]) {
             alert("This cell is already occupied!");
             return;
         }
     
-        // Place the tile
-        this.board[row][col] = tile;
-        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        cell.innerHTML = `
-            ${tile.letter}
-            <span class="points">${tile.value}</span>
-        `;
-        
-        // Remove tile from rack
-        const tileIndex = this.playerRack.indexOf(tile);
-        if (tileIndex > -1) {
-            this.playerRack.splice(tileIndex, 1);
+        // If it's a blank tile (asterisk), show letter selection dialog
+        if (tile.letter === '*') {
+            const letterSelectionDialog = document.createElement('div');
+            letterSelectionDialog.className = 'letter-selection-dialog';
+            letterSelectionDialog.innerHTML = `
+                <div class="dialog-content">
+                    <h3>Choose a letter for the blank tile</h3>
+                    <div class="letter-grid">
+                        ${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => `
+                            <button class="letter-choice">${letter}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+    
+            // Add styles for the dialog
+            const style = document.createElement('style');
+            style.textContent = `
+                .letter-selection-dialog {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+                .dialog-content {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                    max-width: 400px;
+                    width: 90%;
+                }
+                .letter-grid {
+                    display: grid;
+                    grid-template-columns: repeat(6, 1fr);
+                    gap: 5px;
+                    margin-top: 15px;
+                }
+                .letter-choice {
+                    padding: 10px;
+                    border: 1px solid #ccc;
+                    background: #f0f0f0;
+                    cursor: pointer;
+                    border-radius: 5px;
+                    transition: all 0.2s;
+                }
+                .letter-choice:hover {
+                    background: #e0e0e0;
+                    transform: scale(1.1);
+                }
+                h3 {
+                    text-align: center;
+                    margin-top: 0;
+                    color: #333;
+                }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(letterSelectionDialog);
+    
+            // Handle letter selection
+            const buttons = letterSelectionDialog.querySelectorAll('.letter-choice');
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const selectedLetter = button.textContent;
+                    
+                    // Create a new tile object with the selected letter but keep point value as 0
+                    const blankTile = {
+                        ...tile,
+                        letter: selectedLetter,
+                        originalLetter: '*', // Keep track that this was originally a blank
+                        value: 0 // Ensure blank tiles remain worth 0 points
+                    };
+    
+                    // Place the tile with the selected letter
+                    this.board[row][col] = blankTile;
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    cell.innerHTML = `
+                        ${selectedLetter}
+                        <span class="points">0</span>
+                        <span class="blank-indicator">★</span>
+                    `;
+    
+                    // Add special styling for blank tiles
+                    const blankStyle = document.createElement('style');
+                    blankStyle.textContent = `
+                        .blank-indicator {
+                            position: absolute;
+                            top: 2px;
+                            right: 2px;
+                            font-size: 10px;
+                            color: #666;
+                        }
+                    `;
+                    document.head.appendChild(blankStyle);
+    
+                    // Remove tile from rack
+                    const tileIndex = this.playerRack.indexOf(tile);
+                    if (tileIndex > -1) {
+                        this.playerRack.splice(tileIndex, 1);
+                    }
+    
+                    // Add to placed tiles
+                    this.placedTiles.push({ tile: blankTile, row, col });
+    
+                    // Update rack display
+                    this.renderRack();
+    
+                    // Remove the dialog
+                    letterSelectionDialog.remove();
+                });
+            });
+    
+        } else {
+            // Normal tile placement (non-blank tile)
+            this.board[row][col] = tile;
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            cell.innerHTML = `
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+            `;
+            
+            // Remove tile from rack
+            const tileIndex = this.playerRack.indexOf(tile);
+            if (tileIndex > -1) {
+                this.playerRack.splice(tileIndex, 1);
+            }
+            
+            // Add to placed tiles
+            this.placedTiles.push({ tile, row, col });
+            
+            // Update rack display
+            this.renderRack();
         }
-        
-        // Add to placed tiles
-        this.placedTiles.push({ tile, row, col });
-        
-        // Update rack display
-        this.renderRack();
     }
+    
 
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
@@ -1104,52 +1224,62 @@ class ScrabbleGame {
         if (!this.areTilesConnected()) return false;
     
         // Get all formed words (main word and crossing words)
-        const words = [];
+        const words = new Set(); // Using Set to avoid duplicates
         
-        // Get the main word
+        // Get the main word based on tile placement direction
         const mainWord = this.getMainWord();
         if (mainWord.length > 1) {
-            words.push(mainWord);
+            words.add(mainWord);
         }
     
-        // Get crossing words for each placed tile
+        // Check each placed tile for crossing words
         this.placedTiles.forEach(({row, col}) => {
-            // Check vertical crossing word if main word is horizontal
-            let verticalWord = '';
-            let r = row;
-            while (r > 0 && this.board[r-1][col]) r--;
-            while (r < 15 && this.board[r][col]) {
-                verticalWord += this.board[r][col].letter;
-                r++;
-            }
-            if (verticalWord.length > 1) {
-                words.push(verticalWord);
-            }
-    
-            // Check horizontal crossing word if main word is vertical
-            let horizontalWord = '';
-            let c = col;
-            while (c > 0 && this.board[row][c-1]) c--;
-            while (c < 15 && this.board[row][c]) {
-                horizontalWord += this.board[row][c].letter;
-                c++;
-            }
-            if (horizontalWord.length > 1) {
-                words.push(horizontalWord);
-            }
+            const crossWords = this.getCrossWords(row, col);
+            crossWords.forEach(word => {
+                if (word.length > 1) {
+                    words.add(word);
+                }
+            });
         });
     
-        // Remove duplicates
-        const uniqueWords = [...new Set(words)];
-    
-        // Validate all words
-        return uniqueWords.every(word => {
+        // Validate each word
+        return Array.from(words).every(word => {
             const isValid = this.dictionary.has(word.toLowerCase());
             if (!isValid) {
                 console.log(`Invalid word: ${word}`);
             }
             return isValid;
         });
+    }
+
+    getCrossWords(row, col) {
+        const words = [];
+        const horizontal = this.getWordAt(row, col, true);
+        const vertical = this.getWordAt(row, col, false);
+        
+        if (horizontal) words.push(horizontal);
+        if (vertical) words.push(vertical);
+        
+        return words;
+    }
+
+    getWordAt(row, col, isHorizontal) {
+        let word = '';
+        let start = isHorizontal ? col : row;
+        
+        // Find start of word
+        while (start > 0 && this.board[isHorizontal ? row : start - 1][isHorizontal ? start - 1 : col]) {
+            start--;
+        }
+        
+        // Build word
+        let current = start;
+        while (current < 15 && this.board[isHorizontal ? row : current][isHorizontal ? current : col]) {
+            word += this.board[isHorizontal ? row : current][isHorizontal ? current : col].letter;
+            current++;
+        }
+        
+        return word.length > 1 ? word : null;
     }
     
 
@@ -1227,113 +1357,129 @@ class ScrabbleGame {
             return a.row - b.row;
         });
     
+        // Determine if word is horizontal or vertical based on placed tiles
         const isHorizontal = sortedTiles.every(t => t.row === sortedTiles[0].row);
-        let word = '';
         let row = sortedTiles[0].row;
         let col = sortedTiles[0].col;
     
-        // Find start of word
-        while (col > 0 && this.board[row][col - 1]) col--;
-        while (row > 0 && this.board[row - 1][col]) row--;
-    
-        // Build word
+        // Find the start of the word
         if (isHorizontal) {
-            while (col < 15 && this.board[row][col]) {
-                word += this.board[row][col].letter;
-                col++;
+            while (col > 0 && this.board[row][col - 1]) {
+                col--;
             }
         } else {
-            while (row < 15 && this.board[row][col]) {
-                word += this.board[row][col].letter;
-                row++;
+            while (row > 0 && this.board[row - 1][col]) {
+                row--;
+            }
+        }
+    
+        // Build the complete word including existing tiles
+        let word = '';
+        let currentRow = row;
+        let currentCol = col;
+    
+        if (isHorizontal) {
+            while (currentCol < 15 && this.board[row][currentCol]) {
+                word += this.board[row][currentCol].letter;
+                currentCol++;
+            }
+        } else {
+            while (currentRow < 15 && this.board[currentRow][col]) {
+                word += this.board[currentRow][col].letter;
+                currentRow++;
             }
         }
     
         return word;
     }
     
-
     calculateScore() {
         let totalScore = 0;
+        const processedPositions = new Set(); // Track positions we've already scored
+        
+        // Get all words formed by this play
         const words = this.getFormedWords();
-    
+        
         words.forEach(word => {
             let wordScore = 0;
             let wordMultiplier = 1;
-            let startPos = null;
-            let isHorizontal = true;
-    
-            // Find the starting position and orientation of the word on the board
-            for (let row = 0; row < 15; row++) {
-                for (let col = 0; col < 15; col++) {
-                    if (this.board[row][col] && 
-                        this.board[row][col].letter === word[0]) {
-                        // Check if this is the start of our word horizontally
-                        if (col + word.length <= 15) {
-                            let matches = true;
-                            for (let i = 0; i < word.length; i++) {
-                                if (!this.board[row][col + i] || 
-                                    this.board[row][col + i].letter !== word[i]) {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                            if (matches) {
-                                startPos = { row, col };
-                                isHorizontal = true;
-                                break;
-                            }
+            const wordPos = this.findWordPosition(word);
+            
+            if (!wordPos) return;
+            
+            const {startRow, startCol, isHorizontal} = wordPos;
+            
+            // Calculate score for each letter in the word
+            for (let i = 0; i < word.length; i++) {
+                const currentRow = isHorizontal ? startRow : startRow + i;
+                const currentCol = isHorizontal ? startCol + i : startCol;
+                const posKey = `${currentRow},${currentCol}`;
+                
+                // Only count tile premium bonuses for newly placed tiles
+                const isNewTile = this.placedTiles.some(t => 
+                    t.row === currentRow && t.col === currentCol
+                );
+                
+                if (isNewTile && !processedPositions.has(posKey)) {
+                    processedPositions.add(posKey);
+                    let letterScore = this.tileValues[this.board[currentRow][currentCol].letter];
+                    
+                    // Apply premium square bonuses
+                    const premium = this.getPremiumSquareType(currentRow, currentCol);
+                    if (premium === 'dl') letterScore *= 2;
+                    if (premium === 'tl') letterScore *= 3;
+                    if (premium === 'dw') wordMultiplier *= 2;
+                    if (premium === 'tw') wordMultiplier *= 3;
+                    
+                    wordScore += letterScore;
+                } else {
+                    // Add base value for existing tiles
+                    wordScore += this.tileValues[this.board[currentRow][currentCol].letter];
+                }
+            }
+            
+            totalScore += wordScore * wordMultiplier;
+        });
+        
+        return totalScore;
+    }
+
+    findWordPosition(word) {
+        // Search the board for the starting position of the word
+        for (let row = 0; row < 15; row++) {
+            for (let col = 0; col < 15; col++) {
+                // Check horizontal
+                if (col <= 15 - word.length) {
+                    let matches = true;
+                    for (let i = 0; i < word.length; i++) {
+                        if (!this.board[row][col + i] || 
+                            this.board[row][col + i].letter !== word[i]) {
+                            matches = false;
+                            break;
                         }
-                        
-                        // Check if this is the start of our word vertically
-                        if (row + word.length <= 15) {
-                            let matches = true;
-                            for (let i = 0; i < word.length; i++) {
-                                if (!this.board[row + i][col] || 
-                                    this.board[row + i][col].letter !== word[i]) {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                            if (matches) {
-                                startPos = { row, col };
-                                isHorizontal = false;
-                                break;
-                            }
-                        }
+                    }
+                    if (matches) {
+                        return { startRow: row, startCol: col, isHorizontal: true };
                     }
                 }
-                if (startPos) break;
-            }
-    
-            if (startPos) {
-                // Calculate score for the word
-                [...word].forEach((letter, i) => {
-                    const currentRow = isHorizontal ? startPos.row : startPos.row + i;
-                    const currentCol = isHorizontal ? startPos.col + i : startPos.col;
-                    let letterScore = this.tileValues[letter];
-                    
-                    // Only apply premium squares for newly placed tiles
-                    const isNewTile = this.placedTiles.some(t => 
-                        t.row === currentRow && t.col === currentCol
-                    );
-                    
-                    if (isNewTile) {
-                        const premium = this.getPremiumSquareType(currentRow, currentCol);
-                        if (premium === 'dl') letterScore *= 2;
-                        if (premium === 'tl') letterScore *= 3;
-                        if (premium === 'dw') wordMultiplier *= 2;
-                        if (premium === 'tw') wordMultiplier *= 3;
+                
+                // Check vertical
+                if (row <= 15 - word.length) {
+                    let matches = true;
+                    for (let i = 0; i < word.length; i++) {
+                        if (!this.board[row + i][col] || 
+                            this.board[row + i][col].letter !== word[i]) {
+                            matches = false;
+                            break;
+                        }
                     }
-    
-                    wordScore += letterScore;
-                });
-    
-                totalScore += wordScore * wordMultiplier;
+                    if (matches) {
+                        return { startRow: row, startCol: col, isHorizontal: false };
+                    }
+                }
             }
-        });
-    
-        return totalScore;
+        }
+        return null;
     }
     
 
