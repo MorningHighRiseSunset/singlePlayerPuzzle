@@ -1211,15 +1211,81 @@ class ScrabbleGame {
         return tileElement;
     }
 
-        setupDragAndDrop() {
+    setupDragAndDrop() {
         this.setupDragListeners();
         this.setupDropListeners();
+        this.setupRackDropZone();
     }
+
+    setupRackDropZone() {
+        const rack = document.getElementById('tile-rack');
+        
+        rack.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (this.currentTurn === 'player') {
+                e.currentTarget.classList.add('rack-droppable');
+            }
+        });
+    
+        rack.addEventListener('dragleave', (e) => {
+            e.currentTarget.classList.remove('rack-droppable');
+        });
+    
+        rack.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('rack-droppable');
+    
+            if (this.currentTurn !== 'player') return;
+    
+            // Find the dragged tile element
+            const draggedTile = document.querySelector('.tile.dragging');
+            if (!draggedTile) return;
+    
+            // Find the placed tile by looking through all board cells
+            const boardCell = draggedTile.closest('.board-cell');
+            if (!boardCell) return;
+    
+            const row = parseInt(boardCell.dataset.row);
+            const col = parseInt(boardCell.dataset.col);
+    
+            // Find the corresponding placed tile
+            const placedTileIndex = this.placedTiles.findIndex(t => 
+                t.row === row && t.col === col
+            );
+    
+            if (placedTileIndex !== -1) {
+                const placedTile = this.placedTiles[placedTileIndex];
+                
+                // Return the tile to the rack
+                this.playerRack.push(placedTile.tile);
+                
+                // Clear the board cell
+                this.board[row][col] = null;
+                boardCell.innerHTML = '';
+                
+                // Remove from placed tiles array
+                this.placedTiles.splice(placedTileIndex, 1);
+                
+                // Update the rack display
+                this.renderRack();
+                
+                // Update valid placement highlights
+                this.highlightValidPlacements();
+            }
+        });
+    }
+    
+    
+    
 
     setupDragListeners() {
         document.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('tile') && this.currentTurn === 'player') {
                 e.target.classList.add('dragging');
+                const tileData = {
+                    index: e.target.dataset.index,
+                    id: e.target.dataset.id
+                };
                 e.dataTransfer.setData('text/plain', e.target.dataset.index);
                 
                 // Create a clone of just the dragged tile for the drag image
@@ -1229,10 +1295,8 @@ class ScrabbleGame {
                 dragImage.style.top = '-1000px';
                 document.body.appendChild(dragImage);
                 
-                // Set the custom drag image
                 e.dataTransfer.setDragImage(dragImage, dragImage.offsetWidth / 2, dragImage.offsetHeight / 2);
                 
-                // Remove the clone after the drag starts
                 setTimeout(() => {
                     document.body.removeChild(dragImage);
                 }, 0);
@@ -1245,6 +1309,7 @@ class ScrabbleGame {
             }
         });
     }
+    
     
 
     setupDropListeners() {
@@ -1500,11 +1565,30 @@ placeTile(tile, row, col) {
                 // Place the tile with the selected letter
                 this.board[row][col] = blankTile;
                 const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                const tileIndex = this.playerRack.indexOf(tile);
+
                 cell.innerHTML = `
-                    ${selectedLetter}
-                    <span class="points">0</span>
-                    <span class="blank-indicator">★</span>
+                    <div class="tile" draggable="true" data-index="${tileIndex}" data-id="${tile.id}">
+                        ${selectedLetter}
+                        <span class="points">0</span>
+                        <span class="blank-indicator">★</span>
+                    </div>
                 `;
+
+                placedTile.addEventListener('dragstart', (e) => {
+                    if (this.currentTurn === 'player') {
+                        e.target.classList.add('dragging');
+                        // Store the position information
+                        const cell = e.target.closest('.board-cell');
+                        const row = cell.dataset.row;
+                        const col = cell.dataset.col;
+                        e.dataTransfer.setData('text/plain', `${row},${col}`);
+                    }
+                });
+                
+                placedTile.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                });
 
                 // Add special styling for blank tiles
                 const blankStyle = document.createElement('style');
@@ -1520,7 +1604,6 @@ placeTile(tile, row, col) {
                 document.head.appendChild(blankStyle);
 
                 // Remove tile from rack
-                const tileIndex = this.playerRack.indexOf(tile);
                 if (tileIndex > -1) {
                     this.playerRack.splice(tileIndex, 1);
                 }
@@ -1543,13 +1626,29 @@ placeTile(tile, row, col) {
         // Normal tile placement (non-blank tile)
         this.board[row][col] = tile;
         const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        const tileIndex = this.playerRack.indexOf(tile);
+
         cell.innerHTML = `
-            ${tile.letter}
-            <span class="points">${tile.value}</span>
+            <div class="tile" draggable="true" data-index="${tileIndex}" data-id="${tile.id}">
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+            </div>
         `;
+
+        // Add drag functionality to the placed tile
+        const placedTile = cell.querySelector('.tile');
+        placedTile.addEventListener('dragstart', (e) => {
+            if (this.currentTurn === 'player') {
+                e.target.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', e.target.dataset.index);
+            }
+        });
+
+        placedTile.addEventListener('dragend', (e) => {
+            e.target.classList.remove('dragging');
+        });
         
         // Remove tile from rack
-        const tileIndex = this.playerRack.indexOf(tile);
         if (tileIndex > -1) {
             this.playerRack.splice(tileIndex, 1);
         }
@@ -1564,6 +1663,7 @@ placeTile(tile, row, col) {
         this.highlightValidPlacements();
     }
 }
+
     
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
@@ -2103,8 +2203,6 @@ placeTile(tile, row, col) {
         this.updateTilesCount();
     }
     
-    
-
     setupEventListeners() {
         // Initial highlight of valid placements
         this.highlightValidPlacements();
@@ -2222,16 +2320,8 @@ placeTile(tile, row, col) {
             printWindow.focus();
             printWindow.print();
         });
-    
-        document.getElementById('recall-tiles').addEventListener('click', () => {
-            if (this.currentTurn === 'player') {
-                this.resetPlacedTiles();
-                this.highlightValidPlacements();
-            } else {
-                alert("You can only recall tiles during your turn!");
-            }
-        });
     }
+    
 }
 
 

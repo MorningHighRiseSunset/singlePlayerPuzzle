@@ -392,3 +392,12 @@ button:hover {
 .board-cell.valid-placement {
     animation: pulse 1.5s infinite;
 }
+
+#tile-rack.rack-droppable {
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 2px dashed #4CAF50;
+}
+
+.tile.dragging {
+    opacity: 0.6;
+}
