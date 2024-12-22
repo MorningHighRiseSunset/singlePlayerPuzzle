@@ -631,6 +631,12 @@ class ScrabbleGame {
     }
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
+        // First check for abbreviations and minimum length
+        if (word.length < 2 || this.isAbbreviation(word)) {
+            console.log(`Skipping ${word} - too short or is an abbreviation`);
+            return false;
+        }
+    
         // Keep track of words already on the board
         const existingWords = this.getExistingWords();
         if (existingWords.includes(word)) {
@@ -681,7 +687,7 @@ class ScrabbleGame {
                 }
                 touchesExistingTile = true;
             } else {
-                // 6. Check adjacent cells (up, down, left, right) for existing tiles
+                // 6. Check adjacent cells for existing tiles
                 const adjacentPositions = [
                     [row - 1, col], // up
                     [row + 1, col], // down
@@ -696,21 +702,18 @@ class ScrabbleGame {
                             
                             // 7. Validate any perpendicular words that would be formed
                             let crossWord = '';
-                            let tempBoard = JSON.parse(JSON.stringify(this.board)); // Create temporary board
-                            tempBoard[row][col] = { letter: word[i] }; // Place current letter temporarily
+                            let tempBoard = JSON.parse(JSON.stringify(this.board));
+                            tempBoard[row][col] = { letter: word[i] };
                             
                             if (horizontal) {
                                 // Check vertical word formation
                                 let r = row;
-                                // Get letters above
                                 while (r > 0 && (tempBoard[r - 1][col] || this.board[r - 1][col])) {
                                     crossWord = (tempBoard[r - 1][col] || this.board[r - 1][col]).letter + crossWord;
                                     r--;
                                 }
-                                // Add current letter
                                 crossWord += word[i];
                                 r = row;
-                                // Get letters below
                                 while (r < 14 && (tempBoard[r + 1][col] || this.board[r + 1][col])) {
                                     crossWord += (tempBoard[r + 1][col] || this.board[r + 1][col]).letter;
                                     r++;
@@ -718,15 +721,12 @@ class ScrabbleGame {
                             } else {
                                 // Check horizontal word formation
                                 let c = col;
-                                // Get letters to the left
                                 while (c > 0 && (tempBoard[row][c - 1] || this.board[row][c - 1])) {
                                     crossWord = (tempBoard[row][c - 1] || this.board[row][c - 1]).letter + crossWord;
                                     c--;
                                 }
-                                // Add current letter
                                 crossWord += word[i];
                                 c = col;
-                                // Get letters to the right
                                 while (c < 14 && (tempBoard[row][c + 1] || this.board[row][c + 1])) {
                                     crossWord += (tempBoard[row][c + 1] || this.board[row][c + 1]).letter;
                                     c++;
@@ -735,6 +735,10 @@ class ScrabbleGame {
                             
                             // 8. If a cross word is formed, validate it
                             if (crossWord.length > 1) {
+                                if (this.isAbbreviation(crossWord)) {
+                                    console.log(`Invalid cross word would be formed (abbreviation): ${crossWord}`);
+                                    return false;
+                                }
                                 if (!this.dictionary.has(crossWord.toLowerCase())) {
                                     console.log(`Invalid cross word would be formed: ${crossWord}`);
                                     return false;
@@ -787,6 +791,10 @@ class ScrabbleGame {
         }
     
         // 10. Validate the main word
+        if (this.isAbbreviation(mainWord)) {
+            console.log(`Invalid main word would be formed (abbreviation): ${mainWord}`);
+            return false;
+        }
         if (!this.dictionary.has(mainWord.toLowerCase())) {
             console.log(`Invalid main word would be formed: ${mainWord}`);
             return false;
@@ -795,6 +803,49 @@ class ScrabbleGame {
         // 11. Final validation: must connect to existing tiles (except first move)
         return hasAdjacentTile || touchesExistingTile;
     }
+
+    
+isAbbreviation(word) {
+    // Common abbreviations to explicitly exclude
+    const commonAbbreviations = new Set([
+        'SAE', 'USA', 'UK', 'TV', 'FBI', 'CIA', 'NASA', 'DNA', 'PhD', 'AM', 'PM',
+        'Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Sr', 'Jr', 'Corp', 'Inc', 'Ltd', 'St',
+        'Ave', 'Rd', 'Blvd', 'APT', 'DOB', 'SSN', 'PIN', 'ATM', 'PC', 'USB', 'RAM',
+        'ROM', 'CEO', 'CFO', 'CTO', 'HR', 'ID', 'VP', 'FAQ', 'ASAP', 'VIP', 'PDQ',
+        'MPH', 'RPM', 'MPG', 'ESP', 'HIV', 'ICU', 'ER', 'RX', 'MRI', 'CT', 'ABC',
+        'XYZ', 'BBC', 'CNN', 'NBA', 'NFL', 'NHL', 'MLB', 'GPS', 'RSS', 'DOS', 'IRC',
+        'ISP', 'VHS', 'CD', 'DVD', 'MP3', 'AAA', 'AA', 'HDTV', 'LCD', 'LED', 'iOS',
+        'PhD', 'BSc', 'MSc', 'BA', 'MA', 'MD', 'DDS', 'ESQ', 'LLC', 'PDF', 'PNG',
+        'JPG', 'GIF', 'URL', 'HTTP', 'WWW', 'SMS', 'SIM', 'PIN', 'ATM', 'OK'
+    ]);
+
+    // Convert to uppercase for checking
+    const upperWord = word.toUpperCase();
+
+    // Check if word is in our abbreviations list
+    if (commonAbbreviations.has(upperWord)) {
+        console.log(`${word} is a known abbreviation - skipping`);
+        return true;
+    }
+
+    // Check if word is all capitals (likely an abbreviation)
+    if (word === word.toUpperCase() && word.length <= 3) {
+        // Exception for common short words
+        const commonShortWords = new Set(['A', 'I', 'O', 'AN', 'AS', 'AT', 'BE', 'BY', 'DO', 'GO', 'HE', 'IF', 'IN', 'IS', 'IT', 'ME', 'MY', 'NO', 'OF', 'ON', 'OR', 'SO', 'TO', 'UP', 'US', 'WE']);
+        if (!commonShortWords.has(upperWord)) {
+            console.log(`${word} appears to be an abbreviation (all caps) - skipping`);
+            return true;
+        }
+    }
+
+    // Check for mixed case with periods (e.g., "Ph.D.")
+    if (word.includes('.')) {
+        console.log(`${word} contains periods - likely an abbreviation`);
+        return true;
+    }
+
+    return false;
+}
     
     getExistingWords() {
         const words = new Set();
@@ -1563,23 +1614,33 @@ checkAdjacentTiles(row, col) {
         if (!this.areTilesConnected()) return false;
     
         // Get all formed words (main word and crossing words)
-        const words = new Set(); // Using Set to avoid duplicates
+        const words = new Set(); 
         
         // Get the main word based on tile placement direction
         const mainWord = this.getMainWord();
         if (mainWord.length > 1) {
+            // Check for abbreviations
+            if (this.isAbbreviation(mainWord)) {
+                console.log(`Invalid word: ${mainWord} (abbreviation)`);
+                return false;
+            }
             words.add(mainWord);
         }
     
         // Check each placed tile for crossing words
-        this.placedTiles.forEach(({row, col}) => {
+        for (const {row, col} of this.placedTiles) {
             const crossWords = this.getCrossWords(row, col);
-            crossWords.forEach(word => {
+            for (const word of crossWords) {
                 if (word.length > 1) {
+                    // Check for abbreviations
+                    if (this.isAbbreviation(word)) {
+                        console.log(`Invalid word: ${word} (abbreviation)`);
+                        return false;
+                    }
                     words.add(word);
                 }
-            });
-        });
+            }
+        }
     
         // Validate each word
         return Array.from(words).every(word => {
@@ -1590,6 +1651,7 @@ checkAdjacentTiles(row, col) {
             return isValid;
         });
     }
+    
 
     getCrossWords(row, col) {
         const words = [];
