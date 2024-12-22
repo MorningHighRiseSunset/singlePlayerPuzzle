@@ -435,6 +435,13 @@ class ScrabbleGame {
         const {word, startPos, isHorizontal, score} = play;
         console.log("AI playing:", word, "at", startPos, isHorizontal ? "horizontally" : "vertically");
     
+        // Double-check all cross words before placing
+        if (!this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
+            console.log("Invalid placement detected during execution, skipping turn");
+            this.skipAITurn();
+            return;
+        }
+    
         return new Promise(async (resolve) => {
             // Start placing tiles with animation
             for (let i = 0; i < word.length; i++) {
@@ -689,36 +696,39 @@ class ScrabbleGame {
                             
                             // 7. Validate any perpendicular words that would be formed
                             let crossWord = '';
+                            let tempBoard = JSON.parse(JSON.stringify(this.board)); // Create temporary board
+                            tempBoard[row][col] = { letter: word[i] }; // Place current letter temporarily
+                            
                             if (horizontal) {
                                 // Check vertical word formation
                                 let r = row;
                                 // Get letters above
-                                while (r > 0 && this.board[r - 1][col]) {
-                                    crossWord = this.board[r - 1][col].letter + crossWord;
+                                while (r > 0 && (tempBoard[r - 1][col] || this.board[r - 1][col])) {
+                                    crossWord = (tempBoard[r - 1][col] || this.board[r - 1][col]).letter + crossWord;
                                     r--;
                                 }
                                 // Add current letter
                                 crossWord += word[i];
                                 r = row;
                                 // Get letters below
-                                while (r < 14 && this.board[r + 1][col]) {
-                                    crossWord += this.board[r + 1][col].letter;
+                                while (r < 14 && (tempBoard[r + 1][col] || this.board[r + 1][col])) {
+                                    crossWord += (tempBoard[r + 1][col] || this.board[r + 1][col]).letter;
                                     r++;
                                 }
                             } else {
                                 // Check horizontal word formation
                                 let c = col;
                                 // Get letters to the left
-                                while (c > 0 && this.board[row][c - 1]) {
-                                    crossWord = this.board[row][c - 1].letter + crossWord;
+                                while (c > 0 && (tempBoard[row][c - 1] || this.board[row][c - 1])) {
+                                    crossWord = (tempBoard[row][c - 1] || this.board[row][c - 1]).letter + crossWord;
                                     c--;
                                 }
                                 // Add current letter
                                 crossWord += word[i];
                                 c = col;
                                 // Get letters to the right
-                                while (c < 14 && this.board[row][c + 1]) {
-                                    crossWord += this.board[row][c + 1].letter;
+                                while (c < 14 && (tempBoard[row][c + 1] || this.board[row][c + 1])) {
+                                    crossWord += (tempBoard[row][c + 1] || this.board[row][c + 1]).letter;
                                     c++;
                                 }
                             }
@@ -726,6 +736,7 @@ class ScrabbleGame {
                             // 8. If a cross word is formed, validate it
                             if (crossWord.length > 1) {
                                 if (!this.dictionary.has(crossWord.toLowerCase())) {
+                                    console.log(`Invalid cross word would be formed: ${crossWord}`);
                                     return false;
                                 }
                             }
@@ -737,36 +748,47 @@ class ScrabbleGame {
     
         // 9. Check if the main word being formed is valid
         let mainWord = word;
+        let tempBoard = JSON.parse(JSON.stringify(this.board));
+        // Place the entire word temporarily
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+            if (!tempBoard[row][col]) {
+                tempBoard[row][col] = { letter: word[i] };
+            }
+        }
+    
         if (horizontal) {
             // Check for letters before
             let c = startCol - 1;
-            while (c >= 0 && this.board[startRow][c]) {
-                mainWord = this.board[startRow][c].letter + mainWord;
+            while (c >= 0 && tempBoard[startRow][c]) {
+                mainWord = tempBoard[startRow][c].letter + mainWord;
                 c--;
             }
             // Check for letters after
             c = startCol + word.length;
-            while (c < 15 && this.board[startRow][c]) {
-                mainWord += this.board[startRow][c].letter;
+            while (c < 15 && tempBoard[startRow][c]) {
+                mainWord += tempBoard[startRow][c].letter;
                 c++;
             }
         } else {
             // Check for letters before
             let r = startRow - 1;
-            while (r >= 0 && this.board[r][startCol]) {
-                mainWord = this.board[r][startCol].letter + mainWord;
+            while (r >= 0 && tempBoard[r][startCol]) {
+                mainWord = tempBoard[r][startCol].letter + mainWord;
                 r--;
             }
             // Check for letters after
             r = startRow + word.length;
-            while (r < 15 && this.board[r][startCol]) {
-                mainWord += this.board[r][startCol].letter;
+            while (r < 15 && tempBoard[r][startCol]) {
+                mainWord += tempBoard[r][startCol].letter;
                 r++;
             }
         }
     
         // 10. Validate the main word
         if (!this.dictionary.has(mainWord.toLowerCase())) {
+            console.log(`Invalid main word would be formed: ${mainWord}`);
             return false;
         }
     
