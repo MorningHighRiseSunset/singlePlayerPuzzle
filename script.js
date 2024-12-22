@@ -1168,29 +1168,71 @@ class ScrabbleGame {
             return isHorizontal || isVertical;
         }
     
-        // For subsequent moves, must be adjacent to existing tiles
-        return this.checkAdjacentTiles(row, col);
+        // For subsequent moves, check if the placement connects to existing board tiles
+        // This includes both adjacent tiles and tiles that would form part of the word
+        const hasAdjacentTile = this.checkAdjacentTiles(row, col);
+        const isConnectedToExisting = this.checkExistingWordConnection(row, col);
+        
+        return hasAdjacentTile || isConnectedToExisting;
     }
 
-    checkAdjacentTiles(row, col) {
-        const directions = [
-            [-1, 0],  // up
-            [1, 0],   // down
-            [0, -1],  // left
-            [0, 1]    // right
-        ];
+    // Add this new method to check if the placement would connect to an existing word
+checkExistingWordConnection(row, col) {
+    // Check horizontal line
+    let isPartOfHorizontalWord = false;
+    let leftCol = col - 1;
+    let rightCol = col + 1;
     
-        return directions.some(([dx, dy]) => {
-            const newRow = row + dx;
-            const newCol = col + dy;
-            return (
-                newRow >= 0 && newRow < 15 &&
-                newCol >= 0 && newCol < 15 &&
-                this.board[newRow][newCol] !== null
-            );
-        });
+    // Check left side
+    while (leftCol >= 0 && this.board[row][leftCol]) {
+        isPartOfHorizontalWord = true;
+        leftCol--;
+    }
+    
+    // Check right side
+    while (rightCol < 15 && this.board[row][rightCol]) {
+        isPartOfHorizontalWord = true;
+        rightCol++;
     }
 
+    // Check vertical line
+    let isPartOfVerticalWord = false;
+    let topRow = row - 1;
+    let bottomRow = row + 1;
+    
+    // Check above
+    while (topRow >= 0 && this.board[topRow][col]) {
+        isPartOfVerticalWord = true;
+        topRow--;
+    }
+    
+    // Check below
+    while (bottomRow < 15 && this.board[bottomRow][col]) {
+        isPartOfVerticalWord = true;
+        bottomRow++;
+    }
+
+    return isPartOfHorizontalWord || isPartOfVerticalWord;
+}
+
+checkAdjacentTiles(row, col) {
+    const directions = [
+        [-1, 0],  // up
+        [1, 0],   // down
+        [0, -1],  // left
+        [0, 1]    // right
+    ];
+
+    return directions.some(([dx, dy]) => {
+        const newRow = row + dx;
+        const newCol = col + dy;
+        return (
+            newRow >= 0 && newRow < 15 &&
+            newCol >= 0 && newCol < 15 &&
+            this.board[newRow][newCol] !== null
+        );
+    });
+}
 
     placeTile(tile, row, col) {
         if (this.board[row][col]) {
