@@ -29,7 +29,42 @@ class ScrabbleGame {
 
     async aiTurn() {
         console.log("AI thinking...");
+        
+        // Show "AI is thinking..." message before checking moves
+        const thinkingMessage = document.createElement('div');
+        thinkingMessage.className = 'ai-thinking-message';
+        thinkingMessage.textContent = 'AI is thinking...';
+        thinkingMessage.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f0f0f0;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(thinkingMessage);
+        setTimeout(() => thinkingMessage.style.opacity = '1', 100);
+    
         console.log("AI rack:", this.aiRack.map(t => t.letter));
+        
+        // Check if AI can make any valid moves
+        if (!this.canAIMakeValidMove()) {
+            console.log("AI has no valid moves available");
+            setTimeout(() => {
+                thinkingMessage.style.opacity = '0';
+                setTimeout(() => {
+                    thinkingMessage.remove();
+                    this.skipAITurn();
+                }, 300);
+            }, 1000);
+            return;
+        }
+    
         const possiblePlays = this.findAIPossiblePlays();
         console.log("Possible plays found:", possiblePlays.length);
         
@@ -38,39 +73,56 @@ class ScrabbleGame {
             // Sort plays by score and take the best one
             const bestPlay = possiblePlays.sort((a, b) => b.score - a.score)[0];
             console.log("Choosing play:", bestPlay);
-            this.executeAIPlay(bestPlay);
+            
+            // Remove thinking message before executing play
+            setTimeout(() => {
+                thinkingMessage.style.opacity = '0';
+                setTimeout(() => {
+                    thinkingMessage.remove();
+                    this.executeAIPlay(bestPlay);
+                }, 300);
+            }, 1000);
         } else {
             console.log("AI skips turn - no valid plays found");
-            this.consecutiveSkips++;
-            this.currentTurn = 'player';
-            this.updateGameState();
+            setTimeout(() => {
+                thinkingMessage.style.opacity = '0';
+                setTimeout(() => {
+                    thinkingMessage.remove();
+                    this.skipAITurn();
+                }, 300);
+            }, 1000);
         }
     }
     
-
     findAIPossiblePlays() {
         const possiblePlays = [];
         const anchors = this.findAnchors();
         const availableLetters = this.aiRack.map(tile => tile.letter);
+        const existingWords = this.getExistingWords();
         
         console.log("Available letters:", availableLetters);
         console.log("Anchors found:", anchors);
+        console.log("Existing words:", existingWords);
     
         // If it's the first move or no tiles on board
         if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
-            // Try all possible words from the rack
             const words = Array.from(this.dictionary);
             for (const word of words) {
                 if (word.length >= 2 && word.length <= availableLetters.length) {
+                    const upperWord = word.toUpperCase();
+                    // Skip if word already exists on board
+                    if (existingWords.includes(upperWord)) {
+                        console.log(`Skipping ${upperWord} - already exists on board`);
+                        continue;
+                    }
                     if (this.canFormWord(word, '', '', availableLetters)) {
-                        // For first move, try to place through center
                         const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
-                        if (this.isValidAIPlacement(word.toUpperCase(), centerPos.row, centerPos.col, true)) {
+                        if (this.isValidAIPlacement(upperWord, centerPos.row, centerPos.col, true)) {
                             possiblePlays.push({
-                                word: word.toUpperCase(),
+                                word: upperWord,
                                 startPos: centerPos,
                                 isHorizontal: true,
-                                score: this.calculatePotentialScore(word.toUpperCase(), centerPos.row, centerPos.col, true)
+                                score: this.calculatePotentialScore(upperWord, centerPos.row, centerPos.col, true)
                             });
                         }
                     }
@@ -79,11 +131,8 @@ class ScrabbleGame {
         } else {
             // For subsequent moves
             anchors.forEach(anchor => {
-                // Try horizontal placements
                 const hPrefix = this.getPrefix(anchor, true);
                 const hSuffix = this.getSuffix(anchor, true);
-                
-                // Try vertical placements
                 const vPrefix = this.getPrefix(anchor, false);
                 const vSuffix = this.getSuffix(anchor, false);
                 
@@ -91,16 +140,24 @@ class ScrabbleGame {
                 for (const word of this.dictionary) {
                     const upperWord = word.toUpperCase();
                     
+                    // Skip if word already exists on board
+                    if (existingWords.includes(upperWord)) {
+                        console.log(`Skipping ${upperWord} - already exists on board`);
+                        continue;
+                    }
+                    
                     // Check horizontal placement
                     if (this.canFormWord(upperWord, hPrefix, hSuffix, availableLetters)) {
                         const startCol = anchor.col - hPrefix.length;
                         if (this.isValidAIPlacement(upperWord, anchor.row, startCol, true)) {
+                            const score = this.calculatePotentialScore(upperWord, anchor.row, startCol, true);
                             possiblePlays.push({
                                 word: upperWord,
                                 startPos: { row: anchor.row, col: startCol },
                                 isHorizontal: true,
-                                score: this.calculatePotentialScore(upperWord, anchor.row, startCol, true)
+                                score
                             });
+                            console.log(`Found valid horizontal play: ${upperWord} for ${score} points`);
                         }
                     }
                     
@@ -108,21 +165,33 @@ class ScrabbleGame {
                     if (this.canFormWord(upperWord, vPrefix, vSuffix, availableLetters)) {
                         const startRow = anchor.row - vPrefix.length;
                         if (this.isValidAIPlacement(upperWord, startRow, anchor.col, false)) {
+                            const score = this.calculatePotentialScore(upperWord, startRow, anchor.col, false);
                             possiblePlays.push({
                                 word: upperWord,
                                 startPos: { row: startRow, col: anchor.col },
                                 isHorizontal: false,
-                                score: this.calculatePotentialScore(upperWord, startRow, anchor.col, false)
+                                score
                             });
+                            console.log(`Found valid vertical play: ${upperWord} for ${score} points`);
                         }
                     }
                 }
             });
         }
     
-        console.log("Found possible plays:", possiblePlays);
-        return possiblePlays;
-    }    
+        // Filter out any duplicate plays or plays with existing words
+        const uniquePlays = possiblePlays.filter((play, index, self) =>
+            index === self.findIndex((p) => (
+                p.word === play.word &&
+                p.startPos.row === play.startPos.row &&
+                p.startPos.col === play.startPos.col &&
+                p.isHorizontal === play.isHorizontal
+            ))
+        );
+    
+        console.log(`Found ${uniquePlays.length} possible plays after filtering`);
+        return uniquePlays;
+    }
 
     findSimpleWords(letters) {
         const words = new Set();
@@ -251,6 +320,54 @@ class ScrabbleGame {
         return suffix;
     }
 
+    canAIMakeValidMove() {
+        if (this.aiRack.length === 0) return false;
+        
+        const availableLetters = this.aiRack.map(tile => tile.letter);
+        console.log("Checking possible moves with letters:", availableLetters);
+        
+        // If it's the first move, check if we can form any valid word
+        if (this.isFirstMove) {
+            for (const word of this.dictionary) {
+                if (word.length >= 2 && word.length <= availableLetters.length) {
+                    if (this.canFormWord(word, '', '', availableLetters)) {
+                        console.log("Found possible first move:", word);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    
+        // Find anchor points for subsequent moves
+        const anchors = this.findAnchors();
+        if (anchors.length === 0) return false;
+    
+        // Check each anchor point for possible plays
+        for (const anchor of anchors) {
+            // Try horizontal placements
+            const hPrefix = this.getPrefix(anchor, true);
+            const hSuffix = this.getSuffix(anchor, true);
+            
+            // Try vertical placements
+            const vPrefix = this.getPrefix(anchor, false);
+            const vSuffix = this.getSuffix(anchor, false);
+            
+            // Check if we can form any valid words at this anchor
+            for (const word of this.dictionary) {
+                if (this.canFormWord(word, hPrefix, hSuffix, availableLetters) ||
+                    this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
+                    console.log("Found possible play:", word);
+                    return true;
+                }
+            }
+        }
+        
+        console.log("No valid moves found");
+        return false;
+    }
+    
+
     canFormWord(word, prefix, suffix, availableLetters) {
         // Convert everything to uppercase for comparison
         word = word.toUpperCase();
@@ -315,42 +432,11 @@ class ScrabbleGame {
     }
 
     executeAIPlay(play) {
-        const {word, startPos, isHorizontal} = play;
+        const {word, startPos, isHorizontal, score} = play;
         console.log("AI playing:", word, "at", startPos, isHorizontal ? "horizontally" : "vertically");
-        
-        // Show "AI is thinking..." message
-        const thinkingMessage = document.createElement('div');
-        thinkingMessage.className = 'ai-thinking-message';
-        thinkingMessage.textContent = 'AI is thinking...';
-        thinkingMessage.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f0f0f0;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(thinkingMessage);
-        
-        // Fade in thinking message
-        setTimeout(() => thinkingMessage.style.opacity = '1', 100);
     
-        // Add artificial thinking delay
-        setTimeout(async () => {
-            // Fade out and remove thinking message
-            thinkingMessage.style.opacity = '0';
-            setTimeout(() => thinkingMessage.remove(), 300);
-    
+        return new Promise(async (resolve) => {
             // Start placing tiles with animation
-            await animateLetterPlacements();
-        }, 2000); // AI "thinking" time
-    
-        const animateLetterPlacements = async () => {
             for (let i = 0; i < word.length; i++) {
                 const letter = word[i];
                 const row = isHorizontal ? startPos.row : startPos.row + i;
@@ -373,7 +459,7 @@ class ScrabbleGame {
                         const targetCell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                         const targetRect = targetCell.getBoundingClientRect();
                         
-                        // Start position (from top of screen)
+                        // Animation setup
                         animatedTile.style.cssText = `
                             position: fixed;
                             top: -50px;
@@ -387,26 +473,21 @@ class ScrabbleGame {
                         
                         // Animate tile placement
                         await new Promise(resolve => {
-                            // Short delay before starting animation
                             setTimeout(() => {
-                                // Move tile to target position
                                 animatedTile.style.top = `${targetRect.top}px`;
                                 animatedTile.style.transform = 'rotate(0deg)';
                                 
-                                // Add bounce effect at the end
                                 setTimeout(() => {
+                                    // Add bounce effect
                                     animatedTile.style.transform = 'rotate(0deg) scale(1.2)';
                                     setTimeout(() => {
                                         animatedTile.style.transform = 'rotate(0deg) scale(1)';
                                     }, 100);
                                 }, 800);
     
-                                // Add tile to board after animation
+                                // Place tile on board
                                 setTimeout(() => {
-                                    // Add flash effect to cell
                                     targetCell.classList.add('tile-placed');
-                                    
-                                    // Remove animated tile and update board
                                     animatedTile.remove();
                                     this.board[row][col] = this.aiRack.splice(tileIndex, 1)[0];
                                     targetCell.innerHTML = `
@@ -414,7 +495,6 @@ class ScrabbleGame {
                                         <span class="points">${tile.value}</span>
                                     `;
                                     
-                                    // Remove flash effect
                                     setTimeout(() => {
                                         targetCell.classList.remove('tile-placed');
                                     }, 500);
@@ -432,20 +512,17 @@ class ScrabbleGame {
     
             // Update game state after all animations complete
             setTimeout(() => {
-                this.aiScore += play.score;
+                this.aiScore += score;
                 this.isFirstMove = false;
                 this.consecutiveSkips = 0;
                 this.currentTurn = 'player';
-                this.addToMoveHistory('Computer', word, play.score);
+                this.addToMoveHistory('Computer', word, score);
                 this.fillRacks();
                 this.updateGameState();
+                resolve();
             }, 500);
-        };
+        });
     }
-    
-    
-    
-    
 
     findBestMove() {
         const possibleMoves = this.findPossibleMoves();
@@ -547,6 +624,13 @@ class ScrabbleGame {
     }
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
+        // Keep track of words already on the board
+        const existingWords = this.getExistingWords();
+        if (existingWords.includes(word)) {
+            console.log(`Word ${word} already exists on the board`);
+            return false;
+        }
+    
         // 1. Check basic boundary conditions
         if (horizontal) {
             if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
@@ -690,6 +774,50 @@ class ScrabbleGame {
         return hasAdjacentTile || touchesExistingTile;
     }
     
+    getExistingWords() {
+        const words = new Set();
+        
+        // Check horizontal words
+        for (let row = 0; row < 15; row++) {
+            let word = '';
+            for (let col = 0; col < 15; col++) {
+                if (this.board[row][col]) {
+                    word += this.board[row][col].letter;
+                } else if (word.length > 1) {
+                    words.add(word);
+                    word = '';
+                } else {
+                    word = '';
+                }
+            }
+            if (word.length > 1) {
+                words.add(word);
+            }
+        }
+    
+        // Check vertical words
+        for (let col = 0; col < 15; col++) {
+            let word = '';
+            for (let row = 0; row < 15; row++) {
+                if (this.board[row][col]) {
+                    word += this.board[row][col].letter;
+                } else if (word.length > 1) {
+                    words.add(word);
+                    word = '';
+                } else {
+                    word = '';
+                }
+            }
+            if (word.length > 1) {
+                words.add(word);
+            }
+        }
+    
+        const existingWords = Array.from(words);
+        console.log("Existing words on board:", existingWords);
+        return existingWords;
+    }
+    
 
     calculatePotentialScore(word, startRow, startCol, horizontal) {
         let score = 0;
@@ -752,10 +880,13 @@ class ScrabbleGame {
         console.log("AI skipping turn");
         this.consecutiveSkips++;
         this.currentTurn = 'player';
-        this.updateGameState();
         
         if (this.consecutiveSkips >= 4) {
             this.checkGameEnd();
+        } else {
+            // Optionally record skip in move history
+            this.addToMoveHistory('Computer', 'SKIP', 0);
+            this.updateGameState();
         }
     }
 
