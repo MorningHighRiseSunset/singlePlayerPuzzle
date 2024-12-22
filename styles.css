@@ -367,3 +367,28 @@ button:hover {
 .tile-rack.ai-rack {
     background: linear-gradient(145deg, #42a5f5, #1976d2);  /* Lighter blue gradient */
 }
+
+.board-cell.placement-close {
+    background: linear-gradient(145deg, 
+        rgba(33, 150, 243, 0.8),  /* Light blue */
+        rgba(25, 118, 210, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.placement-medium {
+    background: linear-gradient(145deg, 
+        rgba(13, 71, 161, 0.8),  /* Medium blue */
+        rgba(21, 101, 192, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.placement-far {
+    background: linear-gradient(145deg, 
+        rgba(0, 33, 113, 0.8),  /* Dark blue */
+        rgba(13, 71, 161, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.valid-placement {
+    animation: pulse 1.5s infinite;
+}

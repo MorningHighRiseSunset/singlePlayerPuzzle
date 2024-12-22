@@ -1294,26 +1294,57 @@ class ScrabbleGame {
             return row === 7 && col === 7;
         }
     
-        // If there are already placed tiles in this turn
-        if (this.placedTiles.length > 0) {
-            // Get the direction from the already placed tiles
-            const firstPlaced = this.placedTiles[0];
-            const isCurrentHorizontal = row === firstPlaced.row;
-            const isCurrentVertical = col === firstPlaced.col;
+        // For subsequent moves, check distance to existing tiles
+        const distance = this.getMinDistanceToWords(row, col);
+        return distance <= 5; // Allow placement up to 5 blocks away
+    }
+
+    highlightValidPlacements() {
+        // Remove existing highlights
+        document.querySelectorAll('.board-cell').forEach(cell => {
+            cell.classList.remove('placement-close', 'placement-medium', 'placement-far', 'valid-placement');
+        });
     
-            // All tiles must be in the same line
-            for (const placed of this.placedTiles) {
-                if (isCurrentHorizontal && placed.row !== row) return false;
-                if (isCurrentVertical && placed.col !== col) return false;
+        // Only highlight if it's player's turn
+        if (this.currentTurn !== 'player') return;
+    
+        // Check each empty cell
+        for (let row = 0; row < 15; row++) {
+            for (let col = 0; col < 15; col++) {
+                if (!this.board[row][col]) {
+                    const distance = this.getMinDistanceToWords(row, col);
+                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    
+                    if (distance <= 5) {
+                        cell.classList.add('valid-placement');
+                        
+                        if (distance <= 2) {
+                            cell.classList.add('placement-close');
+                        } else if (distance <= 4) {
+                            cell.classList.add('placement-medium');
+                        } else {
+                            cell.classList.add('placement-far');
+                        }
+                    }
+                }
             }
-    
-            // Must be in same line as existing tiles
-            return isCurrentHorizontal || isCurrentVertical;
         }
+    }
     
-        // For a new word with no tiles placed this turn yet,
-        // just check if it connects to any existing tiles
-        return this.isFirstMove || this.checkAdjacentTiles(row, col);
+    getMinDistanceToWords(row, col) {
+        let minDistance = Infinity;
+        
+        // Check distance to all occupied cells
+        for (let i = 0; i < 15; i++) {
+            for (let j = 0; j < 15; j++) {
+                if (this.board[i][j]) {
+                    const distance = Math.abs(row - i) + Math.abs(col - j);
+                    minDistance = Math.min(minDistance, distance);
+                }
+            }
+        }
+        
+        return minDistance;
     }
 
     checkValidStartingPosition(row, col) {
@@ -1381,152 +1412,158 @@ checkAdjacentTiles(row, col) {
     });
 }
 
-    placeTile(tile, row, col) {
-        if (this.board[row][col]) {
-            alert("This cell is already occupied!");
-            return;
-        }
-    
-        // If it's a blank tile (asterisk), show letter selection dialog
-        if (tile.letter === '*') {
-            const letterSelectionDialog = document.createElement('div');
-            letterSelectionDialog.className = 'letter-selection-dialog';
-            letterSelectionDialog.innerHTML = `
-                <div class="dialog-content">
-                    <h3>Choose a letter for the blank tile</h3>
-                    <div class="letter-grid">
-                        ${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => `
-                            <button class="letter-choice">${letter}</button>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-    
-            // Add styles for the dialog
-            const style = document.createElement('style');
-            style.textContent = `
-                .letter-selection-dialog {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                }
-                .dialog-content {
-                    background: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                    max-width: 400px;
-                    width: 90%;
-                }
-                .letter-grid {
-                    display: grid;
-                    grid-template-columns: repeat(6, 1fr);
-                    gap: 5px;
-                    margin-top: 15px;
-                }
-                .letter-choice {
-                    padding: 10px;
-                    border: 1px solid #ccc;
-                    background: #f0f0f0;
-                    cursor: pointer;
-                    border-radius: 5px;
-                    transition: all 0.2s;
-                }
-                .letter-choice:hover {
-                    background: #e0e0e0;
-                    transform: scale(1.1);
-                }
-                h3 {
-                    text-align: center;
-                    margin-top: 0;
-                    color: #333;
-                }
-            `;
-            document.head.appendChild(style);
-            document.body.appendChild(letterSelectionDialog);
-    
-            // Handle letter selection
-            const buttons = letterSelectionDialog.querySelectorAll('.letter-choice');
-            buttons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const selectedLetter = button.textContent;
-                    
-                    // Create a new tile object with the selected letter but keep point value as 0
-                    const blankTile = {
-                        ...tile,
-                        letter: selectedLetter,
-                        originalLetter: '*', // Keep track that this was originally a blank
-                        value: 0 // Ensure blank tiles remain worth 0 points
-                    };
-    
-                    // Place the tile with the selected letter
-                    this.board[row][col] = blankTile;
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    cell.innerHTML = `
-                        ${selectedLetter}
-                        <span class="points">0</span>
-                        <span class="blank-indicator">★</span>
-                    `;
-    
-                    // Add special styling for blank tiles
-                    const blankStyle = document.createElement('style');
-                    blankStyle.textContent = `
-                        .blank-indicator {
-                            position: absolute;
-                            top: 2px;
-                            right: 2px;
-                            font-size: 10px;
-                            color: #666;
-                        }
-                    `;
-                    document.head.appendChild(blankStyle);
-    
-                    // Remove tile from rack
-                    const tileIndex = this.playerRack.indexOf(tile);
-                    if (tileIndex > -1) {
-                        this.playerRack.splice(tileIndex, 1);
-                    }
-    
-                    // Add to placed tiles
-                    this.placedTiles.push({ tile: blankTile, row, col });
-    
-                    // Update rack display
-                    this.renderRack();
-    
-                    // Remove the dialog
-                    letterSelectionDialog.remove();
-                });
-            });
-    
-        } else {
-            // Normal tile placement (non-blank tile)
-            this.board[row][col] = tile;
-            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            cell.innerHTML = `
-                ${tile.letter}
-                <span class="points">${tile.value}</span>
-            `;
-            
-            // Remove tile from rack
-            const tileIndex = this.playerRack.indexOf(tile);
-            if (tileIndex > -1) {
-                this.playerRack.splice(tileIndex, 1);
-            }
-            
-            // Add to placed tiles
-            this.placedTiles.push({ tile, row, col });
-            
-            // Update rack display
-            this.renderRack();
-        }
+placeTile(tile, row, col) {
+    if (this.board[row][col]) {
+        alert("This cell is already occupied!");
+        return;
     }
+
+    // If it's a blank tile (asterisk), show letter selection dialog
+    if (tile.letter === '*') {
+        const letterSelectionDialog = document.createElement('div');
+        letterSelectionDialog.className = 'letter-selection-dialog';
+        letterSelectionDialog.innerHTML = `
+            <div class="dialog-content">
+                <h3>Choose a letter for the blank tile</h3>
+                <div class="letter-grid">
+                    ${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => `
+                        <button class="letter-choice">${letter}</button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        // Add styles for the dialog
+        const style = document.createElement('style');
+        style.textContent = `
+            .letter-selection-dialog {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+            .dialog-content {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                max-width: 400px;
+                width: 90%;
+            }
+            .letter-grid {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 5px;
+                margin-top: 15px;
+            }
+            .letter-choice {
+                padding: 10px;
+                border: 1px solid #ccc;
+                background: #f0f0f0;
+                cursor: pointer;
+                border-radius: 5px;
+                transition: all 0.2s;
+            }
+            .letter-choice:hover {
+                background: #e0e0e0;
+                transform: scale(1.1);
+            }
+            h3 {
+                text-align: center;
+                margin-top: 0;
+                color: #333;
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(letterSelectionDialog);
+
+        // Handle letter selection
+        const buttons = letterSelectionDialog.querySelectorAll('.letter-choice');
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                const selectedLetter = button.textContent;
+                
+                // Create a new tile object with the selected letter but keep point value as 0
+                const blankTile = {
+                    ...tile,
+                    letter: selectedLetter,
+                    originalLetter: '*', // Keep track that this was originally a blank
+                    value: 0 // Ensure blank tiles remain worth 0 points
+                };
+
+                // Place the tile with the selected letter
+                this.board[row][col] = blankTile;
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                cell.innerHTML = `
+                    ${selectedLetter}
+                    <span class="points">0</span>
+                    <span class="blank-indicator">★</span>
+                `;
+
+                // Add special styling for blank tiles
+                const blankStyle = document.createElement('style');
+                blankStyle.textContent = `
+                    .blank-indicator {
+                        position: absolute;
+                        top: 2px;
+                        right: 2px;
+                        font-size: 10px;
+                        color: #666;
+                    }
+                `;
+                document.head.appendChild(blankStyle);
+
+                // Remove tile from rack
+                const tileIndex = this.playerRack.indexOf(tile);
+                if (tileIndex > -1) {
+                    this.playerRack.splice(tileIndex, 1);
+                }
+
+                // Add to placed tiles
+                this.placedTiles.push({ tile: blankTile, row, col });
+
+                // Update rack display
+                this.renderRack();
+
+                // Remove the dialog
+                letterSelectionDialog.remove();
+                
+                // Update valid placement highlights
+                this.highlightValidPlacements();
+            });
+        });
+
+    } else {
+        // Normal tile placement (non-blank tile)
+        this.board[row][col] = tile;
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        cell.innerHTML = `
+            ${tile.letter}
+            <span class="points">${tile.value}</span>
+        `;
+        
+        // Remove tile from rack
+        const tileIndex = this.playerRack.indexOf(tile);
+        if (tileIndex > -1) {
+            this.playerRack.splice(tileIndex, 1);
+        }
+        
+        // Add to placed tiles
+        this.placedTiles.push({ tile, row, col });
+        
+        // Update rack display
+        this.renderRack();
+        
+        // Update valid placement highlights
+        this.highlightValidPlacements();
+    }
+}
     
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
@@ -2069,6 +2106,14 @@ checkAdjacentTiles(row, col) {
     
 
     setupEventListeners() {
+        // Initial highlight of valid placements
+        this.highlightValidPlacements();
+    
+        // Update highlights when game state changes
+        document.addEventListener('click', () => {
+            this.highlightValidPlacements();
+        });
+    
         document.getElementById('play-word').addEventListener('click', () => this.playWord());
         document.getElementById('shuffle-rack').addEventListener('click', async () => {
             const rack = document.getElementById('tile-rack');
@@ -2115,74 +2160,73 @@ checkAdjacentTiles(row, col) {
             this.consecutiveSkips++;
             this.currentTurn = 'ai';
             this.updateGameState();
+            this.highlightValidPlacements();
             if (!this.checkGameEnd()) {
                 this.aiTurn();
             }
         });
-
-        // Add this to the setupEventListeners method
-document.getElementById('print-history').addEventListener('click', () => {
-    const printWindow = window.open('', '_blank');
-    const gameDate = new Date().toLocaleString();
     
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Scrabble Game History - ${gameDate}</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 20px;
-                        line-height: 1.6;
-                    }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                        padding-bottom: 10px;
-                        border-bottom: 2px solid #333;
-                    }
-                    .move {
-                        margin: 10px 0;
-                        padding: 5px;
-                        border-bottom: 1px solid #eee;
-                    }
-                    .scores {
-                        margin: 20px 0;
-                        padding: 10px;
-                        background: #f5f5f5;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>Scrabble Game History</h1>
-                    <p>Game played on: ${gameDate}</p>
-                </div>
-                <div class="scores">
-                    <h3>Final Scores:</h3>
-                    <p>Player: ${this.playerScore}</p>
-                    <p>Computer: ${this.aiScore}</p>
-                </div>
-                <h3>Move History:</h3>
-                ${this.moveHistory.map((move, index) => `
-                    <div class="move">
-                        ${index + 1}. ${move.player}: "${move.word}" for ${move.score} points
-                    </div>
-                `).join('')}
-            </body>
-        </html>
-    `);
+        document.getElementById('print-history').addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            const gameDate = new Date().toLocaleString();
+            
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Scrabble Game History - ${gameDate}</title>
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                margin: 20px;
+                                line-height: 1.6;
+                            }
+                            .header {
+                                text-align: center;
+                                margin-bottom: 20px;
+                                padding-bottom: 10px;
+                                border-bottom: 2px solid #333;
+                            }
+                            .move {
+                                margin: 10px 0;
+                                padding: 5px;
+                                border-bottom: 1px solid #eee;
+                            }
+                            .scores {
+                                margin: 20px 0;
+                                padding: 10px;
+                                background: #f5f5f5;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <h1>Scrabble Game History</h1>
+                            <p>Game played on: ${gameDate}</p>
+                        </div>
+                        <div class="scores">
+                            <h3>Final Scores:</h3>
+                            <p>Player: ${this.playerScore}</p>
+                            <p>Computer: ${this.aiScore}</p>
+                        </div>
+                        <h3>Move History:</h3>
+                        ${this.moveHistory.map((move, index) => `
+                            <div class="move">
+                                ${index + 1}. ${move.player}: "${move.word}" for ${move.score} points
+                            </div>
+                        `).join('')}
+                    </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
     
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-});
-
-
-        // Add this event listener
         document.getElementById('recall-tiles').addEventListener('click', () => {
             if (this.currentTurn === 'player') {
                 this.resetPlacedTiles();
+                this.highlightValidPlacements();
             } else {
                 alert("You can only recall tiles during your turn!");
             }
