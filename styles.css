@@ -318,3 +318,50 @@ button:hover {
         opacity: 0;
     }
 }
+
+.animated-tile {
+    width: 40px;
+    height: 40px;
+    background-color: #f4d03f;
+    border: 2px solid #d4ac0d;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    pointer-events: none;
+}
+
+.animated-tile .points {
+    font-size: 0.7em;
+    margin-top: 2px;
+}
+
+@keyframes tilePlace {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        background-color: #ffe97f;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+}
+
+.board-cell.tile-placed {
+    animation: tilePlace 0.5s ease-out;
+}
+
+.ai-thinking-message {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    color: #333;
+}

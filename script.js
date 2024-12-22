@@ -318,40 +318,131 @@ class ScrabbleGame {
         const {word, startPos, isHorizontal} = play;
         console.log("AI playing:", word, "at", startPos, isHorizontal ? "horizontally" : "vertically");
         
-        // Place each letter
-        [...word].forEach((letter, index) => {
-            const row = isHorizontal ? startPos.row : startPos.row + index;
-            const col = isHorizontal ? startPos.col + index : startPos.col;
-            
-            // Only place if the cell is empty
-            if (!this.board[row][col]) {
-                // Find matching tile in AI's rack
-                const tileIndex = this.aiRack.findIndex(t => t.letter === letter);
-                if (tileIndex !== -1) {
-                    const tile = this.aiRack.splice(tileIndex, 1)[0];
-                    this.board[row][col] = tile;
-                    
-                    // Update visual board
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    cell.innerHTML = `
-                        ${tile.letter}
-                        <span class="points">${tile.value}</span>
-                    `;
+        // Show "AI is thinking..." message
+        const thinkingMessage = document.createElement('div');
+        thinkingMessage.className = 'ai-thinking-message';
+        thinkingMessage.textContent = 'AI is thinking...';
+        thinkingMessage.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f0f0f0;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+        document.body.appendChild(thinkingMessage);
+        
+        // Fade in thinking message
+        setTimeout(() => thinkingMessage.style.opacity = '1', 100);
+    
+        // Add artificial thinking delay
+        setTimeout(async () => {
+            // Fade out and remove thinking message
+            thinkingMessage.style.opacity = '0';
+            setTimeout(() => thinkingMessage.remove(), 300);
+    
+            // Start placing tiles with animation
+            await animateLetterPlacements();
+        }, 2000); // AI "thinking" time
+    
+        const animateLetterPlacements = async () => {
+            for (let i = 0; i < word.length; i++) {
+                const letter = word[i];
+                const row = isHorizontal ? startPos.row : startPos.row + i;
+                const col = isHorizontal ? startPos.col + i : startPos.col;
+                
+                if (!this.board[row][col]) {
+                    const tileIndex = this.aiRack.findIndex(t => t.letter === letter);
+                    if (tileIndex !== -1) {
+                        const tile = this.aiRack[tileIndex];
+                        
+                        // Create animated tile element
+                        const animatedTile = document.createElement('div');
+                        animatedTile.className = 'tile animated-tile';
+                        animatedTile.innerHTML = `
+                            ${tile.letter}
+                            <span class="points">${tile.value}</span>
+                        `;
+                        
+                        // Get target cell position
+                        const targetCell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                        const targetRect = targetCell.getBoundingClientRect();
+                        
+                        // Start position (from top of screen)
+                        animatedTile.style.cssText = `
+                            position: fixed;
+                            top: -50px;
+                            left: ${targetRect.left}px;
+                            transform: rotate(-180deg);
+                            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                            z-index: 1000;
+                        `;
+                        
+                        document.body.appendChild(animatedTile);
+                        
+                        // Animate tile placement
+                        await new Promise(resolve => {
+                            // Short delay before starting animation
+                            setTimeout(() => {
+                                // Move tile to target position
+                                animatedTile.style.top = `${targetRect.top}px`;
+                                animatedTile.style.transform = 'rotate(0deg)';
+                                
+                                // Add bounce effect at the end
+                                setTimeout(() => {
+                                    animatedTile.style.transform = 'rotate(0deg) scale(1.2)';
+                                    setTimeout(() => {
+                                        animatedTile.style.transform = 'rotate(0deg) scale(1)';
+                                    }, 100);
+                                }, 800);
+    
+                                // Add tile to board after animation
+                                setTimeout(() => {
+                                    // Add flash effect to cell
+                                    targetCell.classList.add('tile-placed');
+                                    
+                                    // Remove animated tile and update board
+                                    animatedTile.remove();
+                                    this.board[row][col] = this.aiRack.splice(tileIndex, 1)[0];
+                                    targetCell.innerHTML = `
+                                        ${tile.letter}
+                                        <span class="points">${tile.value}</span>
+                                    `;
+                                    
+                                    // Remove flash effect
+                                    setTimeout(() => {
+                                        targetCell.classList.remove('tile-placed');
+                                    }, 500);
+                                    
+                                    resolve();
+                                }, 1000);
+                            }, 200);
+                        });
+                        
+                        // Delay between letters
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
                 }
             }
-        });
     
-        this.aiScore += play.score;
-        this.isFirstMove = false;
-        this.consecutiveSkips = 0;
-        this.currentTurn = 'player';
-        this.addToMoveHistory('Computer', word, play.score);
-        this.fillRacks();
-        this.updateGameState();
-        
-        // Debug info
-        console.log("AI rack after play:", this.aiRack.map(t => t.letter));
+            // Update game state after all animations complete
+            setTimeout(() => {
+                this.aiScore += play.score;
+                this.isFirstMove = false;
+                this.consecutiveSkips = 0;
+                this.currentTurn = 'player';
+                this.addToMoveHistory('Computer', word, play.score);
+                this.fillRacks();
+                this.updateGameState();
+            }, 500);
+        };
     }
+    
     
     
     
