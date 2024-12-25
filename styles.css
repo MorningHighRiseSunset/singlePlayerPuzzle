@@ -12,15 +12,20 @@ body {
     padding: 20px;
     background: linear-gradient(145deg, #e6e6e6, #f0f0f0);
     font-family: Arial, sans-serif;
-    perspective: 1000px;
 }
 
 .game-container {
     display: flex;
     gap: 20px;
-    max-width: 1400px; /* Increased to accommodate the new panel */
+    max-width: 1400px;
     margin: 0 auto;
-    transform-style: preserve-3d;
+}
+
+.board-container {
+    position: relative;
+    perspective: 1000px;
+    perspective-origin: center;
+    z-index: 1;
 }
 
 .moves-panel {
@@ -54,43 +59,47 @@ body {
     background-color: var(--board-border);
     padding: 2px;
     border: 2px solid var(--primary-blue);
-    box-shadow: 
-        0 15px 35px rgba(0, 0, 0, 0.3),
-        0 5px 15px rgba(0, 0, 0, 0.2);
-    transform: rotateX(5deg);
-    transform-style: preserve-3d;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1;
+    transform-style: flat;
 }
 
 .board-cell {
+    position: relative;
+    z-index: 2;
+    pointer-events: all;
     background: linear-gradient(145deg, #ffffff, #e6e6e6);
     border: 1px solid #ddd;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    position: relative;
     transition: all 0.3s;
-    transform-style: preserve-3d;
     box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.7),
                 inset -1px -1px 3px rgba(0, 0, 0, 0.1);
+    transform: translateZ(0);
 }
 
 .board-cell.tw { 
     background: linear-gradient(145deg, #002171, #0d47a1);
     color: white;
 }
+
 .board-cell.dw { 
     background: linear-gradient(145deg, #0d47a1, #1565c0);
+    color: white;
 }
+
 .board-cell.tl { 
     background: linear-gradient(145deg, #003892, #1565c0);
     color: white;
 }
+
 .board-cell.dl { 
     background: linear-gradient(145deg, #2196f3, #1976d2);
+    color: white;
 }
-
-
 
 .tile-rack {
     margin-top: 20px;
@@ -104,44 +113,63 @@ body {
     box-shadow: 
         0 10px 20px rgba(0, 0, 0, 0.2),
         0 5px 8px rgba(0, 0, 0, 0.1);
-    transform: rotateX(5deg);
 }
 
 .tile {
+    position: relative;
     width: 40px;
     height: 40px;
-    background: linear-gradient(145deg, #ffffff, #e6e6e6);
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
     border: 1px solid #ccc;
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    cursor: move;
-    position: relative;
+    cursor: grab;
     transform-style: preserve-3d;
-    transition: all 0.3s;
-    transform: translateZ(5px); /* Add initial 3D lift */
+    transform: translateZ(2px);
+    transition: all 0.3s ease;
+    /* Enhanced 3D effect */
     box-shadow: 
-        0 5px 15px rgba(0, 0, 0, 0.2),
-        0 3px 5px rgba(0, 0, 0, 0.1),
-        /* Add side shadows for 3D effect */
-        -1px 0 2px rgba(0, 0, 0, 0.05),
-        1px 0 2px rgba(0, 0, 0, 0.05);
-    padding-bottom: 5px;
+        2px 2px 5px rgba(0, 0, 0, 0.2),  /* Main shadow */
+        inset -2px -2px 5px rgba(0, 0, 0, 0.1),  /* Inner shadow */
+        inset 2px 2px 5px rgba(255, 255, 255, 0.5);  /* Inner highlight */
+}
+
+.tile:active {
+    cursor: grabbing;
+    transform: translateZ(1px) translateY(0);
+    box-shadow: 
+        1px 1px 3px rgba(0, 0, 0, 0.2),
+        inset -1px -1px 3px rgba(0, 0, 0, 0.1),
+        inset 1px 1px 3px rgba(255, 255, 255, 0.5);
 }
 
 .tile::before {
     content: '';
     position: absolute;
     width: 100%;
-    height: 100%;
-    background: linear-gradient(145deg, #e6e6e6, #d4d4d4);
-    transform: translateZ(-5px);
-    top: 2px;
+    height: 4px;
+    bottom: -4px;
     left: 0;
-    border-radius: 4px;
-    z-index: -1;
+    background: linear-gradient(to bottom, #d4d4d4, #bbb);
+    transform: rotateX(-90deg);
+    transform-origin: top;
+    border-radius: 0 0 4px 4px;
+}
+
+.tile::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 100%;
+    top: 0;
+    right: -4px;
+    background: linear-gradient(to right, #d4d4d4, #bbb);
+    transform: rotateY(90deg);
+    transform-origin: left;
+    border-radius: 0 4px 4px 0;
 }
 
 .points {
@@ -152,23 +180,24 @@ body {
     font-weight: normal;
     color: #000000;
     text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-    transform: translateZ(1px);
 }
-
 
 .tile:hover {
-    transform: translateY(-5px) translateZ(10px) rotateX(10deg);
+    transform: translateZ(4px) translateY(-2px);
     box-shadow: 
-        0 8px 20px rgba(0, 0, 0, 0.3),
-        0 6px 8px rgba(0, 0, 0, 0.2),
-        /* Enhanced side shadows on hover */
-        -2px 0 4px rgba(0, 0, 0, 0.1),
-        2px 0 4px rgba(0, 0, 0, 0.1);
+        3px 3px 8px rgba(0, 0, 0, 0.3),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.1),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.5);
 }
 
+.tile.dragging {
+    opacity: 0.6;
+    z-index: 1000;
+    cursor: grabbing;
+}
 
 .tile.selected {
-    transform: translateY(-8px) translateZ(15px) rotateX(15deg);
+    transform: translateY(-4px);
     box-shadow: 
         0 10px 25px rgba(0, 0, 0, 0.3),
         0 8px 10px rgba(0, 0, 0, 0.2),
@@ -198,40 +227,30 @@ button {
     box-shadow: 
         0 5px 15px rgba(0, 0, 0, 0.2),
         0 3px 5px rgba(0, 0, 0, 0.1);
-    transform: translateZ(0);
+    margin: 5px 0;
+    width: 100%;
 }
 
 button:hover {
-    transform: translateY(-3px) translateZ(10px);
+    transform: translateY(-2px);
     box-shadow: 
         0 8px 20px rgba(0, 0, 0, 0.3),
         0 6px 8px rgba(0, 0, 0, 0.2);
     background: linear-gradient(145deg, var(--secondary-blue), #403991);
 }
 
-#move-history {
-    background: linear-gradient(145deg, #f5f5f5, #e6e6e6);
-    border-radius: 5px;
-    box-shadow: 
-        inset 0 2px 5px rgba(0, 0, 0, 0.1),
-        0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
 .droppable-hover {
-    transform: translateZ(10px);
+    transform: scale(1.05);
     box-shadow: 
         0 0 20px rgba(26, 35, 126, 0.3),
         inset 0 0 10px rgba(26, 35, 126, 0.2);
 }
 
 .board-cell[data-row="7"][data-col="7"]::before {
-    content: '';
+    content: '⚜';
     position: absolute;
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-bottom: 15px solid rgba(0, 0, 0, 0.4);
+    color: rgba(0, 0, 0, 0.2);
+    font-size: 24px;
     pointer-events: none;
 }
 
@@ -283,38 +302,9 @@ button:hover {
         0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-.win-overlay.active .win-message {
-    transform: translateY(0);
-}
-
 .win-message h2 {
     color: var(--primary-blue);
     margin-bottom: 20px;
-}
-
-.win-message button {
-    margin-top: 20px;
-}
-
-@keyframes celebrate {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-.win-message.celebrate {
-    animation: celebrate 0.5s ease-in-out;
-}
-
-@keyframes confetti-fall {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
 }
 
 .animated-tile {
@@ -328,14 +318,110 @@ button:hover {
     justify-content: center;
     align-items: center;
     font-weight: bold;
-    cursor: pointer;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     pointer-events: none;
 }
 
-.animated-tile .points {
-    font-size: 0.7em;
-    margin-top: 2px;
+.board-cell.placement-close {
+    background: linear-gradient(145deg, 
+        rgba(33, 150, 243, 0.8),
+        rgba(25, 118, 210, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.placement-medium {
+    background: linear-gradient(145deg, 
+        rgba(13, 71, 161, 0.8),
+        rgba(21, 101, 192, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.placement-far {
+    background: linear-gradient(145deg, 
+        rgba(0, 33, 113, 0.8),
+        rgba(13, 71, 161, 0.8)) !important;
+    transition: background 0.3s ease;
+}
+
+.board-cell.valid-placement {
+    animation: pulse 1.5s infinite;
+}
+
+#tile-rack.rack-droppable {
+    background-color: rgba(0, 255, 0, 0.1);
+    border: 2px dashed #4CAF50;
+}
+
+.ai-thinking-message {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    color: #333;
+}
+
+.tile-rack.ai-rack {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+}
+
+.tile-rack.ai-rack .tile {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    color: white;
+    box-shadow: 
+        2px 2px 5px rgba(0, 0, 0, 0.2),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.2);
+}
+
+.tile-rack.ai-rack .tile::before {
+    background: linear-gradient(to bottom, #1976d2, #1565c0);
+}
+
+.tile-rack.ai-rack .tile::after {
+    background: linear-gradient(to right, #1976d2, #1565c0);
+}
+
+.tile-rack.ai-rack .tile .points {
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.board-cell .tile {
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    transform: translateZ(2px);
+    box-shadow: 
+        2px 2px 5px rgba(0, 0, 0, 0.2),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.1),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+    }
+}
+
+@keyframes celebrate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
 }
 
 @keyframes tilePlace {
@@ -354,50 +440,16 @@ button:hover {
     }
 }
 
-.board-cell.tile-placed {
-    animation: tilePlace 0.5s ease-out;
-}
+/* Media Queries for Responsiveness */
+@media (max-width: 1200px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
 
-.ai-thinking-message {
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    color: #333;
-}
-
-.tile-rack.ai-rack {
-    background: linear-gradient(145deg, #42a5f5, #1976d2);  /* Lighter blue gradient */
-}
-
-.board-cell.placement-close {
-    background: linear-gradient(145deg, 
-        rgba(33, 150, 243, 0.8),  /* Light blue */
-        rgba(25, 118, 210, 0.8)) !important;
-    transition: background 0.3s ease;
-}
-
-.board-cell.placement-medium {
-    background: linear-gradient(145deg, 
-        rgba(13, 71, 161, 0.8),  /* Medium blue */
-        rgba(21, 101, 192, 0.8)) !important;
-    transition: background 0.3s ease;
-}
-
-.board-cell.placement-far {
-    background: linear-gradient(145deg, 
-        rgba(0, 33, 113, 0.8),  /* Dark blue */
-        rgba(13, 71, 161, 0.8)) !important;
-    transition: background 0.3s ease;
-}
-
-.board-cell.valid-placement {
-    animation: pulse 1.5s infinite;
-}
-
-#tile-rack.rack-droppable {
-    background-color: rgba(0, 255, 0, 0.1);
-    border: 2px dashed #4CAF50;
-}
-
-.tile.dragging {
-    opacity: 0.6;
+    .moves-panel, .info-panel {
+        width: 100%;
+        max-width: 600px;
+        margin-top: 20px;
+    }
 }
