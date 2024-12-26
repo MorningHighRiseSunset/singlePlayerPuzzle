@@ -210,7 +210,7 @@ class ScrabbleGame {
         console.log("Existing words:", existingWords);
     
         // If not enough tiles for minimum word length, return empty array
-        if (availableLetters.length < 5) {
+        if (availableLetters.length < 4) {
             console.log("Not enough tiles for a 5-letter word");
             return [];
         }
@@ -220,7 +220,7 @@ class ScrabbleGame {
             const words = Array.from(this.dictionary);
             for (const word of words) {
                 // Skip words shorter than 5 letters
-                if (word.length < 5) continue;
+                if (word.length < 4) continue;
     
                 if (!this.dictionary.has(word.toLowerCase())) {
                     continue;
@@ -444,7 +444,7 @@ class ScrabbleGame {
     }
 
     canAIMakeValidMove() {
-        if (this.aiRack.length < 5) {
+        if (this.aiRack.length < 4) {
             console.log("Not enough tiles for minimum word length - will skip turn");
             return false;
         }
@@ -454,7 +454,7 @@ class ScrabbleGame {
         
         // Only check words of 5 or more letters
         for (const word of this.dictionary) {
-            if (word.length >= 5 && this.canFormWord(word, '', '', availableLetters)) {
+            if (word.length >= 4 && this.canFormWord(word, '', '', availableLetters)) {
                 console.log("Found possible move:", word);
                 return true;
             }
@@ -844,8 +844,8 @@ class ScrabbleGame {
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
         // Enforce minimum 5-letter word length
-        if (word.length < 5) {
-            console.log(`Rejecting ${word} - words must be at least 5 letters long`);
+        if (word.length < 4) {
+            console.log(`Rejecting ${word} - words must be at least 4 letters long`);
             return false;
         }
     
@@ -1232,7 +1232,7 @@ class ScrabbleGame {
             adjustedScore += lengthBonus;
         }
     
-        if (word.length >= 5 && formedWords.length > 1) {
+        if (word.length >= 4 && formedWords.length > 1) {
             adjustedScore += 35;
         }
     
