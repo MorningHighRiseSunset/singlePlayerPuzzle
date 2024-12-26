@@ -936,12 +936,12 @@ class ScrabbleGame {
             currentRow++;
         }
         
-        // Only add words that are longer than 1 letter
-        if (horizontalWord.length > 1) {
+        // Only add words that are longer than 2 letter
+        if (horizontalWord.length > 2) {
             words.add(horizontalWord);
             console.log("Found horizontal word:", horizontalWord);
         }
-        if (verticalWord.length > 1) {
+        if (verticalWord.length > 2) {
             words.add(verticalWord);
             console.log("Found vertical word:", verticalWord);
         }
