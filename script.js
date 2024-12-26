@@ -255,7 +255,7 @@ class ScrabbleGame {
                 
                 for (const word of this.dictionary) {
                     // Skip words shorter than 5 letters
-                    if (word.length < 5) continue;
+                    if (word.length < 3) continue;
     
                     if (!this.dictionary.has(word.toLowerCase())) {
                         continue;
@@ -843,9 +843,9 @@ class ScrabbleGame {
     }
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
-        // Enforce minimum 5-letter word length
-        if (word.length < 4) {
-            console.log(`Rejecting ${word} - words must be at least 4 letters long`);
+        // Enforce minimum 3-letter word length
+        if (word.length < 3) {
+            console.log(`Rejecting ${word} - words must be at least 3 letters long`);
             return false;
         }
     
@@ -1068,7 +1068,7 @@ class ScrabbleGame {
     
     calculatePotentialScore(word, startRow, startCol, horizontal) {
         // Immediately reject two-letter words
-        if (word.length <= 2) {
+        if (word.length <= 3) {
             return -999999;
         }
     
@@ -1250,6 +1250,49 @@ class ScrabbleGame {
         console.log(`Original score: ${totalScore}, Adjusted score: ${adjustedScore}`);
         return adjustedScore;
     }
+
+    findCrossWordOpportunities(availableLetters) {
+        const plays = [];
+        // Check each existing word on the board
+        for (let row = 0; row < 15; row++) {
+            for (let col = 0; col < 15; col++) {
+                if (this.board[row][col]) {
+                    // Check if we can form perpendicular words
+                    const letter = this.board[row][col].letter;
+                    for (const direction of ['horizontal', 'vertical']) {
+                        const crossWords = this.findPossibleCrossWords(
+                            row, col, letter, availableLetters, direction
+                        );
+                        plays.push(...crossWords);
+                    }
+                }
+            }
+        }
+        return plays;
+    }
+
+    findParallelWords(existingWord, startRow, startCol, isHorizontal) {
+        const availableLetters = this.aiRack.map(tile => tile.letter);
+        const parallelPlays = [];
+        
+        // Check one row/column above and below
+        const offsets = [-1, 1];
+        for (const offset of offsets) {
+            const newRow = isHorizontal ? startRow + offset : startRow;
+            const newCol = isHorizontal ? startCol : startCol + offset;
+            
+            if (this.isValidPosition(newRow, newCol)) {
+                const possibleWords = this.findWordsUsingLetters(
+                    availableLetters,
+                    existingWord
+                );
+                parallelPlays.push(...possibleWords);
+            }
+        }
+        return parallelPlays;
+    }
+    
+    
     
     
     // Add this helper method to the ScrabbleGame class
