@@ -859,13 +859,6 @@ class ScrabbleGame {
             return false;
         }
     
-        // Keep track of words already on the board
-        const existingWords = this.getExistingWords();
-        if (existingWords.includes(word)) {
-            console.log(`Word ${word} already exists on board`);
-            return false;
-        }
-    
         // Check basic boundary conditions
         if (horizontal) {
             if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
@@ -877,11 +870,10 @@ class ScrabbleGame {
             }
         }
     
-        let hasAdjacentTile = false;
-        let touchesExistingTile = false;
         let tempBoard = JSON.parse(JSON.stringify(this.board));
+        let hasValidConnection = false;
     
-        // Place the word temporarily and check all formed words
+        // Place the word temporarily on the board
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
@@ -890,38 +882,58 @@ class ScrabbleGame {
                 if (tempBoard[row][col].letter !== word[i]) {
                     return false;
                 }
-                touchesExistingTile = true;
-                continue;
+                hasValidConnection = true;
+            } else {
+                tempBoard[row][col] = { letter: word[i] };
             }
     
-            tempBoard[row][col] = { letter: word[i] };
+            // Check for adjacent tiles
+            if (this.hasAdjacentTile(row, col)) {
+                hasValidConnection = true;
+            }
     
-            // Check cross words at this position
-            const crossWord = this.getCrossWordAt(row, col, !horizontal, tempBoard);
-            if (crossWord && crossWord.length > 1) {
-                if (!this.dictionary.has(crossWord.toLowerCase())) {
+            // Get and validate all cross words at this position
+            const crossWords = this.getAllFormedWords(row, col, tempBoard);
+            for (const crossWord of crossWords) {
+                if (crossWord.length > 1 && !this.dictionary.has(crossWord.toLowerCase())) {
                     console.log(`Invalid cross word formed: ${crossWord}`);
                     return false;
                 }
             }
-    
-            // Check for adjacent tiles
-            const adjacentPositions = [
-                [row - 1, col], [row + 1, col],
-                [row, col - 1], [row, col + 1]
-            ];
-    
-            for (const [adjRow, adjCol] of adjacentPositions) {
-                if (adjRow >= 0 && adjRow < 15 && adjCol >= 0 && adjCol < 15) {
-                    if (this.board[adjRow][adjCol]) {
-                        hasAdjacentTile = true;
-                    }
-                }
-            }
         }
     
-        return this.isFirstMove || hasAdjacentTile || touchesExistingTile;
+        return this.isFirstMove || hasValidConnection;
     }
+    
+    getAllFormedWords(row, col, board) {
+        const words = new Set();
+        
+        // Check horizontal word
+        let horizontalWord = '';
+        let startCol = col;
+        while (startCol > 0 && board[row][startCol - 1]) startCol--;
+        
+        while (startCol < 15 && board[row][startCol]) {
+            horizontalWord += board[row][startCol].letter;
+            startCol++;
+        }
+        
+        // Check vertical word
+        let verticalWord = '';
+        let startRow = row;
+        while (startRow > 0 && board[startRow - 1][col]) startRow--;
+        
+        while (startRow < 15 && board[startRow][col]) {
+            verticalWord += board[startRow][col].letter;
+            startRow++;
+        }
+        
+        if (horizontalWord.length > 1) words.add(horizontalWord);
+        if (verticalWord.length > 1) words.add(verticalWord);
+        
+        return Array.from(words);
+    }
+    
     
     // Add this helper method to get cross words
     getCrossWordAt(row, col, isHorizontal, tempBoard) {
