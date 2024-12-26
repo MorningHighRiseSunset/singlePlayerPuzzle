@@ -11,6 +11,7 @@ class ScrabbleGame {
             'J': 1, 'K': 1, 'L': 4, 'M': 2, 'N': 6, 'O': 8, 'P': 2, 'Q': 1, 'R': 6,
             'S': 4, 'T': 6, 'U': 4, 'V': 2, 'W': 2, 'X': 1, 'Y': 2, 'Z': 1, '*': 2
         };
+        this.setupHintSystem();
         this.previousBoard = null;
         this.tiles = [];
         this.playerRack = [];
@@ -95,6 +96,108 @@ class ScrabbleGame {
             }, 1000);
         }
     }
+
+    setupHintSystem() {
+        const hints = [
+            "Triple Word Score (TW) squares multiply the entire word score by 3!",
+            "Triple Letter Score (TL) squares multiply just that letter's score by 3!",
+            "Using all 7 tiles in one move gives you a 50-point bonus!",
+            "Blank tiles can be any letter, but are worth 0 points.",
+            "Q and Z are worth 10 points each - try to use them on multiplier squares!",
+            "Words must connect to existing tiles on the board (except for the first move).",
+            "The center square (marked with ⚜) must be used in the first move.",
+            "Try to save S tiles - they're great for making parallel words!",
+            "High-scoring letters on TL squares can lead to massive points!",
+            "Plan ahead - save valuable tiles for premium squares.",
+            "Remember: all new words formed must be valid dictionary words.",
+            "Cross-words count too! Check both directions when placing tiles.",
+            "You can exchange tiles instead of playing a word - but you'll lose your turn.",
+            "The letter 'S' can often be added to existing words to form new ones!",
+            "Look for opportunities to play parallel words along existing ones.",
+            "Short two-letter words can be valuable for creating multiple scoring opportunities.",
+            "Common prefixes like 'RE-', 'UN-', and 'IN-' can help extend words.",
+            "Common suffixes like '-ING', '-ED', and '-S' can help extend words.",
+            "Keep a balance of vowels and consonants in your rack.",
+            "Try to use high-scoring letters (J, X, Q, Z) on premium squares.",
+            "Playing through existing words can create multiple scoring opportunities.",
+            "Look for hook letters that can change existing words (e.g., HEAT to CHEAT).",
+            "Save some good letters for later when better opportunities arise.",
+            "Consider exchanging tiles if you have too many consonants or vowels.",
+            "The letter 'Q' is usually followed by 'U' - save a 'U' if you have a 'Q'.",
+            "Think defensively - avoid setting up TW squares for your opponent.",
+            "The letters A, E, I, O, U are most common - use them wisely to connect words.",
+            "Playing across multiple premium squares multiplies your score significantly!",
+            "Look for opportunities to form two or more words in a single play.",
+            "The more letters you play, the higher your potential score.",
+            "Remember common two-letter words like AA, AB, AD, AE, AG, AH, AI, AL, AM, AN, AR, AS, AT, AW, AX, AY.",
+            "Challenge yourself to use all seven tiles for the 50-point bonus!",
+            "Position high-value letters strategically to maximize points.",
+            "Watch out for blocked positions where no more words can be played.",
+            "Try to keep at least two vowels in your rack for flexibility.",
+            "The board edges can be valuable for high-scoring plays.",
+            "Look for opportunities to create multiple small words simultaneously.",
+            "Some letters (like S, E, R, T) can be saved for extending existing words.",
+            "Consider blocking premium squares if your opponent is leading.",
+            "Use blank tiles strategically - they're most valuable for high-scoring plays.",
+            "Remember that longer words aren't always better - sometimes short words score more.",
+            "Keep track of which high-value letters have been played.",
+            "Look for opportunities to play 'bingos' (using all 7 tiles) for the bonus.",
+            "Consider the remaining tiles when planning your strategy.",
+            "Some premium squares are more valuable than others based on playable words.",
+            "Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!"
+        ];    
+
+        let currentHintIndex = 0;
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+    
+        // Fisher-Yates shuffle algorithm
+        const shuffleArray = (array) => {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        };
+    
+        // Create a shuffled copy of hints
+        let shuffledHints = shuffleArray([...hints]);
+    
+        const showNextHint = () => {
+            // If we've shown all hints, reshuffle and start over
+            if (currentHintIndex >= shuffledHints.length) {
+                shuffledHints = shuffleArray([...hints]);
+                currentHintIndex = 0;
+            }
+    
+            hintText.textContent = shuffledHints[currentHintIndex];
+            hintBox.classList.add('show');
+            
+            setTimeout(() => {
+                hintBox.classList.remove('show');
+            }, 5000); // Hide after 5 seconds
+    
+            currentHintIndex++;
+        };
+    
+        // Show first hint after 5 seconds
+        setTimeout(() => {
+            showNextHint();
+            // Then show new hints every 30 seconds
+            setInterval(showNextHint, 30000);
+        }, 5000);
+    
+        // Show random hint on hover
+        hintBox.addEventListener('mouseenter', () => {
+            // Show a random hint from the shuffled array
+            hintText.textContent = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
+            hintBox.classList.add('show');
+        });
+    
+        hintBox.addEventListener('mouseleave', () => {
+            hintBox.classList.remove('show');
+        });
+    }
     
     findAIPossiblePlays() {
         const possiblePlays = [];
@@ -110,6 +213,11 @@ class ScrabbleGame {
         if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
             const words = Array.from(this.dictionary);
             for (const word of words) {
+                // Add explicit dictionary check
+                if (!this.dictionary.has(word.toLowerCase())) {
+                    continue;
+                }
+    
                 if (word.length >= 2 && word.length <= availableLetters.length) {
                     const upperWord = word.toUpperCase();
                     // Skip if word already exists on board
@@ -140,6 +248,11 @@ class ScrabbleGame {
                 
                 // Try all possible words from dictionary
                 for (const word of this.dictionary) {
+                    // Add explicit dictionary check
+                    if (!this.dictionary.has(word.toLowerCase())) {
+                        continue;
+                    }
+    
                     const upperWord = word.toUpperCase();
                     
                     // Skip if word already exists on board
@@ -159,7 +272,6 @@ class ScrabbleGame {
                                 isHorizontal: true,
                                 score
                             });
-                            console.log(`Found valid horizontal play: ${upperWord} for ${score} points`);
                         }
                     }
                     
@@ -174,14 +286,13 @@ class ScrabbleGame {
                                 isHorizontal: false,
                                 score
                             });
-                            console.log(`Found valid vertical play: ${upperWord} for ${score} points`);
                         }
                     }
                 }
             });
         }
     
-        // Filter out any duplicate plays or plays with existing words
+        // Filter out duplicates
         const uniquePlays = possiblePlays.filter((play, index, self) =>
             index === self.findIndex((p) => (
                 p.word === play.word &&
@@ -194,6 +305,7 @@ class ScrabbleGame {
         console.log(`Found ${uniquePlays.length} possible plays after filtering`);
         return uniquePlays;
     }
+    
 
     findSimpleWords(letters) {
         const words = new Set();
@@ -437,6 +549,13 @@ class ScrabbleGame {
         const {word, startPos, isHorizontal, score} = play;
         console.log("AI playing:", word, "at", startPos, isHorizontal ? "horizontally" : "vertically");
     
+        // Add dictionary check before executing the play
+        if (!this.dictionary.has(word.toLowerCase())) {
+            console.log(`Invalid word ${word} - skipping AI turn`);
+            this.skipAITurn();
+            return;
+        }
+    
         // Store the previous board state
         this.previousBoard = JSON.parse(JSON.stringify(this.board));
     
@@ -600,6 +719,7 @@ class ScrabbleGame {
     }
     
     
+    
     calculateWordScore(word, startRow, startCol, isHorizontal) {
         let wordScore = 0;
         let wordMultiplier = 1;
@@ -733,10 +853,16 @@ class ScrabbleGame {
             return false;
         }
     
+        // Explicit dictionary check for the main word
+        if (!this.dictionary.has(word.toLowerCase())) {
+            console.log(`${word} is not a valid word in the dictionary`);
+            return false;
+        }
+    
         // Keep track of words already on the board
         const existingWords = this.getExistingWords();
         if (existingWords.includes(word)) {
-            console.log(`Word ${word} already exists on the board`);
+            console.log(`Word ${word} already exists on board`);
             return false;
         }
     
@@ -751,33 +877,15 @@ class ScrabbleGame {
             }
         }
     
-        // Handle first move
-        if (this.isFirstMove) {
-            const centerRow = 7, centerCol = 7;
-            if (horizontal) {
-                if (startRow !== centerRow) return false;
-                if (startCol > centerCol || startCol + word.length <= centerCol) return false;
-            } else {
-                if (startCol !== centerCol) return false;
-                if (startRow > centerRow || startRow + word.length <= centerRow) return false;
-            }
-            return true;
-        }
-    
         let hasAdjacentTile = false;
         let touchesExistingTile = false;
         let tempBoard = JSON.parse(JSON.stringify(this.board));
-    
-        // Collect all words that would be formed by this placement
-        let formedWords = new Set();
-        formedWords.add(word.toLowerCase());
     
         // Place the word temporarily and check all formed words
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
     
-            // Check if current cell is occupied
             if (tempBoard[row][col]) {
                 if (tempBoard[row][col].letter !== word[i]) {
                     return false;
@@ -788,60 +896,19 @@ class ScrabbleGame {
     
             tempBoard[row][col] = { letter: word[i] };
     
-            // Check each direction for formed words
-            let crossWord = '';
-            if (horizontal) {
-                // Check vertical word formed at this position
-                let upWord = '';
-                let downWord = '';
-                
-                // Check upward
-                let r = row - 1;
-                while (r >= 0 && (tempBoard[r][col] || this.board[r][col])) {
-                    upWord = (tempBoard[r][col] || this.board[r][col]).letter + upWord;
-                    r--;
+            // Check cross words at this position
+            const crossWord = this.getCrossWordAt(row, col, !horizontal, tempBoard);
+            if (crossWord && crossWord.length > 1) {
+                if (!this.dictionary.has(crossWord.toLowerCase())) {
+                    console.log(`Invalid cross word formed: ${crossWord}`);
+                    return false;
                 }
-                
-                // Check downward
-                r = row + 1;
-                while (r < 15 && (tempBoard[r][col] || this.board[r][col])) {
-                    downWord += (tempBoard[r][col] || this.board[r][col]).letter;
-                    r++;
-                }
-                
-                crossWord = upWord + word[i] + downWord;
-            } else {
-                // Check horizontal word formed at this position
-                let leftWord = '';
-                let rightWord = '';
-                
-                // Check leftward
-                let c = col - 1;
-                while (c >= 0 && (tempBoard[row][c] || this.board[row][c])) {
-                    leftWord = (tempBoard[row][c] || this.board[row][c]).letter + leftWord;
-                    c--;
-                }
-                
-                // Check rightward
-                c = col + 1;
-                while (c < 15 && (tempBoard[row][c] || this.board[row][c])) {
-                    rightWord += (tempBoard[row][c] || this.board[row][c]).letter;
-                    c++;
-                }
-                
-                crossWord = leftWord + word[i] + rightWord;
-            }
-    
-            if (crossWord.length > 1) {
-                formedWords.add(crossWord.toLowerCase());
             }
     
             // Check for adjacent tiles
             const adjacentPositions = [
-                [row - 1, col],
-                [row + 1, col],
-                [row, col - 1],
-                [row, col + 1]
+                [row - 1, col], [row + 1, col],
+                [row, col - 1], [row, col + 1]
             ];
     
             for (const [adjRow, adjCol] of adjacentPositions) {
@@ -853,18 +920,28 @@ class ScrabbleGame {
             }
         }
     
-        // Verify all formed words are valid
-        for (const formedWord of formedWords) {
-            if (!this.dictionary.has(formedWord)) {
-                console.log(`Invalid word would be formed: ${formedWord}`);
-                return false;
-            }
-        }
-    
-        // Must connect to existing tiles (except first move)
-        return hasAdjacentTile || touchesExistingTile;
+        return this.isFirstMove || hasAdjacentTile || touchesExistingTile;
     }
     
+    // Add this helper method to get cross words
+    getCrossWordAt(row, col, isHorizontal, tempBoard) {
+        let word = '';
+        let start = isHorizontal ? col : row;
+        
+        // Find start of word
+        while (start > 0 && (tempBoard[isHorizontal ? row : start - 1][isHorizontal ? start - 1 : col])) {
+            start--;
+        }
+        
+        // Build word
+        let current = start;
+        while (current < 15 && (tempBoard[isHorizontal ? row : current][isHorizontal ? current : col])) {
+            word += tempBoard[isHorizontal ? row : current][isHorizontal ? current : col].letter;
+            current++;
+        }
+        
+        return word.length > 1 ? word : null;
+    }
     
     
     
@@ -2192,11 +2269,18 @@ placeTile(tile, row, col) {
         let totalScore = 0;
         const words = this.getFormedWords();
         
+        console.log('=== Starting Score Calculation ===');
+        console.log('Words formed:', words.map(w => w.word));
+    
         words.forEach(wordObj => {
             let wordScore = 0;
             let wordMultiplier = 1;
             const { word, startPos, direction } = wordObj;
             const isHorizontal = direction === 'horizontal';
+            
+            console.log(`\n=== Calculating score for word: ${word} ===`);
+            console.log(`Direction: ${direction}`);
+            console.log(`Starting position: [${startPos.row}, ${startPos.col}]`);
             
             // Calculate score for each letter in the word
             for (let i = 0; i < word.length; i++) {
@@ -2212,39 +2296,71 @@ placeTile(tile, row, col) {
     
                 // Base letter score
                 let letterScore = currentTile.value || this.tileValues[currentTile.letter];
+                console.log(`\nLetter "${currentTile.letter}" at [${currentRow}, ${currentCol}]:`);
+                console.log(`Base value: ${letterScore}`);
                 
-                // Only apply premium squares for newly placed tiles
+                // Check if this is a newly placed tile
                 const isNewTile = this.placedTiles.some(t => 
                     t.row === currentRow && t.col === currentCol
                 );
                 
+                // Only apply premium squares for newly placed tiles
                 if (isNewTile) {
+                    console.log('This is a newly placed tile');
                     const premium = this.getPremiumSquareType(currentRow, currentCol);
-                    if (premium === 'dl') letterScore *= 2;
-                    if (premium === 'tl') letterScore *= 3;
-                    if (premium === 'dw') wordMultiplier *= 2;
-                    if (premium === 'tw') wordMultiplier *= 3;
+                    
+                    if (premium) {
+                        console.log(`Premium square type: ${premium}`);
+                        
+                        switch(premium) {
+                            case 'dl':
+                                letterScore *= 2;
+                                console.log(`Double Letter Score applied: ${letterScore}`);
+                                break;
+                            case 'tl':
+                                letterScore *= 3;
+                                console.log(`Triple Letter Score applied: ${letterScore}`);
+                                break;
+                            case 'dw':
+                                wordMultiplier *= 2;
+                                console.log('Double Word Score will be applied');
+                                break;
+                            case 'tw':
+                                wordMultiplier *= 3;
+                                console.log('Triple Word Score will be applied');
+                                break;
+                        }
+                    }
+                } else {
+                    console.log('Existing tile - no premium squares applied');
                 }
                 
                 wordScore += letterScore;
+                console.log(`Running word score (before multiplier): ${wordScore}`);
             }
             
             // Apply word multiplier after summing all letters
-            wordScore *= wordMultiplier;
-            totalScore += wordScore;
-    
-            console.log(`Scored word "${word}" for ${wordScore} points`);
+            const finalWordScore = wordScore * wordMultiplier;
+            console.log(`\nWord "${word}" final calculation:`);
+            console.log(`Base word score: ${wordScore}`);
+            console.log(`Word multiplier: ${wordMultiplier}`);
+            console.log(`Final word score: ${finalWordScore}`);
+            
+            totalScore += finalWordScore;
         });
         
         // Bonus for using all 7 tiles
         if (this.placedTiles.length === 7) {
+            console.log('\nBINGO! Adding 50 point bonus for using all 7 tiles');
             totalScore += 50;
-            console.log("Added 50 point bonus for using all 7 tiles");
         }
         
-        console.log(`Total score for move: ${totalScore}`);
+        console.log(`\n=== Final Score Calculation ===`);
+        console.log(`Total score for this move: ${totalScore}`);
+        
         return totalScore;
     }
+    
     
     
     
