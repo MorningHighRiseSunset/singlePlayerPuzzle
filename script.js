@@ -27,6 +27,7 @@ class ScrabbleGame {
         this.generateTileBag();
         this.init();
     }
+    
 
     async aiTurn() {
         console.log("AI thinking...");
@@ -2379,11 +2380,14 @@ placeTile(tile, row, col) {
         const winner = this.playerScore > this.aiScore ? 'Player' : 'Computer';
         const finalScore = Math.max(this.playerScore, this.aiScore);
     
-        // Create win overlay if it doesn't exist
         let winOverlay = document.querySelector('.win-overlay');
         if (!winOverlay) {
             winOverlay = document.createElement('div');
             winOverlay.className = 'win-overlay';
+            // Add 'lose' class only if player lost
+            if (winner === 'Computer') {
+                winOverlay.classList.add('lose');
+            }
             document.body.appendChild(winOverlay);
     
             const messageBox = document.createElement('div');
@@ -2413,31 +2417,72 @@ placeTile(tile, row, col) {
     }
     
     createConfettiEffect() {
-        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
-        const confettiCount = 150;
+        // Different effects for win vs lose
+        const isWinner = this.playerScore > this.aiScore;
+        
+        if (isWinner) {
+            // Happy emojis and colorful confetti for winning
+            const emojis = ['🎉', '🎊', '🏆', '⭐', '🌟', '💫', '✨'];
+            const colors = ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#87CEEB'];
+            const particleCount = 150;
     
-        for (let i = 0; i < confettiCount; i++) {
-            const confetti = document.createElement('div');
-            confetti.style.cssText = `
-                position: fixed;
-                width: 10px;
-                height: 10px;
-                background-color: ${colors[Math.floor(Math.random() * colors.length)]};
-                pointer-events: none;
-                left: ${Math.random() * 100}vw;
-                top: -10px;
-                opacity: 1;
-                transform: rotate(${Math.random() * 360}deg);
-                animation: confetti-fall ${3 + Math.random() * 2}s linear forwards;
-            `;
-            document.body.appendChild(confetti);
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                
+                // Randomly choose between emoji or confetti
+                const isEmoji = Math.random() > 0.7; // 30% chance of emoji
+                
+                if (isEmoji) {
+                    particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                    particle.style.fontSize = `${20 + Math.random() * 20}px`;
+                } else {
+                    particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.width = '10px';
+                    particle.style.height = '10px';
+                }
     
-            // Remove confetti after animation
-            confetti.addEventListener('animationend', () => {
-                confetti.remove();
-            });
+                particle.style.cssText += `
+                    position: fixed;
+                    pointer-events: none;
+                    left: ${Math.random() * 100}vw;
+                    top: -20px;
+                    opacity: 1;
+                    transform: rotate(${Math.random() * 360}deg);
+                    animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
+                `;
+                document.body.appendChild(particle);
+    
+                particle.addEventListener('animationend', () => {
+                    particle.remove();
+                });
+            }
+        } else {
+            // Taunting emojis for losing
+            const emojis = ['😂', '🤣', '😝', '😜', '😋', '😏', '🤪', '😎', '🤭', '😈'];
+            const emojiCount = 50;
+    
+            for (let i = 0; i < emojiCount; i++) {
+                const emoji = document.createElement('div');
+                emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                emoji.style.cssText = `
+                    position: fixed;
+                    font-size: ${20 + Math.random() * 20}px;
+                    pointer-events: none;
+                    left: ${Math.random() * 100}vw;
+                    top: -40px;
+                    opacity: 1;
+                    transform: rotate(${Math.random() * 360}deg);
+                    animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
+                `;
+                document.body.appendChild(emoji);
+    
+                emoji.addEventListener('animationend', () => {
+                    emoji.remove();
+                });
+            }
         }
     }
+    
     
 
     addToMoveHistory(player, word, score) {
@@ -2594,6 +2639,35 @@ placeTile(tile, row, col) {
                 this.aiTurn();
             }
         });
+
+        const quitButton = document.getElementById('quit-game');
+        if (quitButton) {
+            quitButton.addEventListener('click', () => {
+                if (this.gameEnded) return; // Prevent multiple triggers
+                
+                // Set the computer as winner since player quit
+                this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+                this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+                this.gameEnded = true;
+                
+                // Update scores before animation
+                this.updateScores();
+                
+                // Add the quit move to history
+                if (this.moveHistory) {
+                    this.moveHistory.push({
+                        player: 'Player',
+                        word: 'QUIT',
+                        score: 0,
+                        timestamp: new Date()
+                    });
+                    this.updateMoveHistory();
+                }
+                
+                // Trigger game over animation
+                this.announceWinner();
+            });
+        }
 
         // Add this method to the ScrabbleGame class
         async function getWordDefinition(word) {
