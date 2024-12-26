@@ -83,23 +83,27 @@ body {
 
 .board-cell.tw { 
     background: linear-gradient(145deg, #002171, #0d47a1);
-    color: white;
 }
 
 .board-cell.dw { 
     background: linear-gradient(145deg, #0d47a1, #1565c0);
-    color: white;
 }
 
 .board-cell.tl { 
     background: linear-gradient(145deg, #003892, #1565c0);
-    color: white;
 }
 
 .board-cell.dl { 
     background: linear-gradient(145deg, #2196f3, #1976d2);
+}
+
+.board-cell.tw:empty,
+.board-cell.dw:empty,
+.board-cell.tl:empty,
+.board-cell.dl:empty {
     color: white;
 }
+
 
 .tile-rack {
     margin: 20px auto; /* Changed from margin-top to margin */
@@ -324,29 +328,9 @@ button:hover {
     pointer-events: none;
 }
 
-.board-cell.placement-close {
-    background: linear-gradient(145deg, 
-        rgba(33, 150, 243, 0.8),
-        rgba(25, 118, 210, 0.8)) !important;
-    transition: background 0.3s ease;
-}
-
-.board-cell.placement-medium {
-    background: linear-gradient(145deg, 
-        rgba(13, 71, 161, 0.8),
-        rgba(21, 101, 192, 0.8)) !important;
-    transition: background 0.3s ease;
-}
-
-.board-cell.placement-far {
-    background: linear-gradient(145deg, 
-        rgba(0, 33, 113, 0.8),
-        rgba(13, 71, 161, 0.8)) !important;
-    transition: background 0.3s ease;
-}
 
 .board-cell.valid-placement {
-    animation: pulse 1.5s infinite;
+    /*animation: pulse 1.5s infinite; */
 }
 
 #tile-rack.rack-droppable {
@@ -390,6 +374,7 @@ button:hover {
 }
 
 .board-cell .tile {
+    color: #000000;
     width: 100%;
     height: 100%;
     border-radius: 2px;

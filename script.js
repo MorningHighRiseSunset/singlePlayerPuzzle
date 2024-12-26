@@ -1540,23 +1540,12 @@ highlightValidPlacements() {
                 
                 if (distance <= 5) {
                     cell.classList.add('valid-placement');
-                    
-                    // Add distance-based classes
-                    if (distance <= 1) {
-                        cell.classList.add('placement-close');
-                    } else if (distance <= 3) {
-                        cell.classList.add('placement-medium');
-                    } else {
-                        cell.classList.add('placement-far');
-                    }
                 }
             }
         }
     }
 }
 
-    
-    
     
     getMinDistanceToWords(row, col) {
         let minDistance = Infinity;
@@ -1910,22 +1899,26 @@ placeTile(tile, row, col) {
         // Check if tiles are properly connected
         if (!this.areTilesConnected()) return false;
     
-        // Get all formed words (main word and crossing words)
-        const words = new Set(); 
+        // Get all formed words
+        const words = new Set();
         
-        // Get all words formed by this play
+        // Get main word
         const mainWord = this.getMainWord();
         if (mainWord.length > 1) {
-            words.add(mainWord);
+            words.add(mainWord.toLowerCase());
         }
     
-        // Check each placed tile for crossing words
+        // Check each placed tile for cross words
         for (const {row, col} of this.placedTiles) {
-            const crossWords = this.getCrossWords(row, col);
-            for (const word of crossWords) {
-                if (word && word.length > 1) {
-                    words.add(word);
-                }
+            // Get both horizontal and vertical words at this position
+            const horizontalWord = this.getWordAt(row, col, true);
+            const verticalWord = this.getWordAt(row, col, false);
+            
+            if (horizontalWord && horizontalWord.length > 1) {
+                words.add(horizontalWord.toLowerCase());
+            }
+            if (verticalWord && verticalWord.length > 1) {
+                words.add(verticalWord.toLowerCase());
             }
         }
     
@@ -1936,15 +1929,17 @@ placeTile(tile, row, col) {
         }
     
         // Validate each word
-        return Array.from(words).every(word => {
-            // Skip abbreviation check for common short words
-            const isValid = this.dictionary.has(word.toLowerCase());
-            if (!isValid) {
+        let allWordsValid = true;
+        words.forEach(word => {
+            if (!this.dictionary.has(word.toLowerCase())) {
                 console.log(`Invalid word: ${word}`);
+                allWordsValid = false;
             }
-            return isValid;
         });
+    
+        return allWordsValid;
     }
+    
     
 
     getCrossWords(row, col) {
@@ -1960,22 +1955,24 @@ placeTile(tile, row, col) {
 
     getWordAt(row, col, isHorizontal) {
         let word = '';
-        let start = isHorizontal ? col : row;
+        let startPos = isHorizontal ? col : row;
         
         // Find start of word
-        while (start > 0 && this.board[isHorizontal ? row : start - 1][isHorizontal ? start - 1 : col]) {
-            start--;
+        while (startPos > 0 && this.board[isHorizontal ? row : startPos - 1][isHorizontal ? startPos - 1 : col]) {
+            startPos--;
         }
         
-        // Build word
-        let current = start;
-        while (current < 15 && this.board[isHorizontal ? row : current][isHorizontal ? current : col]) {
-            word += this.board[isHorizontal ? row : current][isHorizontal ? current : col].letter;
-            current++;
+        // Build complete word
+        let currentPos = startPos;
+        while (currentPos < 15 && this.board[isHorizontal ? row : currentPos][isHorizontal ? currentPos : col]) {
+            const tile = this.board[isHorizontal ? row : currentPos][isHorizontal ? currentPos : col];
+            word += tile.letter;
+            currentPos++;
         }
         
         return word.length > 1 ? word : null;
     }
+    
     
     getFormedWords() {
         const words = new Set();
@@ -2597,11 +2594,35 @@ placeTile(tile, row, col) {
                 this.aiTurn();
             }
         });
+
+        // Add this method to the ScrabbleGame class
+        async function getWordDefinition(word) {
+            try {
+                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word.toLowerCase()}`);
+                const data = await response.json();
+                
+                if (data && data[0] && data[0].meanings) {
+                    // Get the first 2 definitions if available
+                    const definitions = data[0].meanings
+                        .slice(0, 2)
+                        .map(meaning => ({
+                            partOfSpeech: meaning.partOfSpeech,
+                            definition: meaning.definitions[0].definition
+                        }));
+                    return definitions;
+                }
+                return null;
+            } catch (error) {
+                console.error(`Error fetching definition for ${word}:`, error);
+                return null;
+            }
+        }
     
-        document.getElementById('print-history').addEventListener('click', () => {
+        document.getElementById('print-history').addEventListener('click', async () => {
             const printWindow = window.open('', '_blank');
             const gameDate = new Date().toLocaleString();
             
+            // Show loading message
             printWindow.document.write(`
                 <html>
                     <head>
@@ -2619,37 +2640,105 @@ placeTile(tile, row, col) {
                                 border-bottom: 2px solid #333;
                             }
                             .move {
-                                margin: 10px 0;
-                                padding: 5px;
-                                border-bottom: 1px solid #eee;
+                                margin: 20px 0;
+                                padding: 15px;
+                                border: 1px solid #ddd;
+                                border-radius: 5px;
+                                background: #f9f9f9;
+                            }
+                            .word-header {
+                                font-size: 1.2em;
+                                color: #2c3e50;
+                                margin-bottom: 10px;
+                            }
+                            .definitions {
+                                margin-left: 20px;
+                                padding: 10px;
+                                border-left: 3px solid #3498db;
+                            }
+                            .part-of-speech {
+                                color: #e67e22;
+                                font-style: italic;
                             }
                             .scores {
                                 margin: 20px 0;
-                                padding: 10px;
+                                padding: 15px;
                                 background: #f5f5f5;
+                                border-radius: 5px;
+                            }
+                            .loading {
+                                text-align: center;
+                                padding: 20px;
+                                font-style: italic;
+                                color: #666;
                             }
                         </style>
                     </head>
                     <body>
-                        <div class="header">
-                            <h1>Scrabble Game History</h1>
-                            <p>Game played on: ${gameDate}</p>
-                        </div>
-                        <div class="scores">
-                            <h3>Final Scores:</h3>
-                            <p>Player: ${this.playerScore}</p>
-                            <p>Computer: ${this.aiScore}</p>
-                        </div>
-                        <h3>Move History:</h3>
-                        ${this.moveHistory.map((move, index) => `
-                            <div class="move">
-                                ${index + 1}. ${move.player}: "${move.word}" for ${move.score} points
-                            </div>
-                        `).join('')}
+                        <div class="loading">Loading definitions...</div>
                     </body>
                 </html>
             `);
-            
+        
+            // Gather all unique words from move history
+            const uniqueWords = [...new Set(this.moveHistory
+                .map(move => move.word)
+                .filter(word => word !== 'SKIP'))];
+        
+            // Fetch definitions for all words
+            const wordDefinitions = new Map();
+            for (const word of uniqueWords) {
+                const definitions = await getWordDefinition(word);
+                if (definitions) {
+                    wordDefinitions.set(word, definitions);
+                }
+            }
+        
+            // Generate the final content
+            const content = `
+                <div class="header">
+                    <h1>Scrabble Game History</h1>
+                    <p>Game played on: ${gameDate}</p>
+                </div>
+                <div class="scores">
+                    <h3>Final Scores:</h3>
+                    <p>Player: ${this.playerScore}</p>
+                    <p>Computer: ${this.aiScore}</p>
+                </div>
+                <h3>Move History with Definitions:</h3>
+                ${this.moveHistory.map((move, index) => {
+                    if (move.word === 'SKIP') {
+                        return `
+                            <div class="move">
+                                ${index + 1}. ${move.player} skipped their turn
+                            </div>
+                        `;
+                    }
+                    
+                    const definitions = wordDefinitions.get(move.word);
+                    return `
+                        <div class="move">
+                            <div class="word-header">
+                                ${index + 1}. ${move.player}: "${move.word}" for ${move.score} points
+                            </div>
+                            ${definitions ? `
+                                <div class="definitions">
+                                    <strong>Definitions:</strong><br>
+                                    ${definitions.map(def => `
+                                        <p>
+                                            <span class="part-of-speech">${def.partOfSpeech}:</span>
+                                            ${def.definition}
+                                        </p>
+                                    `).join('')}
+                                </div>
+                            ` : '<p>No definition available</p>'}
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        
+            // Update the window content
+            printWindow.document.body.innerHTML = content;
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
