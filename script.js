@@ -519,6 +519,7 @@ class ScrabbleGame {
                                     // Remove tile from AI rack and place on board
                                     this.aiRack.splice(tileIndex, 1);
                                     this.board[row][col] = tile;
+                                    this.renderAIRack();
     
                                     // Create permanent tile element
                                     const permanentTile = document.createElement('div');
@@ -749,7 +750,7 @@ class ScrabbleGame {
             }
         }
     
-        // Handle first move of the game
+        // Handle first move
         if (this.isFirstMove) {
             const centerRow = 7, centerCol = 7;
             if (horizontal) {
@@ -766,14 +767,17 @@ class ScrabbleGame {
         let touchesExistingTile = false;
         let tempBoard = JSON.parse(JSON.stringify(this.board));
     
-        // Place the word temporarily on the board
+        // Collect all words that would be formed by this placement
+        let formedWords = new Set();
+        formedWords.add(word.toLowerCase());
+    
+        // Place the word temporarily and check all formed words
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
     
             // Check if current cell is occupied
             if (tempBoard[row][col]) {
-                // If occupied, letter must match
                 if (tempBoard[row][col].letter !== word[i]) {
                     return false;
                 }
@@ -783,81 +787,84 @@ class ScrabbleGame {
     
             tempBoard[row][col] = { letter: word[i] };
     
-            // Check adjacent cells
+            // Check each direction for formed words
+            let crossWord = '';
+            if (horizontal) {
+                // Check vertical word formed at this position
+                let upWord = '';
+                let downWord = '';
+                
+                // Check upward
+                let r = row - 1;
+                while (r >= 0 && (tempBoard[r][col] || this.board[r][col])) {
+                    upWord = (tempBoard[r][col] || this.board[r][col]).letter + upWord;
+                    r--;
+                }
+                
+                // Check downward
+                r = row + 1;
+                while (r < 15 && (tempBoard[r][col] || this.board[r][col])) {
+                    downWord += (tempBoard[r][col] || this.board[r][col]).letter;
+                    r++;
+                }
+                
+                crossWord = upWord + word[i] + downWord;
+            } else {
+                // Check horizontal word formed at this position
+                let leftWord = '';
+                let rightWord = '';
+                
+                // Check leftward
+                let c = col - 1;
+                while (c >= 0 && (tempBoard[row][c] || this.board[row][c])) {
+                    leftWord = (tempBoard[row][c] || this.board[row][c]).letter + leftWord;
+                    c--;
+                }
+                
+                // Check rightward
+                c = col + 1;
+                while (c < 15 && (tempBoard[row][c] || this.board[row][c])) {
+                    rightWord += (tempBoard[row][c] || this.board[row][c]).letter;
+                    c++;
+                }
+                
+                crossWord = leftWord + word[i] + rightWord;
+            }
+    
+            if (crossWord.length > 1) {
+                formedWords.add(crossWord.toLowerCase());
+            }
+    
+            // Check for adjacent tiles
             const adjacentPositions = [
-                [row - 1, col], // up
-                [row + 1, col], // down
-                [row, col - 1], // left
-                [row, col + 1]  // right
+                [row - 1, col],
+                [row + 1, col],
+                [row, col - 1],
+                [row, col + 1]
             ];
     
             for (const [adjRow, adjCol] of adjacentPositions) {
                 if (adjRow >= 0 && adjRow < 15 && adjCol >= 0 && adjCol < 15) {
                     if (this.board[adjRow][adjCol]) {
                         hasAdjacentTile = true;
-    
-                        // Check for cross words
-                        if (horizontal) {
-                            // Check vertical cross word
-                            let crossWord = '';
-                            let r = row;
-                            // Get letters above
-                            while (r > 0 && (tempBoard[r - 1][col] || this.board[r - 1][col])) {
-                                crossWord = (tempBoard[r - 1][col] || this.board[r - 1][col]).letter + crossWord;
-                                r--;
-                            }
-                            crossWord += word[i];
-                            r = row;
-                            // Get letters below
-                            while (r < 14 && (tempBoard[r + 1][col] || this.board[r + 1][col])) {
-                                crossWord += (tempBoard[r + 1][col] || this.board[r + 1][col]).letter;
-                                r++;
-                            }
-    
-                            if (crossWord.length > 1) {
-                                if (!this.dictionary.has(crossWord.toLowerCase())) {
-                                    console.log(`Invalid vertical cross word: ${crossWord}`);
-                                    return false;
-                                }
-                            }
-                        } else {
-                            // Check horizontal cross word
-                            let crossWord = '';
-                            let c = col;
-                            // Get letters to the left
-                            while (c > 0 && (tempBoard[row][c - 1] || this.board[row][c - 1])) {
-                                crossWord = (tempBoard[row][c - 1] || this.board[row][c - 1]).letter + crossWord;
-                                c--;
-                            }
-                            crossWord += word[i];
-                            c = col;
-                            // Get letters to the right
-                            while (c < 14 && (tempBoard[row][c + 1] || this.board[row][c + 1])) {
-                                crossWord += (tempBoard[row][c + 1] || this.board[row][c + 1]).letter;
-                                c++;
-                            }
-    
-                            if (crossWord.length > 1) {
-                                if (!this.dictionary.has(crossWord.toLowerCase())) {
-                                    console.log(`Invalid horizontal cross word: ${crossWord}`);
-                                    return false;
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
     
-        // Verify the main word itself
-        if (!this.dictionary.has(word.toLowerCase())) {
-            console.log(`Main word ${word} is not in dictionary`);
-            return false;
+        // Verify all formed words are valid
+        for (const formedWord of formedWords) {
+            if (!this.dictionary.has(formedWord)) {
+                console.log(`Invalid word would be formed: ${formedWord}`);
+                return false;
+            }
         }
     
         // Must connect to existing tiles (except first move)
         return hasAdjacentTile || touchesExistingTile;
     }
+    
+    
     
     
     isAbbreviation(word) {
@@ -996,6 +1003,7 @@ class ScrabbleGame {
         }
     
         // Check for cross words at each position of the new word
+        let parallelWordCount = 0; // Count words formed parallel to existing words
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
@@ -1030,6 +1038,11 @@ class ScrabbleGame {
                 }
                 
                 if (crossWord.length > 1) {
+                    // Check if this word is formed parallel to existing words
+                    if (this.hasParallelWord(row, col, horizontal)) {
+                        parallelWordCount++;
+                    }
+                    
                     formedWords.push({
                         word: crossWord,
                         score: crossWordScore * crossWordMultiplier
@@ -1047,10 +1060,59 @@ class ScrabbleGame {
             console.log("Added 50 point bonus for using all 7 tiles");
         }
     
+        // Apply scoring adjustments for better word placement
+        let adjustedScore = totalScore;
+    
+        // Penalize multiple short words and parallel placements
+        formedWords.forEach(wordObj => {
+            // Penalty for very short words (2-3 letters)
+            if (wordObj.word.length <= 3) {
+                adjustedScore -= Math.floor(wordObj.score * 0.5);
+                
+                // Extra penalty for creating multiple short words
+                if (formedWords.length > 2) {
+                    adjustedScore -= 10;
+                }
+            }
+        });
+    
+        // Penalty for excessive parallel word formation
+        if (parallelWordCount > 1) {
+            adjustedScore -= parallelWordCount * 15;
+        }
+    
+        // Bonus for longer words
+        if (word.length > 5) {
+            adjustedScore += word.length * 2;
+        }
+    
+        // Bonus for intersecting words rather than parallel words
+        if (formedWords.length > 1 && parallelWordCount === 0) {
+            adjustedScore += 20;
+        }
+    
+        // Ensure score doesn't go negative
+        adjustedScore = Math.max(adjustedScore, 1);
+    
         console.log("Words formed:", formedWords.map(w => `${w.word} (${w.score})`).join(', '));
-        console.log(`Total score: ${totalScore}`);
-        return totalScore;
+        console.log(`Original score: ${totalScore}, Adjusted score: ${adjustedScore}`);
+        return adjustedScore;
     }
+    
+    // Add this helper method to the ScrabbleGame class
+    hasParallelWord(row, col, isHorizontal) {
+        // Check if there are words parallel to the current placement
+        if (isHorizontal) {
+            // Check above and below for vertical words
+            return (row > 0 && this.board[row - 1][col] !== null) ||
+                   (row < 14 && this.board[row + 1][col] !== null);
+        } else {
+            // Check left and right for horizontal words
+            return (col > 0 && this.board[row][col - 1] !== null) ||
+                   (col < 14 && this.board[row][col + 1] !== null);
+        }
+    }
+    
     
     
 
@@ -1460,37 +1522,41 @@ class ScrabbleGame {
     }
     
 
-    highlightValidPlacements() {
-        // Remove existing highlights
-        document.querySelectorAll('.board-cell').forEach(cell => {
-            cell.classList.remove('placement-close', 'placement-medium', 'placement-far', 'valid-placement');
-        });
-    
-        // Only highlight if it's player's turn
-        if (this.currentTurn !== 'player') return;
-    
-        // Check each empty cell
-        for (let row = 0; row < 15; row++) {
-            for (let col = 0; col < 15; col++) {
-                if (!this.board[row][col]) {
-                    const distance = this.getMinDistanceToWords(row, col);
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+highlightValidPlacements() {
+    // Remove existing highlights
+    document.querySelectorAll('.board-cell').forEach(cell => {
+        cell.classList.remove('valid-placement', 'placement-close', 'placement-medium', 'placement-far');
+    });
+
+    // Only highlight if it's player's turn
+    if (this.currentTurn !== 'player') return;
+
+    // Check each empty cell
+    for (let row = 0; row < 15; row++) {
+        for (let col = 0; col < 15; col++) {
+            if (!this.board[row][col]) {
+                const distance = this.getMinDistanceToWords(row, col);
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                
+                if (distance <= 5) {
+                    cell.classList.add('valid-placement');
                     
-                    if (distance <= 5) {
-                        cell.classList.add('valid-placement');
-                        
-                        if (distance <= 2) {
-                            cell.classList.add('placement-close');
-                        } else if (distance <= 4) {
-                            cell.classList.add('placement-medium');
-                        } else {
-                            cell.classList.add('placement-far');
-                        }
+                    // Add distance-based classes
+                    if (distance <= 1) {
+                        cell.classList.add('placement-close');
+                    } else if (distance <= 3) {
+                        cell.classList.add('placement-medium');
+                    } else {
+                        cell.classList.add('placement-far');
                     }
                 }
             }
         }
     }
+}
+
+    
+    
     
     getMinDistanceToWords(row, col) {
         let minDistance = Infinity;
@@ -2419,16 +2485,57 @@ placeTile(tile, row, col) {
     }
 
     fillRacks() {
+        const balanceRack = (rack) => {
+            const vowels = ['A', 'E', 'I', 'O', 'U'];
+            const vowelCount = rack.filter(tile => vowels.includes(tile.letter)).length;
+            
+            // Aim for 2-3 vowels in a rack of 7 tiles
+            if (vowelCount < 2 && this.tiles.length > 0) {
+                // Find positions of consonants that could be swapped
+                const consonantIndices = rack
+                    .map((tile, index) => !vowels.includes(tile.letter) ? index : -1)
+                    .filter(index => index !== -1);
+                
+                // Find vowels in the remaining tiles
+                const vowelIndices = this.tiles
+                    .map((tile, index) => vowels.includes(tile.letter) ? index : -1)
+                    .filter(index => index !== -1);
+                
+                // Perform swap if possible
+                if (consonantIndices.length > 0 && vowelIndices.length > 0) {
+                    const consonantIdx = consonantIndices[Math.floor(Math.random() * consonantIndices.length)];
+                    const vowelIdx = vowelIndices[Math.floor(Math.random() * vowelIndices.length)];
+                    
+                    // Swap a consonant with a vowel
+                    const consonant = rack[consonantIdx];
+                    rack[consonantIdx] = this.tiles[vowelIdx];
+                    this.tiles[vowelIdx] = consonant;
+                }
+            }
+            return rack;
+        };
+    
+        // Fill player's rack
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
             this.playerRack.push(this.tiles.pop());
         }
+        
+        // Balance player's rack if needed
+        if (this.playerRack.length === 7) {
+            this.playerRack = balanceRack(this.playerRack);
+        }
+    
+        // Fill AI's rack
         while (this.aiRack.length < 7 && this.tiles.length > 0) {
             this.aiRack.push(this.tiles.pop());
         }
+    
+        // Update displays
         this.renderRack();
-        this.renderAIRack(); // Add this line
+        this.renderAIRack();
         this.updateTilesCount();
     }
+    
     
     setupEventListeners() {
         // Initial highlight of valid placements
