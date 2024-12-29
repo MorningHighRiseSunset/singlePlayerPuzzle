@@ -210,10 +210,30 @@ class ScrabbleGame {
         console.log("Existing words:", existingWords);
     
         // If not enough tiles for minimum word length, return empty array
-        if (availableLetters.length < 4) {
-            console.log("Not enough tiles for a 5-letter word");
-            return [];
+        // Update inside findAIPossiblePlays method
+if (availableLetters.length < 4) {
+    // Try shorter words when rack is low
+    const shortWords = Array.from(this.dictionary).filter(word => 
+        word.length >= 2 && 
+        word.length <= availableLetters.length && 
+        this.canFormWord(word, '', '', availableLetters)
+    );
+    
+    if (shortWords.length > 0) {
+        for (const word of shortWords) {
+            const upperWord = word.toUpperCase();
+            if (this.isValidAIPlacement(upperWord, 7, 7, true)) {
+                possiblePlays.push({
+                    word: upperWord,
+                    startPos: { row: 7, col: 7 },
+                    isHorizontal: true,
+                    score: this.calculatePotentialScore(upperWord, 7, 7, true)
+                });
+            }
         }
+    }
+}
+
     
         // Handle first move or empty board
         if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
@@ -466,61 +486,59 @@ class ScrabbleGame {
     
     
 
-    canFormWord(word, prefix, suffix, availableLetters) {
-        word = word.toUpperCase();
-        prefix = prefix.toUpperCase();
-        suffix = suffix.toUpperCase();
-        
-        // Count available letters, including blanks
-        const letterCount = {};
-        let blankCount = 0;
-        availableLetters.forEach(letter => {
-            if (letter === '*') {
-                blankCount++;
-            } else {
-                letterCount[letter] = (letterCount[letter] || 0) + 1;
-            }
-        });
-        
-        // For first move or when starting fresh
-        if (prefix === '' && suffix === '') {
-            // Check if we have enough letters (including blanks) for the word
-            for (const letter of word) {
-                if (letterCount[letter]) {
-                    letterCount[letter]--;
-                } else if (blankCount > 0) {
-                    blankCount--; // Use a blank tile
-                } else {
-                    return false;
-                }
-            }
-            return true;
+// Update inside findAIPossiblePlays method
+canFormWord(word, prefix, suffix, availableLetters) {
+    word = word.toUpperCase();
+    prefix = prefix.toUpperCase();
+    suffix = suffix.toUpperCase();
+    
+    // Create a copy of available letters for counting
+    const letterCount = {};
+    let blankCount = availableLetters.filter(l => l === '*').length;
+    
+    availableLetters.forEach(letter => {
+        if (letter !== '*') {
+            letterCount[letter] = (letterCount[letter] || 0) + 1;
         }
-        
-        // For subsequent moves
-        if (!word.includes(prefix) || !word.includes(suffix)) {
-            return false;
-        }
-        
-        // Get the part of the word we need to form
-        const neededPart = word
-            .replace(prefix, '')
-            .replace(suffix, '')
-            .split('');
-        
-        // Check if we have the needed letters (including blanks)
-        for (const letter of neededPart) {
+    });
+
+    // For first move or starting fresh
+    if (!prefix && !suffix) {
+        for (const letter of word) {
             if (letterCount[letter]) {
                 letterCount[letter]--;
             } else if (blankCount > 0) {
-                blankCount--; // Use a blank tile
+                blankCount--; // Use blank tile
             } else {
                 return false;
             }
         }
-        
         return true;
     }
+
+    // For subsequent moves
+    if (!word.includes(prefix) || !word.includes(suffix)) {
+        return false;
+    }
+
+    const neededPart = word
+        .replace(prefix, '')
+        .replace(suffix, '')
+        .split('');
+
+    for (const letter of neededPart) {
+        if (letterCount[letter]) {
+            letterCount[letter]--;
+        } else if (blankCount > 0) {
+            blankCount--; // Use blank tile
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
     
     
 
@@ -541,11 +559,11 @@ class ScrabbleGame {
         };
     }
 
-    executeAIPlay(play) {
+    async executeAIPlay(play) {
         const {word, startPos, isHorizontal, score} = play;
-        console.log("AI playing:", word, "at", startPos, isHorizontal ? "horizontally" : "vertically");
+        console.log("AI executing play:", {word, startPos, isHorizontal, score});
     
-        // Add dictionary check before executing the play
+        // Double check word validity
         if (!this.dictionary.has(word.toLowerCase())) {
             console.log(`Invalid word ${word} - skipping AI turn`);
             this.skipAITurn();
@@ -566,41 +584,51 @@ class ScrabbleGame {
             }
         }));
     
-        // Double-check all cross words before placing
-        if (!this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
-            console.log("Invalid placement detected during execution, skipping turn");
-            this.skipAITurn();
-            return;
-        }
-    
         return new Promise(async (resolve) => {
             // Start placing tiles with animation
             for (let i = 0; i < word.length; i++) {
                 const letter = word[i];
                 const row = isHorizontal ? startPos.row : startPos.row + i;
                 const col = isHorizontal ? startPos.col + i : startPos.col;
-                
+    
                 if (!this.board[row][col]) {
-                    const tileIndex = this.aiRack.findIndex(t => t.letter === letter);
+                    // Find matching tile or blank tile
+                    let tileIndex = this.aiRack.findIndex(t => t.letter === letter);
+                    if (tileIndex === -1) {
+                        // Try to use blank tile
+                        tileIndex = this.aiRack.findIndex(t => t.letter === '*');
+                        if (tileIndex !== -1) {
+                            // Convert blank tile to needed letter
+                            this.aiRack[tileIndex] = {
+                                letter: letter,
+                                value: 0,  // Blank tiles are worth 0 points
+                                id: `blank_${Date.now()}_${i}`,
+                                isBlank: true
+                            };
+                        }
+                    }
+    
                     if (tileIndex !== -1) {
                         const tile = {
-                            letter: this.aiRack[tileIndex].letter,
-                            value: this.aiRack[tileIndex].value || this.tileValues[this.aiRack[tileIndex].letter],
-                            id: `ai_${letter}_${Date.now()}_${i}`
+                            letter: letter,
+                            value: this.aiRack[tileIndex].isBlank ? 0 : this.tileValues[letter],
+                            id: this.aiRack[tileIndex].isBlank ? `blank_${letter}_${Date.now()}_${i}` : `ai_${letter}_${Date.now()}_${i}`,
+                            isBlank: this.aiRack[tileIndex].isBlank
                         };
-                        
+    
                         // Create animated tile element
                         const animatedTile = document.createElement('div');
                         animatedTile.className = 'tile animated-tile';
                         animatedTile.innerHTML = `
                             ${tile.letter}
                             <span class="points">${tile.value}</span>
+                            ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ''}
                         `;
-                        
+    
                         // Get target cell position
                         const targetCell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                         const targetRect = targetCell.getBoundingClientRect();
-                        
+    
                         // Animation setup
                         animatedTile.style.cssText = `
                             position: fixed;
@@ -610,15 +638,15 @@ class ScrabbleGame {
                             transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                             z-index: 1000;
                         `;
-                        
+    
                         document.body.appendChild(animatedTile);
-                        
+    
                         // Animate tile placement
                         await new Promise(resolve => {
                             setTimeout(() => {
                                 animatedTile.style.top = `${targetRect.top}px`;
                                 animatedTile.style.transform = 'rotate(0deg)';
-                                
+    
                                 setTimeout(() => {
                                     // Add bounce effect
                                     animatedTile.style.transform = 'rotate(0deg) scale(1.2)';
@@ -631,7 +659,7 @@ class ScrabbleGame {
                                 setTimeout(() => {
                                     targetCell.classList.add('tile-placed');
                                     animatedTile.remove();
-                                    
+    
                                     // Remove tile from AI rack and place on board
                                     this.aiRack.splice(tileIndex, 1);
                                     this.board[row][col] = tile;
@@ -640,28 +668,32 @@ class ScrabbleGame {
                                     // Create permanent tile element
                                     const permanentTile = document.createElement('div');
                                     permanentTile.className = 'tile';
+                                    if (tile.isBlank) {
+                                        permanentTile.classList.add('blank-tile');
+                                    }
                                     permanentTile.style.cssText = `
                                         background: linear-gradient(145deg, #ffffff, #f0f0f0);
-                                        color: #000; /* Ensure text is black */
+                                        color: #000;
                                     `;
                                     permanentTile.innerHTML = `
                                         ${tile.letter}
                                         <span class="points" style="color: #000;">${tile.value}</span>
+                                        ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ''}
                                     `;
-                                    
+    
                                     // Clear cell and add permanent tile
                                     targetCell.innerHTML = '';
                                     targetCell.appendChild(permanentTile);
-                                    
+    
                                     setTimeout(() => {
                                         targetCell.classList.remove('tile-placed');
                                     }, 500);
-                                    
+    
                                     resolve();
                                 }, 1000);
                             }, 200);
                         });
-                        
+    
                         // Delay between letters
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
@@ -702,10 +734,10 @@ class ScrabbleGame {
                 this.consecutiveSkips = 0;
                 this.currentTurn = 'player';
                 this.addToMoveHistory('Computer', wordsDisplay, totalScore);
-                
+    
                 // Clear the placed tiles array after scoring
                 this.placedTiles = [];
-                
+    
                 // Refill racks and update display
                 this.fillRacks();
                 this.updateGameState();
@@ -713,6 +745,7 @@ class ScrabbleGame {
             }, 500);
         });
     }
+    
     
     
     
@@ -1172,7 +1205,6 @@ class ScrabbleGame {
                     currentCrossPos++;
                 }
                 
-                // Reject if any cross word is too short
                 if (crossWord.length === 2) {
                     return -999999;
                 }
@@ -1198,58 +1230,213 @@ class ScrabbleGame {
     
         let adjustedScore = totalScore;
     
-        // Heavy penalties for short words
-        formedWords.forEach(wordObj => {
-            if (wordObj.word.length <= 4) {
-                const penaltyMultiplier = {
-                    3: 0.05,  // 5% of original score for 3-letter words
-                    4: 0.1    // 10% of original score for 4-letter words
-                }[wordObj.word.length] || 1;
+        // Enhanced parallel word penalties
+        if (parallelWordCount > 0) {
+            // Get parallel word penalty
+            const parallelPenalty = this.hasAdjacentParallelWords(startRow, startCol, horizontal, word);
+            adjustedScore -= parallelPenalty;
+    
+            // Additional penalties for specific patterns
+            if (word.length <= 3) {
+                // Severe penalty for short words creating parallel plays
+                adjustedScore -= 200;
                 
-                adjustedScore = Math.floor(adjustedScore * penaltyMultiplier);
-                
-                const shortWordPenalty = {
-                    3: -150,  // Heavy penalty for 3-letter words
-                    4: -100   // Significant penalty for 4-letter words
-                }[wordObj.word.length] || 0;
-                
-                adjustedScore += shortWordPenalty;
-                
+                // Extra penalty if creating multiple short words
                 if (formedWords.length > 1) {
-                    adjustedScore -= 100;
+                    adjustedScore -= 300;
                 }
             }
-        });
     
-        // Bonuses for longer words
-        if (word.length > 4) {
-            const lengthBonus = {
-                5: 15,
-                6: 25,
-                7: 40
-            }[word.length] || 50;
-            
-            adjustedScore += lengthBonus;
+            // Penalty for creating too many words in one play
+            if (formedWords.length > 2) {
+                adjustedScore -= (formedWords.length - 2) * 100;
+            }
         }
     
-        if (word.length >= 4 && formedWords.length > 1) {
-            adjustedScore += 35;
+        // Strongly prefer longer words
+        if (word.length >= 5) {
+            adjustedScore += word.length * 20;
         }
     
-        if (parallelWordCount > 1) {
-            adjustedScore -= parallelWordCount * 15;
+        // Bonus for crosswords that aren't parallel and are longer
+        if (formedWords.length === 2 && parallelWordCount === 0) {
+            const allWordsLongEnough = formedWords.every(w => w.word.length >= 4);
+            if (allWordsLongEnough) {
+                adjustedScore += 100;
+            }
         }
     
-        if (formedWords.length > 1 && parallelWordCount === 0) {
-            adjustedScore += 30;
-        }
-    
+        // Ensure minimum score
         adjustedScore = Math.max(adjustedScore, 1);
+    
+        // Additional checks for stacked short words
+        if (this.wouldCreateStackedShortWords(word, startRow, startCol, horizontal)) {
+            adjustedScore = 1; // Effectively reject these plays
+        }
     
         console.log("Words formed:", formedWords.map(w => `${w.word} (${w.score})`).join(', '));
         console.log(`Original score: ${totalScore}, Adjusted score: ${adjustedScore}`);
         return adjustedScore;
+    }    
+
+    wouldCreateStackedShortWords(word, row, col, horizontal) {
+        const maxStack = 2; // Maximum allowed stacked words
+        let stackCount = 0;
+        let shortWordCount = 0;
+    
+        // For each letter in the word we're trying to place
+        for (let i = 0; i < word.length; i++) {
+            const currentRow = horizontal ? row : row + i;
+            const currentCol = horizontal ? col + i : col;
+            
+            // Check perpendicular directions for existing words
+            if (horizontal) {
+                // Check above
+                if (currentRow > 0) {
+                    const aboveWord = this.getParallelWordDetails(currentRow - 1, currentCol, !horizontal);
+                    if (aboveWord) {
+                        stackCount++;
+                        if (aboveWord.length <= 3) shortWordCount++;
+                    }
+                }
+                // Check below
+                if (currentRow < 14) {
+                    const belowWord = this.getParallelWordDetails(currentRow + 1, currentCol, !horizontal);
+                    if (belowWord) {
+                        stackCount++;
+                        if (belowWord.length <= 3) shortWordCount++;
+                    }
+                }
+            } else {
+                // Check left
+                if (currentCol > 0) {
+                    const leftWord = this.getParallelWordDetails(currentRow, currentCol - 1, !horizontal);
+                    if (leftWord) {
+                        stackCount++;
+                        if (leftWord.length <= 3) shortWordCount++;
+                    }
+                }
+                // Check right
+                if (currentCol < 14) {
+                    const rightWord = this.getParallelWordDetails(currentRow, currentCol + 1, !horizontal);
+                    if (rightWord) {
+                        stackCount++;
+                        if (rightWord.length <= 3) shortWordCount++;
+                    }
+                }
+            }
+    
+            // Immediate rejection conditions:
+            // 1. Too many stacked words
+            // 2. Multiple short words being created
+            // 3. Creating a short word parallel to another short word
+            if (stackCount > maxStack || 
+                shortWordCount > 1 || 
+                (shortWordCount > 0 && word.length <= 3)) {
+                return true;
+            }
+        }
+    
+        return false;
     }
+    
+
+hasAdjacentParallelWords(row, col, horizontal, word) {
+    // Track details about parallel words
+    const parallelWords = {
+        above: null,
+        below: null,
+        left: null,
+        right: null
+    };
+
+    if (horizontal) {
+        // Check words above
+        if (row > 0) {
+            parallelWords.above = this.getParallelWordDetails(row - 1, col, horizontal);
+        }
+        // Check words below
+        if (row < 14) {
+            parallelWords.below = this.getParallelWordDetails(row + 1, col, horizontal);
+        }
+    } else {
+        // Check words to the left
+        if (col > 0) {
+            parallelWords.left = this.getParallelWordDetails(row, col - 1, horizontal);
+        }
+        // Check words to the right
+        if (col < 14) {
+            parallelWords.right = this.getParallelWordDetails(row, col + 1, horizontal);
+        }
+    }
+
+    // Calculate penalty based on parallel word patterns
+    let penalty = 0;
+    
+    // Severe penalty for stacking on top of longer words
+    const stackedOnLong = Object.values(parallelWords).some(details => 
+        details && details.length > 3
+    );
+    if (stackedOnLong) {
+        penalty += 200;
+    }
+
+    // Extra penalty for short words stacked on each other
+    const hasShortStacks = Object.values(parallelWords).filter(details => 
+        details && details.length <= 3
+    ).length;
+    penalty += hasShortStacks * 150;
+
+    // Additional penalty for creating multiple short parallel words
+    if (word.length <= 3) {
+        penalty += 250;
+    }
+
+    return penalty;
+}
+
+getParallelWordDetails(row, col, horizontal) {
+    let start = horizontal ? col : row;
+    let word = '';
+    
+    // Find start of word
+    while (start > 0 && this.board[horizontal ? row : start - 1][horizontal ? start - 1 : col]) {
+        start--;
+    }
+    
+    // Build word
+    let current = start;
+    while (current < 15 && this.board[horizontal ? row : current][horizontal ? current : col]) {
+        word += this.board[horizontal ? row : current][horizontal ? current : col].letter;
+        current++;
+    }
+    
+    return word.length > 1 ? {
+        word,
+        length: word.length,
+        start: start
+    } : null;
+}
+
+
+
+getParallelWordLength(row, col, horizontal) {
+    let length = 0;
+    let currentPos = horizontal ? col : row;
+    
+    // Find start of word
+    while (currentPos > 0 && this.board[horizontal ? row : currentPos - 1][horizontal ? currentPos - 1 : col]) {
+        currentPos--;
+    }
+    
+    // Count length
+    while (currentPos < 15 && this.board[horizontal ? row : currentPos][horizontal ? currentPos : col]) {
+        length++;
+        currentPos++;
+    }
+    
+    return length;
+}
 
     findCrossWordOpportunities(availableLetters) {
         const plays = [];
@@ -1291,24 +1478,30 @@ class ScrabbleGame {
         }
         return parallelPlays;
     }
-    
-    
-    
-    
-    // Add this helper method to the ScrabbleGame class
+
     hasParallelWord(row, col, isHorizontal) {
-        // Check if there are words parallel to the current placement
-        if (isHorizontal) {
-            // Check above and below for vertical words
-            return (row > 0 && this.board[row - 1][col] !== null) ||
-                   (row < 14 && this.board[row + 1][col] !== null);
-        } else {
-            // Check left and right for horizontal words
-            return (col > 0 && this.board[row][col - 1] !== null) ||
-                   (col < 14 && this.board[row][col + 1] !== null);
-        }
-    }
+        const checkPositions = isHorizontal ? 
+            [[row - 1, col], [row + 1, col]] :  // Check above and below for horizontal words
+            [[row, col - 1], [row, col + 1]];   // Check left and right for vertical words
     
+        // Count how many adjacent parallel words we find
+        let parallelWordCount = 0;
+        
+        checkPositions.forEach(([r, c]) => {
+            if (r >= 0 && r < 15 && c >= 0 && c < 15) {
+                // If we find a tile, verify it's part of a word
+                if (this.board[r][c] !== null) {
+                    const wordLength = this.getParallelWordDetails(r, c, isHorizontal)?.length || 0;
+                    if (wordLength > 2) { // Only count as parallel if it's a real word (3+ letters)
+                        parallelWordCount++;
+                    }
+                }
+            }
+        });
+    
+        return parallelWordCount > 0;
+    }
+        
     
     
 
