@@ -511,3 +511,169 @@ button:hover {
     font-size: 14px;
     line-height: 1.4;
 }
+
+.exchange-area {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(145deg, #0d47a1, #0d47a1);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    perspective: 1000px;
+    box-shadow: 
+        0 10px 20px rgba(0,0,0,0.2),
+        inset 0 0 15px rgba(255,255,255,0.1);
+}
+
+.exchange-portal {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    opacity: 0;
+    transition: all 0.5s ease;
+    transform: scale(0);
+    transform-style: preserve-3d;
+}
+
+.exchange-portal.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.portal-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    animation: spin 4s linear infinite;
+}
+
+.portal-ring.outer {
+    width: 100%;
+    height: 100%;
+    border-color: #64b5f6;
+    animation-duration: 4s;
+    box-shadow: 0 0 20px #64b5f6;
+}
+
+.portal-ring.middle {
+    width: 75%;
+    height: 75%;
+    top: 12.5%;
+    left: 12.5%;
+    border-color: #2196f3;
+    animation-duration: 3s;
+    animation-direction: reverse;
+    box-shadow: 0 0 15px #2196f3;
+}
+
+.portal-ring.inner {
+    width: 50%;
+    height: 50%;
+    top: 25%;
+    left: 25%;
+    border-color: #1976d2;
+    animation-duration: 2s;
+    box-shadow: 0 0 10px #1976d2;
+}
+
+.portal-core {
+    position: absolute;
+    width: 25%;
+    height: 25%;
+    top: 37.5%;
+    left: 37.5%;
+    background: radial-gradient(circle, #1a237e, #0d47a1);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 30px #1a237e;
+}
+
+.portal-particles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 30% 30%, #64b5f6 1px, transparent 1px),
+        radial-gradient(circle at 70% 70%, #2196f3 1px, transparent 1px),
+        radial-gradient(circle at 50% 50%, #1976d2 1px, transparent 1px);
+    animation: particleMove 3s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+@keyframes particleMove {
+    0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+    50% { transform: scale(0.8) rotate(180deg); opacity: 1; }
+    100% { transform: scale(1) rotate(360deg); opacity: 0.5; }
+}
+
+.portal-dragover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px #64b5f6;
+}
+
+.exchange-button {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.exchange-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.exchange-instructions {
+    color: white;
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.exchange-particle {
+    pointer-events: none;
+    box-shadow: 0 0 4px currentColor;
+}
+
+.portal-pulse {
+    animation: portalPulse 0.5s ease-out;
+}
+
+@keyframes portalPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.exchange-portal.active .portal-core {
+    animation: portalCoreActive 2s ease-in-out infinite;
+}
+
+@keyframes portalCoreActive {
+    0% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.3); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+.exchange-portal.active .portal-ring {
+    animation-duration: 1.5s;
+}
+
+.exchange-portal.active .portal-particles {
+    animation-duration: 2s;
+    opacity: 0.8;
+}

@@ -1,50 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Single Player Puzzle</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="game-container">
-        <div class="moves-panel">
+   <head>
+      <meta charset="UTF-8">
+      <title>Single Player Puzzle</title>
+      <link rel="stylesheet" href="styles.css">
+   </head>
+   <body>
+      <div class="game-container">
+         <div class="moves-panel">
             <h2>Moves History</h2>
             <button id="print-history" class="print-button">Print History</button>
             <div id="move-history"></div>
-        </div>
-
-    <div id="hint-box" class="hint-box">
-        <div class="hint-content">
-            <span class="hint-icon">💡</span>
-            <p id="hint-text"></p>
-        </div>
-    </div>
-        
-        <div class="board-container">
+         </div>
+         <div id="hint-box" class="hint-box">
+            <div class="hint-content">
+               <span class="hint-icon">💡</span>
+               <p id="hint-text"></p>
+            </div>
+         </div>
+         <div class="board-container">
             <div id="ai-rack" class="tile-rack ai-rack"></div>
             <div id="scrabble-board"></div>
             <div id="tile-rack" class="tile-rack"></div>
-        </div>
-        
-        
-        <div class="info-panel">
+         </div>
+         <div class="info-panel">
             <h2>Game Info</h2>
             <div class="score-box">
-                <h3>Scores</h3>
-                <p>Player: <span id="player-score">0</span></p>
-                <p>Computer: <span id="computer-score">0</span></p>
+               <h3>Scores</h3>
+               <p>Player: <span id="player-score">0</span></p>
+               <p>Computer: <span id="computer-score">0</span></p>
             </div>
             <div class="tiles-left">
-                <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+               <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
             </div>
+            <div class="exchange-area">
+                <h3>Exchange Tiles</h3>
+                <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
+                <div id="exchange-portal" class="exchange-portal">
+                    <div class="portal-ring outer"></div>
+                    <div class="portal-ring middle"></div>
+                    <div class="portal-ring inner"></div>
+                    <div class="portal-core"></div>
+                    <div class="portal-particles"></div>
+                </div>
+                <div class="exchange-instructions">
+                    Drag tiles here to exchange them
+                </div>
+            </div>            
             <div class="controls">
-                <button id="play-word">Submit</button><br>
-                <button id="shuffle-rack">Shuffle Rack</button><br>
-                <button id="skip-turn">Skip Turn</button><br>
-                <button id="quit-game" class="quit-button">Quit Game</button><br>
+               <button id="play-word">Submit</button><br>
+               <button id="shuffle-rack">Shuffle Rack</button><br>
+               <button id="skip-turn">Skip Turn</button><br>
+               <button id="quit-game" class="quit-button">Quit Game</button><br>
             </div>
-        </div>
-    </div>
-    <script src="script.js"></script>
-</body>
+         </div>
+      </div>
+      <script src="script.js"></script>
+   </body>
 </html>
