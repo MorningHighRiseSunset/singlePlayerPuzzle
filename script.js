@@ -4213,7 +4213,7 @@ class ScrabbleGame {
           printWindow.document.write(`
                       <html>
                           <head>
-                              <title>Scrabble Game History - ${gameDate}</title>
+                              <title>Puzzle Game History - ${gameDate}</title>
                               <style>
                                   body {
                                       font-family: Arial, sans-serif;
