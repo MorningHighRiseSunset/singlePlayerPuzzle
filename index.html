@@ -1,38 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
-   <head>
-      <meta charset="UTF-8">
-      <title>Single Player Puzzle</title>
-      <link rel="stylesheet" href="styles.css">
-   </head>
-   <body>
-      <div class="game-container">
-         <div class="moves-panel">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Puzzle Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal.show {
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: #0047AB;
+            color: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 10px;
+            position: relative;
+            transform: scale(0.7);
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            max-height: 40vh;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+
+        .modal-content::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .close-button {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transition: all 0.2s ease-in-out;
+            z-index: 1001;
+        }
+
+        .close-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .instructions-text {
+            line-height: 1.6;
+            padding: 10px;
+        }
+
+        .instructions-text ul {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        .instructions-text li {
+            margin-bottom: 8px;
+        }
+
+        #show-instructions {
+            background-color: #0047AB;
+            color: white;
+            transition: all 0.2s ease-in-out;
+        }
+
+        #show-instructions:hover {
+            background-color: #003380;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Game Container with Horizontal Scroll for Mobile -->
+    <div class="game-container">
+        <!-- Left Panel -->
+        <div class="moves-panel">
             <h2>Moves History</h2>
             <button id="print-history" class="print-button">Print Move History (Shows Word Definitions)</button>
             <div id="move-history"></div>
-         </div>
-         <div id="hint-box" class="hint-box">
-            <div class="hint-content">
-               <span class="hint-icon">💡</span>
-               <p id="hint-text"></p>
-            </div>
-         </div>
-         <div class="board-container">
+        </div>
+
+        <!-- Center Panel -->
+        <div class="board-container">
             <div id="ai-rack" class="tile-rack ai-rack"></div>
             <div id="scrabble-board"></div>
             <div id="tile-rack" class="tile-rack"></div>
-         </div>
-         <div class="info-panel">
+        </div>
+
+        <!-- Right Panel -->
+        <div class="info-panel">
             <h2>Game Info</h2>
             <div class="score-box">
-               <h3>Scores</h3>
-               <p>Player: <span id="player-score">0</span></p>
-               <p>Computer: <span id="computer-score">0</span></p>
+                <h3>Scores</h3>
+                <p>Player: <span id="player-score">0</span></p>
+                <p>Computer: <span id="computer-score">0</span></p>
             </div>
+
             <div class="tiles-left">
-               <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+                <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
             </div>
+
             <div class="exchange-area">
                 <h3>Exchange Tiles</h3>
                 <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
@@ -46,15 +142,117 @@
                 <div class="exchange-instructions">
                     Drag tiles here to exchange them
                 </div>
-            </div>            
-            <div class="controls">
-               <button id="play-word">Submit</button><br>
-               <button id="shuffle-rack">Shuffle Rack</button><br>
-               <button id="skip-turn">Skip Turn</button><br>
-               <button id="quit-game" class="quit-button">Quit Game</button><br>
             </div>
-         </div>
-      </div>
-      <script src="script.js"></script>
-   </body>
+
+            <div class="controls">
+                <button id="play-word">Submit</button>
+                <button id="shuffle-rack">Shuffle Rack</button>
+                <button id="skip-turn">Skip Turn</button>
+                <button id="show-instructions">How to Play</button>
+                <button id="quit-game" class="quit-button">Quit Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hint Box -->
+    <div id="hint-box" class="hint-box">
+        <div class="hint-content">
+            <span class="hint-icon">💡</span>
+            <p id="hint-text"></p>
+        </div>
+    </div>
+
+    <!-- Game Status Modal -->
+    <div id="game-status-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="status-message"></h2>
+            <p id="final-scores"></p>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h2>How to Play</h2>
+            <div class="instructions-text">
+                <p>1. Playing Tiles:</p>
+                <ul>
+                    <li>On desktop: Click and drag tiles from your rack to the board</li>
+                    <li>On mobile: Touch and hold a tile for 1 second, then drag to place it</li>
+                    <li>To remove a tile, drag it back to your rack</li>
+                </ul>
+            
+                <p>2. Creating Words:</p>
+                <ul>
+                    <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
+                    <li>First word must cross the center star</li>
+                    <li>New words must connect to existing tiles on the board</li>
+                    <li>All words formed must be valid dictionary words</li>
+                </ul>
+            
+                <p>3. Submitting Your Move:</p>
+                <ul>
+                    <li>After placing your tiles, click the "Submit" button</li>
+                    <li>Invalid words will be rejected and tiles returned to your rack</li>
+                    <li>Points will be automatically calculated and added to your score</li>
+                </ul>
+            
+                <p>4. Exchanging Tiles:</p>
+                <ul>
+                    <li>Click "Activate Exchange Portal" to start an exchange</li>
+                    <li>Drag unwanted tiles into the portal</li>
+                    <li>You'll receive the same number of new tiles</li>
+                    <li>This counts as your turn</li>
+                </ul>
+            
+                <p>5. Skipping and Game End:</p>
+                <ul>
+                    <li>Use "Skip Turn" if you can't make a valid move</li>
+                    <li>The game ends when all tiles are used or both players skip twice in a row</li>
+                    <li>Your score is based on the letter values and bonus squares</li>
+                </ul>
+            </div>           
+        </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          const modal = document.getElementById('instructions-modal');
+          const showButton = document.getElementById('show-instructions');
+          const closeButton = document.querySelector('.close-button');
+  
+          function openModal() {
+              modal.style.display = 'block';
+              // Trigger reflow
+              modal.offsetHeight;
+              modal.classList.add('show');
+          }
+  
+          function closeModal() {
+              modal.classList.remove('show');
+              setTimeout(() => {
+                  modal.style.display = 'none';
+              }, 300);
+          }
+  
+          showButton.addEventListener('click', openModal);
+          closeButton.addEventListener('click', closeModal);
+  
+          window.addEventListener('click', function(event) {
+              if (event.target.classList.contains('modal')) {
+                  closeModal();
+              }
+          });
+  
+          // Close with Escape key
+          document.addEventListener('keydown', function(event) {
+              if (event.key === 'Escape') {
+                  closeModal();
+              }
+          });
+      });
+  </script>
+    <script src="script.js"></script>
+</body>
 </html>

@@ -1,3 +1,4 @@
+/* Part 1: Root Variables and Basic Setup */
 :root {
     --primary-blue: #1a237e;
     --secondary-blue: #534bae;
@@ -81,6 +82,7 @@ body {
     transform: translateZ(0);
 }
 
+/* Board Cell Types */
 .board-cell.tw { 
     background: linear-gradient(145deg, #002171, #0d47a1);
 }
@@ -104,9 +106,9 @@ body {
     color: white;
 }
 
-
+/* Part 2: Tile Rack and Tiles Styling */
 .tile-rack {
-    margin: 20px auto; /* Changed from margin-top to margin */
+    margin: 20px auto;
     background: linear-gradient(145deg, var(--primary-blue), #151d69);
     padding: 15px;
     border-radius: 10px;
@@ -114,8 +116,8 @@ body {
     gap: 10px;
     justify-content: center;
     min-height: 50px;
-    width: calc(100% - 30px); /* Added width calculation */
-    max-width: 600px; /* Added max-width */
+    width: calc(100% - 30px);
+    max-width: 600px;
     box-shadow: 
         0 10px 20px rgba(0, 0, 0, 0.2),
         0 5px 8px rgba(0, 0, 0, 0.1);
@@ -136,11 +138,10 @@ body {
     transform-style: preserve-3d;
     transform: translateZ(2px);
     transition: all 0.3s ease;
-    /* Enhanced 3D effect */
     box-shadow: 
-        2px 2px 5px rgba(0, 0, 0, 0.2),  /* Main shadow */
-        inset -2px -2px 5px rgba(0, 0, 0, 0.1),  /* Inner shadow */
-        inset 2px 2px 5px rgba(255, 255, 255, 0.5);  /* Inner highlight */
+        2px 2px 5px rgba(0, 0, 0, 0.2),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.1),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.5);
 }
 
 .tile:active {
@@ -212,6 +213,37 @@ body {
     border: 2px solid var(--primary-blue);
 }
 
+/* AI Rack Specific Styles */
+.tile-rack.ai-rack {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    margin: 20px auto;
+    width: calc(100% - 30px);
+    max-width: 600px;
+}
+
+.tile-rack.ai-rack .tile {
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    color: white;
+    box-shadow: 
+        2px 2px 5px rgba(0, 0, 0, 0.2),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+        inset 2px 2px 5px rgba(255, 255, 255, 0.2);
+}
+
+.tile-rack.ai-rack .tile::before {
+    background: linear-gradient(to bottom, #1976d2, #1565c0);
+}
+
+.tile-rack.ai-rack .tile::after {
+    background: linear-gradient(to right, #1976d2, #1565c0);
+}
+
+.tile-rack.ai-rack .tile .points {
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Part 3: Info Panel, Buttons, and Exchange Portal */
 .info-panel {
     background: linear-gradient(145deg, #ffffff, #f0f0f0);
     padding: 20px;
@@ -243,273 +275,6 @@ button:hover {
         0 8px 20px rgba(0, 0, 0, 0.3),
         0 6px 8px rgba(0, 0, 0, 0.2);
     background: linear-gradient(145deg, var(--secondary-blue), #403991);
-}
-
-.droppable-hover {
-    transform: scale(1.05);
-    box-shadow: 
-        0 0 20px rgba(26, 35, 126, 0.3),
-        inset 0 0 10px rgba(26, 35, 126, 0.2);
-}
-
-.board-cell[data-row="7"][data-col="7"]::before {
-    content: '⚜';
-    position: absolute;
-    color: rgba(0, 0, 0, 0.2);
-    font-size: 24px;
-    pointer-events: none;
-}
-
-.print-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 10px;
-    font-size: 14px;
-}
-
-.print-button:hover {
-    background-color: #45a049;
-}
-
-.win-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Only darken for losing */
-    background: rgba(0, 0, 0, var(--overlay-opacity));
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    --overlay-opacity: 0; /* Default transparent background */
-}
-
-.win-overlay.lose {
-    --overlay-opacity: 0.8;
-}
-
-@keyframes win-particle-fall {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    75% {
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
-}
-
-@keyframes lose-particle-fall {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
-}
-
-.win-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.win-message {
-    background: linear-gradient(145deg, #ffffff, #f0f0f0);
-    padding: 30px 50px;
-    border-radius: 15px;
-    text-align: center;
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
-    box-shadow: 
-        0 15px 35px rgba(0, 0, 0, 0.3),
-        0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.win-message h2 {
-    color: var(--primary-blue);
-    margin-bottom: 20px;
-}
-
-.animated-tile {
-    width: 40px;
-    height: 40px;
-    background-color: #f4d03f;
-    border: 2px solid #d4ac0d;
-    border-radius: 5px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    pointer-events: none;
-}
-
-
-.board-cell.valid-placement {
-    /*animation: pulse 1.5s infinite; */
-}
-
-#tile-rack.rack-droppable {
-    background-color: rgba(0, 255, 0, 0.1);
-    border: 2px dashed #4CAF50;
-}
-
-.ai-thinking-message {
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    color: #333;
-}
-
-.tile-rack.ai-rack {
-    background: linear-gradient(145deg, #42a5f5, #1976d2);
-    margin: 20px auto; /* Added margin */
-    width: calc(100% - 30px); /* Added width calculation */
-    max-width: 600px; /* Added max-width */
-}
-
-.tile-rack.ai-rack .tile {
-    background: linear-gradient(145deg, #42a5f5, #1976d2);
-    color: white;
-    box-shadow: 
-        2px 2px 5px rgba(0, 0, 0, 0.2),
-        inset -2px -2px 5px rgba(0, 0, 0, 0.2),
-        inset 2px 2px 5px rgba(255, 255, 255, 0.2);
-}
-
-.tile-rack.ai-rack .tile::before {
-    background: linear-gradient(to bottom, #1976d2, #1565c0);
-}
-
-.tile-rack.ai-rack .tile::after {
-    background: linear-gradient(to right, #1976d2, #1565c0);
-}
-
-.tile-rack.ai-rack .tile .points {
-    color: rgba(255, 255, 255, 0.9);
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
-}
-
-.board-cell .tile {
-    color: #000000;
-    width: 100%;
-    height: 100%;
-    border-radius: 2px;
-    transform: translateZ(2px);
-    box-shadow: 
-        2px 2px 5px rgba(0, 0, 0, 0.2),
-        inset -2px -2px 5px rgba(0, 0, 0, 0.1),
-        inset 2px 2px 5px rgba(255, 255, 255, 0.5);
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
-    }
-}
-
-@keyframes celebrate {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-@keyframes confetti-fall {
-    0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
-}
-
-@keyframes tilePlace {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    50% {
-        transform: scale(1.1);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        background-color: #ffe97f;
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-}
-
-/* Media Queries for Responsiveness */
-@media (max-width: 1200px) {
-    .game-container {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .moves-panel, .info-panel {
-        width: 100%;
-        max-width: 600px;
-        margin-top: 20px;
-    }
-}
-
-.hint-box {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: linear-gradient(145deg, #ffffff, #f0f0f0);
-    padding: 15px 20px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    max-width: 300px;
-    transform: translateY(150%);
-    transition: transform 0.3s ease;
-    z-index: 1000;
-}
-
-.hint-box.show {
-    transform: translateY(0);
-}
-
-.hint-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.hint-icon {
-    font-size: 24px;
-    color: #ffd700;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-#hint-text {
-    margin: 0;
-    color: #333;
-    font-size: 14px;
-    line-height: 1.4;
 }
 
 .exchange-area {
@@ -603,28 +368,6 @@ button:hover {
     animation: particleMove 3s linear infinite;
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 0.8; }
-}
-
-@keyframes particleMove {
-    0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
-    50% { transform: scale(0.8) rotate(180deg); opacity: 1; }
-    100% { transform: scale(1) rotate(360deg); opacity: 0.5; }
-}
-
-.portal-dragover {
-    transform: scale(1.1);
-    box-shadow: 0 0 30px #64b5f6;
-}
-
 .exchange-button {
     background: linear-gradient(145deg, #42a5f5, #1976d2);
     margin-bottom: 15px;
@@ -644,13 +387,92 @@ button:hover {
     opacity: 0.8;
 }
 
-.exchange-particle {
-    pointer-events: none;
-    box-shadow: 0 0 4px currentColor;
+.hint-box {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    max-width: 300px;
+    transform: translateY(150%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
 }
 
-.portal-pulse {
-    animation: portalPulse 0.5s ease-out;
+.hint-box.show {
+    transform: translateY(0);
+}
+
+.hint-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.hint-icon {
+    font-size: 24px;
+    color: #ffd700;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#hint-text {
+    margin: 0;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Part 4: Animations, Media Queries, and Misc Styles */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+@keyframes particleMove {
+    0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+    50% { transform: scale(0.8) rotate(180deg); opacity: 1; }
+    100% { transform: scale(1) rotate(360deg); opacity: 0.5; }
+}
+
+@keyframes celebrate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes tilePlace {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        background-color: #ffe97f;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
 }
 
 @keyframes portalPulse {
@@ -659,14 +481,117 @@ button:hover {
     100% { transform: scale(1); }
 }
 
-.exchange-portal.active .portal-core {
-    animation: portalCoreActive 2s ease-in-out infinite;
-}
-
 @keyframes portalCoreActive {
     0% { transform: scale(1); filter: brightness(1); }
     50% { transform: scale(1.3); filter: brightness(1.5); }
     100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Media Queries */
+@media screen and (max-width: 1200px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .moves-panel, .info-panel {
+        width: 100%;
+        max-width: 600px;
+        margin-top: 20px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .game-container {
+        gap: 10px;
+    }
+
+    #scrabble-board {
+        grid-template-columns: repeat(15, minmax(20px, 1fr));
+        grid-template-rows: repeat(15, minmax(20px, 1fr));
+    }
+
+    .tile-rack {
+        padding: 10px;
+        gap: 5px;
+    }
+
+    .tile {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+
+    .points {
+        font-size: 8px;
+        top: 1px;
+        right: 2px;
+    }
+
+    .exchange-portal {
+        width: 80px;
+        height: 80px;
+    }
+
+    .hint-box {
+        max-width: 250px;
+        left: 50%;
+        transform: translateX(-50%) translateY(150%);
+    }
+
+    .hint-box.show {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #scrabble-board {
+        grid-template-columns: repeat(15, minmax(15px, 1fr));
+        grid-template-rows: repeat(15, minmax(15px, 1fr));
+    }
+
+    .tile {
+        width: 25px;
+        height: 25px;
+        font-size: 12px;
+    }
+
+    .exchange-portal {
+        width: 60px;
+        height: 60px;
+    }
+
+    .moves-panel, .info-panel {
+        padding: 10px;
+    }
+
+    button {
+        padding: 8px;
+        font-size: 14px;
+    }
+}
+
+/* Misc Utility Classes */
+.droppable-hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px #64b5f6;
+}
+
+.portal-dragover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px #64b5f6;
+}
+
+.portal-pulse {
+    animation: portalPulse 0.5s ease-out;
+}
+
+.exchange-portal.active .portal-core {
+    animation: portalCoreActive 2s ease-in-out infinite;
 }
 
 .exchange-portal.active .portal-ring {
@@ -676,4 +601,30 @@ button:hover {
 .exchange-portal.active .portal-particles {
     animation-duration: 2s;
     opacity: 0.8;
+}
+
+.win-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, var(--overlay-opacity));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    --overlay-opacity: 0;
+}
+
+.win-overlay.lose {
+    --overlay-opacity: 0.8;
+}
+
+.win-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
 }

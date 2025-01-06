@@ -1,3 +1,30 @@
+function isMobileDevice() {
+  return (window.innerWidth <= 768) || 
+         ('ontouchstart' in window) ||
+         (navigator.maxTouchPoints > 0) ||
+         (navigator.msMaxTouchPoints > 0);
+}
+
+// Add this function to handle mobile-specific adjustments
+function setupMobileLayout() {
+  if (isMobileDevice()) {
+      // Adjust touch areas for better mobile interaction
+      document.querySelectorAll('.grid-item').forEach(item => {
+          item.style.touchAction = 'manipulation';
+          
+          // Remove hover effects on mobile
+          item.style.transition = 'transform 0.1s';
+          
+          // Prevent double-tap zoom
+          item.addEventListener('touchend', function(e) {
+              e.preventDefault();
+          });
+      });
+  }
+}
+
+
+
 class ScrabbleGame {
   constructor() {
     this.board = Array(15)
@@ -214,6 +241,21 @@ class ScrabbleGame {
       "Consider the remaining tiles when planning your strategy.",
       "Some premium squares are more valuable than others based on playable words.",
       "Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!",
+      "Blank tiles (★) can represent any letter - choose wisely for maximum impact!",
+    "The center star (⚜) in the middle of the board must be covered on the first turn.",
+    "Premium squares with multiple effects compound - plan combinations carefully!",
+    "Letters like J, X, Q, and Z are rare - save them for special squares if possible.",
+    "Special colored squares only apply their bonus when first covered.",
+    "Premium square bonuses stack with the 50-point bonus for using all tiles!",
+    "Once a premium square is used, it no longer provides its bonus in future turns.",
+    "Blank tiles keep their assigned letter for the entire game.",
+    "Some squares multiply your entire word score - aim for these with long words!",
+    "Premium squares near the edges can be reached with shorter words.",
+    "Special squares work best with high-value letters - plan your rack accordingly.",
+    "The rarest letters (J, X, Q, Z) paired with premium squares can score big points!",
+    "Center star (⚜) starts the game - build outward from there strategically.",
+    "Premium square effects apply only to newly placed tiles, not existing ones.",
+    "Multiple word bonuses can apply when forming several words in one turn!"
     ];
 
     let currentHintIndex = 0;
@@ -275,302 +317,986 @@ class ScrabbleGame {
     const availableLetters = this.aiRack.map((tile) => tile.letter);
     const existingWords = this.getExistingWords();
 
+    console.log("=== Starting Enhanced AI Play Search ===");
     console.log("Available letters:", availableLetters);
     console.log("Anchors found:", anchors);
-    console.log("Existing words:", existingWords);
 
-    // If not enough tiles for minimum word length, check for shorter words
-    if (availableLetters.length < 4) {
-      const shortWords = Array.from(this.dictionary).filter(
-        (word) =>
-          word.length >= 2 &&
-          word.length <= availableLetters.length &&
-          this.canFormWord(word, "", "", availableLetters),
-      );
-
-      if (shortWords.length > 0) {
-        for (const word of shortWords) {
-          const upperWord = word.toUpperCase();
-          if (this.isValidAIPlacement(upperWord, 7, 7, true)) {
-            possiblePlays.push({
-              word: upperWord,
-              startPos: { row: 7, col: 7 },
-              isHorizontal: true,
-              score: this.calculatePotentialScore(upperWord, 7, 7, true),
-            });
-          }
-        }
-      }
-    }
-
-    // Handle first move or empty board
+    // Handle first move or empty board with preference for longer words
     if (
       this.isFirstMove ||
       this.board.every((row) => row.every((cell) => cell === null))
     ) {
-      const words = Array.from(this.dictionary);
-      for (const word of words) {
-        if (word.length < 3) continue;
-        if (!this.dictionary.has(word.toLowerCase())) continue;
+      const words = Array.from(this.dictionary)
+        .filter((word) => {
+          // Prefer longer words for first move
+          if (word.length < 3) return false;
+          // Must be formable with available letters
+          return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
+        })
+        .map((word) => word.toUpperCase());
 
-        if (
-          word.length <= availableLetters.length &&
-          this.canFormWord(word, "", "", availableLetters)
-        ) {
-          const upperWord = word.toUpperCase();
-          if (existingWords.includes(upperWord)) continue;
+      // Sort by length and take top candidates
+      const candidates = words.sort((a, b) => b.length - a.length).slice(0, 20); // Consider top 20 longest possible words
 
-          const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
-          if (
-            this.isValidAIPlacement(
-              upperWord,
-              centerPos.row,
-              centerPos.col,
-              true,
-            )
-          ) {
-            possiblePlays.push({
-              word: upperWord,
-              startPos: centerPos,
-              isHorizontal: true,
-              score: this.calculatePotentialScore(
-                upperWord,
-                centerPos.row,
-                centerPos.col,
-                true,
-              ),
-            });
-          }
-        }
-      }
-    } else {
-      // For subsequent moves
-      anchors.forEach((anchor) => {
-        const hPrefix = this.getPrefix(anchor, true);
-        const hSuffix = this.getSuffix(anchor, true);
-        const vPrefix = this.getPrefix(anchor, false);
-        const vSuffix = this.getSuffix(anchor, false);
-
-        for (const word of this.dictionary) {
-          if (word.length < 3) continue;
-          if (!this.dictionary.has(word.toLowerCase())) continue;
-
-          const upperWord = word.toUpperCase();
-          if (existingWords.includes(upperWord)) continue;
-
-          // Try horizontal placement
-          if (this.canFormWord(upperWord, hPrefix, hSuffix, availableLetters)) {
-            const startCol = anchor.col - hPrefix.length;
-            if (
-              this.isValidAIPlacement(upperWord, anchor.row, startCol, true)
-            ) {
-              possiblePlays.push({
-                word: upperWord,
-                startPos: { row: anchor.row, col: startCol },
-                isHorizontal: true,
-                score: this.calculatePotentialScore(
-                  upperWord,
-                  anchor.row,
-                  startCol,
-                  true,
-                ),
-              });
-            }
-          }
-
-          // Try vertical placement
-          if (this.canFormWord(upperWord, vPrefix, vSuffix, availableLetters)) {
-            const startRow = anchor.row - vPrefix.length;
-            if (
-              this.isValidAIPlacement(upperWord, startRow, anchor.col, false)
-            ) {
-              possiblePlays.push({
-                word: upperWord,
-                startPos: { row: startRow, col: anchor.col },
-                isHorizontal: false,
-                score: this.calculatePotentialScore(
-                  upperWord,
-                  startRow,
-                  anchor.col,
-                  false,
-                ),
-              });
-            }
-          }
-        }
-      });
-    }
-
-    // Filter plays based on new criteria
-    return possiblePlays
-      .filter((play) => {
-        // Reject plays that create too many short words
-        if (
-          this.wouldCreateStackedShortWords(
-            play.word,
-            play.startPos.row,
-            play.startPos.col,
-            play.isHorizontal,
-          )
-        ) {
-          return false;
-        }
-
-        // Reject plays that stack words too closely
-        if (
-          this.hasNearbyParallelWords(
-            play.startPos.row,
-            play.startPos.col,
-            play.isHorizontal,
-          )
-        ) {
-          return false;
-        }
-
-        // Prefer longer words
-        if (play.word.length <= 3) {
-          // Only allow short words if they create no parallel words
-          return !this.hasParallelWord(
-            play.startPos.row,
-            play.startPos.col,
-            play.isHorizontal,
+      for (const word of candidates) {
+        // Try to place word through center square
+        const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
+        if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
+          const score = this.calculatePotentialScore(
+            word,
+            centerPos.row,
+            centerPos.col,
+            true,
           );
-        }
-
-        return true;
-      })
-      .sort((a, b) => b.score - a.score);
-
-    // Handle first move or empty board
-    if (
-      this.isFirstMove ||
-      this.board.every((row) => row.every((cell) => cell === null))
-    ) {
-      const words = Array.from(this.dictionary);
-      for (const word of words) {
-        // Skip words shorter than 5 letters
-        if (word.length < 3) continue;
-
-        if (!this.dictionary.has(word.toLowerCase())) {
-          continue;
-        }
-
-        if (word.length <= availableLetters.length) {
-          const upperWord = word.toUpperCase();
-          if (existingWords.includes(upperWord)) {
-            console.log(`Skipping ${upperWord} - already exists on board`);
-            continue;
-          }
-          if (this.canFormWord(word, "", "", availableLetters)) {
-            const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
-            if (
-              this.isValidAIPlacement(
-                upperWord,
-                centerPos.row,
-                centerPos.col,
-                true,
-              )
-            ) {
-              possiblePlays.push({
-                word: upperWord,
-                startPos: centerPos,
-                isHorizontal: true,
-                score: this.calculatePotentialScore(
-                  upperWord,
-                  centerPos.row,
-                  centerPos.col,
-                  true,
-                ),
-              });
-            }
-          }
+          possiblePlays.push({
+            word,
+            startPos: centerPos,
+            isHorizontal: true,
+            score,
+          });
         }
       }
     } else {
       // For subsequent moves
-      anchors.forEach((anchor) => {
+      for (const anchor of anchors) {
+        // Get prefixes and suffixes for both directions
         const hPrefix = this.getPrefix(anchor, true);
         const hSuffix = this.getSuffix(anchor, true);
         const vPrefix = this.getPrefix(anchor, false);
         const vSuffix = this.getSuffix(anchor, false);
 
-        for (const word of this.dictionary) {
-          // Skip words shorter than 5 letters
-          if (word.length < 3) continue;
+        // Find potential words that could be formed
+        const potentialWords = this.findPotentialWords(availableLetters);
 
-          if (!this.dictionary.has(word.toLowerCase())) {
+        // Try horizontal placements
+        for (const word of potentialWords) {
+          // Skip very short words unless they create multiple scoring opportunities
+          if (
+            word.length < 3 &&
+            !this.createsMultipleWords(word, anchor.row, anchor.col, true)
+          ) {
             continue;
           }
 
-          const upperWord = word.toUpperCase();
-
-          if (existingWords.includes(upperWord)) {
-            console.log(`Skipping ${upperWord} - already exists on board`);
-            continue;
-          }
-
-          // Try horizontal placement
-          if (this.canFormWord(upperWord, hPrefix, hSuffix, availableLetters)) {
+          if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
             const startCol = anchor.col - hPrefix.length;
-            if (
-              this.isValidAIPlacement(upperWord, anchor.row, startCol, true)
-            ) {
+            if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
               const score = this.calculatePotentialScore(
-                upperWord,
+                word,
                 anchor.row,
                 startCol,
                 true,
               );
-              possiblePlays.push({
-                word: upperWord,
-                startPos: { row: anchor.row, col: startCol },
-                isHorizontal: true,
-                score,
-              });
+
+              // Only add plays that meet minimum score threshold
+              if (score >= 10) {
+                possiblePlays.push({
+                  word,
+                  startPos: { row: anchor.row, col: startCol },
+                  isHorizontal: true,
+                  score,
+                });
+              }
             }
           }
+        }
 
-          // Try vertical placement
-          if (this.canFormWord(upperWord, vPrefix, vSuffix, availableLetters)) {
+        // Try vertical placements
+        for (const word of potentialWords) {
+          if (
+            word.length < 3 &&
+            !this.createsMultipleWords(word, anchor.row, anchor.col, false)
+          ) {
+            continue;
+          }
+
+          if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
             const startRow = anchor.row - vPrefix.length;
-            if (
-              this.isValidAIPlacement(upperWord, startRow, anchor.col, false)
-            ) {
+            if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
               const score = this.calculatePotentialScore(
-                upperWord,
+                word,
                 startRow,
                 anchor.col,
                 false,
               );
-              possiblePlays.push({
-                word: upperWord,
-                startPos: { row: startRow, col: anchor.col },
-                isHorizontal: false,
-                score,
-              });
+
+              if (score >= 10) {
+                possiblePlays.push({
+                  word,
+                  startPos: { row: startRow, col: anchor.col },
+                  isHorizontal: false,
+                  score,
+                });
+              }
             }
           }
         }
-      });
+      }
     }
 
-    // Filter out duplicates
-    const uniquePlays = possiblePlays.filter(
-      (play, index, self) =>
-        index ===
-        self.findIndex(
-          (p) =>
-            p.word === play.word &&
-            p.startPos.row === play.startPos.row &&
-            p.startPos.col === play.startPos.col &&
-            p.isHorizontal === play.isHorizontal,
-        ),
+    // Filter and sort plays
+    const validPlays = possiblePlays
+      .filter((play) => {
+        // Basic validity checks
+        if (!this.dictionary.has(play.word.toLowerCase())) {
+          return false;
+        }
+
+        // Check for simple extensions of existing words
+        if (this.isSimpleExtension(play.word, existingWords)) {
+          // Only accept extensions if they create high-value plays
+          return (
+            play.score > 30 &&
+            this.createsMultipleWords(
+              play.word,
+              play.startPos.row,
+              play.startPos.col,
+              play.isHorizontal,
+            )
+          );
+        }
+
+        // Check for creative placement
+        const isCreative = this.isCreativePlacement(
+          play.startPos.row,
+          play.startPos.col,
+          play.isHorizontal,
+          play.word,
+        );
+
+        // Accept plays that are either creative or score well
+        return isCreative || play.score > 20;
+      })
+      .sort((a, b) => {
+        // First compare scores
+        const scoreDiff = b.score - a.score;
+        if (Math.abs(scoreDiff) > 10) {
+          return scoreDiff;
+        }
+
+        // If scores are close, prefer longer words
+        const lengthDiff = b.word.length - a.word.length;
+        if (lengthDiff !== 0) {
+          return lengthDiff;
+        }
+
+        // If lengths are equal, prefer creative placements
+        const aCreative = this.isCreativePlacement(
+          a.startPos.row,
+          a.startPos.col,
+          a.isHorizontal,
+          a.word,
+        );
+        const bCreative = this.isCreativePlacement(
+          b.startPos.row,
+          b.startPos.col,
+          b.isHorizontal,
+          b.word,
+        );
+
+        return bCreative - aCreative;
+      });
+
+    console.log(`Found ${validPlays.length} valid plays after filtering`);
+    return validPlays;
+  }
+
+  isSimpleExtension(word, existingWords) {
+    for (const existingWord of existingWords) {
+      // Check for simple prefix/suffix additions
+      if (word.startsWith(existingWord) || word.endsWith(existingWord)) {
+        return true;
+      }
+      // Check for common modifications
+      if (
+        word === existingWord + "S" ||
+        word === existingWord + "ED" ||
+        word === existingWord + "ING" ||
+        word === existingWord + "ES"
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  createsMultipleWords(word, row, col, isHorizontal) {
+    let crossWordCount = 0;
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = isHorizontal ? row : row + i;
+      const currentCol = isHorizontal ? col + i : col;
+
+      // Check perpendicular direction for potential words
+      const crossWord = this.getPerpendicularWord(
+        currentRow,
+        currentCol,
+        isHorizontal,
+      );
+      if (crossWord && crossWord.length > 2) {
+        crossWordCount++;
+      }
+    }
+
+    return crossWordCount > 1;
+  }
+
+  getPerpendicularWord(row, col, isHorizontal) {
+    // Get the word formed in the perpendicular direction
+    return isHorizontal
+      ? this.getVerticalWordAt(row, col)
+      : this.getHorizontalWordAt(row, col);
+  }
+
+  getVerticalWordAt(row, col) {
+    let word = "";
+    let startRow = row;
+
+    // Find start of word
+    while (startRow > 0 && this.board[startRow - 1][col]) {
+      startRow--;
+    }
+
+    // Build word from start position
+    let currentRow = startRow;
+    while (currentRow < 15 && this.board[currentRow][col]) {
+      word += this.board[currentRow][col].letter;
+      currentRow++;
+    }
+
+    return word.length > 1 ? word : null;
+  }
+
+  getHorizontalWordAt(row, col) {
+    let word = "";
+    let startCol = col;
+
+    // Find start of word
+    while (startCol > 0 && this.board[row][startCol - 1]) {
+      startCol--;
+    }
+
+    // Build word from start position
+    let currentCol = startCol;
+    while (currentCol < 15 && this.board[row][currentCol]) {
+      word += this.board[row][currentCol].letter;
+      currentCol++;
+    }
+
+    return word.length > 1 ? word : null;
+  }
+
+  hasPerpendicularWord(row, col, isHorizontal) {
+    if (isHorizontal) {
+      return this.getVerticalWordAt(row, col) !== null;
+    } else {
+      return this.getHorizontalWordAt(row, col) !== null;
+    }
+  }
+
+  getWordAt(row, col, isHorizontal) {
+    if (!this.isValidPosition(row, col)) return null;
+
+    let word = "";
+    let startPos = isHorizontal ? col : row;
+
+    // Find start of word
+    while (
+      this.isValidPosition(
+        isHorizontal ? row : startPos - 1,
+        isHorizontal ? startPos - 1 : col,
+      ) &&
+      this.board[isHorizontal ? row : startPos - 1][
+        isHorizontal ? startPos - 1 : col
+      ]
+    ) {
+      startPos--;
+    }
+
+    // Build word
+    let currentPos = startPos;
+    while (
+      this.isValidPosition(
+        isHorizontal ? row : currentPos,
+        isHorizontal ? currentPos : col,
+      ) &&
+      this.board[isHorizontal ? row : currentPos][
+        isHorizontal ? currentPos : col
+      ]
+    ) {
+      word +=
+        this.board[isHorizontal ? row : currentPos][
+          isHorizontal ? currentPos : col
+        ].letter;
+      currentPos++;
+    }
+
+    return word.length > 1 ? word : null;
+  }
+
+  isValidPosition(row, col) {
+    return row >= 0 && row < 15 && col >= 0 && col < 15;
+  }
+
+  getMinDistanceToLastMove(row, col) {
+    if (this.placedTiles.length === 0) return Infinity;
+
+    const lastMove = this.placedTiles[0];
+    return Math.abs(row - lastMove.row) + Math.abs(col - lastMove.col);
+  }
+
+  getWordInDirection(row, col, direction) {
+    const [dx, dy] = direction;
+    let word = "";
+    let currentRow = row;
+    let currentCol = col;
+
+    // Find start of word
+    while (
+      currentRow >= 0 &&
+      currentRow < 15 &&
+      currentCol >= 0 &&
+      currentCol < 15 &&
+      this.board[currentRow][currentCol]
+    ) {
+      currentRow -= dx;
+      currentCol -= dy;
+    }
+
+    // Move back to last valid position
+    currentRow += dx;
+    currentCol += dy;
+
+    // Build word
+    while (
+      currentRow >= 0 &&
+      currentRow < 15 &&
+      currentCol >= 0 &&
+      currentCol < 15 &&
+      this.board[currentRow][currentCol]
+    ) {
+      word += this.board[currentRow][currentCol].letter;
+      currentRow += dx;
+      currentCol += dy;
+    }
+
+    return word.length > 1 ? word : null;
+  }
+
+  getConnectedWords(row, col) {
+    const words = new Set();
+    const directions = [
+      [0, 1], // horizontal
+      [1, 0], // vertical
+    ];
+
+    for (const direction of directions) {
+      const word = this.getWordInDirection(row, col, direction);
+      if (word) {
+        words.add(word);
+      }
+    }
+
+    return Array.from(words);
+  }
+
+  getPotentialCrossWords(row, col, letter, direction) {
+    const tempBoard = JSON.parse(JSON.stringify(this.board));
+    tempBoard[row][col] = { letter: letter };
+
+    return direction === "horizontal"
+      ? this.getVerticalWordAt(row, col)
+      : this.getHorizontalWordAt(row, col);
+  }
+
+  getAllWordsFromPosition(row, col, isHorizontal) {
+    const words = new Set();
+
+    // Get main word
+    const mainWord = this.getWordAt(row, col, isHorizontal);
+    if (mainWord) words.add(mainWord);
+
+    // Get perpendicular words
+    const perpWord = this.getWordAt(row, col, !isHorizontal);
+    if (perpWord) words.add(perpWord);
+
+    return Array.from(words);
+  }
+
+  findPotentialWords(availableLetters) {
+    const words = new Set();
+    const letterCount = {};
+    let blankCount = availableLetters.filter((l) => l === "*").length;
+
+    // Count available letters
+    availableLetters.forEach((letter) => {
+      if (letter !== "*") {
+        letterCount[letter] = (letterCount[letter] || 0) + 1;
+      }
+    });
+
+    // Check dictionary for words that can be formed
+    for (const word of this.dictionary) {
+      if (word.length >= 2) {
+        const upperWord = word.toUpperCase();
+        const tempCount = { ...letterCount };
+        let tempBlankCount = blankCount;
+        let canForm = true;
+
+        // Check if word can be formed with available letters
+        for (const letter of upperWord) {
+          if (tempCount[letter] && tempCount[letter] > 0) {
+            tempCount[letter]--;
+          } else if (tempBlankCount > 0) {
+            tempBlankCount--;
+          } else {
+            canForm = false;
+            break;
+          }
+        }
+
+        if (canForm) {
+          words.add(upperWord);
+        }
+      }
+    }
+
+    return Array.from(words);
+  }
+
+  findWordsWithPrefixSuffix(prefix, suffix, availableLetters) {
+    const words = new Set();
+    const pattern = new RegExp(`^${prefix}.*${suffix}$`);
+
+    // Get all possible combinations of available letters
+    const letterCombinations = this.getCombinations(availableLetters);
+
+    for (const combination of letterCombinations) {
+      const word = prefix + combination + suffix;
+      if (
+        word.length >= 2 &&
+        this.dictionary.has(word.toLowerCase()) &&
+        pattern.test(word)
+      ) {
+        words.add(word);
+      }
+    }
+
+    return Array.from(words);
+  }
+
+  getCombinations(letters, maxLength = 7) {
+    const results = new Set();
+
+    function combine(current, remaining) {
+      if (current.length > 0) {
+        results.add(current);
+      }
+      if (current.length >= maxLength) return;
+
+      for (let i = 0; i < remaining.length; i++) {
+        combine(current + remaining[i], remaining.slice(i + 1));
+      }
+    }
+
+    combine("", letters.join(""));
+    return Array.from(results);
+  }
+
+  isSimpleModification(word, existingWords) {
+    const commonSuffixes = ["S", "ES", "ED", "ING"];
+
+    for (const existingWord of existingWords) {
+      // Check for simple plurals or common suffixes
+      if (
+        commonSuffixes.some(
+          (suffix) =>
+            word === existingWord + suffix || existingWord === word + suffix,
+        )
+      ) {
+        return true;
+      }
+
+      // Check for simple prefixes
+      if (word.endsWith(existingWord) || existingWord.endsWith(word)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  canFormLongerWord(currentWord, availableLetters) {
+    const minLength = currentWord.length + 1;
+    const maxLength = Math.min(
+      15,
+      availableLetters.length + currentWord.length,
     );
+    const letterPool = [...availableLetters.map((t) => t.letter)];
 
-    console.log(`Found ${uniquePlays.length} possible plays after filtering`);
+    // Count available letters including blanks
+    const letterCount = {};
+    let blankCount = letterPool.filter((l) => l === "*").length;
+    letterPool.forEach((letter) => {
+      if (letter !== "*") {
+        letterCount[letter] = (letterCount[letter] || 0) + 1;
+      }
+    });
 
-    // Sort by score (highest first)
-    return uniquePlays.sort((a, b) => b.score - a.score);
+    // Search dictionary for longer words
+    for (const word of this.dictionary) {
+      if (word.length >= minLength && word.length <= maxLength) {
+        const upperWord = word.toUpperCase();
+        const tempCount = { ...letterCount };
+        let tempBlankCount = blankCount;
+        let canForm = true;
+
+        // Check if we can form this word
+        for (const letter of upperWord) {
+          if (tempCount[letter] && tempCount[letter] > 0) {
+            tempCount[letter]--;
+          } else if (tempBlankCount > 0) {
+            tempBlankCount--;
+          } else {
+            canForm = false;
+            break;
+          }
+        }
+
+        if (canForm) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  evaluateWordQuality(word, row, col, horizontal) {
+    let quality = 0;
+
+    // Base points for word length
+    quality += word.length * 10;
+
+    // Bonus for using high-value letters effectively
+    for (let i = 0; i < word.length; i++) {
+      const letter = word[i];
+      const letterRow = horizontal ? row : row + i;
+      const letterCol = horizontal ? col + i : col;
+
+      // Check if high-value letter is on premium square
+      if (this.tileValues[letter] >= 4) {
+        const premium = this.getPremiumSquareType(letterRow, letterCol);
+        if (premium === "tl" || premium === "dl") {
+          quality += 25;
+        }
+      }
+    }
+
+    // Check for balanced vowel-consonant ratio
+    const vowels = "AEIOU";
+    const vowelCount = word.split("").filter((c) => vowels.includes(c)).length;
+    const consonantCount = word.length - vowelCount;
+
+    if (vowelCount > 0 && consonantCount > 0) {
+      const ratio = vowelCount / word.length;
+      if (ratio >= 0.3 && ratio <= 0.6) {
+        quality += 15; // Bonus for balanced ratio
+      }
+    }
+
+    // Check for cross-word potential
+    const crossWords = this.evaluateCrossWordPotential(
+      word,
+      row,
+      col,
+      horizontal,
+    );
+    quality += crossWords * 20;
+
+    // Consider strategic position
+    quality += this.evaluatePositionalValue(row, col, horizontal, word);
+
+    return quality;
+  }
+
+  evaluateCrossWordPotential(word, row, col, horizontal) {
+    let potential = 0;
+    const commonLetters = "AEIOURST";
+
+    for (let i = 0; i < word.length; i++) {
+      const letter = word[i];
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Bonus for common letters in good positions
+      if (commonLetters.includes(letter)) {
+        // Check if position allows for cross-word formation
+        if (this.hasAdjacentSpace(currentRow, currentCol, !horizontal)) {
+          potential++;
+        }
+      }
+
+      // Extra bonus for S in good positions
+      if (
+        letter === "S" &&
+        this.isGoodPositionForS(currentRow, currentCol, horizontal)
+      ) {
+        potential += 2;
+      }
+    }
+
+    return potential;
+  }
+
+  evaluatePositionalValue(row, col, horizontal, word) {
+    let value = 0;
+    const centerRow = 7,
+      centerCol = 7;
+
+    // Distance from center
+    const distanceFromCenter =
+      Math.abs(row - centerRow) + Math.abs(col - centerCol);
+    value -= distanceFromCenter * 2; // Slight penalty for distance from center
+
+    // Check if move creates a balanced board
+    const boardBalance = this.evaluateBoardBalance(row, col, horizontal, word);
+    value += boardBalance;
+
+    // Bonus for moves that don't crowd the board
+    if (!this.isBoardCrowded(row, col, horizontal, word)) {
+      value += 15;
+    }
+
+    // Consider edge proximity
+    if (this.isNearEdge(row, col, horizontal, word)) {
+      value -= 10; // Penalty for being too close to edge
+    }
+
+    return value;
+  }
+
+  hasAdjacentSpace(row, col, vertical) {
+    if (vertical) {
+      // Check spaces above and below
+      const aboveEmpty = row > 0 && !this.board[row - 1][col];
+      const belowEmpty = row < 14 && !this.board[row + 1][col];
+      return aboveEmpty || belowEmpty;
+    } else {
+      // Check spaces left and right
+      const leftEmpty = col > 0 && !this.board[row][col - 1];
+      const rightEmpty = col < 14 && !this.board[row][col + 1];
+      return leftEmpty || rightEmpty;
+    }
+  }
+
+  isGoodPositionForS(row, col, horizontal) {
+    // Check if S can be used to extend existing words
+    if (horizontal) {
+      // Check if there's a word to the left that could be pluralized
+      return (
+        col > 0 &&
+        this.board[row][col - 1] &&
+        !this.board[row][col] &&
+        this.isValidWordEnd(row, col - 1)
+      );
+    } else {
+      // Check if there's a word above that could be pluralized
+      return (
+        row > 0 &&
+        this.board[row - 1][col] &&
+        !this.board[row][col] &&
+        this.isValidWordEnd(row - 1, col)
+      );
+    }
+  }
+
+  evaluateBoardBalance(row, col, horizontal, word) {
+    let balance = 0;
+    const boardQuadrants = this.getBoardQuadrantDensities();
+    const wordQuadrant = this.getQuadrant(row, col);
+
+    // Prefer plays in less dense quadrants
+    const currentDensity = boardQuadrants[wordQuadrant];
+    balance += (1 - currentDensity) * 20;
+
+    // Bonus for connecting different areas of the board
+    if (this.connectsDifferentAreas(row, col, horizontal, word)) {
+      balance += 25;
+    }
+
+    return balance;
+  }
+
+  connectsDifferentAreas(row, col, horizontal, word) {
+    const connectedAreas = new Set();
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check all adjacent positions
+      const directions = [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ];
+      for (const [dx, dy] of directions) {
+        const newRow = currentRow + dx;
+        const newCol = currentCol + dy;
+
+        if (
+          this.isValidPosition(newRow, newCol) &&
+          this.board[newRow][newCol]
+        ) {
+          connectedAreas.add(this.getAreaIdentifier(newRow, newCol));
+        }
+      }
+    }
+
+    return connectedAreas.size > 1;
+  }
+
+  getAreaIdentifier(row, col) {
+    // Divide board into regions and return identifier for given position
+    if (row < 5) {
+      return col < 5 ? "TL" : col < 10 ? "TC" : "TR";
+    } else if (row < 10) {
+      return col < 5 ? "ML" : col < 10 ? "MC" : "MR";
+    } else {
+      return col < 5 ? "BL" : col < 10 ? "BC" : "BR";
+    }
+  }
+
+  getBoardQuadrantDensities() {
+    const quadrants = {
+      TL: 0,
+      TC: 0,
+      TR: 0,
+      ML: 0,
+      MC: 0,
+      MR: 0,
+      BL: 0,
+      BC: 0,
+      BR: 0,
+    };
+
+    let counts = {};
+    let totals = {};
+
+    // Initialize counters
+    for (const quad in quadrants) {
+      counts[quad] = 0;
+      totals[quad] = 0;
+    }
+
+    // Count occupied spaces in each quadrant
+    for (let row = 0; row < 15; row++) {
+      for (let col = 0; col < 15; col++) {
+        const quad = this.getAreaIdentifier(row, col);
+        totals[quad]++;
+        if (this.board[row][col]) {
+          counts[quad]++;
+        }
+      }
+    }
+
+    // Calculate densities
+    for (const quad in quadrants) {
+      quadrants[quad] = counts[quad] / totals[quad];
+    }
+
+    return quadrants;
+  }
+
+  evaluateDefensivePosition(row, col, horizontal, word) {
+    let value = 0;
+
+    // Check for potential high-scoring opportunities created for opponent
+    const vulnerabilities = this.assessVulnerabilities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value -= vulnerabilities * 30;
+
+    // Bonus for blocking opponent's access to premium squares
+    const blockedPremiums = this.countBlockedPremiumSquares(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value += blockedPremiums * 25;
+
+    // Consider distance from edges (avoid creating edge opportunities)
+    const edgeRisk = this.assessEdgeRisk(row, col, horizontal, word);
+    value -= edgeRisk;
+
+    return value;
+  }
+
+  assessVulnerabilities(row, col, horizontal, word) {
+    let vulnerabilityCount = 0;
+
+    // Check positions adjacent to the word
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check perpendicular positions
+      const checkPositions = horizontal
+        ? [
+            [currentRow - 1, currentCol],
+            [currentRow + 1, currentCol],
+          ]
+        : [
+            [currentRow, currentCol - 1],
+            [currentRow, currentCol + 1],
+          ];
+
+      for (const [checkRow, checkCol] of checkPositions) {
+        if (
+          this.isValidPosition(checkRow, checkCol) &&
+          !this.board[checkRow][checkCol]
+        ) {
+          // Check if position could be used for high-scoring play
+          if (this.isPotentialHighScorePosition(checkRow, checkCol)) {
+            vulnerabilityCount++;
+          }
+        }
+      }
+    }
+
+    return vulnerabilityCount;
+  }
+
+  isPotentialHighScorePosition(row, col) {
+    // Check if position is adjacent to premium squares
+    const adjacentPremiums = this.getAdjacentPremiumSquares(row, col);
+    if (adjacentPremiums.length > 0) return true;
+
+    // Check if position could be used for long word placement
+    const maxWordLength = this.getMaxPossibleWordLength(row, col);
+    if (maxWordLength >= 7) return true;
+
+    return false;
+  }
+
+  getMaxPossibleWordLength(row, col) {
+    // Check horizontal
+    let horizontalSpace = 0;
+    let currentCol = col;
+    while (currentCol >= 0 && !this.board[row][currentCol]) {
+      horizontalSpace++;
+      currentCol--;
+    }
+    currentCol = col + 1;
+    while (currentCol < 15 && !this.board[row][currentCol]) {
+      horizontalSpace++;
+      currentCol++;
+    }
+
+    // Check vertical
+    let verticalSpace = 0;
+    let currentRow = row;
+    while (currentRow >= 0 && !this.board[currentRow][col]) {
+      verticalSpace++;
+      currentRow--;
+    }
+    currentRow = row + 1;
+    while (currentRow < 15 && !this.board[currentRow][col]) {
+      verticalSpace++;
+      currentRow++;
+    }
+
+    return Math.max(horizontalSpace, verticalSpace);
+  }
+
+  countBlockedPremiumSquares(row, col, horizontal, word) {
+    let blocked = 0;
+    const premiumTypes = ["tw", "dw", "tl", "dl"];
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check adjacent positions
+      const adjacentPositions = [
+        [currentRow - 1, currentCol],
+        [currentRow + 1, currentCol],
+        [currentRow, currentCol - 1],
+        [currentRow, currentCol + 1],
+      ];
+
+      for (const [checkRow, checkCol] of adjacentPositions) {
+        if (this.isValidPosition(checkRow, checkCol)) {
+          const premium = this.getPremiumSquareType(checkRow, checkCol);
+          if (premiumTypes.includes(premium)) {
+            blocked++;
+          }
+        }
+      }
+    }
+
+    return blocked;
+  }
+
+  assessEdgeRisk(row, col, horizontal, word) {
+    let risk = 0;
+
+    // Check if word is placed near edges
+    const isNearEdge = (pos) => pos <= 1 || pos >= 13;
+
+    if (horizontal) {
+      if (isNearEdge(row)) {
+        risk += 15;
+        // Extra penalty if word creates opportunities along the edge
+        if (this.createsEdgeOpportunities(row, col, horizontal, word)) {
+          risk += 20;
+        }
+      }
+    } else {
+      if (isNearEdge(col)) {
+        risk += 15;
+        if (this.createsEdgeOpportunities(row, col, horizontal, word)) {
+          risk += 20;
+        }
+      }
+    }
+
+    return risk;
+  }
+
+  createsEdgeOpportunities(row, col, horizontal, word) {
+    // Check if placement creates easy extension opportunities along edges
+    const checkPositions = horizontal
+      ? [
+          [row - 1, col + word.length],
+          [row + 1, col + word.length],
+        ]
+      : [
+          [row + word.length, col - 1],
+          [row + word.length, col + 1],
+        ];
+
+    for (const [checkRow, checkCol] of checkPositions) {
+      if (
+        this.isValidPosition(checkRow, checkCol) &&
+        !this.board[checkRow][checkCol]
+      ) {
+        if (this.isPotentialHighScorePosition(checkRow, checkCol)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  isValidPosition(row, col) {
+    return row >= 0 && row < 15 && col >= 0 && col < 15;
   }
 
   findSimpleWords(letters) {
@@ -628,19 +1354,17 @@ class ScrabbleGame {
 
   hasAdjacentTile(row, col) {
     const directions = [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
+      [-1, 0], // up
+      [1, 0], // down
+      [0, -1], // left
+      [0, 1], // right
     ];
+
     return directions.some(([dx, dy]) => {
       const newRow = row + dx;
       const newCol = col + dy;
       return (
-        newRow >= 0 &&
-        newRow < 15 &&
-        newCol >= 0 &&
-        newCol < 15 &&
+        this.isValidPosition(newRow, newCol) &&
         this.board[newRow][newCol] !== null
       );
     });
@@ -674,43 +1398,50 @@ class ScrabbleGame {
 
   async getWordDefinition(word) {
     // Skip special moves and compound words
-    if (word === "SKIP" || word === "EXCHANGE" || word === "QUIT" || word.includes("&")) {
-        return null;
+    if (
+      word === "SKIP" ||
+      word === "EXCHANGE" ||
+      word === "QUIT" ||
+      word.includes("&")
+    ) {
+      return null;
     }
 
     // Clean up the word - remove scores and parentheses
-    const cleanWord = word.split('(')[0].trim();
+    const cleanWord = word.split("(")[0].trim();
 
     try {
-        // Fetch from the dictionary API
-        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord.toLowerCase()}`);
-        
-        // Handle API errors
-        if (!response.ok) {
-            console.log(`No definition found for: ${cleanWord}`);
-            return null;
-        }
+      // Fetch from the dictionary API
+      const response = await fetch(
+        `https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord.toLowerCase()}`,
+      );
 
-        const data = await response.json();
-        
-        // Extract and format the definitions
-        if (data && data[0] && data[0].meanings) {
-            return data[0].meanings.map(meaning => ({
-                partOfSpeech: meaning.partOfSpeech,
-                definitions: meaning.definitions
-                    .slice(0, 2) // Limit to first 2 definitions per part of speech
-                    .map(def => def.definition)
-            }));
-        }
-        
+      // Handle API errors
+      if (!response.ok) {
+        console.log(`No definition found for: ${cleanWord}`);
         return null;
+      }
+
+      const data = await response.json();
+
+      // Extract and format the definitions
+      if (data && data[0] && data[0].meanings) {
+        return data[0].meanings.map((meaning) => ({
+          partOfSpeech: meaning.partOfSpeech,
+          definitions: meaning.definitions
+            .slice(0, 2) // Limit to first 2 definitions per part of speech
+            .map((def) => def.definition),
+        }));
+      }
+
+      return null;
     } catch (error) {
-        console.error(`Error fetching definition for ${word}:`, error);
-        return null;
+      console.error(`Error fetching definition for ${word}:`, error);
+      return null;
     }
-}
+  }
 
-generatePrintContent(gameDate, wordDefinitions) {
+  generatePrintContent(gameDate, wordDefinitions) {
     // Generate header with game information
     const header = `
         <div class="header">
@@ -720,16 +1451,21 @@ generatePrintContent(gameDate, wordDefinitions) {
                 <h2>Final Scores</h2>
                 <p>Player: ${this.playerScore} points</p>
                 <p>Computer: ${this.aiScore} points</p>
-                <p>Winner: ${this.playerScore > this.aiScore ? 'Player' : 'Computer'}</p>
+                <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
             </div>
         </div>
     `;
 
     // Generate content for each move
-    const moves = this.moveHistory.map((move, index) => {
+    const moves = this.moveHistory
+      .map((move, index) => {
         // Handle special moves (SKIP, EXCHANGE, QUIT)
-        if (move.word === "SKIP" || move.word === "EXCHANGE" || move.word === "QUIT") {
-            return `
+        if (
+          move.word === "SKIP" ||
+          move.word === "EXCHANGE" ||
+          move.word === "QUIT"
+        ) {
+          return `
                 <div class="move">
                     <div class="move-header">
                         <h3>Move ${index + 1}</h3>
@@ -742,26 +1478,27 @@ generatePrintContent(gameDate, wordDefinitions) {
         }
 
         // Handle regular word moves
-        let wordContent = '';
+        let wordContent = "";
         let words;
 
         // Handle multiple words (separated by &)
-        if (move.word.includes('&')) {
-            words = move.word.split('&').map(w => {
-                // Extract word and score from format "WORD (score)"
-                const match = w.trim().match(/([A-Z]+)\s*\((\d+)\)/);
-                return match ? match[1] : w.trim();
-            });
+        if (move.word.includes("&")) {
+          words = move.word.split("&").map((w) => {
+            // Extract word and score from format "WORD (score)"
+            const match = w.trim().match(/([A-Z]+)\s*\((\d+)\)/);
+            return match ? match[1] : w.trim();
+          });
         } else {
-            // Handle single word
-            const match = move.word.match(/([A-Z]+)\s*(?:\((\d+)\))?/);
-            words = match ? [match[1]] : [move.word];
+          // Handle single word
+          const match = move.word.match(/([A-Z]+)\s*(?:\((\d+)\))?/);
+          words = match ? [match[1]] : [move.word];
         }
 
         // Generate definition sections for each word
-        const definitions = words.map(word => {
+        const definitions = words
+          .map((word) => {
             const def = wordDefinitions.get(word);
-            if (!def) return '';
+            if (!def) return "";
 
             return `
                 <div class="word-section">
@@ -769,20 +1506,29 @@ generatePrintContent(gameDate, wordDefinitions) {
                         <h4>${word}</h4>
                     </div>
                     <div class="definitions">
-                        ${def.map(meaning => `
+                        ${def
+                          .map(
+                            (meaning) => `
                             <div class="meaning">
                                 <span class="part-of-speech">${meaning.partOfSpeech}</span>
                                 <ul>
-                                    ${meaning.definitions.map(d => `
+                                    ${meaning.definitions
+                                      .map(
+                                        (d) => `
                                         <li>${d}</li>
-                                    `).join('')}
+                                    `,
+                                      )
+                                      .join("")}
                                 </ul>
                             </div>
-                        `).join('')}
+                        `,
+                          )
+                          .join("")}
                     </div>
                 </div>
             `;
-        }).join('');
+          })
+          .join("");
 
         // Combine all elements for this move
         return `
@@ -798,7 +1544,8 @@ generatePrintContent(gameDate, wordDefinitions) {
                 </div>
             </div>
         `;
-    }).join('');
+      })
+      .join("");
 
     // Add additional styling
     const styles = `
@@ -878,7 +1625,7 @@ generatePrintContent(gameDate, wordDefinitions) {
             ${moves}
         </div>
     `;
-}
+  }
 
   getPrefix(anchor, isHorizontal) {
     let prefix = "";
@@ -921,13 +1668,7 @@ generatePrintContent(gameDate, wordDefinitions) {
   }
 
   canAIMakeValidMove() {
-    if (this.aiRack.length < 3) {
-      console.log("Not enough tiles for minimum word length - will skip turn");
-      return false;
-    }
-
     const availableLetters = this.aiRack.map((tile) => tile.letter);
-    console.log("Checking possible moves with letters:", availableLetters);
 
     // Count vowels and consonants
     const vowels = ["A", "E", "I", "O", "U"];
@@ -936,30 +1677,71 @@ generatePrintContent(gameDate, wordDefinitions) {
     ).length;
     const consonantCount = availableLetters.length - vowelCount;
 
-    // Consider exchanging if rack is very unbalanced
+    // Try finding simple 2-3 letter words first
+    const simpleWords = this.findSimpleWords(availableLetters);
+    if (simpleWords.length > 0) {
+      console.log("Found simple words:", simpleWords);
+      return true;
+    }
+
+    // If rack is very unbalanced, prefer exchange
     if (
       vowelCount === 0 ||
       consonantCount === 0 ||
       vowelCount > 5 ||
       consonantCount > 5
     ) {
-      console.log("Rack is unbalanced - considering exchange");
+      console.log("Rack is unbalanced - exchanging tiles");
       return false;
     }
 
-    // Check if we can form any words
+    // Check each word in dictionary
     for (const word of this.dictionary) {
+      // Allow shorter words (2-3 letters) for more possibilities
       if (
-        word.length >= 3 &&
+        word.length >= 2 &&
         this.canFormWord(word, "", "", availableLetters)
       ) {
-        console.log("Found possible move:", word);
+        console.log("Found possible word:", word);
         return true;
       }
     }
 
-    console.log("No valid moves found with current rack");
     return false;
+  }
+
+  findSimpleWords(letters) {
+    const words = new Set();
+    const letterCount = {};
+
+    // Count available letters
+    letters.forEach((letter) => {
+      letterCount[letter] = (letterCount[letter] || 0) + 1;
+    });
+
+    // Check each word in dictionary
+    for (const word of this.dictionary) {
+      if (word.length >= 2 && word.length <= letters.length) {
+        const upperWord = word.toUpperCase();
+        const tempCount = { ...letterCount };
+        let canForm = true;
+
+        // Check if we have all needed letters
+        for (const letter of upperWord) {
+          if (!tempCount[letter] || tempCount[letter] === 0) {
+            canForm = false;
+            break;
+          }
+          tempCount[letter]--;
+        }
+
+        if (canForm) {
+          words.add(upperWord);
+        }
+      }
+    }
+
+    return Array.from(words);
   }
 
   // Update inside findAIPossiblePlays method
@@ -1258,32 +2040,188 @@ generatePrintContent(gameDate, wordDefinitions) {
 
   findBestMove() {
     const possibleMoves = this.findPossibleMoves();
-    if (possibleMoves.length === 0) return null;
 
-    // Sort moves by:
-    // 1. Score (highest first)
-    // 2. Word length (longer words preferred)
-    // 3. Position (prefer center positions)
-    return possibleMoves.sort((a, b) => {
-      // First compare scores
-      if (b.score !== a.score) {
-        return b.score - a.score;
+    // Apply strategic evaluation to each move
+    const evaluatedMoves = possibleMoves.map((move) => ({
+      ...move,
+      strategicValue: this.evaluateStrategicValue(move),
+    }));
+
+    // Sort moves based on multiple criteria
+    return evaluatedMoves.sort((a, b) => {
+      // First compare adjusted scores with strategic value
+      const aTotal = a.score + a.strategicValue;
+      const bTotal = b.score + b.strategicValue;
+      if (bTotal !== aTotal) {
+        return bTotal - aTotal;
       }
 
-      // If scores are equal, prefer longer words
+      // Then prefer longer words
       if (b.word.length !== a.word.length) {
         return b.word.length - a.word.length;
       }
 
-      // If lengths are equal, prefer positions closer to center
-      const centerDistance = (pos) => {
-        const centerRow = 7,
-          centerCol = 7;
-        return Math.abs(pos.row - centerRow) + Math.abs(pos.col - centerCol);
-      };
-
-      return centerDistance(a) - centerDistance(b);
+      // Finally, consider board position
+      const aCenterDist = Math.abs(7 - a.row) + Math.abs(7 - a.col);
+      const bCenterDist = Math.abs(7 - b.row) + Math.abs(7 - b.col);
+      return aCenterDist - bCenterDist;
     })[0];
+  }
+
+  evaluateStrategicValue(move) {
+    let value = 0;
+    const { word, row, col, horizontal } = move;
+
+    // Evaluate board control
+    value += this.evaluateBoardControl(row, col, horizontal, word);
+
+    // Evaluate premium square strategy
+    value += this.evaluatePremiumSquareStrategy(row, col, horizontal, word);
+
+    // Evaluate future opportunities
+    value += this.evaluateFutureOpportunities(row, col, horizontal, word);
+
+    // Evaluate defensive play
+    value += this.evaluateDefensivePlay(row, col, horizontal, word);
+
+    return value;
+  }
+
+  evaluateBoardControl(row, col, horizontal, word) {
+    let value = 0;
+
+    // Bonus for controlling central area
+    const centerControl = this.evaluateCenterControl(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value += centerControl * 30;
+
+    // Bonus for balanced board coverage
+    const coverage = this.evaluateBoardCoverage(row, col, horizontal, word);
+    value += coverage * 25;
+
+    // Penalty for overcrowding areas
+    const crowding = this.evaluateAreaCrowding(row, col, horizontal, word);
+    value -= crowding * 20;
+
+    return value;
+  }
+
+  evaluatePremiumSquareStrategy(row, col, horizontal, word) {
+    let value = 0;
+
+    // Check if move blocks opponent's access to premium squares
+    if (this.blocksOpponentPremiumSquares(row, col, horizontal, word)) {
+      value += 50;
+    }
+
+    // Penalty for opening up premium squares to opponent
+    if (this.opensTripleWordScore(row, col, horizontal, word)) {
+      value -= 60;
+    }
+
+    // Bonus for efficient use of premium squares
+    value += this.evaluatePremiumSquareEfficiency(row, col, horizontal, word);
+
+    return value;
+  }
+
+  evaluateFutureOpportunities(row, col, horizontal, word) {
+    let value = 0;
+
+    // Evaluate potential hook opportunities created
+    const hookOpportunities = this.countHookOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value += hookOpportunities * 15;
+
+    // Evaluate potential extension opportunities
+    const extensionOpportunities = this.countExtensionOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value += extensionOpportunities * 20;
+
+    // Consider remaining tiles in bag
+    value += this.evaluateRemainingTilesOpportunities(word);
+
+    return value;
+  }
+
+  evaluateDefensivePlay(row, col, horizontal, word) {
+    let value = 0;
+
+    // Prevent opponent from accessing high-scoring opportunities
+    if (this.blocksHighScoringOpportunity(row, col, horizontal, word)) {
+      value += 40;
+    }
+
+    // Avoid setting up opponent for premium squares
+    if (this.createsVulnerability(row, col, horizontal, word)) {
+      value -= 35;
+    }
+
+    // Consider board balance and control
+    const defensivePosition = this.evaluateDefensivePosition(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    value += defensivePosition;
+
+    return value;
+  }
+
+  blocksOpponentPremiumSquares(row, col, horizontal, word) {
+    const premiumSquares = this.getNearbyPremiumSquares(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    return premiumSquares.some((square) =>
+      this.wouldBlockPremiumSquare(square.row, square.col, word),
+    );
+  }
+
+  opensTripleWordScore(row, col, horizontal, word) {
+    // Check if this move creates easy access to triple word scores
+    const twSquares = this.getNearbyTripleWordSquares(row, col);
+    return twSquares.some((square) =>
+      this.createsEasyAccess(square.row, square.col, word),
+    );
+  }
+
+  createsPlayOpportunities(row, col, horizontal, word) {
+    // Count potential future play opportunities created
+    let opportunities = 0;
+
+    // Check for extension possibilities
+    opportunities += this.countExtensionOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+
+    // Check for cross-word possibilities
+    opportunities += this.countCrossWordOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+
+    return opportunities > 2; // Return true if creates multiple opportunities
   }
 
   findPossibleMoves() {
@@ -1389,6 +2327,24 @@ generatePrintContent(gameDate, wordDefinitions) {
       }
     }
 
+    // Check for parallel words
+    if (this.hasParallelWord(startRow, startCol, horizontal)) {
+      console.log(`Rejecting ${word} - would create parallel word`);
+      return false;
+    }
+
+    // Check distance from player's last move
+    if (this.placedTiles.length > 0) {
+      const lastPlayerMove = this.placedTiles[0];
+      const distance =
+        Math.abs(startRow - lastPlayerMove.row) +
+        Math.abs(startCol - lastPlayerMove.col);
+      if (distance < 3) {
+        console.log(`Rejecting ${word} - too close to player's last move`);
+        return false;
+      }
+    }
+
     let tempBoard = JSON.parse(JSON.stringify(this.board));
     let hasValidConnection = false;
 
@@ -1420,7 +2376,67 @@ generatePrintContent(gameDate, wordDefinitions) {
       }
     }
 
-    return this.isFirstMove || hasValidConnection;
+    // First move must use center square
+    if (this.isFirstMove) {
+      const usesCenterSquare = horizontal
+        ? startRow === 7 && startCol <= 7 && startCol + word.length > 7
+        : startCol === 7 && startRow <= 7 && startRow + word.length > 7;
+
+      if (!usesCenterSquare) {
+        console.log("First move must use center square");
+        return false;
+      }
+      return true;
+    }
+
+    return hasValidConnection;
+  }
+
+  getAllCrossWords(row, col, board) {
+    const words = new Set();
+
+    // Get horizontal word
+    let horizontalWord = this.getWordInDirection(row, col, [0, 1], board);
+    if (horizontalWord && horizontalWord.length > 1) {
+      words.add(horizontalWord);
+    }
+
+    // Get vertical word
+    let verticalWord = this.getWordInDirection(row, col, [1, 0], board);
+    if (verticalWord && verticalWord.length > 1) {
+      words.add(verticalWord);
+    }
+
+    return Array.from(words);
+  }
+
+  getWordInDirection(row, col, [dx, dy], board) {
+    let word = "";
+    let startRow = row;
+    let startCol = col;
+
+    // Find start of word
+    while (
+      this.isValidPosition(startRow - dx, startCol - dy) &&
+      board[startRow - dx][startCol - dy]
+    ) {
+      startRow -= dx;
+      startCol -= dy;
+    }
+
+    // Build word
+    let currentRow = startRow;
+    let currentCol = startCol;
+    while (
+      this.isValidPosition(currentRow, currentCol) &&
+      board[currentRow][currentCol]
+    ) {
+      word += board[currentRow][currentCol].letter;
+      currentRow += dx;
+      currentCol += dy;
+    }
+
+    return word;
   }
 
   getAllFormedWords(row, col, board) {
@@ -1560,6 +2576,20 @@ generatePrintContent(gameDate, wordDefinitions) {
       "CTO",
       "HR",
       "VP",
+      "AM",
+      "PM",
+      "DC",
+      "AC",
+      "BC",
+      "AD",
+      "PM",
+      "URL",
+      "SMS",
+      "PIN",
+      "ID",
+      "IV",
+      "VI",
+      "XI",
     ]);
 
     // Convert to uppercase for checking
@@ -1567,17 +2597,111 @@ generatePrintContent(gameDate, wordDefinitions) {
 
     // Check if word is in our abbreviations list
     if (commonAbbreviations.has(upperWord)) {
-      console.log(`${word} is a known abbreviation - skipping`);
+      console.log(`${word} is a known abbreviation - rejecting`);
       return true;
     }
 
-    // Remove the all-caps check for short words since many are valid
-    // Check for mixed case with periods (e.g., "Ph.D.")
-    if (word.includes(".")) {
-      console.log(`${word} contains periods - likely an abbreviation`);
+    // Additional checks for potential abbreviations:
+
+    // Check for repeated letters (like AA, BB, CC)
+    if (word.length === 2 && word[0] === word[1]) {
+      console.log(
+        `${word} appears to be a repeated letter abbreviation - rejecting`,
+      );
       return true;
     }
 
+    // Check for roman numerals
+    const romanNumeralPattern = /^[IVXLCDM]+$/;
+    if (romanNumeralPattern.test(upperWord)) {
+      console.log(`${word} appears to be a roman numeral - rejecting`);
+      return true;
+    }
+
+    // Check for all caps words of 2-3 letters (likely abbreviations)
+    if (word.length <= 3 && word === word.toUpperCase()) {
+      console.log(
+        `${word} is a short all-caps word - likely abbreviation - rejecting`,
+      );
+      return true;
+    }
+
+    return false;
+  }
+
+  checkForWordWall(word, row, col, isHorizontal) {
+    const wallRadius = 2; // Check 2 cells in each direction
+    let wallCount = 0;
+
+    if (isHorizontal) {
+      // Check above and below the word
+      for (let i = 0; i < word.length; i++) {
+        const checkCol = col + i;
+
+        // Check above
+        for (let r = 1; r <= wallRadius; r++) {
+          const checkRow = row - r;
+          if (checkRow >= 0 && this.board[checkRow][checkCol]) {
+            wallCount++;
+          }
+        }
+
+        // Check below
+        for (let r = 1; r <= wallRadius; r++) {
+          const checkRow = row + r;
+          if (checkRow < 15 && this.board[checkRow][checkCol]) {
+            wallCount++;
+          }
+        }
+      }
+    } else {
+      // Check left and right of the word
+      for (let i = 0; i < word.length; i++) {
+        const checkRow = row + i;
+
+        // Check left
+        for (let c = 1; c <= wallRadius; c++) {
+          const checkCol = col - c;
+          if (checkCol >= 0 && this.board[checkRow][checkCol]) {
+            wallCount++;
+          }
+        }
+
+        // Check right
+        for (let c = 1; c <= wallRadius; c++) {
+          const checkCol = col + c;
+          if (checkCol < 15 && this.board[checkRow][checkCol]) {
+            wallCount++;
+          }
+        }
+      }
+    }
+
+    // Consider it a wall if there are too many adjacent words
+    return wallCount > word.length * 0.75;
+  }
+
+  isDirectlyAdjacentToWord(word, row, col, isHorizontal) {
+    const checkRow = isHorizontal
+      ? [row - 1, row + 1] // Check rows above and below for horizontal words
+      : [row, row + word.length - 1]; // Check start and end rows for vertical words
+
+    const checkCol = isHorizontal
+      ? [col, col + word.length - 1] // Check start and end cols for horizontal words
+      : [col - 1, col + 1]; // Check columns left and right for vertical words
+
+    for (let r of checkRow) {
+      for (let c of checkCol) {
+        // Check if position is valid and contains a tile
+        if (r >= 0 && r < 15 && c >= 0 && c < 15 && this.board[r][c]) {
+          // Make sure we're not checking crossing points
+          if (isHorizontal && c >= col && c < col + word.length) continue;
+          if (!isHorizontal && r >= row && r < row + word.length) continue;
+
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -1626,24 +2750,21 @@ generatePrintContent(gameDate, wordDefinitions) {
   }
 
   calculatePotentialScore(word, startRow, startCol, horizontal) {
-    // Reject two-letter words immediately
-    if (word.length <= 2) {
-      return -999999;
-    }
-
     let totalScore = 0;
     let tempBoard = JSON.parse(JSON.stringify(this.board));
-    let parallelWordCount = 0;
 
-    // First, place the word temporarily
-    for (let i = 0; i < word.length; i++) {
-      const row = horizontal ? startRow : startRow + i;
-      const col = horizontal ? startCol + i : startCol;
-      if (!tempBoard[row][col]) {
-        tempBoard[row][col] = {
-          letter: word[i],
-          value: this.tileValues[word[i]],
-        };
+    // Heavy penalty for simple extensions of existing words
+    const existingWords = this.getExistingWords();
+    for (const existingWord of existingWords) {
+      if (word.startsWith(existingWord) || word.endsWith(existingWord)) {
+        totalScore -= 50; // Significant penalty for simple extensions
+      }
+      if (
+        word === existingWord + "S" ||
+        word === existingWord + "ED" ||
+        word === existingWord + "ING"
+      ) {
+        totalScore -= 75; // Even larger penalty for common suffixes
       }
     }
 
@@ -1679,84 +2800,147 @@ generatePrintContent(gameDate, wordDefinitions) {
       }
 
       totalScore += wordScore * wordMultiplier;
-
-      // Count parallel words
-      if (
-        this.hasParallelWord(
-          wordInfo.startPos.row,
-          wordInfo.startPos.col,
-          wordInfo.direction === "horizontal",
-        )
-      ) {
-        parallelWordCount++;
-      }
     });
 
-    // Apply penalties and adjustments
+    // Strategic scoring adjustments
     let adjustedScore = totalScore;
 
-    // Enhanced penalties for parallel words and short words
-    if (parallelWordCount > 0) {
-      // Base penalty for parallel words
-      adjustedScore -= parallelWordCount * 150;
-
-      // Extra penalty for short words
-      if (word.length <= 3) {
-        adjustedScore -= 300;
-      }
-
-      // Additional penalty for stacking
-      if (this.hasParallelWord(startRow, startCol, horizontal)) {
-        adjustedScore -= 250;
-      }
-
-      // Severe penalty for multiple parallel words
-      if (parallelWordCount > 1) {
-        adjustedScore -= 400;
-      }
-    }
-
-    // Bonuses for preferred play patterns
+    // Strongly encourage longer words
     if (word.length >= 5) {
-      // Bonus for longer words
-      adjustedScore += word.length * 20;
+      adjustedScore += word.length * 30;
+    }
 
-      // Extra bonus for long words that don't create parallel words
-      if (parallelWordCount === 0) {
-        adjustedScore += 100;
+    // Bonus for creating multiple words
+    if (formedWords.length > 1) {
+      adjustedScore += 40 * formedWords.length;
+    }
+
+    // Bonus for using high-value letters effectively
+    for (let i = 0; i < word.length; i++) {
+      const letter = word[i];
+      if (this.tileValues[letter] >= 4) {
+        // High-value letters
+        const row = horizontal ? startRow : startRow + i;
+        const col = horizontal ? startCol + i : startCol;
+        const premium = this.getPremiumSquareType(row, col);
+        if (premium) {
+          adjustedScore += 35; // Bonus for strategic use of high-value letters
+        }
       }
     }
 
-    // Bingo bonus (using all 7 tiles)
-    if (word.length === 7) {
-      adjustedScore += 50;
-    }
-
-    // Check for problematic patterns
-    if (
-      this.wouldCreateStackedShortWords(word, startRow, startCol, horizontal)
-    ) {
-      adjustedScore = 1; // Effectively reject these plays
-    }
-
-    // Penalty for plays too close to the board edges
-    if (
-      startRow === 0 ||
-      startRow === 14 ||
-      startCol === 0 ||
-      startCol === 14
-    ) {
-      adjustedScore -= 50;
-    }
-
-    // Ensure minimum score and cap extremely high scores
-    adjustedScore = Math.max(adjustedScore, 1);
-    adjustedScore = Math.min(adjustedScore, 1000); // Cap maximum score
-
-    console.log(
-      `Score calculation for ${word}: Base score ${totalScore}, Adjusted score ${adjustedScore}`,
+    // Encourage parallel word formation
+    const parallelWords = this.getParallelWords(
+      startRow,
+      startCol,
+      horizontal,
+      word,
     );
+    if (parallelWords.length > 0) {
+      adjustedScore += 45 * parallelWords.length;
+    }
+
+    // Bonus for creative word placement
+    if (this.isCreativePlacement(startRow, startCol, horizontal, word)) {
+      adjustedScore += 40;
+    }
+
     return adjustedScore;
+  }
+
+  isCreativePlacement(row, col, horizontal, word) {
+    // Consider a placement creative if it:
+    // 1. Creates multiple intersections
+    const intersections = this.countIntersections(row, col, horizontal, word);
+    if (intersections >= 2) return true;
+
+    // 2. Uses premium squares effectively
+    const premiumSquaresUsed = this.countPremiumSquaresUsed(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    if (premiumSquaresUsed >= 2) return true;
+
+    // 3. Creates opportunities for future plays
+    const futureOpportunities = this.countFutureOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    if (futureOpportunities >= 3) return true;
+
+    return false;
+  }
+
+  getParallelWords(row, col, horizontal, word) {
+    const parallelWords = [];
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check perpendicular direction for potential words
+      const perpWord = horizontal
+        ? this.getVerticalWordAt(currentRow, currentCol)
+        : this.getHorizontalWordAt(currentRow, currentCol);
+
+      if (perpWord && perpWord.length > 2) {
+        parallelWords.push(perpWord);
+      }
+    }
+
+    return parallelWords;
+  }
+
+  countIntersections(row, col, horizontal, word) {
+    let intersections = 0;
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check if this position intersects with existing words
+      if (this.hasPerpendicularWord(currentRow, currentCol, horizontal)) {
+        intersections++;
+      }
+    }
+    return intersections;
+  }
+
+  countFutureOpportunities(row, col, horizontal, word) {
+    let opportunities = 0;
+    const directions = horizontal
+      ? [
+          [-1, 0],
+          [1, 0],
+        ]
+      : [
+          [0, -1],
+          [0, 1],
+        ];
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      for (const [dx, dy] of directions) {
+        const newRow = currentRow + dx;
+        const newCol = currentCol + dy;
+
+        if (
+          this.isValidPosition(newRow, newCol) &&
+          !this.board[newRow][newCol]
+        ) {
+          // Check if this position could be used for future words
+          if (this.hasAdjacentTile(newRow, newCol)) {
+            opportunities++;
+          }
+        }
+      }
+    }
+    return opportunities;
   }
 
   wouldCreateStackedShortWords(word, row, col, horizontal) {
@@ -2057,35 +3241,27 @@ generatePrintContent(gameDate, wordDefinitions) {
   }
 
   hasParallelWord(row, col, isHorizontal) {
-    const checkPositions = isHorizontal
-      ? [
-          [row - 1, col],
-          [row + 1, col],
-        ] // Check above and below for horizontal words
-      : [
-          [row, col - 1],
-          [row, col + 1],
-        ]; // Check left and right for vertical words
+    // Only check immediate adjacent positions
+    const positions = isHorizontal
+        ? [[row - 1, col], [row + 1, col]]  // Check only directly above and below
+        : [[row, col - 1], [row, col + 1]]; // Check only directly left and right
 
-    // Count how many adjacent parallel words we find
-    let parallelWordCount = 0;
+    // Filter out the current position
+    const adjacentPositions = positions.filter(([r, c]) => r !== row || c !== col);
 
-    checkPositions.forEach(([r, c]) => {
-      if (r >= 0 && r < 15 && c >= 0 && c < 15) {
-        // If we find a tile, verify it's part of a word
-        if (this.board[r][c] !== null) {
-          const wordLength =
-            this.getParallelWordDetails(r, c, isHorizontal)?.length || 0;
-          if (wordLength > 2) {
-            // Only count as parallel if it's a real word (3+ letters)
-            parallelWordCount++;
-          }
+    for (const [checkRow, checkCol] of adjacentPositions) {
+        if (this.isValidPosition(checkRow, checkCol) && this.board[checkRow][checkCol]) {
+            // Check if there's an actual parallel word
+            const existingWord = this.getWordAt(checkRow, checkCol, isHorizontal);
+            if (existingWord && existingWord.length >= 2) {
+                // Only consider it parallel if it's an actual word
+                console.log(`Found parallel word: ${existingWord} at [${checkRow}, ${checkCol}]`);
+                return true;
+            }
         }
-      }
-    });
-
-    return parallelWordCount > 0;
-  }
+    }
+    return false;
+}
 
   playAIMove(move) {
     console.log("AI playing move:", move);
@@ -2178,10 +3354,7 @@ generatePrintContent(gameDate, wordDefinitions) {
         cell.dataset.row = i;
         cell.dataset.col = j;
 
-        // Add this to verify cell creation
-        console.log(`Creating cell at [${i}, ${j}]`);
-
-        // Test click events on each cell
+        // Keep only the click coordinate logging
         cell.addEventListener("click", () => {
           console.log(`Clicked cell [${i}, ${j}]`);
         });
@@ -2980,39 +4153,6 @@ generatePrintContent(gameDate, wordDefinitions) {
     return words;
   }
 
-  getWordAt(row, col, isHorizontal) {
-    let word = "";
-    let startPos = isHorizontal ? col : row;
-
-    // Find start of word
-    while (
-      startPos > 0 &&
-      this.board[isHorizontal ? row : startPos - 1][
-        isHorizontal ? startPos - 1 : col
-      ]
-    ) {
-      startPos--;
-    }
-
-    // Build complete word
-    let currentPos = startPos;
-    while (
-      currentPos < 15 &&
-      this.board[isHorizontal ? row : currentPos][
-        isHorizontal ? currentPos : col
-      ]
-    ) {
-      const tile =
-        this.board[isHorizontal ? row : currentPos][
-          isHorizontal ? currentPos : col
-        ];
-      word += tile.letter;
-      currentPos++;
-    }
-
-    return word.length > 1 ? word : null;
-  }
-
   getFormedWords() {
     const words = new Set();
     const existingWords = new Set(); // Track words that existed before this move
@@ -3357,6 +4497,155 @@ generatePrintContent(gameDate, wordDefinitions) {
     return null;
   }
 
+  createsVulnerablePosition(word, row, col, isHorizontal) {
+    // Check for vulnerable premium square exposure
+    const vulnerabilityScore = this.calculateVulnerabilityScore(
+      word,
+      row,
+      col,
+      isHorizontal,
+    );
+
+    // Consider a position vulnerable if it exceeds threshold
+    const VULNERABILITY_THRESHOLD = 30;
+
+    return vulnerabilityScore > VULNERABILITY_THRESHOLD;
+  }
+
+  calculateVulnerabilityScore(word, row, col, isHorizontal) {
+    let vulnerabilityScore = 0;
+
+    // Check each position adjacent to the word
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = isHorizontal ? row : row + i;
+      const currentCol = isHorizontal ? col + i : col;
+
+      // Check perpendicular adjacent positions
+      const adjacentPositions = isHorizontal
+        ? [
+            [currentRow - 1, currentCol],
+            [currentRow + 1, currentCol],
+          ]
+        : [
+            [currentRow, currentCol - 1],
+            [currentRow, currentCol + 1],
+          ];
+
+      for (const [adjRow, adjCol] of adjacentPositions) {
+        if (!this.isValidPosition(adjRow, adjCol)) continue;
+
+        // Higher vulnerability near premium squares
+        const premium = this.getPremiumSquareType(adjRow, adjCol);
+        if (premium === "tw") vulnerabilityScore += 15;
+        if (premium === "dw") vulnerabilityScore += 10;
+        if (premium === "tl") vulnerabilityScore += 8;
+        if (premium === "dl") vulnerabilityScore += 5;
+
+        // Check if position enables easy high-scoring plays
+        if (this.enablesHighScoringPlay(adjRow, adjCol)) {
+          vulnerabilityScore += 12;
+        }
+
+        // Penalty for exposing edges that enable long word placement
+        if (this.createsEdgeVulnerability(adjRow, adjCol)) {
+          vulnerabilityScore += 8;
+        }
+      }
+    }
+
+    return vulnerabilityScore;
+  }
+
+  enablesHighScoringPlay(row, col) {
+    // Check if position could enable opponent to make high-scoring play
+
+    // Check for adjacent premium squares
+    const hasNearbyPremium = this.hasAdjacentPremiumSquares(row, col);
+
+    // Check for potential long word placement
+    const potentialLength = this.getMaxPossibleWordLength(row, col);
+
+    // Check for cross-word opportunities
+    const crossWordPotential =
+      this.evaluateCrossWordPotential("", row, col, true) > 1;
+
+    return hasNearbyPremium || potentialLength >= 6 || crossWordPotential;
+  }
+
+  hasAdjacentPremiumSquares(row, col) {
+    const directions = [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ];
+
+    for (const [dx, dy] of directions) {
+      const newRow = row + dx;
+      const newCol = col + dy;
+
+      if (this.isValidPosition(newRow, newCol)) {
+        const premium = this.getPremiumSquareType(newRow, newCol);
+        if (premium) return true;
+      }
+    }
+
+    return false;
+  }
+
+  createsEdgeVulnerability(row, col) {
+    // Check if position is near edge and creates opportunity for opponent
+    const isEdge = row <= 1 || row >= 13 || col <= 1 || col >= 13;
+
+    if (!isEdge) return false;
+
+    // Check if there's enough space for a long word
+    const horizontalSpace = this.getHorizontalSpace(row, col);
+    const verticalSpace = this.getVerticalSpace(row, col);
+
+    return horizontalSpace >= 5 || verticalSpace >= 5;
+  }
+
+  getHorizontalSpace(row, col) {
+    let space = 1;
+    let currentCol = col - 1;
+
+    // Check left
+    while (currentCol >= 0 && !this.board[row][currentCol]) {
+      space++;
+      currentCol--;
+    }
+
+    // Check right
+    currentCol = col + 1;
+    while (currentCol < 15 && !this.board[row][currentCol]) {
+      space++;
+      currentCol++;
+    }
+
+    return space;
+  }
+
+  getVerticalSpace(row, col) {
+    let space = 1;
+    let currentRow = row - 1;
+
+    // Check up
+    while (currentRow >= 0 && !this.board[currentRow][col]) {
+      space++;
+      currentRow--;
+    }
+
+    // Check down
+    currentRow = row + 1;
+    while (currentRow < 15 && !this.board[currentRow][col]) {
+      space++;
+      currentRow++;
+    }
+
+    return space;
+  }
+
   getPremiumSquareType(row, col) {
     const cell = document.querySelector(
       `[data-row="${row}"][data-col="${col}"]`,
@@ -3366,6 +4655,191 @@ generatePrintContent(gameDate, wordDefinitions) {
     if (cell.classList.contains("tl")) return "tl";
     if (cell.classList.contains("dl")) return "dl";
     return null;
+  }
+
+  countPremiumSquaresUsed(row, col, horizontal, word) {
+    let count = 0;
+    const premiumTypes = ["tw", "dw", "tl", "dl"];
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Only count premium squares that aren't already used
+      if (!this.board[currentRow][currentCol]) {
+        const premium = this.getPremiumSquareType(currentRow, currentCol);
+        if (premiumTypes.includes(premium)) {
+          count++;
+        }
+      }
+    }
+
+    return count;
+  }
+
+  isCreativePlacement(row, col, horizontal, word) {
+    let creativityScore = 0;
+
+    // Check for multiple intersections with existing words
+    const intersections = this.countIntersections(row, col, horizontal, word);
+    creativityScore += intersections * 2;
+
+    // Check premium square usage
+    const premiumSquares = this.countPremiumSquaresUsed(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    creativityScore += premiumSquares * 2;
+
+    // Check for parallel word formation
+    const parallelWords = this.countParallelWords(row, col, horizontal, word);
+    creativityScore += parallelWords * 3;
+
+    // Check for future play opportunities created
+    const opportunities = this.countFutureOpportunities(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    creativityScore += opportunities;
+
+    // Check for balanced board coverage
+    if (this.improvesBoardBalance(row, col, horizontal, word)) {
+      creativityScore += 2;
+    }
+
+    // Consider a placement creative if it scores above threshold
+    return creativityScore >= 5;
+  }
+
+  countParallelWords(row, col, horizontal, word) {
+    let count = 0;
+    const minParallelLength = 3; // Minimum length for parallel words
+
+    for (let i = 0; i < word.length; i++) {
+      const currentRow = horizontal ? row : row + i;
+      const currentCol = horizontal ? col + i : col;
+
+      // Check positions parallel to the word
+      const checkPositions = horizontal
+        ? [
+            [currentRow - 1, currentCol],
+            [currentRow + 1, currentCol],
+          ]
+        : [
+            [currentRow, currentCol - 1],
+            [currentRow, currentCol + 1],
+          ];
+
+      for (const [checkRow, checkCol] of checkPositions) {
+        if (this.isValidPosition(checkRow, checkCol)) {
+          const parallelWord = horizontal
+            ? this.getHorizontalWordAt(checkRow, checkCol)
+            : this.getVerticalWordAt(checkRow, checkCol);
+
+          if (parallelWord && parallelWord.length >= minParallelLength) {
+            count++;
+          }
+        }
+      }
+    }
+
+    return count;
+  }
+
+  improvesBoardBalance(row, col, horizontal, word) {
+    const boardQuadrants = this.getBoardQuadrantDensities();
+    const playQuadrant = this.getQuadrant(row, col);
+
+    // Check if this play helps balance the board
+    const avgDensity =
+      Object.values(boardQuadrants).reduce((sum, density) => sum + density, 0) /
+      9;
+
+    // Play improves balance if it's in a less dense quadrant
+    return boardQuadrants[playQuadrant] < avgDensity;
+  }
+
+  getQuadrant(row, col) {
+    // Divide board into 9 quadrants
+    if (row < 5) {
+      return col < 5 ? "TL" : col < 10 ? "TC" : "TR";
+    } else if (row < 10) {
+      return col < 5 ? "ML" : col < 10 ? "MC" : "MR";
+    } else {
+      return col < 5 ? "BL" : col < 10 ? "BC" : "BR";
+    }
+  }
+
+  getBoardQuadrantDensities() {
+    const quadrants = {
+      TL: 0,
+      TC: 0,
+      TR: 0,
+      ML: 0,
+      MC: 0,
+      MR: 0,
+      BL: 0,
+      BC: 0,
+      BR: 0,
+    };
+
+    // Count tiles in each quadrant
+    for (let row = 0; row < 15; row++) {
+      for (let col = 0; col < 15; col++) {
+        if (this.board[row][col]) {
+          const quadrant = this.getQuadrant(row, col);
+          quadrants[quadrant]++;
+        }
+      }
+    }
+
+    // Convert counts to densities
+    const quadrantSize = 25; // 5x5 squares
+    for (const quadrant in quadrants) {
+      quadrants[quadrant] = quadrants[quadrant] / quadrantSize;
+    }
+
+    return quadrants;
+  }
+
+  evaluateWordQuality(word, row, col, horizontal) {
+    let quality = 0;
+
+    // Base points for word length
+    quality += word.length * 10;
+
+    // Check premium square utilization
+    const premiumSquares = this.countPremiumSquaresUsed(
+      row,
+      col,
+      horizontal,
+      word,
+    );
+    quality += premiumSquares * 15;
+
+    // Check for cross-words
+    const crossWords = this.countIntersections(row, col, horizontal, word);
+    quality += crossWords * 20;
+
+    // Check for balanced letter usage
+    const letterBalance = this.evaluateLetterBalance(word);
+    quality += letterBalance * 10;
+
+    return quality;
+  }
+
+  evaluateLetterBalance(word) {
+    const vowels = "AEIOU";
+    const vowelCount = word.split("").filter((c) => vowels.includes(c)).length;
+    const consonantCount = word.length - vowelCount;
+
+    // Ideal ratio is around 40% vowels
+    const vowelRatio = vowelCount / word.length;
+    return vowelRatio >= 0.3 && vowelRatio <= 0.5 ? 2 : 0;
   }
 
   async playWord() {
