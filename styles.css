@@ -609,22 +609,65 @@ button:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, var(--overlay-opacity));
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    --overlay-opacity: 0;
-}
-
-.win-overlay.lose {
-    --overlay-opacity: 0.8;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 1000;
+    background-color: rgba(0, 255, 0, 0.7); /* Default win background */
 }
 
 .win-overlay.active {
     opacity: 1;
-    pointer-events: auto;
+    visibility: visible;
+}
+
+.win-overlay.lose {
+    background-color: rgba(255, 0, 0, 0.7); /* Red background for losing */
+}
+
+.win-message {
+    background: white;
+    padding: 2em;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    text-align: center;
+    z-index: 1001; /* Ensure it's above the overlay */
+}
+
+@keyframes win-particle-fall {
+    to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes lose-particle-fall {
+    to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Add celebration animation for the message box */
+@keyframes celebrate {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.celebrate {
+    animation: celebrate 0.5s ease-out forwards;
+}
+
+.center-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em;
+    color: #333;
+    pointer-events: none;
 }
