@@ -1,29 +1,29 @@
 function isMobileDevice() {
-  return (window.innerWidth <= 768) || 
-         ('ontouchstart' in window) ||
-         (navigator.maxTouchPoints > 0) ||
-         (navigator.msMaxTouchPoints > 0);
+  return (
+    window.innerWidth <= 768 ||
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0
+  );
 }
 
 // Add this function to handle mobile-specific adjustments
 function setupMobileLayout() {
   if (isMobileDevice()) {
-      // Adjust touch areas for better mobile interaction
-      document.querySelectorAll('.grid-item').forEach(item => {
-          item.style.touchAction = 'manipulation';
-          
-          // Remove hover effects on mobile
-          item.style.transition = 'transform 0.1s';
-          
-          // Prevent double-tap zoom
-          item.addEventListener('touchend', function(e) {
-              e.preventDefault();
-          });
+    // Adjust touch areas for better mobile interaction
+    document.querySelectorAll(".grid-item").forEach((item) => {
+      item.style.touchAction = "manipulation";
+
+      // Remove hover effects on mobile
+      item.style.transition = "transform 0.1s";
+
+      // Prevent double-tap zoom
+      item.addEventListener("touchend", function (e) {
+        e.preventDefault();
       });
+    });
   }
 }
-
-
 
 class ScrabbleGame {
   constructor() {
@@ -242,20 +242,20 @@ class ScrabbleGame {
       "Some premium squares are more valuable than others based on playable words.",
       "Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!",
       "Blank tiles (★) can represent any letter - choose wisely for maximum impact!",
-    "The center star (⚜) in the middle of the board must be covered on the first turn.",
-    "Premium squares with multiple effects compound - plan combinations carefully!",
-    "Letters like J, X, Q, and Z are rare - save them for special squares if possible.",
-    "Special colored squares only apply their bonus when first covered.",
-    "Premium square bonuses stack with the 50-point bonus for using all tiles!",
-    "Once a premium square is used, it no longer provides its bonus in future turns.",
-    "Blank tiles keep their assigned letter for the entire game.",
-    "Some squares multiply your entire word score - aim for these with long words!",
-    "Premium squares near the edges can be reached with shorter words.",
-    "Special squares work best with high-value letters - plan your rack accordingly.",
-    "The rarest letters (J, X, Q, Z) paired with premium squares can score big points!",
-    "Center star (⚜) starts the game - build outward from there strategically.",
-    "Premium square effects apply only to newly placed tiles, not existing ones.",
-    "Multiple word bonuses can apply when forming several words in one turn!"
+      "The center star (⚜) in the middle of the board must be covered on the first turn.",
+      "Premium squares with multiple effects compound - plan combinations carefully!",
+      "Letters like J, X, Q, and Z are rare - save them for special squares if possible.",
+      "Special colored squares only apply their bonus when first covered.",
+      "Premium square bonuses stack with the 50-point bonus for using all tiles!",
+      "Once a premium square is used, it no longer provides its bonus in future turns.",
+      "Blank tiles keep their assigned letter for the entire game.",
+      "Some squares multiply your entire word score - aim for these with long words!",
+      "Premium squares near the edges can be reached with shorter words.",
+      "Special squares work best with high-value letters - plan your rack accordingly.",
+      "The rarest letters (J, X, Q, Z) paired with premium squares can score big points!",
+      "Center star (⚜) starts the game - build outward from there strategically.",
+      "Premium square effects apply only to newly placed tiles, not existing ones.",
+      "Multiple word bonuses can apply when forming several words in one turn!",
     ];
 
     let currentHintIndex = 0;
@@ -2546,139 +2546,159 @@ class ScrabbleGame {
   }
 
   isAbbreviation(word) {
-    // Common abbreviations to explicitly exclude
-    const commonAbbreviations = new Set([
-      "USA",
-      "UK",
-      "TV",
-      "FBI",
-      "CIA",
-      "NASA",
-      "DNA",
-      "PhD",
-      "Mr",
-      "Mrs",
-      "Ms",
-      "Dr",
-      "Prof",
-      "Sr",
-      "Jr",
-      "Corp",
-      "Inc",
-      "Ltd",
-      "ATM",
-      "PC",
-      "USB",
-      "RAM",
-      "ROM",
-      "CEO",
-      "CFO",
-      "CTO",
-      "HR",
-      "VP",
-      "AM",
-      "PM",
-      "DC",
-      "AC",
-      "BC",
+    // Official two-letter words allowed in Scrabble/Word games
+    const validTwoLetterWords = new Set([
+      "AA",
+      "AB",
       "AD",
-      "PM",
-      "URL",
-      "SMS",
-      "PIN",
+      "AE",
+      "AG",
+      "AH",
+      "AI",
+      "AL",
+      "AM",
+      "AN",
+      "AR",
+      "AS",
+      "AT",
+      "AW",
+      "AX",
+      "AY",
+      "BA",
+      "BE",
+      "BI",
+      "BO",
+      "BY",
+      "DA",
+      "DE",
+      "DO",
+      "ED",
+      "EF",
+      "EH",
+      "EL",
+      "EM",
+      "EN",
+      "ER",
+      "ES",
+      "ET",
+      "EX",
+      "FA",
+      "FE",
+      "FY",
+      "GO",
+      "HA",
+      "HE",
+      "HI",
+      "HM",
+      "HO",
       "ID",
-      "IV",
-      "VI",
+      "IF",
+      "IN",
+      "IS",
+      "IT",
+      "JO",
+      "KA",
+      "KI",
+      "LA",
+      "LI",
+      "LO",
+      "MA",
+      "ME",
+      "MI",
+      "MM",
+      "MO",
+      "MU",
+      "MY",
+      "NA",
+      "NE",
+      "NO",
+      "NU",
+      "OD",
+      "OE",
+      "OF",
+      "OH",
+      "OI",
+      "OK",
+      "OM",
+      "ON",
+      "OP",
+      "OR",
+      "OS",
+      "OW",
+      "OX",
+      "OY",
+      "PA",
+      "PE",
+      "PI",
+      "PO",
+      "QI",
+      "RE",
+      "SH",
+      "SI",
+      "SO",
+      "TA",
+      "TE",
+      "TI",
+      "TO",
+      "UH",
+      "UM",
+      "UN",
+      "UP",
+      "US",
+      "UT",
+      "WE",
+      "WO",
       "XI",
+      "XU",
+      "YA",
+      "YE",
+      "YO",
+      "ZA",
+      "ZE",
     ]);
 
-    // Convert to uppercase for checking
-    const upperWord = word.toUpperCase();
+    // If it's a two-letter word, check against valid list
+    if (word.length === 2) {
+      if (!validTwoLetterWords.has(word.toUpperCase())) {
+        console.log(`${word} is not a valid two-letter word - rejecting`);
+        return true;
+      }
+      return false; // It's a valid two-letter word
+    }
 
-    // Check if word is in our abbreviations list
-    if (commonAbbreviations.has(upperWord)) {
-      console.log(`${word} is a known abbreviation - rejecting`);
+    // Check for three-letter abbreviations (all caps)
+    if (
+      word.length === 3 &&
+      word === word.toUpperCase() &&
+      !/[AEIOU]/.test(word)
+    ) {
+      console.log(
+        `${word} appears to be a three-letter abbreviation - rejecting`,
+      );
       return true;
     }
 
-    // Additional checks for potential abbreviations:
+    // Check for roman numerals
+    const romanNumeralPattern =
+      /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+    if (romanNumeralPattern.test(word.toUpperCase())) {
+      console.log(`${word} appears to be a roman numeral - rejecting`);
+      return true;
+    }
 
-    // Check for repeated letters (like AA, BB, CC)
-    if (word.length === 2 && word[0] === word[1]) {
+    // Check for repeated letters that aren't in validTwoLetterWords
+    if (
+      word.length === 2 &&
+      word[0] === word[1] &&
+      !validTwoLetterWords.has(word.toUpperCase())
+    ) {
       console.log(
         `${word} appears to be a repeated letter abbreviation - rejecting`,
       );
       return true;
     }
 
-    // Check for roman numerals
-    const romanNumeralPattern = /^[IVXLCDM]+$/;
-    if (romanNumeralPattern.test(upperWord)) {
-      console.log(`${word} appears to be a roman numeral - rejecting`);
-      return true;
-    }
-
-    // Check for all caps words of 2-3 letters (likely abbreviations)
-    if (word.length <= 3 && word === word.toUpperCase()) {
-      console.log(
-        `${word} is a short all-caps word - likely abbreviation - rejecting`,
-      );
-      return true;
-    }
-
     return false;
-  }
-
-  checkForWordWall(word, row, col, isHorizontal) {
-    const wallRadius = 2; // Check 2 cells in each direction
-    let wallCount = 0;
-
-    if (isHorizontal) {
-      // Check above and below the word
-      for (let i = 0; i < word.length; i++) {
-        const checkCol = col + i;
-
-        // Check above
-        for (let r = 1; r <= wallRadius; r++) {
-          const checkRow = row - r;
-          if (checkRow >= 0 && this.board[checkRow][checkCol]) {
-            wallCount++;
-          }
-        }
-
-        // Check below
-        for (let r = 1; r <= wallRadius; r++) {
-          const checkRow = row + r;
-          if (checkRow < 15 && this.board[checkRow][checkCol]) {
-            wallCount++;
-          }
-        }
-      }
-    } else {
-      // Check left and right of the word
-      for (let i = 0; i < word.length; i++) {
-        const checkRow = row + i;
-
-        // Check left
-        for (let c = 1; c <= wallRadius; c++) {
-          const checkCol = col - c;
-          if (checkCol >= 0 && this.board[checkRow][checkCol]) {
-            wallCount++;
-          }
-        }
-
-        // Check right
-        for (let c = 1; c <= wallRadius; c++) {
-          const checkCol = col + c;
-          if (checkCol < 15 && this.board[checkRow][checkCol]) {
-            wallCount++;
-          }
-        }
-      }
-    }
-
-    // Consider it a wall if there are too many adjacent words
-    return wallCount > word.length * 0.75;
   }
 
   isDirectlyAdjacentToWord(word, row, col, isHorizontal) {
@@ -3243,25 +3263,38 @@ class ScrabbleGame {
   hasParallelWord(row, col, isHorizontal) {
     // Only check immediate adjacent positions
     const positions = isHorizontal
-        ? [[row - 1, col], [row + 1, col]]  // Check only directly above and below
-        : [[row, col - 1], [row, col + 1]]; // Check only directly left and right
+      ? [
+          [row - 1, col],
+          [row + 1, col],
+        ] // Check only directly above and below
+      : [
+          [row, col - 1],
+          [row, col + 1],
+        ]; // Check only directly left and right
 
     // Filter out the current position
-    const adjacentPositions = positions.filter(([r, c]) => r !== row || c !== col);
+    const adjacentPositions = positions.filter(
+      ([r, c]) => r !== row || c !== col,
+    );
 
     for (const [checkRow, checkCol] of adjacentPositions) {
-        if (this.isValidPosition(checkRow, checkCol) && this.board[checkRow][checkCol]) {
-            // Check if there's an actual parallel word
-            const existingWord = this.getWordAt(checkRow, checkCol, isHorizontal);
-            if (existingWord && existingWord.length >= 2) {
-                // Only consider it parallel if it's an actual word
-                console.log(`Found parallel word: ${existingWord} at [${checkRow}, ${checkCol}]`);
-                return true;
-            }
+      if (
+        this.isValidPosition(checkRow, checkCol) &&
+        this.board[checkRow][checkCol]
+      ) {
+        // Check if there's an actual parallel word
+        const existingWord = this.getWordAt(checkRow, checkCol, isHorizontal);
+        if (existingWord && existingWord.length >= 2) {
+          // Only consider it parallel if it's an actual word
+          console.log(
+            `Found parallel word: ${existingWord} at [${checkRow}, ${checkCol}]`,
+          );
+          return true;
         }
+      }
     }
     return false;
-}
+  }
 
   playAIMove(move) {
     console.log("AI playing move:", move);
@@ -3354,7 +3387,14 @@ class ScrabbleGame {
         cell.dataset.row = i;
         cell.dataset.col = j;
 
-        // Keep only the click coordinate logging
+        // Add center star symbol
+        if (i === 7 && j === 7) {
+          const centerStar = document.createElement("span");
+          centerStar.textContent = "⚜";
+          centerStar.className = "center-star";
+          cell.appendChild(centerStar);
+        }
+
         cell.addEventListener("click", () => {
           console.log(`Clicked cell [${i}, ${j}]`);
         });
@@ -3612,7 +3652,6 @@ class ScrabbleGame {
       cell.addEventListener("dragenter", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log("Drag entered cell");
       });
 
       cell.addEventListener("dragover", (e) => {
@@ -3621,7 +3660,7 @@ class ScrabbleGame {
 
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
-        console.log(`Dragover cell [${row}, ${col}]`);
+        // Console log removed from here
 
         // Explicitly show this is a valid drop target
         e.dataTransfer.dropEffect = "move";
@@ -5055,41 +5094,58 @@ class ScrabbleGame {
     if (!winOverlay) {
       winOverlay = document.createElement("div");
       winOverlay.className = "win-overlay";
-      // Add 'lose' class only if player lost
-      if (winner === "Computer") {
-        winOverlay.classList.add("lose");
-      }
-      document.body.appendChild(winOverlay);
 
       const messageBox = document.createElement("div");
       messageBox.className = "win-message";
       winOverlay.appendChild(messageBox);
+
+      document.body.appendChild(winOverlay);
     }
 
     // Get the message box
     const messageBox = winOverlay.querySelector(".win-message");
     messageBox.innerHTML = `
-                  <h2>Game Over!</h2>
-                  <p>${winner} wins with ${finalScore} points!</p>
-                  <p>Final Scores:</p>
-                  <p>Player: ${this.playerScore}</p>
-                  <p>Computer: ${this.aiScore}</p>
-                  <button onclick="location.reload()">Play Again</button>
-              `;
+        <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
+        <p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
+        <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
+        <p>Player: ${this.playerScore}</p>
+        <p>Computer: ${this.aiScore}</p>
+        <button onclick="location.reload()" 
+                style="padding: 10px 20px; 
+                       margin-top: 20px; 
+                       background-color: #4CAF50; 
+                       color: white; 
+                       border: none; 
+                       border-radius: 5px; 
+                       cursor: pointer;
+                       font-size: 1.1em;">
+            Play Again
+        </button>
+    `;
 
-    // Show the overlay with animation
+    // Clear any existing classes
+    winOverlay.classList.remove("active", "lose");
+    messageBox.classList.remove("celebrate");
+
+    // Add appropriate classes
+    if (winner === "Computer") {
+      winOverlay.classList.add("lose");
+    }
+
+    // Small delay to ensure transitions work properly
     requestAnimationFrame(() => {
       winOverlay.classList.add("active");
       messageBox.classList.add("celebrate");
-    });
 
-    // Add confetti effect
-    this.createConfettiEffect();
+      // Create the confetti/emoji effect
+      this.createConfettiEffect();
+    });
   }
 
   createConfettiEffect() {
     // Different effects for win vs lose
     const isWinner = this.playerScore > this.aiScore;
+    console.log("Creating effect for:", isWinner ? "winner" : "loser");
 
     if (isWinner) {
       // Happy emojis and colorful confetti for winning
