@@ -109,7 +109,7 @@ class ScrabbleGame {
     this.init();
   }
 
-  async aiTurn() {
+  aiTurn() {
     console.log("AI thinking...");
 
     // Show "AI is thinking..." message
@@ -117,18 +117,18 @@ class ScrabbleGame {
     thinkingMessage.className = "ai-thinking-message";
     thinkingMessage.textContent = "AI is thinking...";
     thinkingMessage.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f0f0f0;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #f0f0f0;
+        padding: 10px 20px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
     document.body.appendChild(thinkingMessage);
     setTimeout(() => (thinkingMessage.style.opacity = "1"), 100);
 
@@ -137,60 +137,557 @@ class ScrabbleGame {
       this.aiRack.map((t) => t.letter),
     );
 
-    // First, try to find valid moves
-    if (!this.canAIMakeValidMove()) {
-      console.log("AI has no valid moves available");
-
-      // Check if exchange is possible (there are tiles in the bag)
-      if (this.tiles.length >= 3) {
-        console.log("AI choosing to exchange tiles");
+    // Only exchange if rack is severely unbalanced
+    const shouldExchange = this.shouldExchangeTiles();
+    if (shouldExchange && this.tiles.length >= 5) {
+      console.log("AI choosing to exchange severely unbalanced rack");
+      setTimeout(() => {
+        thinkingMessage.style.opacity = "0";
         setTimeout(() => {
-          thinkingMessage.style.opacity = "0";
-          setTimeout(() => {
-            thinkingMessage.remove();
-            this.handleAIExchange();
-          }, 300);
-        }, 1000);
-      } else {
-        console.log("No tiles to exchange - skipping turn");
-        setTimeout(() => {
-          thinkingMessage.style.opacity = "0";
-          setTimeout(() => {
-            thinkingMessage.remove();
-            this.skipAITurn();
-          }, 300);
-        }, 1000);
-      }
+          thinkingMessage.remove();
+          this.handleAIExchange();
+        }, 300);
+      }, 1000);
       return;
     }
 
-    // If we can make a move, proceed with finding the best play
+    // Try to find valid moves with increased persistence
     const possiblePlays = this.findAIPossiblePlays();
     console.log("Possible plays found:", possiblePlays.length);
 
     if (possiblePlays.length > 0) {
-      console.log("Available plays:", possiblePlays);
-      const bestPlay = possiblePlays.sort((a, b) => b.score - a.score)[0];
-      console.log("Choosing play:", bestPlay);
-
-      setTimeout(() => {
-        thinkingMessage.style.opacity = "0";
+      const bestPlay = this.selectBestPlay(possiblePlays);
+      if (bestPlay) {
+        console.log("Choosing play:", bestPlay);
         setTimeout(() => {
-          thinkingMessage.remove();
-          this.executeAIPlay(bestPlay);
-        }, 300);
-      }, 1000);
-    } else {
-      // This is a fallback - should rarely happen since we checked canAIMakeValidMove
-      console.log("No valid plays found - skipping turn");
-      setTimeout(() => {
-        thinkingMessage.style.opacity = "0";
-        setTimeout(() => {
-          thinkingMessage.remove();
-          this.skipAITurn();
-        }, 300);
-      }, 1000);
+          thinkingMessage.style.opacity = "0";
+          setTimeout(() => {
+            thinkingMessage.remove();
+            this.executeAIPlay(bestPlay);
+          }, 300);
+        }, 1000);
+        return;
+      }
     }
+
+    // If no plays found, try harder to find simple plays
+    const simplePlays = this.findSimplePlays();
+    if (simplePlays.length > 0) {
+      const bestSimplePlay = this.selectBestPlay(simplePlays);
+      if (bestSimplePlay) {
+        setTimeout(() => {
+          thinkingMessage.style.opacity = "0";
+          setTimeout(() => {
+            thinkingMessage.remove();
+            this.executeAIPlay(bestSimplePlay);
+          }, 300);
+        }, 1000);
+        return;
+      }
+    }
+
+    // Last resort: try to form two-letter words
+    const twoLetterPlay = this.findTwoLetterPlay();
+    if (twoLetterPlay) {
+      setTimeout(() => {
+        thinkingMessage.style.opacity = "0";
+        setTimeout(() => {
+          thinkingMessage.remove();
+          this.executeAIPlay(twoLetterPlay);
+        }, 300);
+      }, 1000);
+      return;
+    }
+
+    // Only exchange as absolute last resort
+    console.log("No valid plays found - forced to exchange");
+    setTimeout(() => {
+      thinkingMessage.style.opacity = "0";
+      setTimeout(() => {
+        thinkingMessage.remove();
+        this.handleAIExchange();
+      }, 300);
+    }, 1000);
+  }
+
+  shouldExchangeTiles() {
+    const rack = this.aiRack.map((t) => t.letter);
+    const vowels = "AEIOU";
+    const vowelCount = rack.filter((l) => vowels.includes(l)).length;
+    const consonantCount = rack.length - vowelCount;
+
+    // Only exchange if rack is severely unbalanced
+    if (vowelCount === 0 || consonantCount === 0) return true;
+    if (vowelCount > 5 || consonantCount > 6) return true;
+
+    // Check for difficult letters
+    const difficultLetters = "QJXZ";
+    const difficultCount = rack.filter((l) =>
+      difficultLetters.includes(l),
+    ).length;
+    if (difficultCount > 2 && this.tiles.length >= 10) return true;
+
+    return false;
+  }
+
+  selectBestPlay(plays) {
+    // First filter out any undefined or invalid plays
+    const validPlays = plays.filter(
+      (play) =>
+        play && play.word && play.startPos && typeof play.score === "number",
+    );
+
+    if (validPlays.length === 0) return null;
+
+    return validPlays.sort((a, b) => {
+      // Heavily weight score
+      const scoreDiff = b.score - a.score;
+      if (Math.abs(scoreDiff) > 5) return scoreDiff;
+
+      // Consider word length
+      const lengthDiff = b.word.length - a.word.length;
+      if (lengthDiff !== 0) return lengthDiff;
+
+      // Consider position strategy
+      const aStrategy = this.evaluatePositionStrategy(a);
+      const bStrategy = this.evaluatePositionStrategy(b);
+      return bStrategy - aStrategy;
+    })[0];
+  }
+
+  evaluatePositionStrategy(play) {
+    let value = 0;
+
+    // Bonus for using premium squares
+    value +=
+      this.countPremiumSquaresUsed(
+        play.startPos.row,
+        play.startPos.col,
+        play.isHorizontal,
+        play.word,
+      ) * 10;
+
+    // Bonus for forming multiple words
+    const crossWords = this.countIntersections(
+      play.startPos.row,
+      play.startPos.col,
+      play.isHorizontal,
+      play.word,
+    );
+    value += crossWords * 15;
+
+    // Bonus for using high-point letters effectively
+    value += this.evaluateLetterUsage(play.word) * 5;
+
+    return value;
+  }
+
+  evaluateLetterUsage(word) {
+    let value = 0;
+    const highValueLetters = "JQXZ";
+    const mediumValueLetters = "BFHMPVWY";
+
+    for (const letter of word) {
+      if (highValueLetters.includes(letter)) {
+        value += 3;
+      } else if (mediumValueLetters.includes(letter)) {
+        value += 2;
+      }
+    }
+
+    // Bonus for good vowel-consonant ratio
+    const vowels = "AEIOU";
+    const vowelCount = [...word].filter((l) => vowels.includes(l)).length;
+    const ratio = vowelCount / word.length;
+    if (ratio >= 0.3 && ratio <= 0.6) {
+      value += 2;
+    }
+
+    return value;
+  }
+
+  findSimplePlays() {
+    const plays = [];
+    const rack = this.aiRack.map((t) => t.letter);
+
+    // Get all possible 2-4 letter combinations
+    const combinations = this.getLetterCombinations(rack, 4);
+
+    for (const letters of combinations) {
+      // Get all possible words from these letters
+      const words = this.findPossibleWordsFromLetters(letters);
+
+      for (const word of words) {
+        // Find all valid positions for this word
+        for (let row = 0; row < 15; row++) {
+          for (let col = 0; col < 15; col++) {
+            // Try horizontal placement
+            if (this.isValidAIPlacement(word, row, col, true)) {
+              const score = this.calculatePotentialScore(word, row, col, true);
+              plays.push({
+                word,
+                startPos: { row, col },
+                isHorizontal: true,
+                score,
+              });
+            }
+
+            // Try vertical placement
+            if (this.isValidAIPlacement(word, row, col, false)) {
+              const score = this.calculatePotentialScore(word, row, col, false);
+              plays.push({
+                word,
+                startPos: { row, col },
+                isHorizontal: false,
+                score,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return plays;
+  }
+
+  findPossibleWordsFromLetters(letters) {
+    const words = new Set();
+
+    // Convert letters to lowercase for dictionary matching
+    const lowerLetters = letters.map((l) => l.toLowerCase());
+    const letterCounts = {};
+    let blankCount = 0;
+
+    // Count available letters including blanks
+    lowerLetters.forEach((letter) => {
+      if (letter === "*") {
+        blankCount++;
+      } else {
+        letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+      }
+    });
+
+    // Check each word in dictionary
+    for (const dictWord of this.dictionary) {
+      if (dictWord.length >= 2 && dictWord.length <= letters.length) {
+        const wordCounts = {};
+        let canForm = true;
+        let blanksNeeded = 0;
+
+        // Count letters needed for this word
+        for (const letter of dictWord) {
+          wordCounts[letter] = (wordCounts[letter] || 0) + 1;
+        }
+
+        // Check if we have enough of each letter
+        for (const [letter, count] of Object.entries(wordCounts)) {
+          const available = letterCounts[letter] || 0;
+          if (available < count) {
+            blanksNeeded += count - available;
+            if (blanksNeeded > blankCount) {
+              canForm = false;
+              break;
+            }
+          }
+        }
+
+        if (canForm) {
+          words.add(dictWord.toUpperCase());
+        }
+      }
+    }
+
+    return Array.from(words);
+  }
+
+  getLetterCombinations(letters, maxLength) {
+    const combinations = [];
+
+    // Helper function to generate combinations
+    function generateCombination(current, remaining, minLength = 2) {
+      if (current.length >= minLength && current.length <= maxLength) {
+        combinations.push([...current]);
+      }
+
+      if (current.length >= maxLength) {
+        return;
+      }
+
+      for (let i = 0; i < remaining.length; i++) {
+        current.push(remaining[i]);
+        generateCombination(current, remaining.slice(i + 1));
+        current.pop();
+      }
+    }
+
+    generateCombination([], letters);
+    return combinations;
+  }
+
+  evaluateSimplePlay(word, row, col, isHorizontal) {
+    let value = 0;
+
+    // Base score
+    value += this.calculatePotentialScore(word, row, col, isHorizontal);
+
+    // Bonus for creating multiple words
+    if (this.createsMultipleWords(word, row, col, isHorizontal)) {
+      value += 15;
+    }
+
+    // Bonus for using premium squares
+    value += this.countPremiumSquaresUsed(row, col, isHorizontal, word) * 5;
+
+    // Bonus for good positioning
+    if (this.isGoodPosition(row, col, isHorizontal, word)) {
+      value += 10;
+    }
+
+    return value;
+  }
+
+  isGoodPosition(row, col, isHorizontal, word) {
+    // Check if position uses board features effectively
+
+    // Near center bonus
+    const distanceFromCenter = Math.abs(7 - row) + Math.abs(7 - col);
+    if (distanceFromCenter <= 3) return true;
+
+    // Creates opportunities for future plays
+    const futureOpportunities = this.countFutureOpportunities(
+      row,
+      col,
+      isHorizontal,
+      word,
+    );
+    if (futureOpportunities >= 2) return true;
+
+    // Uses premium squares effectively
+    const premiumSquares = this.countPremiumSquaresUsed(
+      row,
+      col,
+      isHorizontal,
+      word,
+    );
+    if (premiumSquares > 0) return true;
+
+    return false;
+  }
+
+  findTwoLetterPlay() {
+    const validTwoLetterWords = new Set([
+      "AA",
+      "AB",
+      "AD",
+      "AE",
+      "AG",
+      "AH",
+      "AI",
+      "AL",
+      "AM",
+      "AN",
+      "AR",
+      "AS",
+      "AT",
+      "AW",
+      "AX",
+      "AY",
+      "BA",
+      "BE",
+      "BI",
+      "BO",
+      "BY",
+      "DE",
+      "DO",
+      "ED",
+      "EF",
+      "EH",
+      "EL",
+      "EM",
+      "EN",
+      "ER",
+      "ES",
+      "ET",
+      "EX",
+      "FA",
+      "FE",
+      "GO",
+      "HA",
+      "HE",
+      "HI",
+      "HM",
+      "HO",
+      "ID",
+      "IF",
+      "IN",
+      "IS",
+      "IT",
+      "JO",
+      "KA",
+      "LA",
+      "LI",
+      "LO",
+      "MA",
+      "ME",
+      "MI",
+      "MM",
+      "MO",
+      "MU",
+      "MY",
+      "NA",
+      "NE",
+      "NO",
+      "NU",
+      "OD",
+      "OE",
+      "OF",
+      "OH",
+      "OI",
+      "OK",
+      "OM",
+      "ON",
+      "OP",
+      "OR",
+      "OS",
+      "OW",
+      "OX",
+      "OY",
+      "PA",
+      "PE",
+      "PI",
+      "PO",
+      "QI",
+      "RE",
+      "SH",
+      "SI",
+      "SO",
+      "TA",
+      "TE",
+      "TI",
+      "TO",
+      "UH",
+      "UM",
+      "UN",
+      "UP",
+      "US",
+      "UT",
+      "WE",
+      "WO",
+      "XI",
+      "XU",
+      "YA",
+      "YE",
+      "YO",
+      "ZA",
+    ]);
+
+    const rack = this.aiRack.map((t) => t.letter);
+
+    // Try all two-letter combinations
+    for (let i = 0; i < rack.length; i++) {
+      for (let j = i + 1; j < rack.length; j++) {
+        const word = rack[i] + rack[j];
+        if (validTwoLetterWords.has(word)) {
+          const positions = this.findValidPositionsForWord(word);
+          if (positions.length > 0) {
+            const bestPosition = positions.sort(
+              (a, b) =>
+                this.calculatePotentialScore(
+                  word,
+                  b.position.row,
+                  b.position.col,
+                  b.horizontal,
+                ) -
+                this.calculatePotentialScore(
+                  word,
+                  a.position.row,
+                  a.position.col,
+                  a.horizontal,
+                ),
+            )[0];
+
+            return {
+              word,
+              startPos: bestPosition.position,
+              isHorizontal: bestPosition.horizontal,
+              score: this.calculatePotentialScore(
+                word,
+                bestPosition.position.row,
+                bestPosition.position.col,
+                bestPosition.horizontal,
+              ),
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // Add new helper method for forming minimal valid words
+  formMinimalValidWord() {
+    const vowels = "AEIOU".split("");
+    const consonants = "BCDFGHJKLMNPQRSTVWXYZ".split("");
+    const availableLetters = this.aiRack.map((tile) => tile.letter);
+
+    // Try to form simple CV or CVC patterns
+    const hasVowel = availableLetters.some((l) => vowels.includes(l));
+    const hasConsonant = availableLetters.some((l) => consonants.includes(l));
+
+    if (hasVowel && hasConsonant) {
+      // Form simple word patterns
+      for (const letter1 of availableLetters) {
+        for (const letter2 of availableLetters) {
+          if (letter1 === letter2) continue;
+          const word = letter1 + letter2;
+          if (this.dictionary.has(word.toLowerCase())) {
+            const startPos = this.findValidPositionForWord(word);
+            if (startPos) {
+              const play = {
+                word,
+                startPos,
+                isHorizontal: true,
+                score: this.calculatePotentialScore(
+                  word,
+                  startPos.row,
+                  startPos.col,
+                  true,
+                ),
+              };
+              this.executeAIPlay(play);
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Add helper method for finding valid position for a word
+  findValidPositionForWord(word) {
+    // Check center position for first move
+    if (this.isFirstMove) {
+      if (this.isValidAIPlacement(word, 7, 7, true)) {
+        return { row: 7, col: 7 };
+      }
+      return null;
+    }
+
+    // Try to find position near existing words
+    for (let row = 0; row < 15; row++) {
+      for (let col = 0; col < 15; col++) {
+        if (this.hasAdjacentTile(row, col)) {
+          if (this.isValidAIPlacement(word, row, col, true)) {
+            return { row, col };
+          }
+          if (this.isValidAIPlacement(word, row, col, false)) {
+            return { row, col };
+          }
+        }
+      }
+    }
+    return null;
   }
 
   setupHintSystem() {
@@ -312,193 +809,264 @@ class ScrabbleGame {
   }
 
   findAIPossiblePlays() {
-    const possiblePlays = [];
-    const anchors = this.findAnchors();
-    const availableLetters = this.aiRack.map((tile) => tile.letter);
-    const existingWords = this.getExistingWords();
+    try {
+      const possiblePlays = [];
+      const anchors = this.findAnchors();
+      const availableLetters = this.aiRack.map((tile) => tile.letter);
+      const existingWords = this.getExistingWords();
 
-    console.log("=== Starting Enhanced AI Play Search ===");
-    console.log("Available letters:", availableLetters);
-    console.log("Anchors found:", anchors);
+      console.log("=== Starting Enhanced AI Play Search ===");
+      console.log("Available letters:", availableLetters);
+      console.log("Anchors found:", anchors);
 
-    // Handle first move or empty board with preference for longer words
-    if (
-      this.isFirstMove ||
-      this.board.every((row) => row.every((cell) => cell === null))
-    ) {
-      const words = Array.from(this.dictionary)
-        .filter((word) => {
-          // Prefer longer words for first move
-          if (word.length < 3) return false;
-          // Must be formable with available letters
-          return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
+      // Safety check for valid data
+      if (!Array.isArray(anchors) || !Array.isArray(availableLetters)) {
+        console.error("Invalid anchors or available letters");
+        return [];
+      }
+
+      // Handle first move or empty board with preference for longer words
+      if (
+        this.isFirstMove ||
+        this.board.every((row) => row.every((cell) => cell === null))
+      ) {
+        const words = Array.from(this.dictionary)
+          .filter((word) => {
+            // Prefer longer words for first move
+            if (word.length < 3) return false;
+            // Must be formable with available letters
+            return this.canFormWord(
+              word.toUpperCase(),
+              "",
+              "",
+              availableLetters,
+            );
+          })
+          .map((word) => word.toUpperCase());
+
+        // Sort by length and take top candidates
+        const candidates = words
+          .sort((a, b) => b.length - a.length)
+          .slice(0, 20); // Consider top 20 longest possible words
+
+        for (const word of candidates) {
+          // Try to place word through center square
+          const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
+          if (
+            this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)
+          ) {
+            const score = this.calculatePotentialScore(
+              word,
+              centerPos.row,
+              centerPos.col,
+              true,
+            );
+            possiblePlays.push({
+              word,
+              startPos: centerPos,
+              isHorizontal: true,
+              score,
+            });
+          }
+        }
+      } else {
+        // For subsequent moves
+        for (const anchor of anchors) {
+          if (!this.isValidPosition(anchor.row, anchor.col)) {
+            continue;
+          }
+
+          try {
+            // Get prefixes and suffixes for both directions
+            const hPrefix = this.getPrefix(anchor, true);
+            const hSuffix = this.getSuffix(anchor, true);
+            const vPrefix = this.getPrefix(anchor, false);
+            const vSuffix = this.getSuffix(anchor, false);
+
+            // Find potential words that could be formed
+            const potentialWords = this.findPotentialWords(availableLetters);
+
+            // Try horizontal placements
+            for (const word of potentialWords) {
+              // Skip very short words unless they create multiple scoring opportunities
+              if (
+                word.length < 3 &&
+                !this.createsMultipleWords(word, anchor.row, anchor.col, true)
+              ) {
+                continue;
+              }
+
+              if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
+                const startCol = anchor.col - hPrefix.length;
+                if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
+                  const score = this.calculatePotentialScore(
+                    word,
+                    anchor.row,
+                    startCol,
+                    true,
+                  );
+
+                  // Calculate strategic value
+                  let strategicValue = 0;
+                  // Bonus for longer words
+                  strategicValue += word.length * 2;
+                  // Bonus for using premium squares
+                  strategicValue +=
+                    this.countPremiumSquaresUsed(
+                      anchor.row,
+                      startCol,
+                      true,
+                      word,
+                    ) * 5;
+                  // Bonus for creating multiple words
+                  if (
+                    this.createsMultipleWords(word, anchor.row, startCol, true)
+                  ) {
+                    strategicValue += 20;
+                  }
+
+                  // Only add plays that meet minimum score threshold
+                  const totalValue = score + strategicValue;
+                  if (totalValue >= 10) {
+                    possiblePlays.push({
+                      word,
+                      startPos: { row: anchor.row, col: startCol },
+                      isHorizontal: true,
+                      score: totalValue,
+                    });
+                  }
+                }
+              }
+            }
+
+            // Try vertical placements
+            for (const word of potentialWords) {
+              if (
+                word.length < 3 &&
+                !this.createsMultipleWords(word, anchor.row, anchor.col, false)
+              ) {
+                continue;
+              }
+
+              if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
+                const startRow = anchor.row - vPrefix.length;
+                if (
+                  this.isValidAIPlacement(word, startRow, anchor.col, false)
+                ) {
+                  const score = this.calculatePotentialScore(
+                    word,
+                    startRow,
+                    anchor.col,
+                    false,
+                  );
+
+                  // Calculate strategic value
+                  let strategicValue = 0;
+                  // Bonus for longer words
+                  strategicValue += word.length * 2;
+                  // Bonus for using premium squares
+                  strategicValue +=
+                    this.countPremiumSquaresUsed(
+                      startRow,
+                      anchor.col,
+                      false,
+                      word,
+                    ) * 5;
+                  // Bonus for creating multiple words
+                  if (
+                    this.createsMultipleWords(word, startRow, anchor.col, false)
+                  ) {
+                    strategicValue += 20;
+                  }
+
+                  const totalValue = score + strategicValue;
+                  if (totalValue >= 10) {
+                    possiblePlays.push({
+                      word,
+                      startPos: { row: startRow, col: anchor.col },
+                      isHorizontal: false,
+                      score: totalValue,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (anchorError) {
+            console.error("Error processing anchor:", anchorError);
+            continue;
+          }
+        }
+      }
+
+      // Filter and sort plays
+      const validPlays = possiblePlays
+        .filter((play) => {
+          // Basic validity checks
+          if (!this.dictionary.has(play.word.toLowerCase())) {
+            return false;
+          }
+
+          // Check for simple extensions of existing words
+          if (this.isSimpleExtension(play.word, existingWords)) {
+            // Only accept extensions if they create high-value plays
+            return (
+              play.score > 30 &&
+              this.createsMultipleWords(
+                play.word,
+                play.startPos.row,
+                play.startPos.col,
+                play.isHorizontal,
+              )
+            );
+          }
+
+          // Check for creative placement
+          const isCreative = this.isCreativePlacement(
+            play.startPos.row,
+            play.startPos.col,
+            play.isHorizontal,
+            play.word,
+          );
+
+          // Accept plays that are either creative or score well
+          return isCreative || play.score > 20;
         })
-        .map((word) => word.toUpperCase());
+        .sort((a, b) => {
+          // First compare scores
+          const scoreDiff = b.score - a.score;
+          if (Math.abs(scoreDiff) > 10) {
+            return scoreDiff;
+          }
 
-      // Sort by length and take top candidates
-      const candidates = words.sort((a, b) => b.length - a.length).slice(0, 20); // Consider top 20 longest possible words
+          // If scores are close, prefer longer words
+          const lengthDiff = b.word.length - a.word.length;
+          if (lengthDiff !== 0) {
+            return lengthDiff;
+          }
 
-      for (const word of candidates) {
-        // Try to place word through center square
-        const centerPos = { row: 7, col: 7 - Math.floor(word.length / 2) };
-        if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
-          const score = this.calculatePotentialScore(
-            word,
-            centerPos.row,
-            centerPos.col,
-            true,
+          // If lengths are equal, prefer creative placements
+          const aCreative = this.isCreativePlacement(
+            a.startPos.row,
+            a.startPos.col,
+            a.isHorizontal,
+            a.word,
           );
-          possiblePlays.push({
-            word,
-            startPos: centerPos,
-            isHorizontal: true,
-            score,
-          });
-        }
-      }
-    } else {
-      // For subsequent moves
-      for (const anchor of anchors) {
-        // Get prefixes and suffixes for both directions
-        const hPrefix = this.getPrefix(anchor, true);
-        const hSuffix = this.getSuffix(anchor, true);
-        const vPrefix = this.getPrefix(anchor, false);
-        const vSuffix = this.getSuffix(anchor, false);
+          const bCreative = this.isCreativePlacement(
+            b.startPos.row,
+            b.startPos.col,
+            b.isHorizontal,
+            b.word,
+          );
 
-        // Find potential words that could be formed
-        const potentialWords = this.findPotentialWords(availableLetters);
+          return bCreative - aCreative;
+        });
 
-        // Try horizontal placements
-        for (const word of potentialWords) {
-          // Skip very short words unless they create multiple scoring opportunities
-          if (
-            word.length < 3 &&
-            !this.createsMultipleWords(word, anchor.row, anchor.col, true)
-          ) {
-            continue;
-          }
-
-          if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
-            const startCol = anchor.col - hPrefix.length;
-            if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
-              const score = this.calculatePotentialScore(
-                word,
-                anchor.row,
-                startCol,
-                true,
-              );
-
-              // Only add plays that meet minimum score threshold
-              if (score >= 10) {
-                possiblePlays.push({
-                  word,
-                  startPos: { row: anchor.row, col: startCol },
-                  isHorizontal: true,
-                  score,
-                });
-              }
-            }
-          }
-        }
-
-        // Try vertical placements
-        for (const word of potentialWords) {
-          if (
-            word.length < 3 &&
-            !this.createsMultipleWords(word, anchor.row, anchor.col, false)
-          ) {
-            continue;
-          }
-
-          if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
-            const startRow = anchor.row - vPrefix.length;
-            if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
-              const score = this.calculatePotentialScore(
-                word,
-                startRow,
-                anchor.col,
-                false,
-              );
-
-              if (score >= 10) {
-                possiblePlays.push({
-                  word,
-                  startPos: { row: startRow, col: anchor.col },
-                  isHorizontal: false,
-                  score,
-                });
-              }
-            }
-          }
-        }
-      }
+      console.log(`Found ${validPlays.length} valid plays after filtering`);
+      return validPlays;
+    } catch (error) {
+      console.error("Error in findAIPossiblePlays:", error);
+      return [];
     }
-
-    // Filter and sort plays
-    const validPlays = possiblePlays
-      .filter((play) => {
-        // Basic validity checks
-        if (!this.dictionary.has(play.word.toLowerCase())) {
-          return false;
-        }
-
-        // Check for simple extensions of existing words
-        if (this.isSimpleExtension(play.word, existingWords)) {
-          // Only accept extensions if they create high-value plays
-          return (
-            play.score > 30 &&
-            this.createsMultipleWords(
-              play.word,
-              play.startPos.row,
-              play.startPos.col,
-              play.isHorizontal,
-            )
-          );
-        }
-
-        // Check for creative placement
-        const isCreative = this.isCreativePlacement(
-          play.startPos.row,
-          play.startPos.col,
-          play.isHorizontal,
-          play.word,
-        );
-
-        // Accept plays that are either creative or score well
-        return isCreative || play.score > 20;
-      })
-      .sort((a, b) => {
-        // First compare scores
-        const scoreDiff = b.score - a.score;
-        if (Math.abs(scoreDiff) > 10) {
-          return scoreDiff;
-        }
-
-        // If scores are close, prefer longer words
-        const lengthDiff = b.word.length - a.word.length;
-        if (lengthDiff !== 0) {
-          return lengthDiff;
-        }
-
-        // If lengths are equal, prefer creative placements
-        const aCreative = this.isCreativePlacement(
-          a.startPos.row,
-          a.startPos.col,
-          a.isHorizontal,
-          a.word,
-        );
-        const bCreative = this.isCreativePlacement(
-          b.startPos.row,
-          b.startPos.col,
-          b.isHorizontal,
-          b.word,
-        );
-
-        return bCreative - aCreative;
-      });
-
-    console.log(`Found ${validPlays.length} valid plays after filtering`);
-    return validPlays;
   }
 
   isSimpleExtension(word, existingWords) {
@@ -521,11 +1089,16 @@ class ScrabbleGame {
   }
 
   createsMultipleWords(word, row, col, isHorizontal) {
+    if (!word || !this.isValidPosition(row, col)) return false;
+
     let crossWordCount = 0;
 
     for (let i = 0; i < word.length; i++) {
       const currentRow = isHorizontal ? row : row + i;
       const currentCol = isHorizontal ? col + i : col;
+
+      // Check if position is valid before proceeding
+      if (!this.isValidPosition(currentRow, currentCol)) continue;
 
       // Check perpendicular direction for potential words
       const crossWord = this.getPerpendicularWord(
@@ -542,6 +1115,8 @@ class ScrabbleGame {
   }
 
   getPerpendicularWord(row, col, isHorizontal) {
+    if (!this.isValidPosition(row, col)) return null;
+
     // Get the word formed in the perpendicular direction
     return isHorizontal
       ? this.getVerticalWordAt(row, col)
@@ -549,17 +1124,27 @@ class ScrabbleGame {
   }
 
   getVerticalWordAt(row, col) {
+    if (!this.isValidPosition(row, col)) return null;
+
     let word = "";
     let startRow = row;
 
     // Find start of word
-    while (startRow > 0 && this.board[startRow - 1][col]) {
+    while (
+      startRow > 0 &&
+      this.board[startRow - 1] &&
+      this.board[startRow - 1][col]
+    ) {
       startRow--;
     }
 
     // Build word from start position
     let currentRow = startRow;
-    while (currentRow < 15 && this.board[currentRow][col]) {
+    while (
+      currentRow < 15 &&
+      this.board[currentRow] &&
+      this.board[currentRow][col]
+    ) {
       word += this.board[currentRow][col].letter;
       currentRow++;
     }
@@ -568,6 +1153,8 @@ class ScrabbleGame {
   }
 
   getHorizontalWordAt(row, col) {
+    if (!this.isValidPosition(row, col)) return null;
+
     let word = "";
     let startCol = col;
 
@@ -578,7 +1165,7 @@ class ScrabbleGame {
 
     // Build word from start position
     let currentCol = startCol;
-    while (currentCol < 15 && this.board[row][currentCol]) {
+    while (currentCol < 15 && this.board[row] && this.board[row][currentCol]) {
       word += this.board[row][currentCol].letter;
       currentCol++;
     }
@@ -1296,7 +1883,14 @@ class ScrabbleGame {
   }
 
   isValidPosition(row, col) {
-    return row >= 0 && row < 15 && col >= 0 && col < 15;
+    return (
+      row >= 0 &&
+      row < 15 &&
+      col >= 0 &&
+      col < 15 &&
+      this.board[row] !== undefined &&
+      this.board[row][col] !== undefined
+    );
   }
 
   findSimpleWords(letters) {
@@ -5170,15 +5764,16 @@ class ScrabbleGame {
           particle.style.height = "10px";
         }
 
-        particle.style.cssText += `
-                          position: fixed;
-                          pointer-events: none;
-                          left: ${Math.random() * 100}vw;
-                          top: -20px;
-                          opacity: 1;
-                          transform: rotate(${Math.random() * 360}deg);
-                          animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
-                      `;
+        particle.style.cssText = `
+    position: fixed;
+    pointer-events: none;
+    left: ${Math.random() * 100}vw;
+    top: -20px;
+    opacity: 1;
+    transform: rotate(${Math.random() * 360}deg);
+    animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
+    z-index: 1500;
+`;
         document.body.appendChild(particle);
 
         particle.addEventListener("animationend", () => {
@@ -5205,15 +5800,16 @@ class ScrabbleGame {
         const emoji = document.createElement("div");
         emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
         emoji.style.cssText = `
-                          position: fixed;
-                          font-size: ${20 + Math.random() * 20}px;
-                          pointer-events: none;
-                          left: ${Math.random() * 100}vw;
-                          top: -40px;
-                          opacity: 1;
-                          transform: rotate(${Math.random() * 360}deg);
-                          animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
-                      `;
+    position: fixed;
+    font-size: ${20 + Math.random() * 20}px;
+    pointer-events: none;
+    left: ${Math.random() * 100}vw;
+    top: -40px;
+    opacity: 1;
+    transform: rotate(${Math.random() * 360}deg);
+    animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
+    z-index: 1500;
+`;
         document.body.appendChild(emoji);
 
         emoji.addEventListener("animationend", () => {
