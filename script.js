@@ -3366,6 +3366,9 @@ class ScrabbleGame {
       "ZI",
       "ZO",
       "PI",
+      "NP",
+      "ET",
+      "ZO",
     ]);
 
     // Common three-letter abbreviations to reject
@@ -3443,6 +3446,7 @@ class ScrabbleGame {
       "ML",
       "VR",
       "AR",
+      "DIF",
 
       // Government & Military
       "CIA",
