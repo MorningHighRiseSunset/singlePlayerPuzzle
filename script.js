@@ -549,6 +549,12 @@ class ScrabbleGame {
       "OP",
       "OR",
       "OS",
+      "IE",
+      "IA",
+      "NH",
+      "EV",
+      "RA",
+      "DE",
       "OW",
       "OX",
       "OY",
@@ -3361,6 +3367,7 @@ class ScrabbleGame {
       "NP",
       "ET",
       "ZO",
+      "TI",
     ]);
 
     // Common three-letter abbreviations to reject
