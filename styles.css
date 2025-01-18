@@ -511,9 +511,13 @@ button:hover {
     }
 
     #scrabble-board {
-        grid-template-columns: repeat(15, minmax(20px, 1fr));
-        grid-template-rows: repeat(15, minmax(20px, 1fr));
+        grid-template-columns: repeat(15, minmax(30px, 1fr));
+        grid-template-rows: repeat(15, minmax(30px, 1fr));
+        width: 95vw; /* Viewport-relative width */
+        height: 95vw; /* Make it square */
+        margin: 0 auto;
     }
+
 
     .tile-rack {
         padding: 10px;
@@ -550,8 +554,10 @@ button:hover {
 
 @media screen and (max-width: 480px) {
     #scrabble-board {
-        grid-template-columns: repeat(15, minmax(15px, 1fr));
-        grid-template-rows: repeat(15, minmax(15px, 1fr));
+        grid-template-columns: repeat(15, minmax(20px, 1fr));
+        grid-template-rows: repeat(15, minmax(20px, 1fr));
+        width: 98vw;
+        height: 98vw;
     }
 
     .tile {
