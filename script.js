@@ -4741,78 +4741,128 @@ setupDropListeners() {
 
           const row = parseInt(cell.dataset.row);
           const col = parseInt(cell.dataset.col);
-          const tileIndex = this.selectedTile.dataset.index;
+
+          // If it's the first move, enforce center square
+          if (this.isFirstMove && this.placedTiles.length === 0 && (row !== 7 || col !== 7)) {
+              alert("First tile must be placed on the center square!");
+              return;
+          }
+
+          const tileIndex = parseInt(this.selectedTile.dataset.index);
           const tile = this.playerRack[tileIndex];
 
-          if (this.currentTurn === "player" && this.isValidPlacement(row, col, tile)) {
-              this.placeTile(tile, row, col);
+          if (this.currentTurn === "player") {
+              // Check if there's already a tile here
+              if (this.board[row][col]) {
+                  const existingTileIndex = this.placedTiles.findIndex(t => t.row === row && t.col === col);
+                  if (existingTileIndex !== -1) {
+                      // Remove existing tile
+                      this.board[row][col] = null;
+                      cell.innerHTML = '';
+                      const removedTile = this.placedTiles.splice(existingTileIndex, 1)[0];
+                      // Place new tile
+                      this.placeTile(tile, row, col);
+                      // Put removed tile back in rack
+                      this.playerRack.push(removedTile.tile);
+                      this.renderRack();
+                  }
+              } else {
+                  this.placeTile(tile, row, col);
+              }
               this.selectedTile.classList.remove("selected");
               this.selectedTile = null;
-          } else if (this.currentTurn !== "player") {
-              alert("Not your turn!");
-          } else {
-              alert("Invalid placement! Check placement rules.");
           }
-      });
-
-      cell.addEventListener("dragenter", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
       });
 
       cell.addEventListener("dragover", (e) => {
           e.preventDefault();
-          e.stopPropagation();
-
-          const row = parseInt(cell.dataset.row);
-          const col = parseInt(cell.dataset.col);
-
-          e.dataTransfer.dropEffect = "move";
-
           if (this.currentTurn === "player") {
               cell.classList.add("droppable-hover");
           }
       });
 
+      cell.addEventListener("dragleave", (e) => {
+          cell.classList.remove("droppable-hover");
+      });
+
       cell.addEventListener("drop", (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          console.log("Drop attempted");
-
           cell.classList.remove("droppable-hover");
 
-          if (this.currentTurn !== "player") {
-              console.log("Not player turn");
-              return;
-          }
+          if (this.currentTurn !== "player") return;
 
-          const tileIndex = e.dataTransfer.getData("text/plain");
-          console.log("Tile index from drop:", tileIndex);
-
-          const tile = this.playerRack[tileIndex];
           const row = parseInt(cell.dataset.row);
           const col = parseInt(cell.dataset.col);
 
-          if (this.isValidPlacement(row, col, tile)) {
-              this.placeTile(tile, row, col);
-          } else {
-              const validationDetails = {
-                  isOccupied: this.board[row][col] !== null,
-                  distanceToWords: this.getMinDistanceToWords(row, col),
-                  isFirstMove: this.isFirstMove,
-                  placedTilesLength: this.placedTiles.length,
-              };
-              console.log("Placement validation failed:", validationDetails);
-              alert("Invalid placement! Check placement rules.");
+          // If it's the first move, enforce center square
+          if (this.isFirstMove && this.placedTiles.length === 0 && (row !== 7 || col !== 7)) {
+              alert("First tile must be placed on the center square!");
+              return;
           }
-      });
 
-      cell.addEventListener("dragleave", (e) => {
-          e.preventDefault();
-          cell.classList.remove("droppable-hover");
+          // Check if we're moving a tile from the board
+          const draggedTile = document.querySelector(".tile.dragging");
+          if (draggedTile) {
+              const sourceCell = draggedTile.closest(".board-cell");
+              if (sourceCell) {
+                  // Moving from board to board
+                  const oldRow = parseInt(sourceCell.dataset.row);
+                  const oldCol = parseInt(sourceCell.dataset.col);
+                  const tileIndex = this.placedTiles.findIndex(t => t.row === oldRow && t.col === oldCol);
+                  
+                  if (tileIndex !== -1) {
+                      const movedTile = this.placedTiles[tileIndex];
+                      
+                      // Remove from old position
+                      this.board[oldRow][oldCol] = null;
+                      sourceCell.innerHTML = '';
+                      this.placedTiles.splice(tileIndex, 1);
+
+                      // Add to new position
+                      this.board[row][col] = movedTile.tile;
+                      this.placedTiles.push({
+                          tile: movedTile.tile,
+                          row: row,
+                          col: col
+                      });
+
+                      // Update cell display
+                      const tileElement = document.createElement("div");
+                      tileElement.className = "tile";
+                      tileElement.draggable = true;
+                      tileElement.innerHTML = `
+                          ${movedTile.tile.letter}
+                          <span class="points">${movedTile.tile.value}</span>
+                          ${movedTile.tile.isBlank ? '<span class="blank-indicator">★</span>' : ''}
+                      `;
+                      cell.innerHTML = '';
+                      cell.appendChild(tileElement);
+                  }
+              } else {
+                  // Moving from rack to board
+                  const tileIndex = e.dataTransfer.getData("text/plain");
+                  const tile = this.playerRack[parseInt(tileIndex)];
+                  
+                  if (this.board[row][col]) {
+                      // Swap with existing tile
+                      const existingTileIndex = this.placedTiles.findIndex(t => t.row === row && t.col === col);
+                      if (existingTileIndex !== -1) {
+                          const existingTile = this.placedTiles[existingTileIndex].tile;
+                          this.placedTiles.splice(existingTileIndex, 1);
+                          this.playerRack.push(existingTile);
+                      }
+                  }
+                  
+                  this.placeTile(tile, row, col);
+              }
+          }
+
+          this.highlightValidPlacements();
       });
   });
 }
+
+
 
 
   isValidPlacement(row, col, tile) {
