@@ -615,8 +615,8 @@ button:hover {
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 1000;
-    background-color: rgba(0, 255, 0, 0.7); /* Default win background */
+    z-index: 1400; /* Increased from 1000 */
+    background-color: rgba(0, 255, 0, 0.7);
 }
 
 .win-overlay.active {
@@ -625,7 +625,7 @@ button:hover {
 }
 
 .win-overlay.lose {
-    background-color: rgba(255, 0, 0, 0.7); /* Red background for losing */
+    background-color: rgba(255, 255, 255, 0); /* Red background for losing */
 }
 
 .win-message {
@@ -670,4 +670,84 @@ button:hover {
     font-size: 1.5em;
     color: #333;
     pointer-events: none;
+}
+
+/* Mobile Notifications */
+.mobile-notifications {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .mobile-notifications {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+
+    .mobile-notice {
+        background: rgba(25, 118, 210, 0.95);
+        color: white;
+        padding: 12px 40px 12px 15px;
+        margin-bottom: 1px;
+        font-size: 14px;
+        position: relative;
+        animation: slideDown 0.5s ease-out;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .notice-icon {
+        font-size: 18px;
+    }
+
+    .notice-close {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        padding: 5px;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Reorder game elements for mobile */
+    .game-container {
+        flex-direction: column;
+        padding-top: 120px; /* Space for notifications */
+    }
+
+    .board-container {
+        order: 1;
+    }
+
+    .info-panel {
+        order: 2;
+    }
+
+    .moves-panel {
+        order: 3;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
 }
