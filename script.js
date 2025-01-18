@@ -4406,6 +4406,19 @@ class ScrabbleGame {
     this.setupDragAndDrop();
     this.setupEventListeners();
     this.updateGameState();
+
+    // Add the new mobile notification code here
+    if (isMobileDevice()) {
+      document.querySelectorAll(".notice-close").forEach((button) => {
+        button.addEventListener("click", (e) => {
+          const notice = e.target.closest(".mobile-notice");
+          notice.style.animation = "slideUp 0.3s ease-out forwards";
+          setTimeout(() => {
+            notice.style.display = "none";
+          }, 300);
+        });
+      });
+    }
   }
 
   createBoard() {
