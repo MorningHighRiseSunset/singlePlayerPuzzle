@@ -1,10 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Puzzle Game</title>
-    <link rel="stylesheet" href="styles.css">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Puzzle Game</title>
+        <link rel="stylesheet" href="styles.css">
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFT3E5F6HX"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-VFT3E5F6HX');
+        </script>
     <style>
         .modal {
             display: none;
@@ -115,6 +123,26 @@
             <div id="scrabble-board"></div>
             <div id="tile-rack" class="tile-rack"></div>
         </div>
+
+                <!-- Mobile Notifications -->
+        <div class="mobile-notifications">
+            <div class="mobile-notice landscape-notice">
+                <span class="notice-icon">📱</span>
+                For the best experience, please rotate your device to landscape mode
+                <button class="notice-close">×</button>
+            </div>
+            <div class="mobile-notice scroll-notice">
+                <span class="notice-icon">👆</span>
+                You can scroll up and down to access your rack, game controls, and move history
+                <button class="notice-close">×</button>
+            </div>
+            <div class="mobile-notice instruction-notice">
+                <span class="notice-icon">📖</span>
+                Please click "How to Play" to read the instructions before starting
+                <button class="notice-close">×</button>
+            </div>
+        </div>
+
 
         <!-- Right Panel -->
         <div class="info-panel">
