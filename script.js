@@ -3366,6 +3366,7 @@ class ScrabbleGame {
       "PI",
       "NP",
       "ET",
+      "VI",
       "ZO",
       "TI",
     ]);
@@ -4670,121 +4671,149 @@ class ScrabbleGame {
   }
 
   setupDragListeners() {
+    // Store selected tile for mobile click placement
+    this.selectedTile = null;
+
     document.addEventListener("dragstart", (e) => {
-      if (
-        e.target.classList.contains("tile") &&
-        this.currentTurn === "player"
-      ) {
-        e.target.classList.add("dragging");
-        const tileData = {
-          index: e.target.dataset.index,
-          id: e.target.dataset.id,
-        };
-        e.dataTransfer.setData("text/plain", e.target.dataset.index);
+        if (e.target.classList.contains("tile") && this.currentTurn === "player") {
+            e.target.classList.add("dragging");
+            const tileData = {
+                index: e.target.dataset.index,
+                id: e.target.dataset.id,
+            };
+            e.dataTransfer.setData("text/plain", e.target.dataset.index);
+            console.log("Drag started:", tileData);
+            e.dataTransfer.effectAllowed = "move";
 
-        console.log("Drag started:", tileData);
+            const dragImage = e.target.cloneNode(true);
+            dragImage.style.opacity = "0.8";
+            dragImage.style.position = "absolute";
+            dragImage.style.top = "-1000px";
+            document.body.appendChild(dragImage);
 
-        e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setDragImage(dragImage, dragImage.offsetWidth / 2, dragImage.offsetHeight / 2);
 
-        const dragImage = e.target.cloneNode(true);
-        dragImage.style.opacity = "0.8";
-        dragImage.style.position = "absolute";
-        dragImage.style.top = "-1000px";
-        document.body.appendChild(dragImage);
+            setTimeout(() => {
+                document.body.removeChild(dragImage);
+            }, 0);
+        }
+    });
 
-        e.dataTransfer.setDragImage(
-          dragImage,
-          dragImage.offsetWidth / 2,
-          dragImage.offsetHeight / 2,
-        );
+    // Add click handler for mobile tile selection
+    const tileRack = document.getElementById("tile-rack");
+    tileRack.addEventListener("click", (e) => {
+        if (!isMobileDevice()) return; // Only for mobile devices
+        
+        const tile = e.target.closest(".tile");
+        if (!tile || this.currentTurn !== "player") return;
 
-        setTimeout(() => {
-          document.body.removeChild(dragImage);
-        }, 0);
-      }
+        // Deselect if clicking the same tile
+        if (this.selectedTile === tile) {
+            this.selectedTile.classList.remove("selected");
+            this.selectedTile = null;
+            return;
+        }
+
+        // Remove selection from previously selected tile
+        if (this.selectedTile) {
+            this.selectedTile.classList.remove("selected");
+        }
+
+        // Select new tile
+        this.selectedTile = tile;
+        tile.classList.add("selected");
     });
 
     document.addEventListener("dragend", (e) => {
-      if (e.target.classList.contains("tile")) {
-        e.target.classList.remove("dragging");
-      }
+        if (e.target.classList.contains("tile")) {
+            e.target.classList.remove("dragging");
+        }
     });
-  }
+}
 
-  setupDropListeners() {
-    document.querySelectorAll(".board-cell").forEach((cell) => {
-      // Add this to ensure the cell is droppable
+setupDropListeners() {
+  document.querySelectorAll(".board-cell").forEach((cell) => {
       cell.setAttribute("droppable", "true");
 
+      // Add click handler for mobile placement
+      cell.addEventListener("click", (e) => {
+          if (!isMobileDevice() || !this.selectedTile) return;
+
+          const row = parseInt(cell.dataset.row);
+          const col = parseInt(cell.dataset.col);
+          const tileIndex = this.selectedTile.dataset.index;
+          const tile = this.playerRack[tileIndex];
+
+          if (this.currentTurn === "player" && this.isValidPlacement(row, col, tile)) {
+              this.placeTile(tile, row, col);
+              this.selectedTile.classList.remove("selected");
+              this.selectedTile = null;
+          } else if (this.currentTurn !== "player") {
+              alert("Not your turn!");
+          } else {
+              alert("Invalid placement! Check placement rules.");
+          }
+      });
+
       cell.addEventListener("dragenter", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
       });
 
       cell.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
 
-        const row = parseInt(cell.dataset.row);
-        const col = parseInt(cell.dataset.col);
-        // Console log removed from here
+          const row = parseInt(cell.dataset.row);
+          const col = parseInt(cell.dataset.col);
 
-        // Explicitly show this is a valid drop target
-        e.dataTransfer.dropEffect = "move";
+          e.dataTransfer.dropEffect = "move";
 
-        if (this.currentTurn === "player") {
-          cell.classList.add("droppable-hover");
-        }
+          if (this.currentTurn === "player") {
+              cell.classList.add("droppable-hover");
+          }
       });
 
       cell.addEventListener("drop", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log("Drop attempted");
+          e.preventDefault();
+          e.stopPropagation();
+          console.log("Drop attempted");
 
-        cell.classList.remove("droppable-hover");
+          cell.classList.remove("droppable-hover");
 
-        if (this.currentTurn !== "player") {
-          console.log("Not player turn");
-          return;
-        }
+          if (this.currentTurn !== "player") {
+              console.log("Not player turn");
+              return;
+          }
 
-        const tileIndex = e.dataTransfer.getData("text/plain");
-        console.log("Tile index from drop:", tileIndex);
+          const tileIndex = e.dataTransfer.getData("text/plain");
+          console.log("Tile index from drop:", tileIndex);
 
-        const tile = this.playerRack[tileIndex];
-        const row = parseInt(cell.dataset.row);
-        const col = parseInt(cell.dataset.col);
+          const tile = this.playerRack[tileIndex];
+          const row = parseInt(cell.dataset.row);
+          const col = parseInt(cell.dataset.col);
 
-        console.log("Drop details:", {
-          tileIndex,
-          tile,
-          row,
-          col,
-          isFirstMove: this.isFirstMove,
-          currentTurn: this.currentTurn,
-        });
-
-        if (this.isValidPlacement(row, col, tile)) {
-          this.placeTile(tile, row, col);
-        } else {
-          const validationDetails = {
-            isOccupied: this.board[row][col] !== null,
-            distanceToWords: this.getMinDistanceToWords(row, col),
-            isFirstMove: this.isFirstMove,
-            placedTilesLength: this.placedTiles.length,
-          };
-          console.log("Placement validation failed:", validationDetails);
-          alert("Invalid placement! Check placement rules.");
-        }
+          if (this.isValidPlacement(row, col, tile)) {
+              this.placeTile(tile, row, col);
+          } else {
+              const validationDetails = {
+                  isOccupied: this.board[row][col] !== null,
+                  distanceToWords: this.getMinDistanceToWords(row, col),
+                  isFirstMove: this.isFirstMove,
+                  placedTilesLength: this.placedTiles.length,
+              };
+              console.log("Placement validation failed:", validationDetails);
+              alert("Invalid placement! Check placement rules.");
+          }
       });
 
       cell.addEventListener("dragleave", (e) => {
-        e.preventDefault();
-        cell.classList.remove("droppable-hover");
+          e.preventDefault();
+          cell.classList.remove("droppable-hover");
       });
-    });
-  }
+  });
+}
+
 
   isValidPlacement(row, col, tile) {
     console.log("Checking placement validity:", { row, col, tile });
