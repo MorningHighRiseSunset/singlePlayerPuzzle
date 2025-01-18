@@ -751,3 +751,28 @@ button:hover {
         }
     }
 }
+
+.tile.selected {
+    transform: translateY(-4px);
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.3),
+        0 8px 10px rgba(0, 0, 0, 0.2),
+        -3px 0 6px rgba(0, 0, 0, 0.15),
+        3px 0 6px rgba(0, 0, 0, 0.15);
+    border: 2px solid var(--primary-blue);
+}
+
+/* Ensure better touch targets on mobile */
+@media (max-width: 768px) {
+    .tile {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        min-width: 40px; /* Ensure minimum touch target size */
+        min-height: 40px;
+    }
+
+    .board-cell {
+        min-width: 40px;
+        min-height: 40px;
+    }
+}
