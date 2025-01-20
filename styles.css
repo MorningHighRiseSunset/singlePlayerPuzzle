@@ -684,77 +684,124 @@ button:hover {
 }
 
 @media screen and (max-width: 768px) {
-    .mobile-notifications {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
+    #scrabble-board {
+        /* Remove fixed pixel values */
+        grid-template-columns: repeat(15, 1fr);
+        grid-template-rows: repeat(15, 1fr);
+        /* Use the smaller of viewport width/height to maintain square board */
+        width: min(95vw, 95vh);
+        height: min(95vw, 95vh);
+        gap: 1px;
+        margin: 0 auto;
     }
 
-    .mobile-notice {
-        background: rgba(25, 118, 210, 0.95);
-        color: white;
-        padding: 12px 40px 12px 15px;
-        margin-bottom: 1px;
-        font-size: 14px;
-        position: relative;
-        animation: slideDown 0.5s ease-out;
+    .board-cell {
+        width: 100%;
+        height: 100%;
+        /* Ensure minimum touch target size while maintaining aspect ratio */
+        min-width: min(calc(95vw/15), calc(95vh/15));
+        min-height: min(calc(95vw/15), calc(95vh/15));
+        font-size: clamp(8px, 2vw, 14px);
+    }
+
+    .tile {
+        /* Make tiles responsive but maintain minimum touch size */
+        width: min(calc(95vw/15), calc(95vh/15));
+        height: min(calc(95vw/15), calc(95vh/15));
+        min-width: 30px;
+        min-height: 30px;
+        font-size: clamp(10px, 2.5vw, 16px);
+    }
+
+    .points {
+        font-size: clamp(6px, 1.5vw, 10px);
+    }
+
+    .game-container {
+        padding: 10px;
+        gap: 15px;
+    }
+
+    .tile-rack {
+        /* Make rack more compact in portrait */
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+        padding: 10px;
+        min-height: 40px;
+    }
+
+    /* Improve spacing in portrait mode */
+    .moves-panel, .info-panel {
+        width: 95%;
+        max-width: none;
+        margin: 10px auto;
+        padding: 10px;
+    }
+
+    /* Center star adjustments for smaller cells */
+    .center-star {
+        font-size: clamp(0.8em, 2vw, 1.5em);
+    }
+}
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    .game-container {
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 10px;
+        padding-top: 10px;
     }
 
-    .notice-icon {
-        font-size: 18px;
+    #scrabble-board {
+        /* Slightly smaller in portrait to leave room for controls */
+        width: min(90vw, 90vh);
+        height: min(90vw, 90vh);
     }
 
-    .notice-close {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: white;
-        font-size: 20px;
-        padding: 5px;
-        cursor: pointer;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Reorder game elements for mobile */
-    .game-container {
-        flex-direction: column;
-        padding-top: 120px; /* Space for notifications */
-    }
-
-    .board-container {
-        order: 1;
+    .tile-rack {
+        width: 90vw;
+        margin: 10px auto;
     }
 
     .info-panel {
-        order: 2;
+        order: -1; /* Move info panel above board in portrait */
+        margin-bottom: 10px;
     }
 
     .moves-panel {
-        order: 3;
+        max-height: 30vh; /* Limit height in portrait mode */
+        overflow-y: auto;
     }
 
-    @keyframes slideDown {
-        from {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+    #move-history {
+        max-height: 25vh;
+    }
+}
+
+/* Add landscape specific adjustments */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .game-container {
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding: 10px;
+    }
+
+    #scrabble-board {
+        /* Optimize for landscape */
+        width: min(70vh, 60vw);
+        height: min(70vh, 60vw);
+    }
+
+    .info-panel, .moves-panel {
+        width: 18%;
+        min-width: 150px;
+    }
+
+    .tile-rack {
+        width: min(70vh, 60vw);
     }
 }
 
@@ -781,4 +828,25 @@ button:hover {
         min-width: 40px;
         min-height: 40px;
     }
+}
+
+.language-selector {
+    margin: 10px 0;
+}
+
+.language-button {
+    padding: 8px 15px;
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    color: rgb(0, 0, 0);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.language-button:hover {
+    background: linear-gradient(145deg, #1976d2, #1565c0);
+    transform: translateY(-2px);
 }
