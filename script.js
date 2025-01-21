@@ -247,72 +247,10 @@ class ScrabbleGame {
         if (validPlays.length === 0) return null;
     
         // Filter out invalid two-letter words
-        const invalidTwoLetterWords = new Set([
-            "KE", "IV", "YAD", "RI", "NI", "AV", "EB", "FY", "GI", "GU", "IO", "JA", "KI", "KO", "KY", "NY",
-            "OB", "QI", "RA", "RO", "UG", "UR", "YU", "ZE", "ZO", "AO", "AP", "BU", "CU", "DU", "EO", "EU",
-            "FO", "FU", "GA", "GE", "HU", "IQ", "JE", "KU", "LE", "LU", "NI", "NU", "OC", "OU", "PU", "QA",
-            "RI", "RU", "SA", "SE", "SI", "SU", "TU", "UI", "VA", "WA", "WU", "YI", "ZI", "ZO", "PI", "NP",
-            "ET", "VI", "ZO", "TI", "AB", "CD", "EF", "GH", "HI", "JK", "LM", "MN", "PR", "ST", "TV", "WX",
-            "XY", "YZ", "AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN",
-            "OO", "PP", "QQ", "RR", "SS", "TT", "UU", "VV", "WW", "XX", "YY", "ZZ", "XY", "XZ", "XA", "XB",
-            "XC", "XD", "XE", "XF", "XG", "XH", "XI", "XJ", "XK", "XL", "XM", "XN", "XO", "XP", "XQ", "XR",
-            "XS", "XT", "XU", "XV", "XW", "XX", "XY", "XZ", "YA", "YB", "YC", "YD", "YE", "YF", "YG", "YH",
-            "YI", "YJ", "YK", "YL", "YM", "YN", "YO", "YP", "YQ", "YR", "YS", "YT", "YU", "YV", "YW", "YX",
-            "YY", "YZ", "ZA", "ZB", "ZC", "ZD", "ZE", "ZF", "ZG", "ZH", "ZI", "ZJ", "ZK", "ZL", "ZM", "ZN",
-            "ZO", "ZP", "ZQ", "ZR", "ZS", "ZT", "ZU", "ZV", "ZW", "ZX", "ZY", "ZZ", "PL", "QR", "RI", "LT",
-            "KP", "QT", "XZ", "VU", "WF", "XT", "YQ", "ZL", "ZW", "XG", "XR", "YK", "ZQ", "QL", "QT",
-            "BV", "CN", "DF", "GN", "HK", "JL", "KM", "LN", "MP", "NQ", "PS", "QT", "RW", "SX", "TY",
-            "UV", "WP", "XR", "YS", "ZV", "AB", "AC", "AD", "AF", "AG", "AH", "AI", "AJ", "AK", "AL",
-            "AM", "AN", "AO", "AQ", "AR", "AS", "AU", "AW", "AX", "AY", "AZ", "BA", "BC", "BD",
-            "BF", "BG", "BH", "BI", "BJ", "BK", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BU",
-            "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CF", "CG", "CH", "CI", "CJ", "CK",
-            "CL", "CM", "CN", "CO", "CP", "CQ", "CR", "CS", "CT", "CU", "CW", "CX", "CY", "CZ", "DA",
-            "DB", "DC", "DD", "DE", "DF", "DG", "DH", "DI", "DJ", "DK", "DL", "DM", "DN", "DO", "DP",
-            "DQ", "DR", "DS", "DT", "DU", "DV", "DW", "DX", "DY", "DZ", "EA", "EB", "EC", "ED", "EE",
-            "EF", "EG", "EH", "EI", "EJ", "EK", "EL", "EM", "EN", "EO", "EP", "EQ", "ER", "ES", "ET",
-            "EU", "EV", "EW", "EX", "EY", "EZ", "FA", "FB", "FC", "FD", "FE", "FF", "FG", "FH", "FI",
-            "FJ", "FK", "FL", "FM", "FN", "FO", "FP", "FQ", "FR", "FS", "FT", "FU", "FV", "FW", "FX",
-            "FY", "FZ", "GA", "GB", "GC", "GD", "GE", "GF", "GG", "GH", "GI", "GJ", "GK", "GL", "GM",
-            "GN", "GO", "GP", "GQ", "GR", "GS", "GT", "GU", "GV", "GW", "GX", "GY", "GZ", "HA", "HB",
-            "HC", "HD", "HE", "HF", "HG", "HH", "HI", "HJ", "HK", "HL", "HM", "HN", "HO", "HP", "HQ",
-            "HR", "HS", "HT", "HU", "HV", "HW", "HX", "HY", "HZ", "IA", "IB", "IC", "ID", "IE", "IF",
-            "IG", "IH", "II", "IJ", "IK", "IL", "IO", "IP", "IQ", "IR", "IS", "IU",
-            "IV", "IW", "IX", "IY", "IZ", "JA", "JB", "JC", "JD", "JE", "JF", "JG", "JH", "JI", "JJ",
-            "JK", "JL", "JM", "JN", "JO", "JP", "JQ", "JR", "JS", "JT", "JU", "JV", "JW", "JX", "JY",
-            "JZ", "KA", "KB", "KC", "KD", "KE", "KF", "KG", "KH", "KI", "KJ", "KK", "KL", "KM", "KN",
-            "KO", "KP", "KQ", "KR", "KS", "KT", "KU", "KV", "KW", "KX", "KY", "KZ", "LA", "LB", "LC",
-            "LD", "LE", "LF", "LG", "LH", "LI", "LJ", "LK", "LL", "LM", "LN", "LO", "LP", "LQ", "LR",
-            "LS", "LT", "LU", "LV", "LW", "LX", "LY", "LZ", "MA", "MB", "MC", "MD", "ME", "MF", "MG",
-            "MH", "MI", "MJ", "MK", "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV",
-            "MW", "MX", "MY", "MZ", "NA", "NB", "NC", "ND", "NE", "NF", "NG", "NH", "NI", "NJ", "NK",
-            "NL", "NM", "NN", "NO", "NP", "NQ", "NR", "NS", "NT", "NU", "NV", "NW", "NX", "NY", "NZ",
-            "OA", "OB", "OC", "OD", "OE", "OF", "OG", "OH", "OI", "OJ", "OK", "OL", "OM", "ON", "OO",
-            "OP", "OQ", "OR", "OS", "OT", "OU", "OV", "OW", "OX", "OY", "OZ", "PA", "PB", "PC", "PD",
-            "PE", "PF", "PG", "PH", "PI", "PJ", "PK", "PL", "PM", "PN", "PO", "PP", "PQ", "PR", "PS",
-            "PT", "PU", "PV", "PW", "PX", "PY", "PZ", "QA", "QB", "QC", "QD", "QE", "QF", "QG", "QH",
-            "QI", "QJ", "QK", "QL", "QM", "QN", "QO", "QP", "QQ", "QR", "QS", "QT", "QU", "QV", "QW",
-            "QX", "QY", "QZ", "RA", "RB", "RC", "RD", "RE", "RF", "RG", "RH", "RI", "RJ", "RK", "RL",
-            "RM", "RN", "RO", "RP", "RQ", "RR", "RS", "RT", "RU", "RV", "RW", "RX", "RY", "RZ", "SA",
-            "SB", "SC", "SD", "SE", "SF", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SP",
-            "SQ", "SR", "SS", "ST", "SU", "SV", "SW", "SX", "SY", "SZ", "TA", "TB", "TC", "TD", "TE",
-            "TF", "TG", "TH", "TI", "TJ", "TK", "TL", "TM", "TN", "TO", "TP", "TQ", "TR", "TS", "TT",
-            "TU", "TV", "TW", "TX", "TY", "TZ", "UA", "UB", "UC", "UD", "UE", "UF", "UG", "UH", "UI",
-            "UJ", "UK", "UL", "UM", "UN", "UO", "UP", "UQ", "UR", "US", "UT", "UU", "UV", "UW", "UX",
-            "UY", "UZ", "VA", "VB", "VC", "VD", "VE", "VF", "VG", "VH", "VI", "VJ", "VK", "VL", "VM",
-            "VN", "VO", "VP", "VQ", "VR", "VS", "VT", "VU", "VV", "VW", "VX", "VY", "VZ", "WA", "WB",
-            "WC", "WD", "WE", "WF", "WG", "WH", "WI", "WJ", "WK", "WL", "WM", "WN", "WO", "WP", "WQ",
-            "WR", "WS", "WT", "WU", "WV", "WW", "WX", "WY", "WZ", "XA", "XB", "XC", "XD", "XE", "XF",
-            "XG", "XH", "XI", "XJ", "XK", "XL", "XM", "XN", "XO", "XP", "XQ", "XR", "XS", "XT", "XU",
-            "XV", "XW", "XX", "XY", "XZ", "YA", "YB", "YC", "YD", "YE", "YF", "YG", "YH", "YI", "YJ",
-            "YK", "YL", "YM", "YN", "YO", "YP", "YQ", "YR", "YS", "YT", "YU", "YV", "YW", "YX", "YY",
-            "YZ", "ZA", "ZB", "ZC", "ZD", "ZE", "ZF", "ZG", "ZH", "ZI", "ZJ", "ZK", "ZL", "ZM", "ZN",
-            "ZO", "ZP", "ZQ", "ZR", "ZS", "ZT", "ZU", "ZV", "ZW", "ZX", "ZY", "ZZ"
-        ]);
-    
         const filteredPlays = validPlays.filter((play) => {
             // Split play into individual words if it contains multiple words
             const words = play.word.split(" & ").map(w => w.trim().split(" ")[0]); // Extract words
-            return !words.some(word => invalidTwoLetterWords.has(word));
+            return words.every(word => word.length !== 2 || validTwoLetterWords.has(word));
         });
     
         if (filteredPlays.length === 0) return null;
@@ -331,7 +269,7 @@ class ScrabbleGame {
             const bStrategy = this.evaluatePositionStrategy(b);
             return bStrategy - aStrategy;
         })[0];
-    }
+    }    
     
 
     evaluatePositionStrategy(play) {
@@ -561,116 +499,21 @@ class ScrabbleGame {
 
     findTwoLetterPlay() {
         const validTwoLetterWords = new Set([
-            "AA",
-            "AB",
-            "AD",
-            "AE",
-            "AG",
-            "AH",
-            "AI",
-            "AL",
-            "AM",
-            "AN",
-            "AR",
-            "AS",
-            "AT",
-            "AW",
-            "AX",
-            "AY",
-            "BA",
-            "BE",
-            "BI",
-            "BO",
-            "BY",
-            "DE",
+            "AM", "AN", "AS", "AT",
+            "BE", "BY",
             "DO",
-            "ED",
-            "EF",
-            "EH",
-            "EL",
-            "EM",
-            "EN",
-            "ER",
-            "ES",
-            "ET",
-            "EX",
-            "FA",
-            "FE",
             "GO",
-            "HA",
-            "HE",
-            "HI",
-            "HM",
-            "HO",
-            "ID",
-            "IF",
-            "IN",
-            "IS",
-            "IT",
-            "JO",
-            "KA",
-            "LA",
-            "LI",
-            "LO",
-            "MA",
-            "ME",
-            "MI",
-            "MM",
-            "MO",
-            "MU",
-            "MY",
-            "NA",
-            "NE",
+            "HE", "HI",
+            "IF", "IN", "IS", "IT",
+            "ME", "MY",
             "NO",
-            "NU",
-            "OD",
-            "OE",
-            "OF",
-            "OH",
-            "OI",
-            "OK",
-            "OM",
-            "ON",
-            "OP",
-            "OR",
-            "OS",
-            "IE",
-            "IA",
-            "NH",
-            "EV",
-            "RA",
-            "DE",
-            "OW",
-            "OX",
-            "OY",
-            "PA",
-            "PE",
-            "PI",
-            "PO",
-            "QI",
-            "RE",
-            "SH",
-            "SI",
+            "OF", "ON", "OR",
             "SO",
-            "TA",
-            "TE",
-            "TI",
             "TO",
-            "UH",
-            "UM",
-            "UN",
-            "UP",
-            "US",
-            "UT",
-            "WE",
-            "WO",
-            "XI",
-            "XU",
-            "YA",
-            "YE",
-            "YO",
-            "ZA",
+            "UP", "US",
+            "WE"
         ]);
+        
 
         const rack = this.aiRack.map((t) => t.letter);
 
@@ -715,6 +558,7 @@ class ScrabbleGame {
 
         return null;
     }
+    
 
     findValidPositionsForWord(word) {
         const positions = [];
@@ -3257,6 +3101,15 @@ class ScrabbleGame {
             "YZ", "ZA", "ZB", "ZC", "ZD", "ZE", "ZF", "ZG", "ZH", "ZI", "ZJ", "ZK", "ZL", "ZM", "ZN",
             "ZO", "ZP", "ZQ", "ZR", "ZS", "ZT", "ZU", "ZV", "ZW", "ZX", "ZY", "ZZ"
         ]);
+
+        function isInvalidWord(word) {
+            const invalidTwoLetterWords = new Set([
+                "IV", "VI", "LUID", // Add other invalid words as needed
+                // Add the rest of your invalid two-letter words here
+            ]);
+        
+            return invalidTwoLetterWords.has(word);
+        }
 
         // Check if the word is a valid two-letter word
         if (word.length === 2) {
@@ -6206,15 +6059,15 @@ class ScrabbleGame {
                 }
 
                 particle.style.cssText = `
-  position: fixed;
-  pointer-events: none;
-  left: ${Math.random() * 100}vw;
-  top: -20px;
-  opacity: 1;
-  transform: rotate(${Math.random() * 360}deg);
-  animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
-  z-index: 1500;
-`;
+                position: fixed;
+                pointer-events: none;
+                left: ${Math.random() * 100}vw;
+                top: -20px;
+                opacity: 1;
+                transform: rotate(${Math.random() * 360}deg);
+                animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
+                z-index: 1500;
+                `;
                 document.body.appendChild(particle);
 
                 particle.addEventListener("animationend", () => {
@@ -6241,16 +6094,16 @@ class ScrabbleGame {
                 const emoji = document.createElement("div");
                 emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
                 emoji.style.cssText = `
-  position: fixed;
-  font-size: ${20 + Math.random() * 20}px;
-  pointer-events: none;
-  left: ${Math.random() * 100}vw;
-  top: -40px;
-  opacity: 1;
-  transform: rotate(${Math.random() * 360}deg);
-  animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
-  z-index: 1500;
-`;
+                position: fixed;
+                font-size: ${20 + Math.random() * 20}px;
+                pointer-events: none;
+                left: ${Math.random() * 100}vw;
+                top: -40px;
+                opacity: 1;
+                transform: rotate(${Math.random() * 360}deg);
+                animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
+                z-index: 1500;
+                `;
                 document.body.appendChild(emoji);
 
                 emoji.addEventListener("animationend", () => {
@@ -7122,3 +6975,23 @@ const scrabbleGameInstance = new ScrabbleGame();
 document.getElementById('language-selector').addEventListener('change', (e) => {
     scrabbleGameInstance.switchLanguage(e.target.value);
 });
+
+// Define the set of abbreviations globally or in an accessible scope
+let commonThreeLetterAbbreviations = new Set([
+    "API", "CPU", "RAM", "GUI", "URL", "WWW", "USB", "PDF", "LED", "GPS",
+    "HTML", "CSS", "SQL", "XML", "JSON", "FTP", "SSH", "DVD", "CDN", "LAN",
+    "WAN", "FAQ", "OEM", "SDK", "IDE", "DNS", "MAC", "IPV", "VPN", "SEO",
+    "UXD", "CFO", "CEO", "CTO", "BPM", "CRM", "ERP", "KPI", "SLA", "ETA", "DEV",
+]);
+
+function isThreeLetterAbbreviation(word) {
+    return commonThreeLetterAbbreviations.has(word);
+}
+
+// Example usage
+const wordToCheck = "API";
+if (isThreeLetterAbbreviation(wordToCheck)) {
+    console.log(`The abbreviation "${wordToCheck}" is not allowed for computer AI use.`);
+} else {
+    // Proceed with using the word
+}
