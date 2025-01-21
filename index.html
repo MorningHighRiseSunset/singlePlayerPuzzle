@@ -182,12 +182,25 @@
 
             <div class="language-selector">
                 <select id="language-selector" class="language-button">
-                    <option value="en">English (click to change language)</option>
-                    <option value="es">Rompecabeza</option>
+                    <option value="" disabled selected hidden>Click to change language</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
                     <option value="zh">中文</option>
                     <option value="fr">French</option>
                 </select>
-            </div>            
+            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const languageSelector = document.getElementById('language-selector');
+            
+                    languageSelector.addEventListener('focus', function() {
+                        // Remove the placeholder option when the dropdown is focused
+                        if (languageSelector.options[0].value === "") {
+                            languageSelector.remove(0);
+                        }
+                    });
+                });
+            </script>                        
         </div>
     </div>
 
