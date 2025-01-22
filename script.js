@@ -196,19 +196,6 @@ class ScrabbleGame {
             }
         }
 
-        // Last resort: try to form two-letter words
-        const twoLetterPlay = this.findTwoLetterPlay();
-        if (twoLetterPlay) {
-            setTimeout(() => {
-                thinkingMessage.style.opacity = "0";
-                setTimeout(() => {
-                    thinkingMessage.remove();
-                    this.executeAIPlay(twoLetterPlay);
-                }, 300);
-            }, 1000);
-            return;
-        }
-
         // Only exchange as absolute last resort
         console.log("No valid plays found - forced to exchange");
         setTimeout(() => {
@@ -246,16 +233,7 @@ class ScrabbleGame {
     
         if (validPlays.length === 0) return null;
     
-        // Filter out invalid two-letter words
-        const filteredPlays = validPlays.filter((play) => {
-            // Split play into individual words if it contains multiple words
-            const words = play.word.split(" & ").map(w => w.trim().split(" ")[0]); // Extract words
-            return words.every(word => word.length !== 2 || validTwoLetterWords.has(word));
-        });
-    
-        if (filteredPlays.length === 0) return null;
-    
-        return filteredPlays.sort((a, b) => {
+        return validPlays.sort((a, b) => {
             // Heavily weight score
             const scoreDiff = b.score - a.score;
             if (Math.abs(scoreDiff) > 5) return scoreDiff;
@@ -269,8 +247,42 @@ class ScrabbleGame {
             const bStrategy = this.evaluatePositionStrategy(b);
             return bStrategy - aStrategy;
         })[0];
-    }    
+    }
+
+    validateWord() {
+        if (this.placedTiles.length === 0) return false;
     
+        // Get all formed words
+        const formedWords = this.getFormedWords();
+        if (formedWords.length === 0) return false;
+    
+        // Only check dictionary validation
+        const allWordsValid = formedWords.every(wordInfo => 
+            this.dictionary.has(wordInfo.word.toLowerCase())
+        );
+    
+        // First move must connect to center square [7,7]
+        if (this.isFirstMove) {
+            let connectedToCenter = false;
+            for (const wordInfo of formedWords) {
+                if (this.isConnectedToCenter(
+                    wordInfo.startPos.row, 
+                    wordInfo.startPos.col, 
+                    wordInfo.word.length, 
+                    wordInfo.direction === "horizontal"
+                )) {
+                    connectedToCenter = true;
+                    break;
+                }
+            }
+            if (!connectedToCenter) {
+                alert("First word must pass through the center square!");
+                return false;
+            }
+        }
+    
+        return allWordsValid;
+    }    
 
     evaluatePositionStrategy(play) {
         let value = 0;
@@ -496,134 +508,38 @@ class ScrabbleGame {
 
         return false;
     }
-
-    findTwoLetterPlay() {
-        const validTwoLetterWords = new Set([
-            "AM", "AN", "AS", "AT",
-            "BE", "BY",
-            "DO",
-            "GO",
-            "HE", "HI",
-            "IF", "IN", "IS", "IT",
-            "ME", "MY",
-            "NO",
-            "OF", "ON", "OR",
-            "SO",
-            "TO",
-            "UP", "US",
-            "WE"
-        ]);
-        
-
-        const rack = this.aiRack.map((t) => t.letter);
-
-        // Try all two-letter combinations
-        for (let i = 0; i < rack.length; i++) {
-            for (let j = i + 1; j < rack.length; j++) {
-                const word = rack[i] + rack[j];
-                if (validTwoLetterWords.has(word)) {
-                    const positions = this.findValidPositionsForWord(word);
-                    if (positions.length > 0) {
-                        const bestPosition = positions.sort(
-                            (a, b) =>
-                            this.calculatePotentialScore(
-                                word,
-                                b.position.row,
-                                b.position.col,
-                                b.horizontal,
-                            ) -
-                            this.calculatePotentialScore(
-                                word,
-                                a.position.row,
-                                a.position.col,
-                                a.horizontal,
-                            ),
-                        )[0];
-
-                        return {
-                            word,
-                            startPos: bestPosition.position,
-                            isHorizontal: bestPosition.horizontal,
-                            score: this.calculatePotentialScore(
-                                word,
-                                bestPosition.position.row,
-                                bestPosition.position.col,
-                                bestPosition.horizontal,
-                            ),
-                        };
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
     
 
     findValidPositionsForWord(word) {
         const positions = [];
-
-        // For first move, only allow placements through center
-        if (this.isFirstMove) {
-            // Try horizontal center placement
-            if (this.isValidAIPlacement(word, 7, 7, true)) {
-                positions.push({
-                    position: {
-                        row: 7,
-                        col: 7
-                    },
-                    horizontal: true,
-                });
-            }
-            // Try vertical center placement
-            if (this.isValidAIPlacement(word, 7, 7, false)) {
-                positions.push({
-                    position: {
-                        row: 7,
-                        col: 7
-                    },
-                    horizontal: false,
-                });
-            }
-            return positions;
-        }
-
-        // For subsequent moves, try all possible positions
+    
+        // Try all possible positions
         for (let row = 0; row < 15; row++) {
             for (let col = 0; col < 15; col++) {
-                // Only check positions near existing tiles
-                if (this.hasAdjacentTile(row, col)) {
-                    // Try horizontal placement
-                    if (col <= 15 - word.length) {
-                        if (this.isValidAIPlacement(word, row, col, true)) {
-                            positions.push({
-                                position: {
-                                    row,
-                                    col
-                                },
-                                horizontal: true,
-                            });
-                        }
+                // Try horizontal placement
+                if (col <= 15 - word.length) {
+                    if (this.isValidAIPlacement(word, row, col, true)) {
+                        positions.push({
+                            position: { row, col },
+                            horizontal: true,
+                        });
                     }
-
-                    // Try vertical placement
-                    if (row <= 15 - word.length) {
-                        if (this.isValidAIPlacement(word, row, col, false)) {
-                            positions.push({
-                                position: {
-                                    row,
-                                    col
-                                },
-                                horizontal: false,
-                            });
-                        }
+                }
+    
+                // Try vertical placement
+                if (row <= 15 - word.length) {
+                    if (this.isValidAIPlacement(word, row, col, false)) {
+                        positions.push({
+                            position: { row, col },
+                            horizontal: false,
+                        });
                     }
                 }
             }
         }
-
+    
         return positions;
-    }
+    }    
 
     // Add new helper method for forming minimal valid words
     formMinimalValidWord() {
@@ -819,136 +735,51 @@ class ScrabbleGame {
 
     findAIPossiblePlays() {
         try {
-            console.log("Finding possible AI plays...");
-            console.log("Current language:", this.currentLanguage);
-            console.log("Dictionary size:", this.dictionary.size);
-            console.log("AI rack:", this.aiRack.map(t => t.letter));
-
             const possiblePlays = [];
             const anchors = this.findAnchors();
             const availableLetters = this.aiRack.map((tile) => tile.letter);
-            const existingWords = this.getExistingWords();
-
-            // Safety check for valid data
-            if (!Array.isArray(anchors) || !Array.isArray(availableLetters)) {
-                console.error("Invalid anchors or available letters");
-                return [];
-            }
-
-            // Handle first move or empty board
-            if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
-                console.log("Processing first move...");
-                const words = Array.from(this.dictionary)
-                    .filter(word => {
-                        if (word.length < 3) return false;
-                        return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
-                    })
-                    .map(word => word.toUpperCase());
-
-                // Sort by length and take top candidates
-                const candidates = words
-                    .sort((a, b) => b.length - a.length)
-                    .slice(0, 20);
-
-                console.log("First move candidates:", candidates);
-
-                for (const word of candidates) {
-                    const centerPos = {
-                        row: 7,
-                        col: 7 - Math.floor(word.length / 2)
-                    };
-                    if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
-                        const score = this.calculatePotentialScore(word, centerPos.row, centerPos.col, true);
-                        possiblePlays.push({
-                            word,
-                            startPos: centerPos,
-                            isHorizontal: true,
-                            score,
-                        });
-                    }
-                }
-            } else {
-                // For subsequent moves
-                console.log("Processing subsequent move...");
-                for (const anchor of anchors) {
-                    if (!this.isValidPosition(anchor.row, anchor.col)) continue;
-
-                    try {
-                        // Get prefixes and suffixes for both directions
-                        const hPrefix = this.getPrefix(anchor, true);
-                        const hSuffix = this.getSuffix(anchor, true);
-                        const vPrefix = this.getPrefix(anchor, false);
-                        const vSuffix = this.getSuffix(anchor, false);
-
-                        // Find potential words
-                        const potentialWords = this.findPotentialWords(availableLetters);
-                        console.log("Potential words found:", potentialWords);
-
-                        // Try horizontal and vertical placements
-                        for (const word of potentialWords) {
-                            // Try horizontal placement
-                            if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
-                                const startCol = anchor.col - hPrefix.length;
-                                if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
-                                    const score = this.calculatePotentialScore(word, anchor.row, startCol, true);
-                                    possiblePlays.push({
-                                        word,
-                                        startPos: {
-                                            row: anchor.row,
-                                            col: startCol
-                                        },
-                                        isHorizontal: true,
-                                        score,
-                                    });
-                                }
-                            }
-
-                            // Try vertical placement
-                            if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
-                                const startRow = anchor.row - vPrefix.length;
-                                if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
-                                    const score = this.calculatePotentialScore(word, startRow, anchor.col, false);
-                                    possiblePlays.push({
-                                        word,
-                                        startPos: {
-                                            row: startRow,
-                                            col: anchor.col
-                                        },
-                                        isHorizontal: false,
-                                        score,
-                                    });
-                                }
-                            }
+    
+            // Try each possible position on the board
+            for (let row = 0; row < 15; row++) {
+                for (let col = 0; col < 15; col++) {
+                    const words = Array.from(this.dictionary)
+                        .filter(word => {
+                            return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
+                        })
+                        .map(word => word.toUpperCase());
+    
+                    for (const word of words) {
+                        // Try horizontal placement
+                        if (this.isValidAIPlacement(word, row, col, true)) {
+                            const score = this.calculatePotentialScore(word, row, col, true);
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal: true,
+                                score,
+                            });
                         }
-                    } catch (anchorError) {
-                        console.error("Error processing anchor:", anchorError);
-                        continue;
+    
+                        // Try vertical placement
+                        if (this.isValidAIPlacement(word, row, col, false)) {
+                            const score = this.calculatePotentialScore(word, row, col, false);
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal: false,
+                                score,
+                            });
+                        }
                     }
                 }
             }
-
-            // Filter and sort plays
-            const validPlays = possiblePlays
-                .filter(play => {
-                    if (!this.dictionary.has(play.word.toLowerCase())) {
-                        console.log(`Filtering out invalid word: ${play.word}`);
-                        return false;
-                    }
-                    return true;
-                })
-                .sort((a, b) => b.score - a.score);
-
-            console.log("Valid plays found:", validPlays.length);
-            if (validPlays.length > 0) {
-                console.log("Best play:", validPlays[0]);
-            }
-
-            return validPlays;
+    
+            return possiblePlays.sort((a, b) => b.score - a.score);
         } catch (error) {
             console.error("Error in findAIPossiblePlays:", error);
             return [];
         }
-    }
+    }    
 
     isSimpleExtension(word, existingWords) {
         for (const existingWord of existingWords) {
@@ -2781,104 +2612,56 @@ class ScrabbleGame {
     }
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
-        // Enforce minimum 3-letter word length
-        if (word.length < 3) {
-            console.log(`Rejecting ${word} - words must be at least 3 letters long`);
-            return false;
-        }
-
+        // Check if the word is in the dictionary
         if (!this.dictionary.has(word.toLowerCase())) {
-            console.log(`${word} is not a valid word in the dictionary`);
             return false;
         }
-
-        // Check basic boundary conditions
+    
+        // Check boundary conditions
         if (horizontal) {
-            if (
-                startCol < 0 ||
-                startCol + word.length > 15 ||
-                startRow < 0 ||
-                startRow > 14
-            ) {
+            if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
                 return false;
             }
         } else {
-            if (
-                startRow < 0 ||
-                startRow + word.length > 15 ||
-                startCol < 0 ||
-                startCol > 14
-            ) {
+            if (startRow < 0 || startRow + word.length > 15 || startCol < 0 || startCol > 14) {
                 return false;
             }
         }
-
-        // Check for parallel words
-        if (this.hasParallelWord(startRow, startCol, horizontal)) {
-            console.log(`Rejecting ${word} - would create parallel word`);
-            return false;
-        }
-
-        // Check distance from player's last move
-        if (this.placedTiles.length > 0) {
-            const lastPlayerMove = this.placedTiles[0];
-            const distance =
-                Math.abs(startRow - lastPlayerMove.row) +
-                Math.abs(startCol - lastPlayerMove.col);
-            if (distance < 3) {
-                console.log(`Rejecting ${word} - too close to player's last move`);
+    
+        // First move must connect to center square [7,7]
+        if (this.isFirstMove) {
+            const connectedToCenter = this.isConnectedToCenter(startRow, startCol, word.length, horizontal);
+            if (!connectedToCenter) {
                 return false;
             }
         }
-
+    
         let tempBoard = JSON.parse(JSON.stringify(this.board));
-        let hasValidConnection = false;
-
+        
         // Place the word temporarily on the board
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
-
+            
             if (tempBoard[row][col]) {
                 if (tempBoard[row][col].letter !== word[i]) {
                     return false;
                 }
-                hasValidConnection = true;
             } else {
-                tempBoard[row][col] = {
-                    letter: word[i]
-                };
-            }
-
-            if (this.hasAdjacentTile(row, col)) {
-                hasValidConnection = true;
-            }
-
-            // Check formed words at this position
-            const formedWords = this.getAllFormedWords(row, col, tempBoard);
-            for (const formedWord of formedWords) {
-                if (!this.dictionary.has(formedWord.toLowerCase())) {
-                    console.log(`Invalid word formed: ${formedWord}`);
-                    return false;
-                }
+                tempBoard[row][col] = { letter: word[i] };
             }
         }
-
-        // First move must use center square
-        if (this.isFirstMove) {
-            const usesCenterSquare = horizontal ?
-                startRow === 7 && startCol <= 7 && startCol + word.length > 7 :
-                startCol === 7 && startRow <= 7 && startRow + word.length > 7;
-
-            if (!usesCenterSquare) {
-                console.log("First move must use center square");
-                return false;
-            }
-            return true;
-        }
-
-        return hasValidConnection;
+    
+        return true;
     }
+    
+    isConnectedToCenter(startRow, startCol, length, horizontal) {
+        if (horizontal) {
+            return startRow === 7 && startCol <= 7 && (startCol + length) > 7;
+        } else {
+            return startCol === 7 && startRow <= 7 && (startRow + length) > 7;
+        }
+    }    
 
     getAllCrossWords(row, col, board) {
         const words = new Set();
@@ -3033,119 +2816,6 @@ class ScrabbleGame {
         return word.length > 1 ? word : null;
     }
 
-    isAbbreviation(word) {
-        // Valid two-letter words allowed in Scrabble/Word games
-        const validTwoLetterWords = new Set([
-            "HI", "TO", "ME", "MY", "NO", "ON", "IN", "IT", "IS", "AS", "AT", "BE", "BY", "DO", "GO", "HE",
-            "IF", "OF", "OR", "SO", "UP", "US", "WE"
-        ]);
-
-        const invalidTwoLetterWords = new Set([
-            "KE", "IV", "YAD", "RI", "NI", "AV", "EB", "FY", "GI", "GU", "IO", "JA", "KI", "KO", "KY", "NY",
-            "OB", "QI", "RA", "RO", "UG", "UR", "YU", "ZE", "ZO", "AO", "AP", "BU", "CU", "DU", "EO", "EU",
-            "FO", "FU", "GA", "GE", "HU", "IQ", "JE", "KU", "LE", "LU", "NI", "NU", "OC", "OU", "PU", "QA",
-            "RI", "RU", "SA", "SE", "SI", "SU", "TU", "UI", "VA", "WA", "WU", "YI", "ZI", "ZO", "PI", "NP",
-            "ET", "VI", "ZO", "TI", "AB", "CD", "EF", "GH", "HI", "JK", "LM", "MN", "PR", "ST", "TV", "WX",
-            "XY", "YZ", "AA", "BB", "CC", "DD", "EE", "FF", "GG", "HH", "II", "JJ", "KK", "LL", "MM", "NN",
-            "OO", "PP", "QQ", "RR", "SS", "TT", "UU", "VV", "WW", "XX", "YY", "ZZ", "XY", "XZ", "XA", "XB",
-            "XC", "XD", "XE", "XF", "XG", "XH", "XI", "XJ", "XK", "XL", "XM", "XN", "XO", "XP", "XQ", "XR",
-            "XS", "XT", "XU", "XV", "XW", "XX", "XY", "XZ", "YA", "YB", "YC", "YD", "YE", "YF", "YG", "YH",
-            "YI", "YJ", "YK", "YL", "YM", "YN", "YO", "YP", "YQ", "YR", "YS", "YT", "YU", "YV", "YW", "YX",
-            "YY", "YZ", "ZA", "ZB", "ZC", "ZD", "ZE", "ZF", "ZG", "ZH", "ZI", "ZJ", "ZK", "ZL", "ZM", "ZN",
-            "ZO", "ZP", "ZQ", "ZR", "ZS", "ZT", "ZU", "ZV", "ZW", "ZX", "ZY", "ZZ", "PL", "QR", "RI", "LT",
-            "KP", "QT", "XZ", "VU", "WF", "XT", "YQ", "ZL", "ZW", "XG", "XR", "YK", "ZQ", "QL", "QT",
-            "BV", "CN", "DF", "GN", "HK", "JL", "KM", "LN", "MP", "NQ", "PS", "QT", "RW", "SX", "TY",
-            "UV", "WP", "XR", "YS", "ZV", "AB", "AC", "AD", "AF", "AG", "AH", "AI", "AJ", "AK", "AL",
-            "AM", "AN", "AO", "AQ", "AR", "AT", "AU", "AW", "AX", "AY", "AZ", "BA", "BC", "BD",
-            "BF", "BG", "BH", "BI", "BJ", "BK", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BU",
-            "BW", "BX", "BY", "BZ", "CA", "CB", "CC", "CD", "CE", "CF", "CG", "CH", "CI", "CJ", "CK",
-            "CL", "CM", "CN", "CO", "CP", "CQ", "CR", "CS", "CT", "CU", "CW", "CX", "CY", "CZ", "DA",
-            "DB", "DC", "DD", "DE", "DF", "DG", "DH", "DI", "DJ", "DK", "DL", "DM", "DN", "DO", "DP",
-            "DQ", "DR", "DS", "DT", "DU", "DV", "DW", "DX", "DY", "DZ", "EA", "EB", "EC", "ED", "EE",
-            "EF", "EG", "EH", "EI", "EJ", "EK", "EL", "EM", "EN", "EO", "EP", "EQ", "ER", "ES", "ET",
-            "EU", "EV", "EW", "EX", "EY", "EZ", "FA", "FB", "FC", "FD", "FE", "FF", "FG", "FH", "FI",
-            "FJ", "FK", "FL", "FM", "FN", "FO", "FP", "FQ", "FR", "FS", "FT", "FU", "FV", "FW", "FX",
-            "FY", "FZ", "GA", "GB", "GC", "GD", "GE", "GF", "GG", "GH", "GI", "GJ", "GK", "GL", "GM",
-            "GN", "GP", "GQ", "GR", "GS", "GT", "GU", "GV", "GW", "GX", "GY", "GZ", "HA", "HB",
-            "HC", "HD", "HE", "HF", "HG", "HH", "HI", "HJ", "HK", "HL", "HM", "HN", "HO", "HP", "HQ",
-            "HR", "HS", "HT", "HU", "HV", "HW", "HX", "HY", "HZ", "IA", "IB", "IC", "ID", "IE", "IF",
-            "IG", "IH", "II", "IJ", "IK", "IL", "IM", "IN", "IO", "IP", "IQ", "IR", "IT", "IU",
-            "IV", "IW", "IX", "IY", "IZ", "JA", "JB", "JC", "JD", "JE", "JF", "JG", "JH", "JI", "JJ",
-            "JK", "JL", "JM", "JN", "JO", "JP", "JQ", "JR", "JS", "JT", "JU", "JV", "JW", "JX", "JY",
-            "JZ", "KA", "KB", "KC", "KD", "KE", "KF", "KG", "KH", "KI", "KJ", "KK", "KL", "KM", "KN",
-            "KO", "KP", "KQ", "KR", "KS", "KT", "KU", "KV", "KW", "KX", "KY", "KZ", "LA", "LB", "LC",
-            "LD", "LE", "LF", "LG", "LH", "LI", "LJ", "LK", "LL", "LM", "LN", "LO", "LP", "LQ", "LR",
-            "LS", "LT", "LU", "LV", "LW", "LX", "LY", "LZ", "MA", "MB", "MC", "MD", "ME", "MF", "MG",
-            "MH", "MI", "MJ", "MK", "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV",
-            "MW", "MX", "MY", "MZ", "NA", "NB", "NC", "ND", "NE", "NF", "NG", "NH", "NI", "NJ", "NK",
-            "NL", "NM", "NN", "NO", "NP", "NQ", "NR", "NS", "NT", "NU", "NV", "NW", "NX", "NY", "NZ",
-            "OA", "OB", "OC", "OD", "OE", "OF", "OG", "OH", "OI", "OJ", "OK", "OL", "OM", "ON", "OO",
-            "OP", "OQ", "OR", "OS", "OT", "OU", "OV", "OW", "OX", "OY", "OZ", "PA", "PB", "PC", "PD",
-            "PE", "PF", "PG", "PH", "PI", "PJ", "PK", "PL", "PM", "PN", "PO", "PP", "PQ", "PR", "PS",
-            "PT", "PU", "PV", "PW", "PX", "PY", "PZ", "QA", "QB", "QC", "QD", "QE", "QF", "QG", "QH",
-            "QI", "QJ", "QK", "QL", "QM", "QN", "QO", "QP", "QQ", "QR", "QS", "QT", "QU", "QV", "QW",
-            "QX", "QY", "QZ", "RA", "RB", "RC", "RD", "RE", "RF", "RG", "RH", "RI", "RJ", "RK", "RL",
-            "RM", "RN", "RO", "RP", "RQ", "RR", "RS", "RT", "RU", "RV", "RW", "RX", "RY", "RZ", "SA",
-            "SB", "SC", "SD", "SE", "SF", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SP",
-            "SQ", "SR", "SS", "ST", "SU", "SV", "SW", "SX", "SY", "SZ", "TA", "TB", "TC", "TD", "TE",
-            "TF", "TG", "TH", "TI", "TJ", "TK", "TL", "TM", "TN", "TO", "TP", "TQ", "TR", "TS", "TT",
-            "TU", "TV", "TW", "TX", "TY", "TZ", "UA", "UB", "UC", "UD", "UE", "UF", "UG", "UH", "UI",
-            "UJ", "UK", "UL", "UM", "UN", "UO", "UQ", "UR", "US", "UT", "UU", "UV", "UW", "UX",
-            "UY", "UZ", "VA", "VB", "VC", "VD", "VE", "VF", "VG", "VH", "VI", "VJ", "VK", "VL", "VM",
-            "VN", "VO", "VP", "VQ", "VR", "VS", "VT", "VU", "VV", "VW", "VX", "VY", "VZ", "WA", "WB",
-            "WC", "WD", "WF", "WG", "WH", "WI", "WJ", "WK", "WL", "WM", "WN", "WO", "WP", "WQ",
-            "WR", "WS", "WT", "WU", "WV", "WW", "WX", "WY", "WZ", "XA", "XB", "XC", "XD", "XE", "XF",
-            "XG", "XH", "XI", "XJ", "XK", "XL", "XM", "XN", "XO", "XP", "XQ", "XR", "XS", "XT", "XU",
-            "XV", "XW", "XX", "XY", "XZ", "YA", "YB", "YC", "YD", "YE", "YF", "YG", "YH", "YI", "YJ",
-            "YK", "YL", "YM", "YN", "YO", "YP", "YQ", "YR", "YS", "YT", "YU", "YV", "YW", "YX", "YY",
-            "YZ", "ZA", "ZB", "ZC", "ZD", "ZE", "ZF", "ZG", "ZH", "ZI", "ZJ", "ZK", "ZL", "ZM", "ZN",
-            "ZO", "ZP", "ZQ", "ZR", "ZS", "ZT", "ZU", "ZV", "ZW", "ZX", "ZY", "ZZ"
-        ]);
-
-        function isInvalidWord(word) {
-            const invalidTwoLetterWords = new Set([
-                "IV", "VI", "LUID", // Add other invalid words as needed
-                // Add the rest of your invalid two-letter words here
-            ]);
-        
-            return invalidTwoLetterWords.has(word);
-        }
-
-        // Check if the word is a valid two-letter word
-        if (word.length === 2) {
-            if (validTwoLetterWords.has(word.toUpperCase())) {
-                return false; // It's a valid two-letter word
-            } else if (invalidTwoLetterWords.has(word.toUpperCase())) {
-                console.log(`${word} is an invalid two-letter word - rejecting`);
-                return true;
-            }
-        }
-
-        // Check for three-letter abbreviations
-        const commonAbbreviations = new Set([
-            "CEO", "CFO", "CTO", "COO", "USA", "FBI", "CIA", "NBA", "NHL", "BBC", "CNN", "HBO", "MTV"
-        ]);
-
-        if (word.length === 3) {
-            if (commonAbbreviations.has(word.toUpperCase())) {
-                console.log(`${word} is a known abbreviation - rejecting`);
-                return true;
-            }
-            if (word === word.toUpperCase() && !/[AEIOU]/.test(word)) {
-                console.log(`${word} appears to be a three-letter abbreviation - rejecting`);
-                return true;
-            }
-        }
-
-        // Check for roman numerals
-        const romanNumeralPattern = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
-        if (romanNumeralPattern.test(word.toUpperCase())) {
-            console.log(`${word} appears to be a roman numeral - rejecting`);
-            return true;
-        }
-
-        return false;
-    }
 
 
     isDirectlyAdjacentToWord(word, row, col, isHorizontal) {
@@ -3960,9 +3630,7 @@ class ScrabbleGame {
         try {
             const dictionaryUrls = {
                 en: [
-                    "https://raw.githubusercontent.com/jordinebot/word-lists/refs/heads/master/data/scrabble12.txt",
-                    "https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words.txt",
-                    "https://raw.githubusercontent.com/NSokolov114/english-dictionary/refs/heads/main/13k-top-english-words.txt",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/10k-Word-List-One.json",
 
                 ],
                 es: [
@@ -4994,51 +4662,6 @@ class ScrabbleGame {
         this.renderRack();
     }
 
-    validateWord() {
-        if (this.placedTiles.length === 0) return false;
-
-        // Check if tiles are properly connected
-        if (!this.areTilesConnected()) return false;
-
-        // Get all formed words (including connected words)
-        const formedWords = this.getFormedWords();
-        console.log(
-            "Formed words:",
-            formedWords.map((w) => w.word),
-        );
-
-        // If no valid words are formed, return false
-        if (formedWords.length === 0) {
-            console.log("No valid words formed");
-            return false;
-        }
-
-        // Validate each word
-        let allWordsValid = true;
-        formedWords.forEach((wordInfo) => {
-            const word = wordInfo.word.toLowerCase();
-            if (!this.dictionary.has(word)) {
-                console.log(`Invalid word: ${word}`);
-                allWordsValid = false;
-            } else {
-                console.log(`Valid word found: ${word}`);
-            }
-        });
-
-        // First move must use center square
-        if (this.isFirstMove) {
-            const centerUsed = this.placedTiles.some(
-                (tile) => tile.row === 7 && tile.col === 7,
-            );
-            if (!centerUsed) {
-                console.log("First move must use center square");
-                return false;
-            }
-        }
-
-        return allWordsValid;
-    }
-
     getCrossWords(row, col) {
         const words = [];
         const horizontal = this.getWordAt(row, col, true);
@@ -5764,83 +5387,45 @@ class ScrabbleGame {
             alert("Please place some tiles first!");
             return;
         }
-
-        if (!this.areTilesConnected()) {
-            alert("Tiles must be connected and in a straight line!");
-            this.resetPlacedTiles();
-            return;
-        }
-
-        if (this.validateWord()) {
-            // Get all formed words and their individual scores
-            const formedWords = this.getFormedWords();
+    
+        // Get all formed words
+        const formedWords = this.getFormedWords();
+        if (formedWords.length === 0) return;
+    
+        // Check if all words are in dictionary
+        const allWordsValid = formedWords.every(wordInfo => 
+            this.dictionary.has(wordInfo.word.toLowerCase())
+        );
+    
+        if (allWordsValid) {
+            // Calculate score
             let totalScore = 0;
-            let wordDescriptions = [];
-
+            let wordsList = [];
+    
             formedWords.forEach((wordInfo) => {
-                const {
-                    word,
-                    startPos,
-                    direction
-                } = wordInfo;
-                // Calculate score for this specific word
-                let wordScore = 0;
-                let wordMultiplier = 1;
-
-                // Calculate each letter's contribution
-                for (let i = 0; i < word.length; i++) {
-                    const row =
-                        direction === "horizontal" ? startPos.row : startPos.row + i;
-                    const col =
-                        direction === "horizontal" ? startPos.col + i : startPos.col;
-                    const tile = this.board[row][col];
-
-                    let letterScore = tile.value;
-
-                    // Apply premium squares only for newly placed tiles
-                    if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-                        const premium = this.getPremiumSquareType(row, col);
-                        if (premium === "dl") letterScore *= 2;
-                        if (premium === "tl") letterScore *= 3;
-                        if (premium === "dw") wordMultiplier *= 2;
-                        if (premium === "tw") wordMultiplier *= 3;
-                    }
-
-                    wordScore += letterScore;
-                }
-
-                // Apply word multiplier
-                wordScore *= wordMultiplier;
+                const wordScore = this.calculateWordScore(
+                    wordInfo.word,
+                    wordInfo.startPos.row,
+                    wordInfo.startPos.col,
+                    wordInfo.direction === "horizontal"
+                );
                 totalScore += wordScore;
-
-                // Store word and its individual score
-                wordDescriptions.push({
-                    word: word,
-                    score: wordScore,
+                wordsList.push({
+                    word: wordInfo.word,
+                    score: wordScore
                 });
             });
-
+    
             // Add bonus for using all 7 tiles
             if (this.placedTiles.length === 7) {
                 totalScore += 50;
-                wordDescriptions.push({
-                    word: "BINGO BONUS",
-                    score: 50
-                });
             }
-
-            // Format the move description
-            let moveDescription;
-            if (wordDescriptions.length > 1) {
-                // Multiple words formed
-                moveDescription = wordDescriptions
-                    .map((w) => `${w.word} (${w.score})`)
-                    .join(" & ");
-            } else {
-                // Single word
-                moveDescription = wordDescriptions[0].word;
-            }
-
+    
+            // Format move description
+            const moveDescription = wordsList.length > 1 ?
+                wordsList.map(w => `${w.word} (${w.score})`).join(" & ") :
+                wordsList[0].word;
+    
             // Update game state
             this.playerScore += totalScore;
             this.isFirstMove = false;
@@ -5848,11 +5433,12 @@ class ScrabbleGame {
             this.fillRacks();
             this.consecutiveSkips = 0;
             this.currentTurn = "ai";
-
-            // Add to move history with all formed words
+    
+            // Add to move history
             this.addToMoveHistory("Player", moveDescription, totalScore);
             this.updateGameState();
-
+    
+            // Trigger AI turn
             if (!this.checkGameEnd()) {
                 await this.aiTurn();
             }
@@ -5860,7 +5446,7 @@ class ScrabbleGame {
             alert("Invalid word! Please try again.");
             this.resetPlacedTiles();
         }
-    }
+    }    
 
     addToMoveHistory(player, words, score) {
         this.moveHistory.push({
@@ -6976,22 +6562,3 @@ document.getElementById('language-selector').addEventListener('change', (e) => {
     scrabbleGameInstance.switchLanguage(e.target.value);
 });
 
-// Define the set of abbreviations globally or in an accessible scope
-let commonThreeLetterAbbreviations = new Set([
-    "API", "CPU", "RAM", "GUI", "URL", "WWW", "USB", "PDF", "LED", "GPS",
-    "HTML", "CSS", "SQL", "XML", "JSON", "FTP", "SSH", "DVD", "CDN", "LAN",
-    "WAN", "FAQ", "OEM", "SDK", "IDE", "DNS", "MAC", "IPV", "VPN", "SEO",
-    "UXD", "CFO", "CEO", "CTO", "BPM", "CRM", "ERP", "KPI", "SLA", "ETA", "DEV",
-]);
-
-function isThreeLetterAbbreviation(word) {
-    return commonThreeLetterAbbreviations.has(word);
-}
-
-// Example usage
-const wordToCheck = "API";
-if (isThreeLetterAbbreviation(wordToCheck)) {
-    console.log(`The abbreviation "${wordToCheck}" is not allowed for computer AI use.`);
-} else {
-    // Proceed with using the word
-}
