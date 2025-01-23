@@ -770,80 +770,84 @@ class ScrabbleGame {
     }
 
     findAIPossiblePlays() {
-        try {
-            const possiblePlays = [];
-            const anchors = this.findAnchors();
-            const availableLetters = this.aiRack.map(tile => tile.letter);
-            const existingWords = this.getExistingWords(); // Get current words on board
+        const possiblePlays = [];
+        const availableLetters = this.aiRack.map(tile => tile.letter);
     
-            // Get valid words from dictionary
-            const validWords = Array.from(this.dictionary)
-                .filter(word => {
-                    word = word.toUpperCase();
-                    // Basic validation
-                    if (!/^[A-Z]+$/.test(word)) return false;
-                    if (!this.canFormWord(word, "", "", availableLetters)) return false;
-                    
-                    // Prevent simple extensions of existing words
-                    for (const existingWord of existingWords) {
-                        // Check if this word is just an extension of an existing word
-                        if (word.includes(existingWord)) {
-                            const extension = word.replace(existingWord, '');
-                            // If it's just a simple extension and the new word isn't in our dictionary
-                            if (extension.length <= 3 && !this.dictionary.has(word.toLowerCase())) {
-                                console.log(`Rejected extension: ${word} (extending ${existingWord})`);
-                                return false;
-                            }
-                        }
-                    }
-                    
-                    return true;
-                })
-                .map(word => word.toUpperCase());
-    
-            // Try placing valid words
-            for (let row = 0; row < 15; row++) {
-                for (let col = 0; col < 15; col++) {
-                    for (const word of validWords) {
-                        // Additional validation to prevent invalid extensions
-                        if (this.isSimpleExtension(word, existingWords)) {
-                            console.log(`Skipping simple extension: ${word}`);
-                            continue;
-                        }
-    
-                        // Check horizontal placement
-                        if (this.isValidAIPlacement(word, row, col, true)) {
-                            const score = this.calculatePotentialScore(word, row, col, true);
-                            possiblePlays.push({
-                                word,
-                                startPos: { row, col },
-                                isHorizontal: true,
-                                score
-                            });
-                        }
-    
-                        // Check vertical placement
-                        if (this.isValidAIPlacement(word, row, col, false)) {
-                            const score = this.calculatePotentialScore(word, row, col, false);
-                            possiblePlays.push({
-                                word,
-                                startPos: { row, col },
-                                isHorizontal: false,
-                                score
-                            });
-                        }
+        // If it's the first move, only allow plays through center square
+        if (this.isFirstMove) {
+            // Try horizontal plays through center
+            for (let col = Math.max(0, 7 - availableLetters.length + 1); col <= 7; col++) {
+                for (const word of this.findPossibleWords(availableLetters)) {
+                    if (col + word.length <= 15 && 
+                        this.isValidAIPlacement(word, 7, col, true) &&
+                        col <= 7 && col + word.length > 7) {
+                        const score = this.calculatePotentialScore(word, 7, col, true);
+                        possiblePlays.push({
+                            word,
+                            startPos: { row: 7, col },
+                            isHorizontal: true,
+                            score
+                        });
                     }
                 }
             }
     
-            return possiblePlays
-                .filter(play => this.validateAllFormedWords(play))
-                .sort((a, b) => b.score - a.score);
-        } catch (error) {
-            console.error("Error in findAIPossiblePlays:", error);
-            return [];
+            // Try vertical plays through center
+            for (let row = Math.max(0, 7 - availableLetters.length + 1); row <= 7; row++) {
+                for (const word of this.findPossibleWords(availableLetters)) {
+                    if (row + word.length <= 15 &&
+                        this.isValidAIPlacement(word, row, 7, false) &&
+                        row <= 7 && row + word.length > 7) {
+                        const score = this.calculatePotentialScore(word, row, 7, false);
+                        possiblePlays.push({
+                            word,
+                            startPos: { row, col: 7 },
+                            isHorizontal: false,
+                            score
+                        });
+                    }
+                }
+            }
+        } else {
+            // For subsequent moves, find all valid positions
+            for (let row = 0; row < 15; row++) {
+                for (let col = 0; col < 15; col++) {
+                    if (this.hasAdjacentTile(row, col)) {
+                        for (const word of this.findPossibleWords(availableLetters)) {
+                            // Try horizontal placement
+                            if (col + word.length <= 15 && 
+                                this.isValidAIPlacement(word, row, col, true)) {
+                                const score = this.calculatePotentialScore(word, row, col, true);
+                                possiblePlays.push({
+                                    word,
+                                    startPos: { row, col },
+                                    isHorizontal: true,
+                                    score
+                                });
+                            }
+    
+                            // Try vertical placement
+                            if (row + word.length <= 15 &&
+                                this.isValidAIPlacement(word, row, col, false)) {
+                                const score = this.calculatePotentialScore(word, row, col, false);
+                                possiblePlays.push({
+                                    word,
+                                    startPos: { row, col },
+                                    isHorizontal: false,
+                                    score
+                                });
+                            }
+                        }
+                    }
+                }
+            }
         }
-    }
+    
+        // Sort by score but add some randomness to prevent repetitive play
+        return possiblePlays
+            .filter(play => play.score <= 50 || Math.random() < 0.8) // Reduce likelihood of extremely high scores
+            .sort((a, b) => b.score - a.score);
+    }    
 
     validateAllFormedWords(play) {
         const { word, startPos, isHorizontal } = play;
@@ -3080,9 +3084,6 @@ class ScrabbleGame {
     }
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
-        // Create a temporary board to test the placement
-        const tempBoard = JSON.parse(JSON.stringify(this.board));
-        
         // First check if the word fits on the board
         if (horizontal) {
             if (startCol + word.length > 15) return false;
@@ -3090,6 +3091,39 @@ class ScrabbleGame {
             if (startRow + word.length > 15) return false;
         }
     
+        // Must connect to existing tiles unless it's first move
+        if (!this.isFirstMove) {
+            let hasConnection = false;
+            for (let i = 0; i < word.length; i++) {
+                const row = horizontal ? startRow : startRow + i;
+                const col = horizontal ? startCol + i : startCol;
+                
+                // Check if this position uses an existing tile
+                if (this.board[row][col]) {
+                    hasConnection = true;
+                    continue;
+                }
+    
+                // Check adjacent positions
+                const adjacentPositions = [
+                    [row - 1, col], [row + 1, col],
+                    [row, col - 1], [row, col + 1]
+                ];
+    
+                for (const [adjRow, adjCol] of adjacentPositions) {
+                    if (this.isValidPosition(adjRow, adjCol) && this.board[adjRow][adjCol]) {
+                        hasConnection = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!hasConnection) return false;
+        }
+    
+        // Validate all formed words
+        const tempBoard = JSON.parse(JSON.stringify(this.board));
+        
         // Place the word temporarily
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
@@ -3103,57 +3137,10 @@ class ScrabbleGame {
             }
         }
     
-        // Get all words formed by this placement
-        const formedWords = [];
-        
-        // Get the main word
-        let mainWord = '';
-        for (let i = 0; i < word.length; i++) {
-            const row = horizontal ? startRow : startRow + i;
-            const col = horizontal ? startCol + i : startCol;
-            mainWord += tempBoard[row][col].letter;
-        }
-        formedWords.push(mainWord);
-    
-        // Check for cross words at each position
-        for (let i = 0; i < word.length; i++) {
-            const row = horizontal ? startRow : startRow + i;
-            const col = horizontal ? startCol + i : startCol;
-            
-            // Get perpendicular word if it exists
-            let crossWord = '';
-            if (horizontal) {
-                // Check vertical word
-                let r = row;
-                while (r > 0 && tempBoard[r-1][col]) r--;
-                while (r < 15 && tempBoard[r][col]) {
-                    crossWord += tempBoard[r][col].letter;
-                    r++;
-                }
-            } else {
-                // Check horizontal word
-                let c = col;
-                while (c > 0 && tempBoard[row][c-1]) c--;
-                while (c < 15 && tempBoard[row][c]) {
-                    crossWord += tempBoard[row][c].letter;
-                    c++;
-                }
-            }
-            
-            if (crossWord.length > 1) {
-                formedWords.push(crossWord);
-            }
-        }
-    
-        // Validate all formed words
-        return formedWords.every(word => {
-            const isValid = this.dictionary.has(word.toLowerCase());
-            if (!isValid) {
-                console.log(`Invalid word formed: ${word}`);
-            }
-            return isValid;
-        });
-    }
+        // Get and validate all formed words
+        const formedWords = this.getAllFormedWords(startRow, startCol, tempBoard);
+        return formedWords.every(word => this.dictionary.has(word.toLowerCase()));
+    }    
     
     isConnectedToCenter(startRow, startCol, length, horizontal) {
         if (horizontal) {
