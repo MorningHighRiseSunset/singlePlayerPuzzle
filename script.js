@@ -5911,7 +5911,7 @@ class ScrabbleGame {
         );
     
         if (allWordsValid) {
-            // Calculate score and update game state
+            // Calculate score
             let totalScore = 0;
             let wordsList = [];
     
@@ -5951,24 +5951,7 @@ class ScrabbleGame {
             this.addToMoveHistory("Player", moveDescription, totalScore);
             this.updateGameState();
     
-            // Immediately show AI thinking message before checking game end
-            const thinkingMessage = document.createElement("div");
-            thinkingMessage.className = "ai-thinking-message";
-            thinkingMessage.textContent = "AI is thinking...";
-            thinkingMessage.style.cssText = `
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background-color: #f0f0f0;
-                padding: 10px 20px;
-                border-radius: 20px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 1000;
-            `;
-            document.body.appendChild(thinkingMessage);
-    
-            // Check game end and trigger AI turn if game hasn't ended
+            // Trigger AI turn
             if (!this.checkGameEnd()) {
                 await this.aiTurn();
             }
