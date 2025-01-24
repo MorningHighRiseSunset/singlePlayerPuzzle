@@ -2756,9 +2756,15 @@ class ScrabbleGame {
                     totalScore += 50;
                 }
 
-                const moveDescription = wordsList.length > 1 ?
-                    wordsList.map(w => `${w.word} (${w.score})`).join(" & ") :
-                    wordsList[0].word;
+                let moveDescription;
+                if (wordsList.length > 0) {
+                    moveDescription = wordsList.length > 1 ?
+                        wordsList.map(w => `${w.word} (${w.score})`).join(" & ") :
+                        wordsList[0].word;
+                } else {
+                    // Handle the case where no words were formed
+                    moveDescription = "No valid words formed";
+                }
 
                 this.aiScore += totalScore;
                 this.isFirstMove = false;
@@ -6001,9 +6007,15 @@ class ScrabbleGame {
             }
 
             // Format move description
-            const moveDescription = wordsList.length > 1 ?
-                wordsList.map(w => `${w.word} (${w.score})`).join(" & ") :
-                wordsList[0].word;
+            let moveDescription;
+            if (wordsList.length > 0) {
+                moveDescription = wordsList.length > 1 ?
+                    wordsList.map(w => `${w.word} (${w.score})`).join(" & ") :
+                    wordsList[0].word;
+            } else {
+                // Handle the case where no words were formed
+                moveDescription = "No valid words formed";
+            }
 
             // Update game state
             this.playerScore += totalScore;
