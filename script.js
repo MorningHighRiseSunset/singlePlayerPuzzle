@@ -4191,6 +4191,17 @@ class ScrabbleGame {
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/WLN7.JSON",
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/WLN8.JSON",
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/WLN9.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN1.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN2.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN3.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN4.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN5.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN6.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN7.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN8.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN9.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN10.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/100KWORDS5SETS/20K1.JSON",
                 ],
                 es: [
                     "https://raw.githubusercontent.com/words/an-array-of-spanish-words/refs/heads/master/index.json",
@@ -4210,7 +4221,7 @@ class ScrabbleGame {
                         const data = await response.json();
 
                         // Debug log to see the structure
-                        console.warn(`Data structure for ${url}:`, {
+                        console.log(`Data structure for ${url}:`, {
                             isArray: Array.isArray(data),
                             type: typeof data,
                             sample: data instanceof Array ? data.slice(0, 3) : data
@@ -4234,7 +4245,7 @@ class ScrabbleGame {
 
                         // Add words to dictionary
                         words.forEach(word => this.dictionaries[lang].add(word));
-                        console.warn(`Loaded ${words.length} words from ${url} for ${lang}`);
+                        console.log(`Loaded ${words.length} words from ${url} for ${lang}`);
 
                     } catch (error) {
                         console.error(`Error loading dictionary from ${url}:`, error);
@@ -4245,7 +4256,7 @@ class ScrabbleGame {
 
             // Set initial dictionary
             this.dictionary = this.dictionaries[this.currentLanguage];
-            console.warn(`Initial dictionary set to ${this.currentLanguage} with ${this.dictionary.size} words`);
+            console.log(`Initial dictionary set to ${this.currentLanguage} with ${this.dictionary.size} words`);
 
         } catch (error) {
             console.error("Error in dictionary loading process:", error);
