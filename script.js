@@ -4208,6 +4208,9 @@ class ScrabbleGame {
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN9.JSON",
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/dictionarystorage10kW/WLN10.JSON",
                     "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/100KWORDS5SETS/20K1.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/100KWORDS5SETS/20K2.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/100KWORDS5SETS/20K3.JSON",
+                    "https://raw.githubusercontent.com/MorningHighRiseSunset/Puzzle-Word-List/refs/heads/main/100KWORDS5SETS/20K4.JSON",
                 ],
                 es: [
                     "https://raw.githubusercontent.com/words/an-array-of-spanish-words/refs/heads/master/index.json",
