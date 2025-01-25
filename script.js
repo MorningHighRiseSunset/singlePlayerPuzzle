@@ -251,16 +251,16 @@ class ScrabbleGame {
 
     async validateWord() {
         if (this.placedTiles.length === 0) return false;
-
+    
         // Get all formed words 
         const formedWords = this.getFormedWords();
         if (formedWords.length === 0) return false;
-
+    
         // First check internal dictionary
         const allWordsValid = formedWords.every(wordInfo =>
             this.dictionary.has(wordInfo.word.toLowerCase())
         );
-
+    
         // If word is not in internal dictionary, check external API
         if (!allWordsValid) {
             try {
@@ -269,7 +269,7 @@ class ScrabbleGame {
                     const word = wordInfo.word.toLowerCase();
                     if (!this.dictionary.has(word)) {
                         let isValid = false;
-
+    
                         // Try different language endpoints based on current language setting
                         const langEndpoints = {
                             en: 'https://api.dictionaryapi.dev/api/v2/entries/en/',
@@ -277,17 +277,27 @@ class ScrabbleGame {
                             fr: 'https://api.dictionaryapi.dev/api/v2/entries/fr/',
                             zh: 'https://api.dictionaryapi.dev/api/v2/entries/zh/'
                         };
-
+    
                         const endpoint = langEndpoints[this.currentLanguage];
                         if (!endpoint) return false;
-
+    
                         const response = await fetch(`${endpoint}${word}`);
                         if (response.ok) {
                             isValid = true;
                             // Add to internal dictionary for future use
                             this.dictionary.add(word);
                         }
-
+    
+                        // If not valid, check Datamuse API
+                        if (!isValid && word.length > 2) { // Skip two-letter words
+                            const datamuseResponse = await fetch(`https://api.datamuse.com/words?sp=${word}`);
+                            const datamuseData = await datamuseResponse.json();
+                            if (datamuseData.length > 0 && datamuseData.some(entry => entry.word === word)) {
+                                isValid = true;
+                                this.dictionary.add(word);
+                            }
+                        }
+    
                         if (!isValid) return false;
                     }
                 }
@@ -296,7 +306,7 @@ class ScrabbleGame {
                 return false;
             }
         }
-
+    
         // First move must connect to center square [7,7]
         if (this.isFirstMove) {
             let connectedToCenter = false;
@@ -316,9 +326,9 @@ class ScrabbleGame {
                 return false;
             }
         }
-
+    
         return true;
-    }
+    }    
 
     evaluatePositionStrategy(play) {
         let value = 0;
@@ -2652,27 +2662,27 @@ class ScrabbleGame {
     }
 
     async executeAIPlay(play) {
-        const {
-            word,
-            startPos,
-            isHorizontal,
-            score
-        } = play;
-        console.warn("AI executing play:", {
-            word,
-            startPos,
-            isHorizontal,
-            score
-        });
-
+        const { word, startPos, isHorizontal, score } = play;
+        console.warn("AI executing play:", { word, startPos, isHorizontal, score });
+    
+        // Check if the word is valid using the internal dictionary
         if (!this.dictionary.has(word.toLowerCase())) {
-            console.warn(`Invalid word ${word} - skipping AI turn`);
-            this.skipAITurn();
+            console.warn(`Invalid word ${word} - retrying AI turn`);
+    
+            // Retry AI turn to find another valid word
+            const possiblePlays = this.findAIPossiblePlays();
+            const bestPlay = this.selectBestPlay(possiblePlays);
+    
+            if (bestPlay) {
+                await this.executeAIPlay(bestPlay);
+            } else {
+                this.skipAITurn(); // Skip turn if no valid plays are found
+            }
             return;
         }
-
+    
         this.previousBoard = JSON.parse(JSON.stringify(this.board));
-
+    
         this.placedTiles = Array.from(word).map((letter, i) => ({
             row: isHorizontal ? startPos.row : startPos.row + i,
             col: isHorizontal ? startPos.col + i : startPos.col,
@@ -2682,13 +2692,13 @@ class ScrabbleGame {
                 id: `ai_${letter}_${Date.now()}_${i}`,
             },
         }));
-
+    
         return new Promise(async (resolve) => {
             for (let i = 0; i < word.length; i++) {
                 const letter = word[i];
                 const row = isHorizontal ? startPos.row : startPos.row + i;
                 const col = isHorizontal ? startPos.col + i : startPos.col;
-
+    
                 if (!this.board[row][col]) {
                     let tileIndex = this.aiRack.findIndex((t) => t.letter === letter);
                     if (tileIndex === -1) {
@@ -2702,7 +2712,7 @@ class ScrabbleGame {
                             };
                         }
                     }
-
+    
                     if (tileIndex !== -1) {
                         const tile = {
                             letter: letter,
@@ -2710,10 +2720,10 @@ class ScrabbleGame {
                             id: this.aiRack[tileIndex].isBlank ? `blank_${letter}_${Date.now()}_${i}` : `ai_${letter}_${Date.now()}_${i}`,
                             isBlank: this.aiRack[tileIndex].isBlank,
                         };
-
+    
                         const targetCell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                         const targetRect = targetCell.getBoundingClientRect();
-
+    
                         const animatedTile = document.createElement("div");
                         animatedTile.className = "tile animated-tile";
                         animatedTile.innerHTML = `
@@ -2721,23 +2731,23 @@ class ScrabbleGame {
                             <span class="points">${tile.value}</span>
                             ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                         `;
-
+    
                         await this.animateTilePlacement(animatedTile, targetCell, targetRect, tile);
-
+    
                         this.aiRack.splice(tileIndex, 1);
                         this.board[row][col] = tile;
                         this.renderAIRack();
-
+    
                         await new Promise((resolve) => setTimeout(resolve, 500));
                     }
                 }
             }
-
+    
             setTimeout(() => {
                 const formedWords = this.getFormedWords();
                 let totalScore = 0;
                 let wordsList = [];
-
+    
                 formedWords.forEach((wordInfo) => {
                     const wordScore = this.calculateWordScore(
                         wordInfo.word,
@@ -2751,11 +2761,11 @@ class ScrabbleGame {
                         score: wordScore
                     });
                 });
-
+    
                 if (word.length === 7) {
                     totalScore += 50;
                 }
-
+    
                 let moveDescription;
                 if (wordsList.length > 0) {
                     moveDescription = wordsList.length > 1 ?
@@ -2765,7 +2775,7 @@ class ScrabbleGame {
                     // Handle the case where no words were formed
                     moveDescription = "No valid words formed";
                 }
-
+    
                 this.aiScore += totalScore;
                 this.isFirstMove = false;
                 this.consecutiveSkips = 0;
@@ -2774,14 +2784,14 @@ class ScrabbleGame {
                 this.placedTiles = [];
                 this.fillRacks();
                 this.updateGameState();
-
+    
                 // Log AI move details
                 this.logMoveDetails("Computer", word, startPos, isHorizontal);
-
+    
                 resolve();
             }, 500);
         });
-    }
+    }    
 
     animateTilePlacement(animatedTile, targetCell, targetRect, tile) {
         return new Promise((resolve) => {
@@ -4559,61 +4569,55 @@ class ScrabbleGame {
 
     setupRackDropZone() {
         const rack = document.getElementById("tile-rack");
-
+    
         rack.addEventListener("dragover", (e) => {
             e.preventDefault();
             if (this.currentTurn === "player") {
                 e.currentTarget.classList.add("rack-droppable");
             }
         });
-
+    
         rack.addEventListener("dragleave", (e) => {
             e.currentTarget.classList.remove("rack-droppable");
         });
-
+    
         rack.addEventListener("drop", (e) => {
             e.preventDefault();
             e.currentTarget.classList.remove("rack-droppable");
-
+    
             if (this.currentTurn !== "player") return;
-
-            // Find the dragged tile element
+    
             const draggedTile = document.querySelector(".tile.dragging");
             if (!draggedTile) return;
-
-            // Find the placed tile by looking through all board cells
+    
             const boardCell = draggedTile.closest(".board-cell");
             if (!boardCell) return;
-
+    
             const row = parseInt(boardCell.dataset.row);
             const col = parseInt(boardCell.dataset.col);
-
-            // Find the corresponding placed tile
+    
             const placedTileIndex = this.placedTiles.findIndex(
                 (t) => t.row === row && t.col === col,
             );
-
+    
             if (placedTileIndex !== -1) {
                 const placedTile = this.placedTiles[placedTileIndex];
-
-                // Return the tile to the rack
-                this.playerRack.push(placedTile.tile);
-
-                // Clear the board cell
+    
+                // If it's a wild tile, revert to the original wild state
+                const tileToRack = placedTile.tile.isBlank ? { ...placedTile.tile, letter: '*', value: 0 } : placedTile.tile;
+    
+                this.playerRack.push(tileToRack);
+    
                 this.board[row][col] = null;
                 boardCell.innerHTML = "";
-
-                // Remove from placed tiles array
+    
                 this.placedTiles.splice(placedTileIndex, 1);
-
-                // Update the rack display
+    
                 this.renderRack();
-
-                // Update valid placement highlights
                 this.highlightValidPlacements();
             }
         });
-    }
+    }    
 
     setupDragListeners() {
         // Store selected tile for mobile click placement
@@ -4963,171 +4967,63 @@ class ScrabbleGame {
             alert("This cell is already occupied!");
             return;
         }
-
-        if (tile.letter === "*") {
-            const letterSelectionDialog = document.createElement("div");
-            letterSelectionDialog.className = "letter-selection-dialog";
-            letterSelectionDialog.innerHTML = `
-                <div class="dialog-content">
-                    <h3>Choose a letter for the blank tile</h3>
-                    <div class="letter-grid">
-                        ${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-                          .map(
-                            (letter) => `
-                            <button class="letter-choice">${letter}</button>
-                        `,
-                          )
-                          .join("")}
-                    </div>
-                </div>
+    
+        if (tile.originalLetter === "*") {
+            // If the tile is a blank tile that was previously assigned a letter, revert it to a blank
+            const placedTile = {
+                letter: tile.originalLetter,
+                value: 0,
+                id: tile.id,
+                isBlank: true,
+            };
+    
+            this.board[row][col] = placedTile;
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            const tileIndex = this.playerRack.indexOf(tile);
+    
+            const tileElement = document.createElement("div");
+            tileElement.className = "tile";
+            tileElement.draggable = true;
+            tileElement.dataset.index = tileIndex;
+            tileElement.dataset.id = tile.id;
+            tileElement.innerHTML = `
+                ★
+                <span class="points">0</span>
             `;
-
-            // Add styles for the dialog
-            const style = document.createElement("style");
-            style.textContent = `
-                .letter-selection-dialog {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
+    
+            tileElement.addEventListener("dragstart", (e) => {
+                if (this.currentTurn === "player") {
+                    e.target.classList.add("dragging");
+                    e.dataTransfer.setData("text/plain", e.target.dataset.index);
                 }
-                .dialog-content {
-                    background: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                    max-width: 400px;
-                    width: 90%;
-                }
-                .letter-grid {
-                    display: grid;
-                    grid-template-columns: repeat(6, 1fr);
-                    gap: 5px;
-                    margin-top: 15px;
-                }
-                .letter-choice {
-                    padding: 10px;
-                    border: 1px solid #ccc;
-                    background: #0047AB;
-                    cursor: pointer;
-                    border-radius: 5px;
-                    transition: all 0.2s;
-                }
-                .letter-choice:hover {
-                    background: #e0e0e0;
-                    transform: scale(1.1);
-                }
-                h3 {
-                    text-align: center;
-                    margin-top: 0;
-                    color: #333;
-                }
-            `;
-            document.head.appendChild(style);
-            document.body.appendChild(letterSelectionDialog);
-
-            // Handle letter selection
-            const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
-            buttons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    const selectedLetter = button.textContent;
-
-                    // Create a new tile object with the selected letter but keep point value as 0
-                    const blankTile = {
-                        ...tile,
-                        letter: selectedLetter,
-                        originalLetter: "*",
-                        value: 0,
-                    };
-
-                    // Create proper tile object for the board
-                    const placedTile = {
-                        letter: selectedLetter,
-                        value: 0,
-                        id: tile.id,
-                        isBlank: true,
-                    };
-
-                    this.board[row][col] = placedTile;
-                    const cell = document.querySelector(
-                        `[data-row="${row}"][data-col="${col}"]`,
-                    );
-                    const tileIndex = this.playerRack.indexOf(tile);
-
-                    // Create and add the tile element
-                    const tileElement = document.createElement("div");
-                    tileElement.className = "tile";
-                    tileElement.draggable = true;
-                    tileElement.dataset.index = tileIndex;
-                    tileElement.dataset.id = tile.id;
-                    tileElement.innerHTML = `
-                        ${selectedLetter}
-                        <span class="points">0</span>
-                        <span class="blank-indicator">★</span>
-                    `;
-
-                    // Add drag events to the tile
-                    tileElement.addEventListener("dragstart", (e) => {
-                        if (this.currentTurn === "player") {
-                            e.target.classList.add("dragging");
-                            const cell = e.target.closest(".board-cell");
-                            const row = cell.dataset.row;
-                            const col = cell.dataset.col;
-                            e.dataTransfer.setData("text/plain", `${row},${col}`);
-                        }
-                    });
-
-                    tileElement.addEventListener("dragend", (e) => {
-                        e.target.classList.remove("dragging");
-                    });
-
-                    // Clear the cell and add the new tile
-                    cell.innerHTML = "";
-                    cell.appendChild(tileElement);
-
-                    // Remove tile from rack
-                    if (tileIndex > -1) {
-                        this.playerRack.splice(tileIndex, 1);
-                    }
-
-                    // Add to placed tiles
-                    this.placedTiles.push({
-                        tile: placedTile,
-                        row: row,
-                        col: col,
-                    });
-
-                    // Update rack display
-                    this.renderRack();
-
-                    // Remove the dialog
-                    letterSelectionDialog.remove();
-
-                    // Update valid placement highlights
-                    this.highlightValidPlacements();
-                });
             });
+    
+            tileElement.addEventListener("dragend", (e) => {
+                e.target.classList.remove("dragging");
+            });
+    
+            cell.innerHTML = "";
+            cell.appendChild(tileElement);
+    
+            if (tileIndex > -1) {
+                this.playerRack.splice(tileIndex, 1);
+            }
+    
+            this.placedTiles.push({ tile: placedTile, row: row, col: col });
+            this.renderRack();
+            this.highlightValidPlacements();
         } else {
             // Normal tile placement (non-blank tile)
-            // Create proper tile object for the board
             const placedTile = {
                 letter: tile.letter,
                 value: tile.value || this.tileValues[tile.letter],
                 id: tile.id,
             };
-
+    
             this.board[row][col] = placedTile;
-            const cell = document.querySelector(
-                `[data-row="${row}"][data-col="${col}"]`,
-            );
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             const tileIndex = this.playerRack.indexOf(tile);
-
+    
             const tileElement = document.createElement("div");
             tileElement.className = "tile";
             tileElement.draggable = true;
@@ -5137,42 +5033,30 @@ class ScrabbleGame {
                 ${tile.letter}
                 <span class="points">${placedTile.value}</span>
             `;
-
-            // Add drag functionality to the placed tile
+    
             tileElement.addEventListener("dragstart", (e) => {
                 if (this.currentTurn === "player") {
                     e.target.classList.add("dragging");
                     e.dataTransfer.setData("text/plain", e.target.dataset.index);
                 }
             });
-
+    
             tileElement.addEventListener("dragend", (e) => {
                 e.target.classList.remove("dragging");
             });
-
-            // Clear the cell and add the new tile
+    
             cell.innerHTML = "";
             cell.appendChild(tileElement);
-
-            // Remove tile from rack
+    
             if (tileIndex > -1) {
                 this.playerRack.splice(tileIndex, 1);
             }
-
-            // Add to placed tiles
-            this.placedTiles.push({
-                tile: placedTile,
-                row: row,
-                col: col,
-            });
-
-            // Update rack display
+    
+            this.placedTiles.push({ tile: placedTile, row: row, col: col });
             this.renderRack();
-
-            // Update valid placement highlights
             this.highlightValidPlacements();
         }
-    }
+    }    
 
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
