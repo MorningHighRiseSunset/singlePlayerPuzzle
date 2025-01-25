@@ -4504,19 +4504,6 @@ class ScrabbleGame {
         });
     }
 
-
-
-    fillRacks() {
-        while (this.playerRack.length < 7 && this.tiles.length > 0) {
-            this.playerRack.push(this.tiles.pop());
-        }
-        while (this.aiRack.length < 7 && this.tiles.length > 0) {
-            this.aiRack.push(this.tiles.pop());
-        }
-        this.renderRack();
-        this.updateTilesCount();
-    }
-
     renderRack() {
         const rack = document.getElementById("tile-rack");
         rack.innerHTML = "";
@@ -6231,60 +6218,80 @@ class ScrabbleGame {
     fillRacks() {
         const balanceRack = (rack) => {
             const vowels = ["A", "E", "I", "O", "U"];
-            const vowelCount = rack.filter((tile) =>
-                vowels.includes(tile.letter),
-            ).length;
-
+            const vowelCount = rack.filter((tile) => vowels.includes(tile.letter)).length;
+    
             // Aim for 2-3 vowels in a rack of 7 tiles
             if (vowelCount < 2 && this.tiles.length > 0) {
                 // Find positions of consonants that could be swapped
                 const consonantIndices = rack
                     .map((tile, index) => (!vowels.includes(tile.letter) ? index : -1))
                     .filter((index) => index !== -1);
-
+    
                 // Find vowels in the remaining tiles
                 const vowelIndices = this.tiles
                     .map((tile, index) => (vowels.includes(tile.letter) ? index : -1))
                     .filter((index) => index !== -1);
-
+    
                 // Perform swap if possible
                 if (consonantIndices.length > 0 && vowelIndices.length > 0) {
-                    const consonantIdx =
-                        consonantIndices[
-                            Math.floor(Math.random() * consonantIndices.length)
-                        ];
-                    const vowelIdx =
-                        vowelIndices[Math.floor(Math.random() * vowelIndices.length)];
-
+                    const consonantIdx = consonantIndices[Math.floor(Math.random() * consonantIndices.length)];
+                    const vowelIdx = vowelIndices[Math.floor(Math.random() * vowelIndices.length)];
+    
                     // Swap a consonant with a vowel
                     const consonant = rack[consonantIdx];
                     rack[consonantIdx] = this.tiles[vowelIdx];
                     this.tiles[vowelIdx] = consonant;
                 }
+            } else if (vowelCount > 3 && this.tiles.length > 0) {
+                // Find positions of vowels that could be swapped
+                const vowelIndices = rack
+                    .map((tile, index) => (vowels.includes(tile.letter) ? index : -1))
+                    .filter((index) => index !== -1);
+    
+                // Find consonants in the remaining tiles
+                const consonantIndices = this.tiles
+                    .map((tile, index) => (!vowels.includes(tile.letter) ? index : -1))
+                    .filter((index) => index !== -1);
+    
+                // Perform swap if possible
+                if (vowelIndices.length > 0 && consonantIndices.length > 0) {
+                    const vowelIdx = vowelIndices[Math.floor(Math.random() * vowelIndices.length)];
+                    const consonantIdx = consonantIndices[Math.floor(Math.random() * consonantIndices.length)];
+    
+                    // Swap a vowel with a consonant
+                    const vowel = rack[vowelIdx];
+                    rack[vowelIdx] = this.tiles[consonantIdx];
+                    this.tiles[consonantIdx] = vowel;
+                }
             }
             return rack;
         };
-
+    
         // Fill player's rack
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
             this.playerRack.push(this.tiles.pop());
         }
-
+    
         // Balance player's rack if needed
         if (this.playerRack.length === 7) {
             this.playerRack = balanceRack(this.playerRack);
         }
-
+    
         // Fill AI's rack
         while (this.aiRack.length < 7 && this.tiles.length > 0) {
             this.aiRack.push(this.tiles.pop());
         }
-
+    
+        // Balance AI's rack if needed
+        if (this.aiRack.length === 7) {
+            this.aiRack = balanceRack(this.aiRack);
+        }
+    
         // Update displays
         this.renderRack();
         this.renderAIRack();
         this.updateTilesCount();
-    }
+    }    
 
     setupExchangeSystem() {
         this.exchangePortal = document.getElementById("exchange-portal");
