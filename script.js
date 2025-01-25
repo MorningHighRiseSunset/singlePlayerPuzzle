@@ -4603,10 +4603,13 @@ class ScrabbleGame {
             if (placedTileIndex !== -1) {
                 const placedTile = this.placedTiles[placedTileIndex];
     
-                // If it's a wild tile, revert to the original wild state
-                const tileToRack = placedTile.tile.isBlank ? { ...placedTile.tile, letter: '*', value: 0 } : placedTile.tile;
+                // Revert to original wild state if it's a wild tile
+                if (placedTile.tile.isBlank) {
+                    placedTile.tile.letter = '*';
+                    placedTile.tile.value = 0;
+                }
     
-                this.playerRack.push(tileToRack);
+                this.playerRack.push(placedTile.tile);
     
                 this.board[row][col] = null;
                 boardCell.innerHTML = "";
@@ -4968,94 +4971,69 @@ class ScrabbleGame {
             return;
         }
     
-        if (tile.originalLetter === "*") {
-            // If the tile is a blank tile that was previously assigned a letter, revert it to a blank
-            const placedTile = {
-                letter: tile.originalLetter,
-                value: 0,
-                id: tile.id,
-                isBlank: true,
-            };
+        const placedTile = {
+            letter: tile.letter,
+            value: tile.value || this.tileValues[tile.letter],
+            id: tile.id,
+            isBlank: tile.isBlank || false,
+            originalLetter: tile.originalLetter || '*', // Store original state for wild tiles
+        };
     
-            this.board[row][col] = placedTile;
-            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            const tileIndex = this.playerRack.indexOf(tile);
-    
-            const tileElement = document.createElement("div");
-            tileElement.className = "tile";
-            tileElement.draggable = true;
-            tileElement.dataset.index = tileIndex;
-            tileElement.dataset.id = tile.id;
-            tileElement.innerHTML = `
-                ★
-                <span class="points">0</span>
-            `;
-    
-            tileElement.addEventListener("dragstart", (e) => {
-                if (this.currentTurn === "player") {
-                    e.target.classList.add("dragging");
-                    e.dataTransfer.setData("text/plain", e.target.dataset.index);
+        // Check if the tile is a blank tile and prompt for a letter
+        if (placedTile.letter === '*') {
+            let selectedLetter = prompt("Enter the letter for the blank tile:", "");
+            if (selectedLetter) {
+                selectedLetter = selectedLetter.toUpperCase();
+                if (/^[A-Z]$/.test(selectedLetter)) {
+                    placedTile.letter = selectedLetter;
+                    placedTile.value = this.tileValues[selectedLetter];
+                    placedTile.isBlank = true; // Keep track of it being a blank tile
+                } else {
+                    alert("Invalid input. Please enter a single letter.");
+                    return;
                 }
-            });
-    
-            tileElement.addEventListener("dragend", (e) => {
-                e.target.classList.remove("dragging");
-            });
-    
-            cell.innerHTML = "";
-            cell.appendChild(tileElement);
-    
-            if (tileIndex > -1) {
-                this.playerRack.splice(tileIndex, 1);
+            } else {
+                alert("No letter entered. Please try again.");
+                return;
             }
-    
-            this.placedTiles.push({ tile: placedTile, row: row, col: col });
-            this.renderRack();
-            this.highlightValidPlacements();
-        } else {
-            // Normal tile placement (non-blank tile)
-            const placedTile = {
-                letter: tile.letter,
-                value: tile.value || this.tileValues[tile.letter],
-                id: tile.id,
-            };
-    
-            this.board[row][col] = placedTile;
-            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            const tileIndex = this.playerRack.indexOf(tile);
-    
-            const tileElement = document.createElement("div");
-            tileElement.className = "tile";
-            tileElement.draggable = true;
-            tileElement.dataset.index = tileIndex;
-            tileElement.dataset.id = tile.id;
-            tileElement.innerHTML = `
-                ${tile.letter}
-                <span class="points">${placedTile.value}</span>
-            `;
-    
-            tileElement.addEventListener("dragstart", (e) => {
-                if (this.currentTurn === "player") {
-                    e.target.classList.add("dragging");
-                    e.dataTransfer.setData("text/plain", e.target.dataset.index);
-                }
-            });
-    
-            tileElement.addEventListener("dragend", (e) => {
-                e.target.classList.remove("dragging");
-            });
-    
-            cell.innerHTML = "";
-            cell.appendChild(tileElement);
-    
-            if (tileIndex > -1) {
-                this.playerRack.splice(tileIndex, 1);
-            }
-    
-            this.placedTiles.push({ tile: placedTile, row: row, col: col });
-            this.renderRack();
-            this.highlightValidPlacements();
         }
+    
+        this.board[row][col] = placedTile;
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        const tileIndex = this.playerRack.indexOf(tile);
+    
+        const tileElement = document.createElement("div");
+        tileElement.className = "tile";
+        tileElement.draggable = true;
+        tileElement.dataset.index = tileIndex;
+        tileElement.dataset.id = tile.id;
+        tileElement.innerHTML = `
+            ${placedTile.letter}
+            <span class="points">${placedTile.value}</span>
+            ${placedTile.isBlank ? '<span class="blank-indicator">★</span>' : ''}
+        `;
+    
+        tileElement.addEventListener("dragstart", (e) => {
+            if (this.currentTurn === "player") {
+                e.target.classList.add("dragging");
+                e.dataTransfer.setData("text/plain", e.target.dataset.index);
+            }
+        });
+    
+        tileElement.addEventListener("dragend", (e) => {
+            e.target.classList.remove("dragging");
+        });
+    
+        cell.innerHTML = "";
+        cell.appendChild(tileElement);
+    
+        if (tileIndex > -1) {
+            this.playerRack.splice(tileIndex, 1);
+        }
+    
+        this.placedTiles.push({ tile: placedTile, row: row, col: col });
+        this.renderRack();
+        this.highlightValidPlacements();
     }    
 
     areTilesConnected() {
@@ -5102,17 +5080,12 @@ class ScrabbleGame {
     }
 
     resetPlacedTiles() {
-        this.placedTiles.forEach(({
-            tile,
-            row,
-            col
-        }) => {
+        this.placedTiles.forEach(({ tile, row, col }) => {
             this.board[row][col] = null;
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-
+    
             // Clear cell content but preserve center star if it's the middle square
             if (row === 7 && col === 7) {
-                // Check if center star exists, if not create it
                 let centerStar = cell.querySelector('.center-star');
                 if (!centerStar) {
                     centerStar = document.createElement('span');
@@ -5124,13 +5097,40 @@ class ScrabbleGame {
             } else {
                 cell.innerHTML = '';
             }
-
+    
+            // Revert wild tile to original state
+            if (tile.isBlank) {
+                tile.letter = '*';
+                tile.value = 0;
+            }
+    
             this.playerRack.push(tile);
         });
-
+    
         this.placedTiles = [];
         this.renderRack();
     }
+    
+    async playWord() {
+        if (this.placedTiles.length === 0) {
+            alert("Please place some tiles first!");
+            return;
+        }
+    
+        const formedWords = this.getFormedWords();
+        if (formedWords.length === 0) return;
+    
+        const allWordsValid = formedWords.every(wordInfo =>
+            this.dictionary.has(wordInfo.word.toLowerCase())
+        );
+    
+        if (allWordsValid) {
+            // Calculate score and update state...
+        } else {
+            alert("Invalid word! Please try again.");
+            this.resetPlacedTiles();
+        }
+    }    
 
     getCrossWords(row, col) {
         const words = [];
@@ -6721,18 +6721,16 @@ class ScrabbleGame {
     async showAIExchangeAnimation() {
         const portal = document.getElementById("exchange-portal");
         portal.classList.add("active");
-
+    
         // Animate AI tiles going into portal
         const aiRackElement = document.getElementById("ai-rack");
-        const tileElements = Array.from(
-            aiRackElement.getElementsByClassName("tile"),
-        );
+        const tileElements = Array.from(aiRackElement.getElementsByClassName("tile"));
         const portalRect = portal.getBoundingClientRect();
-
+    
         // Animate each tile one by one
         for (const tile of tileElements) {
             const tileRect = tile.getBoundingClientRect();
-
+    
             // Create clone for animation
             const clone = tile.cloneNode(true);
             clone.style.position = "fixed";
@@ -6743,79 +6741,40 @@ class ScrabbleGame {
             clone.style.transition = "none";
             clone.style.zIndex = "1000";
             document.body.appendChild(clone);
-
+    
             // Calculate portal center
             const portalCenterX = portalRect.left + portalRect.width / 2;
             const portalCenterY = portalRect.top + portalRect.height / 2;
-
+    
             // Create spiral keyframes
             const spiralKeyframes = [];
             const totalSteps = 50;
             const totalRotations = 3;
             const scaleFactor = 0.1;
-
+    
             for (let i = 0; i <= totalSteps; i++) {
                 const progress = i / totalSteps;
                 const angle = progress * totalRotations * 2 * Math.PI;
                 const radius = (1 - progress) * 100;
-
-                const x =
-                    tileRect.left +
-                    (portalCenterX - tileRect.left) * progress +
-                    Math.cos(angle) * radius;
-                const y =
-                    tileRect.top +
-                    (portalCenterY - tileRect.top) * progress +
-                    Math.sin(angle) * radius;
-
+    
+                const x = tileRect.left + (portalCenterX - tileRect.left) * progress + Math.cos(angle) * radius;
+                const y = tileRect.top + (portalCenterY - tileRect.top) * progress + Math.sin(angle) * radius;
+    
                 const scale = 1 - progress * (1 - scaleFactor);
                 const rotation = progress * 720;
-
+    
                 spiralKeyframes.push({
-                    transform: `translate(${x - tileRect.left}px, ${y - tileRect.top}px) 
-                             rotate(${rotation}deg) 
-                             scale(${scale})`,
+                    transform: `translate(${x - tileRect.left}px, ${y - tileRect.top}px) rotate(${rotation}deg) scale(${scale})`,
                     opacity: 1 - progress * 0.8,
                 });
             }
-
+    
             // Add final keyframe
             spiralKeyframes.push({
-                transform: `translate(${portalCenterX - tileRect.left}px, ${portalCenterY - tileRect.top}px) 
-                         rotate(720deg) 
-                         scale(${scaleFactor})`,
+                transform: `translate(${portalCenterX - tileRect.left}px, ${portalCenterY - tileRect.top}px) rotate(720deg) scale(${scaleFactor})`,
                 opacity: 0,
             });
-
-            // Create particles
-            const particles = [];
-            const particleCount = 10;
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement("div");
-                particle.className = "exchange-particle";
-                particle.style.cssText = `
-                  position: fixed;
-                  width: 4px;
-                  height: 4px;
-                  background: ${["#64b5f6", "#2196f3", "#1976d2"][Math.floor(Math.random() * 3)]};
-                  border-radius: 50%;
-                  pointer-events: none;
-                  z-index: 999;
-              `;
-                document.body.appendChild(particle);
-                particles.push(particle);
-
-                const delay = i * (1000 / particleCount);
-                const particleAnimation = particle.animate(spiralKeyframes, {
-                    duration: 1000,
-                    delay: delay,
-                    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-                    fill: "forwards",
-                });
-
-                particleAnimation.onfinish = () => particle.remove();
-            }
-
+    
             // Animate the tile
             await new Promise((resolve) => {
                 const animation = clone.animate(spiralKeyframes, {
@@ -6823,104 +6782,61 @@ class ScrabbleGame {
                     easing: "cubic-bezier(0.4, 0, 0.2, 1)",
                     fill: "forwards",
                 });
-
+    
                 animation.onfinish = () => {
                     clone.remove();
                     resolve();
                 };
             });
-
+    
             // Add portal pulse effect
             portal.classList.add("portal-pulse");
             setTimeout(() => {
                 portal.classList.remove("portal-pulse");
             }, 500);
-
+    
             // Small delay between tiles
             await new Promise((resolve) => setTimeout(resolve, 200));
         }
-
+    
         // Short delay before showing new tiles
         await new Promise((resolve) => setTimeout(resolve, 500));
-
+    
         // Animate new tiles coming out
         for (let i = 0; i < this.aiRack.length; i++) {
             const newTile = document.createElement("div");
             newTile.className = "tile ai-tile";
             document.body.appendChild(newTile);
-
+    
             const startX = portalRect.left + portalRect.width / 2;
             const startY = portalRect.top + portalRect.height / 2;
             const finalX = aiRackElement.offsetLeft + i * 50;
             const finalY = aiRackElement.offsetTop;
-
-            const reverseSpiral = [{
-                    transform: `translate(${startX}px, ${startY}px) scale(0) rotate(360deg)`,
-                    opacity: 0,
-                },
-                {
-                    transform: `translate(${finalX}px, ${finalY}px) scale(1) rotate(0deg)`,
-                    opacity: 1,
-                },
+    
+            const reverseSpiral = [
+                { transform: `translate(${startX}px, ${startY}px) scale(0) rotate(360deg)`, opacity: 0 },
+                { transform: `translate(${finalX}px, ${finalY}px) scale(1) rotate(0deg)`, opacity: 1 },
             ];
-
+    
             await new Promise((resolve) => {
                 const animation = newTile.animate(reverseSpiral, {
                     duration: 1000,
                     easing: "cubic-bezier(0.4, 0, 0.2, 1)",
                     fill: "forwards",
                 });
-
-                // Create emergence particles
-                const particleCount = 5;
-                for (let j = 0; j < particleCount; j++) {
-                    const particle = document.createElement("div");
-                    particle.className = "exchange-particle";
-                    particle.style.cssText = `
-                      position: fixed;
-                      width: 4px;
-                      height: 4px;
-                      background: ${["#64b5f6", "#2196f3", "#1976d2"][Math.floor(Math.random() * 3)]};
-                      border-radius: 50%;
-                      pointer-events: none;
-                      z-index: 999;
-                  `;
-                    document.body.appendChild(particle);
-
-                    const angle = (j / particleCount) * Math.PI * 2;
-                    const radius = 30;
-                    const particleAnim = particle.animate(
-                        [{
-                                transform: `translate(${startX + Math.cos(angle) * radius}px, 
-                                     ${startY + Math.sin(angle) * radius}px) scale(0)`,
-                                opacity: 1,
-                            },
-                            {
-                                transform: `translate(${startX + Math.cos(angle) * radius * 2}px, 
-                                     ${startY + Math.sin(angle) * radius * 2}px) scale(1)`,
-                                opacity: 0,
-                            },
-                        ], {
-                            duration: 1000,
-                            easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-                        },
-                    );
-
-                    particleAnim.onfinish = () => particle.remove();
-                }
-
+    
                 animation.onfinish = () => {
                     newTile.remove();
                     resolve();
                 };
             });
-
+    
             // Small delay between new tiles
             await new Promise((resolve) => setTimeout(resolve, 100));
         }
-
+    
         portal.classList.remove("active");
-    }
+    }    
 
     setupEventListeners() {
         // Initial highlight of valid placements
