@@ -2665,19 +2665,25 @@ class ScrabbleGame {
         const { word, startPos, isHorizontal, score } = play;
         console.warn("AI executing play:", { word, startPos, isHorizontal, score });
     
-        // Check if the word is valid using the internal dictionary
-        if (!this.dictionary.has(word.toLowerCase())) {
-            console.warn(`Invalid word ${word} - retrying AI turn`);
+        let isValid = this.dictionary.has(word.toLowerCase());
     
-            // Retry AI turn to find another valid word
-            const possiblePlays = this.findAIPossiblePlays();
-            const bestPlay = this.selectBestPlay(possiblePlays);
-    
-            if (bestPlay) {
-                await this.executeAIPlay(bestPlay);
-            } else {
-                this.skipAITurn(); // Skip turn if no valid plays are found
+        // If not valid, check Datamuse API as a last resort
+        if (!isValid && word.length > 2) { // Skip two-letter words
+            try {
+                const datamuseResponse = await fetch(`https://api.datamuse.com/words?sp=${word}`);
+                const datamuseData = await datamuseResponse.json();
+                if (datamuseData.length > 0 && datamuseData.some(entry => entry.word.toLowerCase() === word.toLowerCase())) {
+                    isValid = true;
+                    this.dictionary.add(word.toLowerCase());
+                }
+            } catch (error) {
+                console.error('Error checking word in Datamuse API:', error);
             }
+        }
+    
+        if (!isValid) {
+            console.warn(`Invalid word ${word} - retrying AI turn`);
+            this.aiTurn(); // Retry AI turn to find another valid word
             return;
         }
     
@@ -6615,53 +6621,77 @@ class ScrabbleGame {
 
     handleAIExchange() {
         console.warn("AI attempting to exchange tiles...");
-
+    
         // Create visual effect for AI exchange
         this.showAIExchangeAnimation().then(() => {
             // Get current AI rack
             const oldTiles = [...this.aiRack];
             const exchangeCount = Math.min(this.aiRack.length, this.tiles.length);
-
+    
             if (exchangeCount === 0) {
                 console.warn("No tiles left to exchange");
                 this.skipAITurn();
                 return;
             }
-
+    
             // Return tiles to bag
             for (let i = 0; i < exchangeCount; i++) {
                 this.tiles.push(this.aiRack.pop());
             }
             this.shuffleTiles();
-
+    
             // Draw new tiles
             for (let i = 0; i < exchangeCount; i++) {
                 if (this.tiles.length > 0) {
                     this.aiRack.push(this.tiles.pop());
                 }
             }
-
+    
             // Update displays
             this.renderAIRack();
             this.updateTilesCount();
-
+    
             // Add to move history
             this.addToMoveHistory("Computer", "EXCHANGE", 0);
-
+    
+            // Notify player about AI exchange
+            const notification = document.createElement("div");
+            notification.className = "ai-exchange-notification";
+            notification.textContent = "The computer has exchanged its tiles.";
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #f0f0f0;
+                padding: 10px 20px;
+                border-radius: 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => (notification.style.opacity = "1"), 100);
+            setTimeout(() => {
+                notification.style.opacity = "0";
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+    
             // Switch turn
             this.currentTurn = "player";
             this.consecutiveSkips++;
             this.updateGameState();
-
+    
             console.warn("AI exchange complete:", {
                 oldTiles: oldTiles.map((t) => t.letter),
                 newTiles: this.aiRack.map((t) => t.letter),
             });
-
+    
             // Check for game end
             this.checkGameEnd();
         });
-    }
+    }    
 
     logMoveDetails(player, word, startPos, isHorizontal) {
         // For intersection cases, make sure we find the actual starting position
