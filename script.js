@@ -4661,42 +4661,34 @@ class ScrabbleGame {
         document.querySelectorAll(".board-cell").forEach((cell) => {
             cell.setAttribute("droppable", "true");
     
-            // Add click handler for mobile placement
+            // Add click handler for mobile placement and moving
             cell.addEventListener("click", (e) => {
-                if (!isMobileDevice() || !this.selectedTile) return;
+                if (!isMobileDevice()) return;
     
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
     
-                // If it's the first move, enforce center square
-                if (this.isFirstMove && this.placedTiles.length === 0 && (row !== 7 || col !== 7)) {
-                    alert("First tile must be placed on the center square!");
+                // If a tile is already placed here, select it for moving
+                if (this.board[row][col] && this.currentTurn === "player") {
+                    if (this.selectedTile) {
+                        this.selectedTile.classList.remove("selected");
+                    }
+                    this.selectedTile = cell.querySelector('.tile');
+                    this.selectedTile.classList.add("selected");
                     return;
                 }
     
-                const tileIndex = parseInt(this.selectedTile.dataset.index);
-                const tile = this.playerRack[tileIndex];
+                // If a tile is selected, move it to the clicked cell
+                if (this.selectedTile) {
+                    const selectedTileIndex = parseInt(this.selectedTile.dataset.index);
+                    const tile = this.playerRack[selectedTileIndex] || this.placedTiles.find(t => t.tile.id === this.selectedTile.dataset.id).tile;
     
-                if (this.currentTurn === "player") {
-                    // Check if there's already a tile here
-                    if (this.board[row][col]) {
-                        const existingTileIndex = this.placedTiles.findIndex(t => t.row === row && t.col === col);
-                        if (existingTileIndex !== -1) {
-                            // Remove existing tile
-                            this.board[row][col] = null;
-                            cell.innerHTML = '';
-                            const removedTile = this.placedTiles.splice(existingTileIndex, 1)[0];
-                            // Place new tile
-                            this.placeTile(tile, row, col);
-                            // Put removed tile back in rack
-                            this.playerRack.push(removedTile.tile);
-                            this.renderRack();
-                        }
-                    } else {
+                    // Ensure the placement is valid
+                    if (this.isValidPlacement(row, col, tile)) {
                         this.placeTile(tile, row, col);
+                        this.selectedTile.classList.remove("selected");
+                        this.selectedTile = null;
                     }
-                    this.selectedTile.classList.remove("selected");
-                    this.selectedTile = null;
                 }
             });
     
@@ -4720,72 +4712,18 @@ class ScrabbleGame {
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
     
-                // If it's the first move, enforce center square
-                if (this.isFirstMove && this.placedTiles.length === 0 && (row !== 7 || col !== 7)) {
-                    alert("First tile must be placed on the center square!");
-                    return;
-                }
-    
                 const draggedTile = document.querySelector(".tile.dragging");
                 if (draggedTile) {
-                    const sourceCell = draggedTile.closest(".board-cell");
-                    if (sourceCell) {
-                        // Moving from board to board
-                        const oldRow = parseInt(sourceCell.dataset.row);
-                        const oldCol = parseInt(sourceCell.dataset.col);
-                        const tileIndex = this.placedTiles.findIndex(t => t.row === oldRow && t.col === oldCol);
-    
-                        if (tileIndex !== -1) {
-                            const movedTile = this.placedTiles[tileIndex];
-    
-                            // Remove from old position
-                            this.board[oldRow][oldCol] = null;
-                            sourceCell.innerHTML = '';
-                            this.placedTiles.splice(tileIndex, 1);
-    
-                            // Add to new position
-                            this.board[row][col] = movedTile.tile;
-                            this.placedTiles.push({
-                                tile: movedTile.tile,
-                                row: row,
-                                col: col
-                            });
-    
-                            // Update cell display
-                            const tileElement = document.createElement("div");
-                            tileElement.className = "tile";
-                            tileElement.draggable = true;
-                            tileElement.innerHTML = `
-                                ${movedTile.tile.letter}
-                                <span class="points">${movedTile.tile.value}</span>
-                                ${movedTile.tile.isBlank ? '<span class="blank-indicator">★</span>' : ''}
-                            `;
-                            cell.innerHTML = '';
-                            cell.appendChild(tileElement);
-                        }
-                    } else {
-                        // Moving from rack to board
-                        const tileIndex = e.dataTransfer.getData("text/plain");
-                        const tile = this.playerRack[parseInt(tileIndex)];
-    
-                        if (this.board[row][col]) {
-                            // Swap with existing tile
-                            const existingTileIndex = this.placedTiles.findIndex(t => t.row === row && t.col === col);
-                            if (existingTileIndex !== -1) {
-                                const existingTile = this.placedTiles[existingTileIndex].tile;
-                                this.placedTiles.splice(existingTileIndex, 1);
-                                this.playerRack.push(existingTile);
-                            }
-                        }
-    
-                        this.placeTile(tile, row, col);
-                    }
+                    // Handle drag-and-drop for desktop
+                    const tileIndex = e.dataTransfer.getData("text/plain");
+                    const tile = this.playerRack[parseInt(tileIndex)];
+                    this.placeTile(tile, row, col);
                 }
     
                 this.highlightValidPlacements();
             });
         });
-    }    
+    }        
 
     isValidPlacement(row, col, tile) {
         console.warn("Checking placement validity:", {
