@@ -425,16 +425,6 @@ button:hover {
 }
 
 /* Part 4: Animations, Media Queries, and Misc Styles */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 0.8; }
-}
 
 @keyframes particleMove {
     0% { transform: scale(1) rotate(0deg); opacity: 0.5; }
@@ -475,18 +465,6 @@ button:hover {
     }
 }
 
-@keyframes portalPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-}
-
-@keyframes portalCoreActive {
-    0% { transform: scale(1); filter: brightness(1); }
-    50% { transform: scale(1.3); filter: brightness(1.5); }
-    100% { transform: scale(1); filter: brightness(1); }
-}
-
 /* Media Queries */
 @media screen and (max-width: 1200px) {
     .game-container {
@@ -498,57 +476,6 @@ button:hover {
         width: 100%;
         max-width: 600px;
         margin-top: 20px;
-    }
-}
-
-@media screen and (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    .game-container {
-        gap: 10px;
-    }
-
-    #scrabble-board {
-        grid-template-columns: repeat(15, minmax(30px, 1fr));
-        grid-template-rows: repeat(15, minmax(30px, 1fr));
-        width: 95vw; /* Viewport-relative width */
-        height: 95vw; /* Make it square */
-        margin: 0 auto;
-    }
-
-
-    .tile-rack {
-        padding: 10px;
-        gap: 5px;
-    }
-
-    .tile {
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
-    }
-
-    .points {
-        font-size: 8px;
-        top: 1px;
-        right: 2px;
-    }
-
-    .exchange-portal {
-        width: 80px;
-        height: 80px;
-    }
-
-    .hint-box {
-        max-width: 250px;
-        left: 50%;
-        transform: translateX(-50%) translateY(150%);
-    }
-
-    .hint-box.show {
-        transform: translateX(-50%) translateY(0);
     }
 }
 
@@ -582,30 +509,42 @@ button:hover {
 }
 
 /* Misc Utility Classes */
-.droppable-hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 30px #64b5f6;
+
+@keyframes portalSpin {
+    0% { transform: rotateZ(0deg) scale(1); }
+    100% { transform: rotateZ(360deg) scale(1.1); }
 }
 
-.portal-dragover {
-    transform: scale(1.1);
-    box-shadow: 0 0 30px #64b5f6;
+@keyframes portalVortex {
+    0% { transform: scale(1) translateZ(0); opacity: 1; }
+    50% { transform: scale(0.8) translateZ(-50px); opacity: 0.5; }
+    100% { transform: scale(1) translateZ(0); opacity: 1; }
 }
 
-.portal-pulse {
-    animation: portalPulse 0.5s ease-out;
+@keyframes particleSwirl {
+    0% { transform: rotate(0deg) scale(1); opacity: 0.5; }
+    50% { transform: rotate(180deg) scale(0.5); opacity: 1; }
+    100% { transform: rotate(360deg) scale(1); opacity: 0.5; }
 }
 
 .exchange-portal.active .portal-core {
-    animation: portalCoreActive 2s ease-in-out infinite;
+    animation: portalSpin 3s linear infinite, portalVortex 2s ease-in-out infinite;
 }
 
-.exchange-portal.active .portal-ring {
-    animation-duration: 1.5s;
+.exchange-portal.active .portal-ring.outer {
+    animation: particleSwirl 6s linear infinite;
+}
+
+.exchange-portal.active .portal-ring.middle {
+    animation: particleSwirl 4s linear infinite reverse;
+}
+
+.exchange-portal.active .portal-ring.inner {
+    animation: particleSwirl 2s linear infinite;
 }
 
 .exchange-portal.active .portal-particles {
-    animation-duration: 2s;
+    animation: particleSwirl 5s linear infinite;
     opacity: 0.8;
 }
 
@@ -684,77 +623,81 @@ button:hover {
 }
 
 @media screen and (max-width: 768px) {
-    .mobile-notifications {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
+    body {
+        padding: 10px;
     }
 
-    .mobile-notice {
-        background: rgba(25, 118, 210, 0.95);
-        color: white;
-        padding: 12px 40px 12px 15px;
-        margin-bottom: 1px;
-        font-size: 14px;
-        position: relative;
-        animation: slideDown 0.5s ease-out;
-        display: flex;
-        align-items: center;
+    .game-container {
         gap: 10px;
     }
 
-    .notice-icon {
-        font-size: 18px;
+    #scrabble-board {
+        grid-template-columns: repeat(15, minmax(5vw, 1fr));
+        grid-template-rows: repeat(15, minmax(5vw, 1fr));
+        width: 100vw; /* Full viewport width */
+        height: 100vw; /* Make it square */
+        margin: 0 auto;
     }
 
-    .notice-close {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        color: white;
-        font-size: 20px;
-        padding: 5px;
-        cursor: pointer;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .tile-rack {
+        padding: 10px;
+        gap: 5px;
     }
 
-    /* Reorder game elements for mobile */
-    .game-container {
-        flex-direction: column;
-        padding-top: 120px; /* Space for notifications */
+    .tile {
+        width: 5vw;
+        height: 5vw;
+        font-size: 2.5vw;
     }
 
-    .board-container {
-        order: 1;
+    .points {
+        font-size: 2vw;
+        top: 1px;
+        right: 2px;
     }
 
-    .info-panel {
-        order: 2;
+    .exchange-portal {
+        width: 80px;
+        height: 80px;
     }
 
-    .moves-panel {
-        order: 3;
+    .hint-box {
+        max-width: 250px;
+        left: 50%;
+        transform: translateX(-50%) translateY(150%);
     }
 
-    @keyframes slideDown {
-        from {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+    .hint-box.show {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    #scrabble-board {
+        grid-template-columns: repeat(15, minmax(4vw, 1fr));
+        grid-template-rows: repeat(15, minmax(4vw, 1fr));
+        width: 100vw;
+        height: 100vw;
+    }
+
+    .tile {
+        width: 4vw;
+        height: 4vw;
+        font-size: 2vw;
+    }
+
+    .exchange-portal {
+        width: 60px;
+        height: 60px;
+    }
+
+    .moves-panel, .info-panel {
+        padding: 10px;
+    }
+
+    button {
+        padding: 8px;
+        font-size: 14px;
     }
 }
 
@@ -798,4 +741,76 @@ button:hover {
 .language-button:hover {
     background: linear-gradient(145deg, #1976d2, #1565c0);
     transform: translateY(-2px);
+}
+
+/* Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1500; /* Above other elements */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7); /* Black with opacity */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 300px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.modal-header {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.modal-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-button {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-button:hover {
+    background: var(--secondary-blue);
+}
+
+.modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
 }
