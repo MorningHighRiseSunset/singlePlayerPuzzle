@@ -96,50 +96,39 @@ function setupDropListeners() {
 
         // Mobile click handler
         cell.addEventListener("click", (e) => {
-            if (!isMobileDevice() || !this.selectedTile) return;
+            if (!isMobileDevice()) return;
 
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
-            const tileIndex = parseInt(this.selectedTile.dataset.index);
-            const tile = this.playerRack[tileIndex];
 
-            if (this.currentTurn === "player") {
-                // Validate first move
-                if (this.isFirstMove && this.placedTiles.length === 0) {
-                    if (row !== 7 || col !== 7) {
-                        alert("First tile must be placed on the center square!");
-                        return;
-                    }
-                }
+            if (this.selectedTile) {
+                // Move the selected tile to the new position
+                if (!this.board[row][col]) {
+                    const oldRow = parseInt(this.selectedTile.dataset.row);
+                    const oldCol = parseInt(this.selectedTile.dataset.col);
 
-                // Handle tile placement
-                if (this.board[row][col]) {
-                    // Handle replacing existing tile
-                    const existingTileIndex = this.placedTiles.findIndex(t => 
-                        t.row === row && t.col === col
-                    );
-                    if (existingTileIndex !== -1) {
-                        const removedTile = this.placedTiles.splice(existingTileIndex, 1)[0];
-                        this.board[row][col] = null;
-                        cell.innerHTML = '';
-                        
-                        // Place new tile
-                        this.placeTile(tile, row, col);
-                        
-                        // Return removed tile to rack
-                        this.playerRack.push(removedTile.tile);
-                        this.renderRack();
-                    }
+                    // Update board state
+                    const tile = this.board[oldRow][oldCol];
+                    this.board[oldRow][oldCol] = null;
+                    this.board[row][col] = tile;
+
+                    // Update UI
+                    cell.innerHTML = '';
+                    cell.appendChild(this.selectedTile);
+                    this.selectedTile.dataset.row = row;
+                    this.selectedTile.dataset.col = col;
+                    this.selectedTile.classList.remove("selected");
+                    this.selectedTile = null;
+                    this.highlightValidPlacements();
                 } else {
-                    this.placeTile(tile, row, col);
+                    alert("This cell is already occupied!");
                 }
-
-                // Clear selection
-                this.selectedTile.classList.remove("selected");
-                this.selectedTile = null;
-                
-                // Update valid placements
-                this.highlightValidPlacements();
+            } else if (this.board[row][col]) {
+                // Select a tile if not already selected
+                this.selectedTile = cell.querySelector(".tile");
+                this.selectedTile.dataset.row = row;
+                this.selectedTile.dataset.col = col;
+                this.selectedTile.classList.add("selected");
             }
         });
 
@@ -164,7 +153,6 @@ function setupDropListeners() {
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
 
-            // First move validation
             if (this.isFirstMove && this.placedTiles.length === 0 && (row !== 7 || col !== 7)) {
                 alert("First tile must be placed on the center square!");
                 return;
