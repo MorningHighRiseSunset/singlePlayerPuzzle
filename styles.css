@@ -532,30 +532,48 @@ button:hover {
 
 @media screen and (max-width: 480px) {
     #scrabble-board {
-        grid-template-columns: repeat(15, minmax(20px, 1fr));
-        grid-template-rows: repeat(15, minmax(20px, 1fr));
-        width: 98vw;
-        height: 98vw;
+        grid-template-columns: repeat(15, minmax(24px, 1fr));
+        grid-template-rows: repeat(15, minmax(24px, 1fr));
+        width: 95vw;
+        height: 95vw;
+        margin: 0 auto;
     }
 
     .tile {
-        width: 25px;
-        height: 25px;
+        width: 28px;
+        height: 28px;
         font-size: 12px;
     }
 
-    .exchange-portal {
-        width: 60px;
-        height: 60px;
+    .points {
+        font-size: 8px;
+        top: 1px;
+        right: 2px;
+    }
+
+    .tile-rack {
+        padding: 8px;
+        gap: 5px;
     }
 
     .moves-panel, .info-panel {
         padding: 10px;
+        margin-top: 10px;
     }
 
     button {
         padding: 8px;
         font-size: 14px;
+    }
+
+    .hint-box {
+        max-width: 250px;
+        left: 50%;
+        transform: translateX(-50%) translateY(150%);
+    }
+
+    .hint-box.show {
+        transform: translateX(-50%) translateY(0);
     }
 }
 
