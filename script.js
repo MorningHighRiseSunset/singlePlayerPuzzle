@@ -942,6 +942,7 @@ class ScrabbleGame {
 
     setupHintSystem() {
         const hints = [
+            "Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!",
             "Triple Word Score (TW) squares multiply the entire word score by 3!",
             "Triple Letter Score (TL) squares multiply just that letter's score by 3!",
             "Using all 7 tiles in one move gives you a 50-point bonus!",
@@ -987,7 +988,6 @@ class ScrabbleGame {
             "Look for opportunities to play 'bingos' (using all 7 tiles) for the bonus.",
             "Consider the remaining tiles when planning your strategy.",
             "Some premium squares are more valuable than others based on playable words.",
-            "Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!",
             "Blank tiles (★) can represent any letter - choose wisely for maximum impact!",
             "The center star (⚜) in the middle of the board must be covered on the first turn.",
             "Premium squares with multiple effects compound - plan combinations carefully!",
@@ -1009,47 +1009,49 @@ class ScrabbleGame {
         const hintBox = document.getElementById("hint-box");
         const hintText = document.getElementById("hint-text");
 
-        // Fisher-Yates shuffle algorithm
-        const shuffleArray = (array) => {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
+        // Fisher-Yates shuffle algorithm for hints excluding the first one
+        const shuffleArrayExceptFirst = (array) => {
+            for (let i = array.length - 1; i > 1; i--) { // Start from 1 to leave the first element
+                const j = 1 + Math.floor(Math.random() * (i)); // Only swap elements from 1 onwards
                 [array[i], array[j]] = [array[j], array[i]];
             }
             return array;
         };
 
-        // Create a shuffled copy of hints
-        let shuffledHints = shuffleArray([...hints]);
+        // Create a shuffled copy of hints except for the first one
+        let shuffledHints = shuffleArrayExceptFirst([...hints]);
 
         const showNextHint = () => {
-            // If we've shown all hints, reshuffle and start over
-            if (currentHintIndex >= shuffledHints.length) {
-                shuffledHints = shuffleArray([...hints]);
-                currentHintIndex = 0;
-            }
-
-            hintText.textContent = shuffledHints[currentHintIndex];
+            const currentHint = shuffledHints[currentHintIndex];
+            hintText.textContent = currentHint;
             hintBox.classList.add("show");
+
+            const hideDelay = currentHint.includes("Contact Maurice's Email")
+                ? 8000 // 6 seconds for the specific hint
+                : 4000; // 5 seconds for all other hints
 
             setTimeout(() => {
                 hintBox.classList.remove("show");
-            }, 5000); // Hide after 5 seconds
+            }, hideDelay);
 
             currentHintIndex++;
+            if (currentHintIndex >= shuffledHints.length) {
+                shuffledHints = shuffleArrayExceptFirst([...hints]);
+                currentHintIndex = 1; // Start from the first shuffled hint
+            }
         };
 
-        // Show first hint after 5 seconds
-        setTimeout(() => {
-            showNextHint();
-            // Then show new hints every 30 seconds
-            setInterval(showNextHint, 30000);
-        }, 5000);
+        // Show first hint immediately after loading
+        showNextHint();
 
+        // Then show new hints every 30 seconds starting after the first
+        setInterval(showNextHint, 30000);
+        
         // Show random hint on hover
         hintBox.addEventListener("mouseenter", () => {
             // Show a random hint from the shuffled array
             hintText.textContent =
-                shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
+                shuffledHints[Math.floor(Math.random() * (shuffledHints.length - 1)) + 1];
             hintBox.classList.add("show");
         });
 
