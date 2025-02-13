@@ -1,3 +1,10 @@
+window.addEventListener('beforeunload', (event) => {
+    // Set a returnValue to trigger a confirmation dialog
+    event.preventDefault(); // Prevents the unload
+    event.returnValue = ''; // Triggers the browser's confirmation dialog
+});
+
+
 function isMobileDevice() {
     return (
         window.innerWidth <= 768 ||
@@ -7357,4 +7364,10 @@ function isParallelPlacement(board, word, row, col, isHorizontal) {
     }
 
     return false;
+    window.addEventListener('beforeunload', (event) => {
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
+    this.init();
 }
