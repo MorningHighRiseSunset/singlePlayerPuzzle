@@ -6313,58 +6313,73 @@ class ScrabbleGame {
     announceWinner() {
         const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
         const finalScore = Math.max(this.playerScore, this.aiScore);
-
+    
         let winOverlay = document.querySelector(".win-overlay");
         if (!winOverlay) {
             winOverlay = document.createElement("div");
             winOverlay.className = "win-overlay";
-
+            
             const messageBox = document.createElement("div");
             messageBox.className = "win-message";
             winOverlay.appendChild(messageBox);
-
+    
             document.body.appendChild(winOverlay);
         }
-
-        // Get the message box
+        
         const messageBox = winOverlay.querySelector(".win-message");
         messageBox.innerHTML = `
-      <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
-      <p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
-      <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
-      <p>Player: ${this.playerScore}</p>
-      <p>Computer: ${this.aiScore}</p>
-      <button onclick="location.reload()" 
-              style="padding: 10px 20px; 
-                     margin-top: 20px; 
-                     background-color: #4CAF50; 
-                     color: white; 
-                     border: none; 
-                     border-radius: 5px; 
-                     cursor: pointer;
-                     font-size: 1.1em;">
-          Play Again
-      </button>
-  `;
-
-        // Clear any existing classes
+          <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
+          <p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
+          <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
+          <p>Player: ${this.playerScore}</p>
+          <p>Computer: ${this.aiScore}</p>
+          <button onclick="location.reload()" 
+                  style="padding: 10px 20px; 
+                         margin-top: 20px; 
+                         background-color: #4CAF50; 
+                         color: white; 
+                         border: none; 
+                         border-radius: 5px; 
+                         cursor: pointer;
+                         font-size: 1.1em;">
+              Play Again
+          </button>
+      `;
+    
+        // Allow page scrolling
+        winOverlay.style.position = "fixed";
+        winOverlay.style.width = "100%";
+        winOverlay.style.height = "100%";
+        winOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        winOverlay.style.pointerEvents = "none"; // Ensure it doesn't block interactions with the page
+    
+        messageBox.style.pointerEvents = "auto"; // Allow interaction with the message box
+    
+    
+        // Add class to make only message box fixed
+        messageBox.style.position = "fixed";
+        messageBox.style.top = "50%";
+        messageBox.style.left = "50%";
+        messageBox.style.transform = "translate(-50%, -50%)";
+        messageBox.style.zIndex = "1100"; // Ensure it's above other elements
+    
+        // Clear existing classes
         winOverlay.classList.remove("active", "lose");
         messageBox.classList.remove("celebrate");
-
-        // Add appropriate classes
+    
+        // Add classes
         if (winner === "Computer") {
             winOverlay.classList.add("lose");
         }
-
-        // Small delay to ensure transitions work properly
+    
         requestAnimationFrame(() => {
             winOverlay.classList.add("active");
             messageBox.classList.add("celebrate");
-
-            // Create the confetti/emoji effect
+    
+            // Create confetti effect
             this.createConfettiEffect();
         });
-    }
+    }    
 
     createConfettiEffect() {
         // Different effects for win vs lose
