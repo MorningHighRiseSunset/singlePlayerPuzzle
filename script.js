@@ -6318,14 +6318,14 @@ class ScrabbleGame {
         if (!winOverlay) {
             winOverlay = document.createElement("div");
             winOverlay.className = "win-overlay";
-            
+    
             const messageBox = document.createElement("div");
             messageBox.className = "win-message";
             winOverlay.appendChild(messageBox);
     
             document.body.appendChild(winOverlay);
         }
-        
+    
         const messageBox = winOverlay.querySelector(".win-message");
         messageBox.innerHTML = `
           <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
@@ -6346,28 +6346,23 @@ class ScrabbleGame {
           </button>
       `;
     
-        // Allow page scrolling
-        winOverlay.style.position = "fixed";
-        winOverlay.style.width = "100%";
-        winOverlay.style.height = "100%";
-        winOverlay.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-        winOverlay.style.pointerEvents = "none"; // Ensure it doesn't block interactions with the page
-    
-        messageBox.style.pointerEvents = "auto"; // Allow interaction with the message box
-    
-    
-        // Add class to make only message box fixed
+        // Position message box to allow interaction and scrolling
+        winOverlay.style.position = "static"; // No position fixed for the overlay itself
         messageBox.style.position = "fixed";
         messageBox.style.top = "50%";
         messageBox.style.left = "50%";
         messageBox.style.transform = "translate(-50%, -50%)";
         messageBox.style.zIndex = "1100"; // Ensure it's above other elements
     
-        // Clear existing classes
+        // Allow interactions with the page
+        winOverlay.style.pointerEvents = "none";
+        messageBox.style.pointerEvents = "auto";
+    
+        // Remove the active and lose winOverlay classes
         winOverlay.classList.remove("active", "lose");
         messageBox.classList.remove("celebrate");
     
-        // Add classes
+        // Add appropriate classes if necessary
         if (winner === "Computer") {
             winOverlay.classList.add("lose");
         }
