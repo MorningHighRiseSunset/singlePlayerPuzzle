@@ -532,71 +532,74 @@ class ScrabbleGame {
     async validateWord() {
         if (this.placedTiles.length === 0) return false;
     
-        // Get all formed words 
+        // Get all formed words
         const formedWords = this.getFormedWords();
         if (formedWords.length === 0) return false;
     
-        // First check internal dictionary
-        const allWordsValid = formedWords.every(wordInfo =>
-            this.dictionary.has(wordInfo.word.toLowerCase())
-        );
+        // Triple check system for each word
+        for (const wordInfo of formedWords) {
+            const word = wordInfo.word.toLowerCase();
+            let isValid = false;
     
-        // If word is not in internal dictionary, check external API
-        if (!allWordsValid) {
-            try {
-                // Check each word that's not in internal dictionary
-                for (const wordInfo of formedWords) {
-                    const word = wordInfo.word.toLowerCase();
-                    if (!this.dictionary.has(word)) {
-                        let isValid = false;
-    
-                        // Try different language endpoints based on current language setting
-                        const langEndpoints = {
-                            en: 'https://api.dictionaryapi.dev/api/v2/entries/en/',
-                            es: 'https://api.dictionaryapi.dev/api/v2/entries/es/',
-                            fr: 'https://api.dictionaryapi.dev/api/v2/entries/fr/',
-                            zh: 'https://api.dictionaryapi.dev/api/v2/entries/zh/'
-                        };
-    
-                        const endpoint = langEndpoints[this.currentLanguage];
-                        if (!endpoint) return false;
-    
-                        const response = await fetch(`${endpoint}${word}`);
-                        if (response.ok) {
-                            isValid = true;
-                            // Add to internal dictionary for future use
-                            this.dictionary.add(word);
-                        }
-    
-                        // If not valid, check Datamuse API
-                        if (!isValid && word.length > 2) { // Skip two-letter words
-                            const datamuseResponse = await fetch(`https://api.datamuse.com/words?sp=${word}`);
-                            const datamuseData = await datamuseResponse.json();
-                            if (datamuseData.length > 0 && datamuseData.some(entry => entry.word === word)) {
-                                isValid = true;
-                                this.dictionary.add(word);
-                            }
-                        }
-    
-                        if (!isValid) return false;
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking word in external dictionary:', error);
-                return false;
+            // 1. First check: Internal dictionary
+            if (this.dictionary.has(word)) {
+                isValid = true;
+                continue;
             }
+    
+            // 2. Second check: Multiple API sources
+            try {
+                // Check Free Dictionary API
+                const freeDictResponse = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/${this.currentLanguage}/${word}`);
+                if (freeDictResponse.ok) {
+                    this.dictionary.add(word); // Add to internal dictionary
+                    isValid = true;
+                    continue;
+                }
+    
+                // Check Datamuse API for word verification
+                const datamuseResponse = await fetch(`https://api.datamuse.com/words?sp=${word}&md=d`);
+                const datamuseData = await datamuseResponse.json();
+                if (datamuseData.length > 0 && datamuseData.some(entry => entry.word === word)) {
+                    this.dictionary.add(word);
+                    isValid = true;
+                    continue;
+                }
+    
+                // Check WordsAPI as final API check
+                const wordsApiResponse = await fetch(`https://wordsapiv1.p.rapidapi.com/words/${word}`, {
+                    headers: {
+                        'X-RapidAPI-Host': 'wordsapiv1.p.rapidapi.com'
+                    }
+                });
+                if (wordsApiResponse.ok) {
+                    this.dictionary.add(word);
+                    isValid = true;
+                    continue;
+                }
+    
+            } catch (error) {
+                console.warn(`API validation error for word ${word}:`, error);
+            }
+    
+            // 3. Third check: Pattern matching and rules
+            if (!isValid) {
+                isValid = this.validateWordPattern(word);
+            }
+    
+            if (!isValid) return false;
         }
     
-        // First move must connect to center square [7,7]
+        // First move must connect to center square
         if (this.isFirstMove) {
             let connectedToCenter = false;
             for (const wordInfo of formedWords) {
                 if (this.isConnectedToCenter(
-                        wordInfo.startPos.row,
-                        wordInfo.startPos.col,
-                        wordInfo.word.length,
-                        wordInfo.direction === "horizontal"
-                    )) {
+                    wordInfo.startPos.row,
+                    wordInfo.startPos.col,
+                    wordInfo.word.length,
+                    wordInfo.direction === "horizontal"
+                )) {
                     connectedToCenter = true;
                     break;
                 }
@@ -608,7 +611,53 @@ class ScrabbleGame {
         }
     
         return true;
-    }    
+    }
+
+    validateWordPattern(word) {
+        // Additional pattern validation rules
+        
+        // Check for common word patterns
+        const commonPatterns = {
+            suffixes: ['ED', 'ING', 'S', 'ES', 'MENT', 'TION'],
+            prefixes: ['RE', 'UN', 'IN', 'DIS', 'PRE'],
+            vowelPatterns: /[AEIOU]/g,
+        };
+    
+        // Must contain at least one vowel (unless it's a two-letter word)
+        if (word.length > 2 && !word.match(commonPatterns.vowelPatterns)) {
+            return false;
+        }
+    
+        // Check if it's a valid modification of an existing word
+        const existingWords = this.getExistingWords();
+        for (const existingWord of existingWords) {
+            // Check if it's a valid suffix addition
+            for (const suffix of commonPatterns.suffixes) {
+                if (word === existingWord + suffix.toLowerCase()) {
+                    return true;
+                }
+            }
+    
+            // Check if it's a valid prefix addition
+            for (const prefix of commonPatterns.prefixes) {
+                if (word === prefix.toLowerCase() + existingWord) {
+                    return true;
+                }
+            }
+        }
+    
+        // Check for valid two-letter words
+        if (word.length === 2) {
+            const validTwoLetterWords = new Set([
+                'am', 'an', 'as', 'at', 'be', 'by', 'do', 'go', 'he', 'hi', 'if',
+                'in', 'is', 'it', 'me', 'my', 'no', 'of', 'on', 'or', 'so', 'to',
+                'up', 'us', 'we'
+            ]);
+            return validTwoLetterWords.has(word);
+        }
+    
+        return false;
+    }
 
     evaluatePositionStrategy(play) {
         let value = 0;
