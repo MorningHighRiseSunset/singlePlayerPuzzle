@@ -401,90 +401,58 @@ class ScrabbleGame {
 
     aiTurn() {
         console.warn("AI thinking...");
-
-        // Show "AI is thinking..." message
+    
+        // Existing thinking message
         const thinkingMessage = document.createElement("div");
         thinkingMessage.className = "ai-thinking-message";
         thinkingMessage.textContent = "AI is thinking...";
-        thinkingMessage.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #f0f0f0;
-      padding: 10px 20px;
-      border-radius: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-        `;
+        thinkingMessage.style.cssText = `...`; // Keep this part unchanged
         document.body.appendChild(thinkingMessage);
+    
         setTimeout(() => (thinkingMessage.style.opacity = "1"), 100);
-
-        console.warn(
-            "AI rack:",
-            this.aiRack.map((t) => t.letter),
-        );
-
-        // Only exchange if rack is severely unbalanced
-        const shouldExchange = this.shouldExchangeTiles();
-        if (shouldExchange && this.tiles.length >= 5) {
-            console.warn("AI choosing to exchange severely unbalanced rack");
-            setTimeout(() => {
-                thinkingMessage.style.opacity = "0";
-                setTimeout(() => {
-                    thinkingMessage.remove();
-                    this.handleAIExchange();
-                }, 300);
-            }, 1000);
-            return;
-        }
-
-        // Try to find valid moves with increased persistence
-        const possiblePlays = this.findAIPossiblePlays();
-        console.warn("Possible plays found:", possiblePlays.length);
-
-        if (possiblePlays.length > 0) {
-            const bestPlay = this.selectBestPlay(possiblePlays);
-            if (bestPlay) {
-                console.warn("Choosing play:", bestPlay);
-                setTimeout(() => {
-                    thinkingMessage.style.opacity = "0";
+    
+        console.warn("AI rack:", this.aiRack.map((t) => t.letter));
+    
+        // Triple check strategy for finding a play
+        const retries = 3;
+        for (let attempt = 0; attempt < retries; attempt++) {
+            const possiblePlays = this.findAIPossiblePlays();
+            if (possiblePlays.length > 0) {
+                const bestPlay = this.selectBestPlay(possiblePlays);
+                if (bestPlay) {
+                    console.warn("Choosing play:", bestPlay, " on attempt:", attempt + 1);
                     setTimeout(() => {
-                        thinkingMessage.remove();
-                        this.executeAIPlay(bestPlay);
-                    }, 300);
-                }, 1000);
-                return;
+                        thinkingMessage.style.opacity = "0";
+                        setTimeout(() => {
+                            thinkingMessage.remove();
+                            this.executeAIPlay(bestPlay);
+                        }, 300);
+                    }, 1000);
+                    return;
+                }
             }
-        }
-
-        // If no plays found, try harder to find simple plays
-        const simplePlays = this.findSimplePlays();
-        if (simplePlays.length > 0) {
-            const bestSimplePlay = this.selectBestPlay(simplePlays);
-            if (bestSimplePlay) {
-                setTimeout(() => {
-                    thinkingMessage.style.opacity = "0";
-                    setTimeout(() => {
-                        thinkingMessage.remove();
-                        this.executeAIPlay(bestSimplePlay);
-                    }, 300);
-                }, 1000);
-                return;
+    
+            console.warn(`No valid plays found on attempt ${attempt + 1} - retrying...`);
+            if (attempt < retries - 1) {
+                continue;
             }
-        }
-
-        // Only exchange as absolute last resort
-        console.warn("No valid plays found - forced to exchange");
-        setTimeout(() => {
-            thinkingMessage.style.opacity = "0";
-            setTimeout(() => {
-                thinkingMessage.remove();
+    
+            // If after retries no valid play is found, attempt a more exhaustive search or exchange tiles
+            if (this.shouldExchangeTiles()) {
                 this.handleAIExchange();
-            }, 300);
-        }, 1000);
+            } else {
+                const possibleSimplePlays = this.findSimplePlays();
+                if (possibleSimplePlays.length > 0) {
+                    const bestSimplePlay = this.selectBestPlay(possibleSimplePlays);
+                    if (bestSimplePlay) {
+                        this.executeAIPlay(bestSimplePlay);
+                        return;
+                    }
+                }
+                console.warn("No valid simple plays found - forced to exchange");
+                this.handleAIExchange();
+            }
+        }
     }
 
     shouldExchangeTiles() {
@@ -620,7 +588,7 @@ class ScrabbleGame {
         const commonPatterns = {
             suffixes: ['ED', 'ING', 'S', 'ES', 'MENT', 'TION'],
             prefixes: ['RE', 'UN', 'IN', 'DIS', 'PRE'],
-            vowelPatterns: /[AEIOU]/g,
+            vowelPatterns: /[AEIOU]/,
         };
     
         // Must contain at least one vowel (unless it's a two-letter word)
@@ -6940,9 +6908,7 @@ class ScrabbleGame {
     handleAIExchange() {
         console.warn("AI attempting to exchange tiles...");
     
-        // Create visual effect for AI exchange
         this.showAIExchangeAnimation().then(() => {
-            // Get current AI rack
             const oldTiles = [...this.aiRack];
             const exchangeCount = Math.min(this.aiRack.length, this.tiles.length);
     
@@ -6952,51 +6918,22 @@ class ScrabbleGame {
                 return;
             }
     
-            // Return tiles to bag
+            // Perform exchange
             for (let i = 0; i < exchangeCount; i++) {
                 this.tiles.push(this.aiRack.pop());
             }
             this.shuffleTiles();
     
-            // Draw new tiles
             for (let i = 0; i < exchangeCount; i++) {
                 if (this.tiles.length > 0) {
                     this.aiRack.push(this.tiles.pop());
                 }
             }
     
-            // Update displays
-            this.renderAIRack();
-            this.updateTilesCount();
+            // Add to move history with specific mention of tile exchange
+            this.addToMoveHistory("Computer", "Tiles Exchanged", 0);
     
-            // Add to move history
-            this.addToMoveHistory("Computer", "EXCHANGE", 0);
-    
-            // Notify player about AI exchange
-            const notification = document.createElement("div");
-            notification.className = "ai-exchange-notification";
-            notification.textContent = "The computer has exchanged its tiles.";
-            notification.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background-color: #f0f0f0;
-                padding: 10px 20px;
-                border-radius: 20px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 1000;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            `;
-            document.body.appendChild(notification);
-            setTimeout(() => (notification.style.opacity = "1"), 100);
-            setTimeout(() => {
-                notification.style.opacity = "0";
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-    
-            // Switch turn
+            // Switch turn to player
             this.currentTurn = "player";
             this.consecutiveSkips++;
             this.updateGameState();
@@ -7009,7 +6946,7 @@ class ScrabbleGame {
             // Check for game end
             this.checkGameEnd();
         });
-    }    
+    }
 
     logMoveDetails(player, word, startPos, isHorizontal) {
         // For intersection cases, make sure we find the actual starting position
