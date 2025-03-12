@@ -4827,14 +4827,124 @@ evaluateWordWithBlanks(word, blanksUsed) {
     }
 
     fillRacks() {
+        // Define letter frequency based on word formation potential
+        const commonLetters = {
+            'E': 25,  // Increased frequency for common letters
+            'A': 20,
+            'R': 18,
+            'I': 18,
+            'O': 18,
+            'T': 15,
+            'N': 15,
+            'S': 15,
+            'L': 12,
+            'U': 10,
+            // Less common letters have reduced frequency
+            'D': 8,
+            'G': 6,
+            'B': 4,
+            'C': 4,
+            'M': 4,
+            'P': 4,
+            'F': 4,
+            'H': 4,
+            'V': 3,
+            'W': 3,
+            'Y': 3,
+            'K': 2,
+            'J': 1,
+            'X': 1,
+            'Q': 1,
+            'Z': 1,
+            '*': 4  // Increased wild tile frequency for AI
+        };
+    
+        // Helper function to get weighted random letter
+        const getWeightedLetter = () => {
+            const totalWeight = Object.values(commonLetters).reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            
+            for (const [letter, weight] of Object.entries(commonLetters)) {
+                random -= weight;
+                if (random <= 0) return letter;
+            }
+            return 'E'; // Fallback to most common letter
+        };
+    
+        // Fill player's rack normally
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
             this.playerRack.push(this.tiles.pop());
         }
+    
+        // Fill AI's rack with weighted distribution
         while (this.aiRack.length < 7 && this.tiles.length > 0) {
-            this.aiRack.push(this.tiles.pop());
+            // 70% chance to get a weighted letter, 30% chance for random tile
+            if (Math.random() < 0.7) {
+                const letter = getWeightedLetter();
+                // Find a tile with this letter in the bag
+                const tileIndex = this.tiles.findIndex(t => t.letter === letter);
+                if (tileIndex !== -1) {
+                    this.aiRack.push(this.tiles.splice(tileIndex, 1)[0]);
+                } else {
+                    // If letter not found, take random tile
+                    this.aiRack.push(this.tiles.pop());
+                }
+            } else {
+                this.aiRack.push(this.tiles.pop());
+            }
         }
+    
+        // Ensure AI has at least one wild tile if available
+        if (!this.aiRack.some(tile => tile.letter === '*')) {
+            const wildTileIndex = this.tiles.findIndex(t => t.letter === '*');
+            if (wildTileIndex !== -1) {
+                const randomIndex = Math.floor(Math.random() * this.aiRack.length);
+                // Swap a random tile with the wild tile
+                this.tiles.push(this.aiRack[randomIndex]);
+                this.aiRack[randomIndex] = this.tiles.splice(wildTileIndex, 1)[0];
+            }
+        }
+    
+        // Balance vowels and consonants for better word formation
+        this.balanceAIRack();
+    
+        // Update displays
         this.renderRack();
+        this.renderAIRack();
         this.updateTilesCount();
+    }
+
+    balanceAIRack() {
+        const vowels = ['A', 'E', 'I', 'O', 'U'];
+        const vowelCount = this.aiRack.filter(tile => vowels.includes(tile.letter)).length;
+    
+        // Aim for 2-3 vowels in the rack
+        if (vowelCount < 2 || vowelCount > 4) {
+            const desiredVowelCount = 3;
+            while (this.tiles.length > 0 && 
+                   this.aiRack.filter(tile => vowels.includes(tile.letter)).length !== desiredVowelCount) {
+                
+                // Remove excess vowels or consonants
+                const indexToRemove = this.aiRack.findIndex(tile => 
+                    vowelCount > 3 ? vowels.includes(tile.letter) : !vowels.includes(tile.letter)
+                );
+    
+                if (indexToRemove !== -1) {
+                    this.tiles.push(this.aiRack.splice(indexToRemove, 1)[0]);
+                    
+                    // Add needed vowel or consonant
+                    const neededType = vowelCount < 2 ? vowels : 
+                        ['R', 'S', 'T', 'L', 'N']; // Common consonants
+                    
+                    const tileIndex = this.tiles.findIndex(t => neededType.includes(t.letter));
+                    if (tileIndex !== -1) {
+                        this.aiRack.push(this.tiles.splice(tileIndex, 1)[0]);
+                    } else {
+                        this.aiRack.push(this.tiles.pop());
+                    }
+                }
+            }
+        }
     }
 
     renderRack() {
