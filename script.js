@@ -106,7 +106,248 @@ class ScrabbleGame {
         this.exchangePortal = null;
         this.exchangingTiles = [];
         this.generateTileBag();
+        this.selectedTile = null;
+        this.isMobile = isMobileDevice();
         this.init();
+    }
+
+    setupEventListeners() {
+        // Initial highlight of valid placements
+        this.highlightValidPlacements();
+    
+        // Update highlights when game state changes
+        document.addEventListener("click", () => {
+            this.highlightValidPlacements();
+        });
+    
+        // Add exchange system setup
+        this.setupExchangeSystem();
+    
+        // Play word button
+        document.getElementById("play-word").addEventListener("click", () => this.playWord());
+    
+        // Shuffle rack button
+        document.getElementById("shuffle-rack").addEventListener("click", async () => {
+            const rack = document.getElementById("tile-rack");
+            const tiles = [...rack.children];
+    
+            // Disable tile dragging during animation
+            tiles.forEach((tile) => (tile.draggable = false));
+    
+            // Visual shuffle animation
+            for (let i = 0; i < 5; i++) { // 5 visual shuffles
+                await new Promise((resolve) => {
+                    tiles.forEach((tile) => {
+                        tile.style.transition = "transform 0.2s ease";
+                        tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
+                    });
+                    setTimeout(resolve, 200);
+                });
+            }
+    
+            // Reset positions with transition
+            tiles.forEach((tile) => {
+                tile.style.transform = "none";
+            });
+    
+            // Actual shuffle logic
+            for (let i = this.playerRack.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+            }
+    
+            // Wait for position reset animation to complete
+            setTimeout(() => {
+                this.renderRack();
+            }, 200);
+    
+            // Re-enable dragging
+            setTimeout(() => {
+                const newTiles = document.querySelectorAll("#tile-rack .tile");
+                newTiles.forEach((tile) => (tile.draggable = true));
+            }, 400);
+        });
+    
+        // Skip turn button
+        document.getElementById("skip-turn").addEventListener("click", () => {
+            if (this.currentTurn === "player") {
+                this.consecutiveSkips++;
+                this.currentTurn = "ai";
+                this.addToMoveHistory("Player", "SKIP", 0);
+                this.updateGameState();
+                this.highlightValidPlacements();
+                if (!this.checkGameEnd()) {
+                    this.aiTurn();
+                }
+            }
+        });
+    
+        // Mobile-specific tile selection and placement
+        if (this.isMobile) {
+            // Handle tile selection from rack
+            document.getElementById("tile-rack").addEventListener("click", (e) => {
+                if (this.currentTurn !== "player") return;
+                
+                const tileElement = e.target.closest(".tile");
+                if (!tileElement) return;
+    
+                // Toggle selection
+                if (this.selectedTile === tileElement) {
+                    this.deselectTile();
+                } else {
+                    this.selectTile(tileElement);
+                }
+            });
+    
+            // Handle board cell clicks for placement
+            document.querySelectorAll(".board-cell").forEach(cell => {
+                cell.addEventListener("click", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    if (this.selectedTile) {
+                        const row = parseInt(cell.dataset.row);
+                        const col = parseInt(cell.dataset.col);
+                        const tileIndex = this.selectedTile.dataset.index;
+                        
+                        if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
+                            this.placeTile(this.playerRack[tileIndex], row, col);
+                            this.deselectTile();
+                        } else {
+                            alert("Invalid placement! Check placement rules.");
+                        }
+                    }
+                });
+            });
+    
+            // Handle placed tile clicks for returning to rack
+            document.addEventListener("click", (e) => {
+                if (this.currentTurn !== "player") return;
+                
+                const tileElement = e.target.closest(".tile");
+                if (!tileElement || !tileElement.closest(".board-cell")) return;
+    
+                const cell = tileElement.closest(".board-cell");
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+    
+                // Find the placed tile
+                const placedTileIndex = this.placedTiles.findIndex(t => 
+                    t.row === row && t.col === col);
+    
+                if (placedTileIndex !== -1) {
+                    // Return tile to rack
+                    const placedTile = this.placedTiles[placedTileIndex];
+                    this.playerRack.push(placedTile.tile);
+                    this.board[row][col] = null;
+                    cell.innerHTML = "";
+                    this.placedTiles.splice(placedTileIndex, 1);
+                    this.renderRack();
+                    this.highlightValidPlacements();
+                }
+            });
+        }
+    
+        // Quit game button
+        const quitButton = document.getElementById("quit-game");
+        if (quitButton) {
+            quitButton.addEventListener("click", () => {
+                if (this.gameEnded) return; // Prevent multiple triggers
+    
+                // Set the computer as winner since player quit
+                this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+                this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+                this.gameEnded = true;
+    
+                // Update scores before animation
+                this.updateScores();
+    
+                // Add the quit move to history
+                if (this.moveHistory) {
+                    this.moveHistory.push({
+                        player: "Player",
+                        word: "QUIT",
+                        score: 0,
+                        timestamp: new Date(),
+                    });
+                    this.updateMoveHistory();
+                }
+    
+                // Trigger game over animation
+                this.announceWinner();
+            });
+        }
+    
+        // Print history button
+        document.getElementById("print-history").addEventListener("click", async () => {
+            const printWindow = window.open("", "_blank");
+            const gameDate = new Date().toLocaleString();
+    
+            // Show loading message
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Puzzle Game History - ${gameDate}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+                            .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                            .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
+                            .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
+                            .part-of-speech { color: #e67e22; font-style: italic; }
+                            .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+                            .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loading">Loading definitions...</div>
+                    </body>
+                </html>
+            `);
+    
+            // Gather all unique words from move history
+            const uniqueWords = [...new Set(
+                this.moveHistory
+                    .map((move) => move.word)
+                    .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+            )];
+    
+            // Fetch definitions for all words
+            const wordDefinitions = new Map();
+            for (const word of uniqueWords) {
+                const definitions = await this.getWordDefinition(word);
+                if (definitions) {
+                    wordDefinitions.set(word, definitions);
+                }
+            }
+    
+            // Generate and set the content
+            const content = this.generatePrintContent(gameDate, wordDefinitions);
+            printWindow.document.body.innerHTML = content;
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
+    }    
+
+    selectTile(tileElement) {
+        // Deselect previously selected tile
+        if (this.selectedTile) {
+            this.selectedTile.classList.remove("selected");
+        }
+        
+        // Select new tile
+        this.selectedTile = tileElement;
+        tileElement.classList.add("selected");
+    
+        // Highlight valid placements
+        this.highlightValidPlacements();
+    }
+    
+    deselectTile() {
+        if (this.selectedTile) {
+            this.selectedTile.classList.remove("selected");
+            this.selectedTile = null;
+        }
     }
 
     async aiTurn() {
