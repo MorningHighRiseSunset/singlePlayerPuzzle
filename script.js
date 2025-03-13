@@ -7382,89 +7382,88 @@ evaluateWordWithBlanks(word, blanksUsed) {
     setupEventListeners() {
         // Initial highlight of valid placements
         this.highlightValidPlacements();
-
+    
         // Update highlights when game state changes
         document.addEventListener("click", () => {
             this.highlightValidPlacements();
         });
-
+    
         // Add exchange system setup
         this.setupExchangeSystem();
-
-        document
-            .getElementById("play-word")
-            .addEventListener("click", () => this.playWord());
-
-        document
-            .getElementById("shuffle-rack")
-            .addEventListener("click", async () => {
-                const rack = document.getElementById("tile-rack");
-                const tiles = [...rack.children];
-
-                // Disable tile dragging during animation
-                tiles.forEach((tile) => (tile.draggable = false));
-
-                // Visual shuffle animation
-                for (let i = 0; i < 5; i++) {
-                    // 5 visual shuffles
-                    await new Promise((resolve) => {
-                        tiles.forEach((tile) => {
-                            tile.style.transition = "transform 0.2s ease";
-                            tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
-                        });
-                        setTimeout(resolve, 200);
+    
+        // Play word button
+        document.getElementById("play-word").addEventListener("click", () => this.playWord());
+    
+        // Shuffle rack button
+        document.getElementById("shuffle-rack").addEventListener("click", async () => {
+            const rack = document.getElementById("tile-rack");
+            const tiles = [...rack.children];
+    
+            // Disable tile dragging during animation
+            tiles.forEach((tile) => (tile.draggable = false));
+    
+            // Visual shuffle animation
+            for (let i = 0; i < 5; i++) { // 5 visual shuffles
+                await new Promise((resolve) => {
+                    tiles.forEach((tile) => {
+                        tile.style.transition = "transform 0.2s ease";
+                        tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
                     });
-                }
-
-                // Reset positions with transition
-                tiles.forEach((tile) => {
-                    tile.style.transform = "none";
+                    setTimeout(resolve, 200);
                 });
-
-                // Actual shuffle logic
-                for (let i = this.playerRack.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.playerRack[i], this.playerRack[j]] = [
-                        this.playerRack[j],
-                        this.playerRack[i],
-                    ];
-                }
-
-                // Wait for position reset animation to complete
-                setTimeout(() => {
-                    this.renderRack();
-                }, 200);
-
-                // Re-enable dragging
-                setTimeout(() => {
-                    const newTiles = document.querySelectorAll("#tile-rack .tile");
-                    newTiles.forEach((tile) => (tile.draggable = true));
-                }, 400);
+            }
+    
+            // Reset positions with transition
+            tiles.forEach((tile) => {
+                tile.style.transform = "none";
             });
-
+    
+            // Actual shuffle logic
+            for (let i = this.playerRack.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+            }
+    
+            // Wait for position reset animation to complete
+            setTimeout(() => {
+                this.renderRack();
+            }, 200);
+    
+            // Re-enable dragging
+            setTimeout(() => {
+                const newTiles = document.querySelectorAll("#tile-rack .tile");
+                newTiles.forEach((tile) => (tile.draggable = true));
+            }, 400);
+        });
+    
+        // Skip turn button
         document.getElementById("skip-turn").addEventListener("click", () => {
-            this.consecutiveSkips++;
-            this.currentTurn = "ai";
-            this.updateGameState();
-            this.highlightValidPlacements();
-            if (!this.checkGameEnd()) {
-                this.aiTurn();
+            if (this.currentTurn === "player") {
+                this.consecutiveSkips++;
+                this.currentTurn = "ai";
+                this.addToMoveHistory("Player", "SKIP", 0);
+                this.updateGameState();
+                this.highlightValidPlacements();
+                if (!this.checkGameEnd()) {
+                    this.aiTurn();
+                }
             }
         });
-
+    
+        // Quit game button
         const quitButton = document.getElementById("quit-game");
         if (quitButton) {
             quitButton.addEventListener("click", () => {
                 if (this.gameEnded) return; // Prevent multiple triggers
-
+    
                 // Set the computer as winner since player quit
                 this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
                 this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
                 this.gameEnded = true;
-
+    
                 // Update scores before animation
                 this.updateScores();
-
+    
                 // Add the quit move to history
                 if (this.moveHistory) {
                     this.moveHistory.push({
@@ -7475,102 +7474,136 @@ evaluateWordWithBlanks(word, blanksUsed) {
                     });
                     this.updateMoveHistory();
                 }
-
+    
                 // Trigger game over animation
                 this.announceWinner();
             });
         }
-
-        document
-            .getElementById("print-history")
-            .addEventListener("click", async () => {
-                const printWindow = window.open("", "_blank");
-                const gameDate = new Date().toLocaleString();
-
-                // Show loading message
-                printWindow.document.write(`
-                        <html>
-                            <head>
-                                <title>Puzzle Game History - ${gameDate}</title>
-                                <style>
-                                    body {
-                                        font-family: Arial, sans-serif;
-                                        margin: 20px;
-                                        line-height: 1.6;
-                                    }
-                                    .header {
-                                        text-align: center;
-                                        margin-bottom: 20px;
-                                        padding-bottom: 10px;
-                                        border-bottom: 2px solid #333;
-                                    }
-                                    .move {
-                                        margin: 20px 0;
-                                        padding: 15px;
-                                        border: 1px solid #ddd;
-                                        border-radius: 5px;
-                                        background: #f9f9f9;
-                                    }
-                                    .word-header {
-                                        font-size: 1.2em;
-                                        color: #2c3e50;
-                                        margin-bottom: 10px;
-                                    }
-                                    .definitions {
-                                        margin-left: 20px;
-                                        padding: 10px;
-                                        border-left: 3px solid #3498db;
-                                    }
-                                    .part-of-speech {
-                                        color: #e67e22;
-                                        font-style: italic;
-                                    }
-                                    .scores {
-                                        margin: 20px 0;
-                                        padding: 15px;
-                                        background: #f5f5f5;
-                                        border-radius: 5px;
-                                    }
-                                    .loading {
-                                        text-align: center;
-                                        padding: 20px;
-                                        font-style: italic;
-                                        color: #666;
-                                    }
-                                </style>
-                            </head>
-                            <body>
-                                <div class="loading">Loading definitions...</div>
-                            </body>
-                        </html>
-                    `);
-
-                // Gather all unique words from move history
-                const uniqueWords = [
-                    ...new Set(
-                        this.moveHistory
-                        .map((move) => move.word)
-                        .filter((word) => word !== "SKIP" && word !== "EXCHANGE"),
-                    ),
-                ];
-
-                // Fetch definitions for all words
-                const wordDefinitions = new Map();
-                for (const word of uniqueWords) {
-                    const definitions = await this.getWordDefinition(word);
-                    if (definitions) {
-                        wordDefinitions.set(word, definitions);
-                    }
+    
+        // Print history button
+        document.getElementById("print-history").addEventListener("click", async () => {
+            const printWindow = window.open("", "_blank");
+            const gameDate = new Date().toLocaleString();
+    
+            // Show loading message
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Puzzle Game History - ${gameDate}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+                            .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                            .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
+                            .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
+                            .part-of-speech { color: #e67e22; font-style: italic; }
+                            .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+                            .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loading">Loading definitions...</div>
+                    </body>
+                </html>
+            `);
+    
+            // Gather all unique words from move history
+            const uniqueWords = [...new Set(
+                this.moveHistory
+                    .map((move) => move.word)
+                    .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+            )];
+    
+            // Fetch definitions for all words
+            const wordDefinitions = new Map();
+            for (const word of uniqueWords) {
+                const definitions = await this.getWordDefinition(word);
+                if (definitions) {
+                    wordDefinitions.set(word, definitions);
                 }
-
-                // Generate and set the content
-                const content = this.generatePrintContent(gameDate, wordDefinitions);
-                printWindow.document.body.innerHTML = content;
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
+            }
+    
+            // Generate and set the content
+            const content = this.generatePrintContent(gameDate, wordDefinitions);
+            printWindow.document.body.innerHTML = content;
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
+    
+        // Mobile notifications handling
+        if (isMobileDevice()) {
+            const notifications = document.querySelectorAll('.mobile-notice');
+            notifications.forEach(notice => {
+                let startX;
+                let currentX;
+                let isDragging = false;
+    
+                // Touch start handler
+                notice.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    currentX = startX;
+                    isDragging = true;
+                    notice.classList.add('swiping');
+                }, { passive: true });
+    
+                // Touch move handler
+                notice.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                    const diff = currentX - startX;
+                    if (diff > 0) { // Only allow right swipe
+                        notice.style.transform = `translateX(${diff}px)`;
+                    }
+                }, { passive: true });
+    
+                // Touch end handler
+                notice.addEventListener('touchend', () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    notice.classList.remove('swiping');
+                    
+                    if (currentX - startX > 100) { // Swipe threshold
+                        notice.classList.add('removing');
+                        setTimeout(() => notice.remove(), 300);
+                    } else {
+                        notice.style.transform = '';
+                    }
+                });
+    
+                // Double-tap to close
+                let lastTap = 0;
+                notice.addEventListener('touchend', (e) => {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTap;
+                    if (tapLength < 500 && tapLength > 0) {
+                        notice.classList.add('removing');
+                        setTimeout(() => notice.remove(), 300);
+                        e.preventDefault();
+                    }
+                    lastTap = currentTime;
+                });
+    
+                // Make close button more reliable
+                const closeButton = notice.querySelector('.notice-close');
+                if (closeButton) {
+                    closeButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        notice.classList.add('removing');
+                        setTimeout(() => notice.remove(), 300);
+                    });
+    
+                    closeButton.addEventListener('touchend', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        notice.classList.add('removing');
+                        setTimeout(() => notice.remove(), 300);
+                    });
+                }
             });
-    }
+        }
+    }    
 }
 
 // Initialize game when document is loaded
