@@ -687,6 +687,7 @@ button:hover {
 }
 
 /* Mobile Notifications */
+/* Update Mobile Notifications styles */
 .mobile-notifications {
     display: none;
 }
@@ -714,26 +715,53 @@ button:hover {
         gap: 10px;
     }
 
-    .notice-icon {
-        font-size: 18px;
-    }
-
+    /* Update close button styles for better touch targets */
     .notice-close {
         position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
+        right: 0;
+        top: 0;
+        width: 44px; /* Increased touch target */
+        height: 100%; /* Full height of notice */
+        background: rgba(0, 0, 0, 0.1);
         border: none;
         color: white;
-        font-size: 20px;
-        padding: 5px;
+        font-size: 24px;
         cursor: pointer;
-        width: 30px;
-        height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color 0.3s ease;
+    }
+
+    .notice-close:active {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    /* Add swipe indicator */
+    .mobile-notice::after {
+        content: '←';
+        position: absolute;
+        right: 50px;
+        opacity: 0.5;
+        animation: swipeHint 1s infinite;
+    }
+
+    @keyframes swipeHint {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(-5px); }
+    }
+
+    /* Add swipe functionality styles */
+    .mobile-notice.swiping {
+        transition: transform 0.2s ease;
+    }
+
+    .mobile-notice.removing {
+        transition: all 0.3s ease;
+        transform: translateX(100%);
+        opacity: 0;
     }
 
     /* Reorder game elements for mobile */
