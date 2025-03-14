@@ -973,4 +973,9 @@ button:hover {
     transform: scale(1.1);
     box-shadow: 0 0 10px rgba(0, 100, 255, 0.5);
     border: 2px solid #007bff;
+    z-index: 2;
+}
+
+.valid-placement {
+    background-color: rgba(0, 255, 0, 0.1);
 }
