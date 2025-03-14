@@ -5298,120 +5298,120 @@ evaluateWordWithBlanks(word, blanksUsed) {
 
     setupDragListeners() {
         document.addEventListener("dragstart", (e) => {
-            if (
-                e.target.classList.contains("tile") &&
-                this.currentTurn === "player"
-            ) {
+            if (e.target.classList.contains("tile") && this.currentTurn === "player") {
+                // Lock the board
+                const board = document.getElementById("scrabble-board");
+                board.classList.add("board-locked");
+    
+                // Only enable valid drop targets
+                const validCells = document.querySelectorAll(".valid-placement");
+                validCells.forEach(cell => {
+                    cell.classList.add("droppable-active");
+                });
+    
                 e.target.classList.add("dragging");
                 const tileData = {
                     index: e.target.dataset.index,
-                    id: e.target.dataset.id,
+                    id: e.target.dataset.id
                 };
                 e.dataTransfer.setData("text/plain", e.target.dataset.index);
-
+                
                 console.log("Drag started:", tileData);
-
+                
                 e.dataTransfer.effectAllowed = "move";
-
+    
                 const dragImage = e.target.cloneNode(true);
                 dragImage.style.opacity = "0.8";
                 dragImage.style.position = "absolute";
                 dragImage.style.top = "-1000px";
                 document.body.appendChild(dragImage);
-
+    
                 e.dataTransfer.setDragImage(
                     dragImage,
                     dragImage.offsetWidth / 2,
-                    dragImage.offsetHeight / 2,
+                    dragImage.offsetHeight / 2
                 );
-
+    
                 setTimeout(() => {
                     document.body.removeChild(dragImage);
                 }, 0);
             }
         });
-
+    
         document.addEventListener("dragend", (e) => {
             if (e.target.classList.contains("tile")) {
+                // Unlock the board
+                const board = document.getElementById("scrabble-board");
+                board.classList.remove("board-locked");
+    
+                // Remove active drop targets
+                const activeCells = document.querySelectorAll(".droppable-active");
+                activeCells.forEach(cell => {
+                    cell.classList.remove("droppable-active");
+                });
+    
                 e.target.classList.remove("dragging");
             }
         });
-    }
+    }    
 
     setupDropListeners() {
         document.querySelectorAll(".board-cell").forEach((cell) => {
-            // Add this to ensure the cell is droppable
             cell.setAttribute("droppable", "true");
-
+    
             cell.addEventListener("dragenter", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-
-            cell.addEventListener("dragover", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-                // Console log removed from here
-
-                // Explicitly show this is a valid drop target
-                e.dataTransfer.dropEffect = "move";
-
-                if (this.currentTurn === "player") {
-                    cell.classList.add("droppable-hover");
+                if (cell.classList.contains("valid-placement")) {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
             });
-
+    
+            cell.addEventListener("dragover", (e) => {
+                if (cell.classList.contains("valid-placement")) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = "move";
+                    
+                    if (this.currentTurn === "player") {
+                        cell.classList.add("droppable-hover");
+                    }
+                }
+            });
+    
             cell.addEventListener("drop", (e) => {
+                if (!cell.classList.contains("valid-placement")) return;
+    
                 e.preventDefault();
                 e.stopPropagation();
                 console.log("Drop attempted");
-
+    
                 cell.classList.remove("droppable-hover");
-
+    
                 if (this.currentTurn !== "player") {
                     console.log("Not player turn");
                     return;
                 }
-
+    
                 const tileIndex = e.dataTransfer.getData("text/plain");
                 console.log("Tile index from drop:", tileIndex);
-
+    
                 const tile = this.playerRack[tileIndex];
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-
-                console.log("Drop details:", {
-                    tileIndex,
-                    tile,
-                    row,
-                    col,
-                    isFirstMove: this.isFirstMove,
-                    currentTurn: this.currentTurn,
-                });
-
+    
                 if (this.isValidPlacement(row, col, tile)) {
                     this.placeTile(tile, row, col);
                 } else {
-                    const validationDetails = {
-                        isOccupied: this.board[row][col] !== null,
-                        distanceToWords: this.getMinDistanceToWords(row, col),
-                        isFirstMove: this.isFirstMove,
-                        placedTilesLength: this.placedTiles.length,
-                    };
-                    console.log("Placement validation failed:", validationDetails);
                     alert("Invalid placement! Check placement rules.");
                 }
             });
-
+    
             cell.addEventListener("dragleave", (e) => {
                 e.preventDefault();
                 cell.classList.remove("droppable-hover");
             });
         });
-    }
+    }    
 
     isValidPlacement(row, col, tile) {
         console.log("Checking placement validity:", {
