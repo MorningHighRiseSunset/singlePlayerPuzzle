@@ -193,7 +193,7 @@ class ScrabbleGame {
                 
                 const tileElement = e.target.closest(".tile");
                 if (!tileElement) return;
-    
+        
                 // Toggle selection
                 if (this.selectedTile === tileElement) {
                     this.deselectTile();
@@ -201,7 +201,7 @@ class ScrabbleGame {
                     this.selectTile(tileElement);
                 }
             });
-    
+        
             // Handle board cell clicks for placement
             document.querySelectorAll(".board-cell").forEach(cell => {
                 cell.addEventListener("click", (e) => {
@@ -213,30 +213,53 @@ class ScrabbleGame {
                         const tileIndex = this.selectedTile.dataset.index;
                         
                         if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
-                            this.placeTile(this.playerRack[tileIndex], row, col);
-                            this.deselectTile();
+                            // Create a nice flying animation
+                            const startRect = this.selectedTile.getBoundingClientRect();
+                            const endRect = cell.getBoundingClientRect();
+                            
+                            const clone = this.selectedTile.cloneNode(true);
+                            clone.style.position = "fixed";
+                            clone.style.left = `${startRect.left}px`;
+                            clone.style.top = `${startRect.top}px`;
+                            clone.style.width = `${startRect.width}px`;
+                            clone.style.height = `${startRect.height}px`;
+                            clone.style.transition = "all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2)";
+                            clone.style.zIndex = "1000";
+                            document.body.appendChild(clone);
+        
+                            requestAnimationFrame(() => {
+                                clone.style.left = `${endRect.left}px`;
+                                clone.style.top = `${endRect.top}px`;
+                                clone.style.transform = "scale(1.1) rotate(360deg)";
+                            });
+        
+                            setTimeout(() => {
+                                clone.remove();
+                                this.placeTile(this.playerRack[tileIndex], row, col);
+                                this.deselectTile();
+                            }, 500);
                         } else {
                             alert("Invalid placement! Check placement rules.");
                         }
                     }
                 });
             });
-    
+        
             // Handle placed tile clicks for returning to rack
             document.addEventListener("click", (e) => {
                 if (this.currentTurn !== "player") return;
                 
                 const tileElement = e.target.closest(".tile");
                 if (!tileElement || !tileElement.closest(".board-cell")) return;
-    
+        
                 const cell = tileElement.closest(".board-cell");
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-    
+        
                 // Find the placed tile
                 const placedTileIndex = this.placedTiles.findIndex(t => 
                     t.row === row && t.col === col);
-    
+        
                 if (placedTileIndex !== -1) {
                     // Return tile to rack
                     const placedTile = this.placedTiles[placedTileIndex];
