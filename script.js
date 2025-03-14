@@ -108,6 +108,9 @@ class ScrabbleGame {
         this.generateTileBag();
         this.selectedTile = null;
         this.isMobile = isMobileDevice();
+
+        document.body.style.overscrollBehavior = 'none';
+        document.documentElement.style.overscrollBehavior = 'none';
         this.init();
     }
 
@@ -5198,26 +5201,90 @@ evaluateWordWithBlanks(word, blanksUsed) {
             tileElement.dataset.index = index;
             tileElement.dataset.id = tile.id;
             tileElement.innerHTML = `
-              ${tile.letter}
-              <span class="points">${tile.value}</span>
-              ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-          `;
-
-            // Add dragstart event listener directly to the tile
-            tileElement.addEventListener("dragstart", (e) => {
-                if (this.currentTurn === "player") {
-                    e.dataTransfer.setData("text/plain", index.toString());
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+            `;
+    
+            // Improved mobile touch handling
+            if (this.isMobile) {
+                let moved = false;
+                
+                tileElement.addEventListener("touchstart", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    // Prevent scrolling when starting drag
+                    document.addEventListener('touchmove', preventScrolling, { passive: false });
+                    
+                    moved = false;
                     e.target.classList.add("dragging");
-                }
-            });
-
-            tileElement.addEventListener("dragend", (e) => {
-                e.target.classList.remove("dragging");
-            });
-
+                    
+                    // Set immediate drag operation
+                    e.target.style.touchAction = "none";
+                    e.target.style.webkitUserSelect = "none";
+                }, { passive: false });
+    
+                tileElement.addEventListener("touchmove", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    moved = true;
+                    const touch = e.touches[0];
+                    const tileRect = tileElement.getBoundingClientRect();
+                    
+                    // Update tile position
+                    tileElement.style.position = "fixed";
+                    tileElement.style.left = `${touch.clientX - tileRect.width / 2}px`;
+                    tileElement.style.top = `${touch.clientY - tileRect.height / 2}px`;
+                    tileElement.style.zIndex = "1000";
+                }, { passive: false });
+    
+                tileElement.addEventListener("touchend", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    // Re-enable scrolling
+                    document.removeEventListener('touchmove', preventScrolling);
+                    
+                    e.target.classList.remove("dragging");
+                    e.target.style.position = "";
+                    e.target.style.left = "";
+                    e.target.style.top = "";
+                    e.target.style.zIndex = "";
+                    
+                    if (moved) {
+                        const touch = e.changedTouches[0];
+                        const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const cell = dropTarget.closest('.board-cell');
+                        
+                        if (cell) {
+                            const row = parseInt(cell.dataset.row);
+                            const col = parseInt(cell.dataset.col);
+                            if (this.isValidPlacement(row, col, tile)) {
+                                this.placeTile(tile, row, col);
+                            } else {
+                                this.renderRack(); // Reset position if invalid
+                            }
+                        } else {
+                            this.renderRack(); // Reset position if not dropped on board
+                        }
+                    }
+                });
+            } else {
+                // Desktop drag handling (keep existing code)
+                tileElement.addEventListener("dragstart", (e) => {
+                    if (this.currentTurn === "player") {
+                        e.dataTransfer.setData("text/plain", index.toString());
+                        e.target.classList.add("dragging");
+                    }
+                });
+    
+                tileElement.addEventListener("dragend", (e) => {
+                    e.target.classList.remove("dragging");
+                });
+            }
+    
             rack.appendChild(tileElement);
         });
-    }
+    }    
 
     createTileElement(tile, index) {
         const tileElement = document.createElement("div");
@@ -5298,120 +5365,120 @@ evaluateWordWithBlanks(word, blanksUsed) {
 
     setupDragListeners() {
         document.addEventListener("dragstart", (e) => {
-            if (e.target.classList.contains("tile") && this.currentTurn === "player") {
-                // Lock the board
-                const board = document.getElementById("scrabble-board");
-                board.classList.add("board-locked");
-    
-                // Only enable valid drop targets
-                const validCells = document.querySelectorAll(".valid-placement");
-                validCells.forEach(cell => {
-                    cell.classList.add("droppable-active");
-                });
-    
+            if (
+                e.target.classList.contains("tile") &&
+                this.currentTurn === "player"
+            ) {
                 e.target.classList.add("dragging");
                 const tileData = {
                     index: e.target.dataset.index,
-                    id: e.target.dataset.id
+                    id: e.target.dataset.id,
                 };
                 e.dataTransfer.setData("text/plain", e.target.dataset.index);
-                
+
                 console.log("Drag started:", tileData);
-                
+
                 e.dataTransfer.effectAllowed = "move";
-    
+
                 const dragImage = e.target.cloneNode(true);
                 dragImage.style.opacity = "0.8";
                 dragImage.style.position = "absolute";
                 dragImage.style.top = "-1000px";
                 document.body.appendChild(dragImage);
-    
+
                 e.dataTransfer.setDragImage(
                     dragImage,
                     dragImage.offsetWidth / 2,
-                    dragImage.offsetHeight / 2
+                    dragImage.offsetHeight / 2,
                 );
-    
+
                 setTimeout(() => {
                     document.body.removeChild(dragImage);
                 }, 0);
             }
         });
-    
+
         document.addEventListener("dragend", (e) => {
             if (e.target.classList.contains("tile")) {
-                // Unlock the board
-                const board = document.getElementById("scrabble-board");
-                board.classList.remove("board-locked");
-    
-                // Remove active drop targets
-                const activeCells = document.querySelectorAll(".droppable-active");
-                activeCells.forEach(cell => {
-                    cell.classList.remove("droppable-active");
-                });
-    
                 e.target.classList.remove("dragging");
             }
         });
-    }    
+    }
 
     setupDropListeners() {
         document.querySelectorAll(".board-cell").forEach((cell) => {
+            // Add this to ensure the cell is droppable
             cell.setAttribute("droppable", "true");
-    
+
             cell.addEventListener("dragenter", (e) => {
-                if (cell.classList.contains("valid-placement")) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
+                e.preventDefault();
+                e.stopPropagation();
             });
-    
+
             cell.addEventListener("dragover", (e) => {
-                if (cell.classList.contains("valid-placement")) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.dataTransfer.dropEffect = "move";
-                    
-                    if (this.currentTurn === "player") {
-                        cell.classList.add("droppable-hover");
-                    }
+                e.preventDefault();
+                e.stopPropagation();
+
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                // Console log removed from here
+
+                // Explicitly show this is a valid drop target
+                e.dataTransfer.dropEffect = "move";
+
+                if (this.currentTurn === "player") {
+                    cell.classList.add("droppable-hover");
                 }
             });
-    
+
             cell.addEventListener("drop", (e) => {
-                if (!cell.classList.contains("valid-placement")) return;
-    
                 e.preventDefault();
                 e.stopPropagation();
                 console.log("Drop attempted");
-    
+
                 cell.classList.remove("droppable-hover");
-    
+
                 if (this.currentTurn !== "player") {
                     console.log("Not player turn");
                     return;
                 }
-    
+
                 const tileIndex = e.dataTransfer.getData("text/plain");
                 console.log("Tile index from drop:", tileIndex);
-    
+
                 const tile = this.playerRack[tileIndex];
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-    
+
+                console.log("Drop details:", {
+                    tileIndex,
+                    tile,
+                    row,
+                    col,
+                    isFirstMove: this.isFirstMove,
+                    currentTurn: this.currentTurn,
+                });
+
                 if (this.isValidPlacement(row, col, tile)) {
                     this.placeTile(tile, row, col);
                 } else {
+                    const validationDetails = {
+                        isOccupied: this.board[row][col] !== null,
+                        distanceToWords: this.getMinDistanceToWords(row, col),
+                        isFirstMove: this.isFirstMove,
+                        placedTilesLength: this.placedTiles.length,
+                    };
+                    console.log("Placement validation failed:", validationDetails);
                     alert("Invalid placement! Check placement rules.");
                 }
             });
-    
+
             cell.addEventListener("dragleave", (e) => {
                 e.preventDefault();
                 cell.classList.remove("droppable-hover");
             });
         });
-    }    
+    }
 
     isValidPlacement(row, col, tile) {
         console.log("Checking placement validity:", {
@@ -7845,6 +7912,10 @@ evaluateWordWithBlanks(word, blanksUsed) {
             });
         }
     }    
+}
+
+function preventScrolling(e) {
+    e.preventDefault();
 }
 
 // Initialize game when document is loaded
