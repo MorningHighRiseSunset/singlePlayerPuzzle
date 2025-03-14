@@ -3336,8 +3336,8 @@ class ScrabbleGame {
     findPossibleWords(letters) {
         const words = new Set();
         const letterCount = {};
-        let blankCount = letters.filter(l => l === "*").length;
-    
+        const blankCount = letters.filter(l => l === "*").length;
+        
         // Count available letters
         letters.forEach(letter => {
             if (letter !== "*") {
@@ -3345,51 +3345,45 @@ class ScrabbleGame {
             }
         });
     
-        // For tracking best words with blank tiles
-        const wordsWithBlanks = new Map(); // word -> number of blanks needed
+        // Enhanced blank tile usage - prioritize high-value opportunities
+        const priorityLetters = new Set(['S', 'R', 'E', 'D', 'L', 'Y']); // Common useful letters
+        
+        for (const word of this.dictionary) {
+            if (word.length >= 3) { // Minimum word length of 3
+                const upperWord = word.toUpperCase();
+                const tempCount = { ...letterCount };
+                let tempBlankCount = blankCount;
+                let canForm = true;
+                let blanksUsed = [];
     
-        // Try longest words first, now considering blank tiles
-        const maxLength = Math.min(15, letters.length);
-        for (let len = maxLength; len >= 3; len--) {
-            for (const word of this.dictionary) {
-                if (word.length === len) {
-                    const upperWord = word.toUpperCase();
-                    const tempCount = { ...letterCount };
-                    let blanksNeeded = 0;
-    
-                    // Try to form word using available letters and blanks
-                    let canForm = true;
-                    for (const letter of upperWord) {
-                        if (tempCount[letter] && tempCount[letter] > 0) {
-                            tempCount[letter]--;
-                        } else if (blanksNeeded < blankCount) {
-                            blanksNeeded++; // Use a blank tile
+                // Try to form word
+                for (const letter of upperWord) {
+                    if (tempCount[letter] && tempCount[letter] > 0) {
+                        tempCount[letter]--;
+                    } else if (tempBlankCount > 0) {
+                        // Prioritize using blanks for useful letters
+                        if (priorityLetters.has(letter) || this.tileValues[letter] >= 4) {
+                            tempBlankCount--;
+                            blanksUsed.push(letter);
+                        } else if (tempBlankCount > 1) { // Save one blank for priority letters if possible
+                            tempBlankCount--;
+                            blanksUsed.push(letter);
                         } else {
                             canForm = false;
                             break;
                         }
-                    }
-    
-                    if (canForm) {
-                        words.add(upperWord);
-                        if (blanksNeeded > 0) {
-                            wordsWithBlanks.set(upperWord, blanksNeeded);
-                        }
+                    } else {
+                        canForm = false;
+                        break;
                     }
                 }
-            }
     
-            // If we found any words at this length, prioritize based on blank usage
-            if (words.size > 0) {
-                // Sort words by score potential and blank tile efficiency
-                const sortedWords = Array.from(words).sort((a, b) => {
-                    const aScore = this.evaluateWordWithBlanks(a, wordsWithBlanks.get(a) || 0);
-                    const bScore = this.evaluateWordWithBlanks(b, wordsWithBlanks.get(b) || 0);
-                    return bScore - aScore;
-                });
-    
-                // Take top candidates
-                return sortedWords.slice(0, 10);
+                if (canForm) {
+                    words.add({
+                        word: upperWord,
+                        blanksUsed: blanksUsed
+                    });
+                }
             }
         }
     
@@ -5200,28 +5194,91 @@ evaluateWordWithBlanks(word, blanksUsed) {
             tileElement.draggable = true;
             tileElement.dataset.index = index;
             tileElement.dataset.id = tile.id;
+            tileElement.innerHTML = `
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+            `;
     
-            // Display wild tile as "*"
-            if (tile.letter === "*" || tile.originalLetter === "*") {
-                tileElement.innerHTML = `
-                    *
-                    <span class="points">0</span>
-                    <span class="blank-indicator">★</span>
-                `;
+            // Improved mobile touch handling
+            if (this.isMobile) {
+                let moved = false;
+                
+                tileElement.addEventListener("touchstart", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    // Prevent scrolling when starting drag
+                    document.addEventListener('touchmove', preventScrolling, { passive: false });
+                    
+                    moved = false;
+                    e.target.classList.add("dragging");
+                    
+                    // Set immediate drag operation
+                    e.target.style.touchAction = "none";
+                    e.target.style.webkitUserSelect = "none";
+                }, { passive: false });
+    
+                tileElement.addEventListener("touchmove", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    moved = true;
+                    const touch = e.touches[0];
+                    const tileRect = tileElement.getBoundingClientRect();
+                    
+                    // Update tile position
+                    tileElement.style.position = "fixed";
+                    tileElement.style.left = `${touch.clientX - tileRect.width / 2}px`;
+                    tileElement.style.top = `${touch.clientY - tileRect.height / 2}px`;
+                    tileElement.style.zIndex = "1000";
+                }, { passive: false });
+    
+                tileElement.addEventListener("touchend", (e) => {
+                    if (this.currentTurn !== "player") return;
+                    
+                    // Re-enable scrolling
+                    document.removeEventListener('touchmove', preventScrolling);
+                    
+                    e.target.classList.remove("dragging");
+                    e.target.style.position = "";
+                    e.target.style.left = "";
+                    e.target.style.top = "";
+                    e.target.style.zIndex = "";
+                    
+                    if (moved) {
+                        const touch = e.changedTouches[0];
+                        const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const cell = dropTarget.closest('.board-cell');
+                        
+                        if (cell) {
+                            const row = parseInt(cell.dataset.row);
+                            const col = parseInt(cell.dataset.col);
+                            if (this.isValidPlacement(row, col, tile)) {
+                                this.placeTile(tile, row, col);
+                            } else {
+                                this.renderRack(); // Reset position if invalid
+                            }
+                        } else {
+                            this.renderRack(); // Reset position if not dropped on board
+                        }
+                    }
+                });
             } else {
-                tileElement.innerHTML = `
-                    ${tile.letter}
-                    <span class="points">${tile.value}</span>
-                    ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                `;
-            }
+                // Desktop drag handling (keep existing code)
+                tileElement.addEventListener("dragstart", (e) => {
+                    if (this.currentTurn === "player") {
+                        e.dataTransfer.setData("text/plain", index.toString());
+                        e.target.classList.add("dragging");
+                    }
+                });
     
-            // Add drag event listeners...
-            // (keep existing drag event listeners)
+                tileElement.addEventListener("dragend", (e) => {
+                    e.target.classList.remove("dragging");
+                });
+            }
     
             rack.appendChild(tileElement);
         });
-    }
+    }    
 
     createTileElement(tile, index) {
         const tileElement = document.createElement("div");
@@ -7001,61 +7058,120 @@ evaluateWordWithBlanks(word, blanksUsed) {
     }
 
     fillRacks() {
-        const balanceRack = (rack) => {
-            const vowels = ["A", "E", "I", "O", "U"];
-            const vowelCount = rack.filter((tile) =>
-                vowels.includes(tile.letter),
-            ).length;
-
-            // Aim for 2-3 vowels in a rack of 7 tiles
-            if (vowelCount < 2 && this.tiles.length > 0) {
-                // Find positions of consonants that could be swapped
-                const consonantIndices = rack
-                    .map((tile, index) => (!vowels.includes(tile.letter) ? index : -1))
-                    .filter((index) => index !== -1);
-
-                // Find vowels in the remaining tiles
-                const vowelIndices = this.tiles
-                    .map((tile, index) => (vowels.includes(tile.letter) ? index : -1))
-                    .filter((index) => index !== -1);
-
-                // Perform swap if possible
-                if (consonantIndices.length > 0 && vowelIndices.length > 0) {
-                    const consonantIdx =
-                        consonantIndices[
-                            Math.floor(Math.random() * consonantIndices.length)
-                        ];
-                    const vowelIdx =
-                        vowelIndices[Math.floor(Math.random() * vowelIndices.length)];
-
-                    // Swap a consonant with a vowel
-                    const consonant = rack[consonantIdx];
-                    rack[consonantIdx] = this.tiles[vowelIdx];
-                    this.tiles[vowelIdx] = consonant;
+        // Define optimal letter distributions
+        const optimalDistribution = {
+            vowels: ['A', 'E', 'I', 'O', 'U'],
+            commonConsonants: ['R', 'S', 'T', 'L', 'N'],
+            mediumConsonants: ['D', 'G', 'B', 'C', 'M', 'P'],
+            rareLetters: ['J', 'K', 'Q', 'V', 'W', 'X', 'Y', 'Z']
+        };
+    
+        // AI gets better distribution and higher chance of blank tiles
+        while (this.aiRack.length < 7 && this.tiles.length > 0) {
+            // 40% chance to get exactly what AI needs
+            if (Math.random() < 0.4) {
+                const currentVowels = this.aiRack.filter(tile => 
+                    optimalDistribution.vowels.includes(tile.letter)).length;
+                
+                // Decide what type of tile AI needs
+                let desiredTile;
+                if (currentVowels < 2) {
+                    // Need vowels
+                    desiredTile = this.findTileInBag(optimalDistribution.vowels);
+                } else if (currentVowels > 3) {
+                    // Need consonants
+                    desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
+                } else {
+                    // Get blank tile or common letter
+                    desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
+                }
+    
+                if (desiredTile) {
+                    this.aiRack.push(desiredTile);
+                    continue;
                 }
             }
-            return rack;
-        };
-
-        // Fill player's rack
+    
+            // Regular draw with weighted probability
+            const tile = this.drawWeightedTile(true); // true for AI
+            if (tile) this.aiRack.push(tile);
+        }
+    
+        // Player gets decent but not as optimal distribution
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
-            this.playerRack.push(this.tiles.pop());
+            const currentVowels = this.playerRack.filter(tile => 
+                optimalDistribution.vowels.includes(tile.letter)).length;
+    
+            // 25% chance to get needed letter type
+            if (Math.random() < 0.25) {
+                let desiredTile;
+                if (currentVowels < 2) {
+                    desiredTile = this.findTileInBag(optimalDistribution.vowels);
+                } else if (currentVowels > 3) {
+                    desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
+                }
+    
+                if (desiredTile) {
+                    this.playerRack.push(desiredTile);
+                    continue;
+                }
+            }
+    
+            // Regular draw with weighted probability
+            const tile = this.drawWeightedTile(false); // false for player
+            if (tile) this.playerRack.push(tile);
         }
-
-        // Balance player's rack if needed
-        if (this.playerRack.length === 7) {
-            this.playerRack = balanceRack(this.playerRack);
-        }
-
-        // Fill AI's rack
-        while (this.aiRack.length < 7 && this.tiles.length > 0) {
-            this.aiRack.push(this.tiles.pop());
-        }
-
+    
         // Update displays
         this.renderRack();
         this.renderAIRack();
         this.updateTilesCount();
+    }
+
+    findTileInBag(desiredLetters) {
+        const index = this.tiles.findIndex(tile => desiredLetters.includes(tile.letter));
+        return index !== -1 ? this.tiles.splice(index, 1)[0] : null;
+    }
+
+    drawWeightedTile(isAI) {
+        if (this.tiles.length === 0) return null;
+    
+        const weights = {
+            '*': isAI ? 50 : 10,  // AI gets 5x chance for blank tiles
+            'AEIOU': isAI ? 35 : 30,
+            'RSTLN': isAI ? 30 : 25,
+            'DGBCMP': 20,
+            'FHVWY': 15,
+            'JKQXZ': 10
+        };
+    
+        // Calculate total weight
+        let totalWeight = 0;
+        this.tiles.forEach(tile => {
+            if (tile.letter === '*') totalWeight += weights['*'];
+            else if ('AEIOU'.includes(tile.letter)) totalWeight += weights['AEIOU'];
+            else if ('RSTLN'.includes(tile.letter)) totalWeight += weights['RSTLN'];
+            else if ('DGBCMP'.includes(tile.letter)) totalWeight += weights['DGBCMP'];
+            else if ('FHVWY'.includes(tile.letter)) totalWeight += weights['FHVWY'];
+            else totalWeight += weights['JKQXZ'];
+        });
+    
+        // Random weighted selection
+        let random = Math.random() * totalWeight;
+        for (let i = 0; i < this.tiles.length; i++) {
+            let weight;
+            if (this.tiles[i].letter === '*') weight = weights['*'];
+            else if ('AEIOU'.includes(this.tiles[i].letter)) weight = weights['AEIOU'];
+            else if ('RSTLN'.includes(this.tiles[i].letter)) weight = weights['RSTLN'];
+            else if ('DGBCMP'.includes(this.tiles[i].letter)) weight = weights['DGBCMP'];
+            else if ('FHVWY'.includes(this.tiles[i].letter)) weight = weights['FHVWY'];
+            else weight = weights['JKQXZ'];
+    
+            random -= weight;
+            if (random <= 0) return this.tiles.splice(i, 1)[0];
+        }
+    
+        return this.tiles.pop();
     }
 
     setupExchangeSystem() {
