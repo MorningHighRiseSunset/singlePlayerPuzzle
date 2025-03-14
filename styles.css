@@ -480,100 +480,59 @@ button:hover {
 }
 
 @media screen and (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    .game-container {
-        gap: 10px;
-    }
-
     #scrabble-board {
-        grid-template-columns: repeat(15, minmax(30px, 1fr));
-        grid-template-rows: repeat(15, minmax(30px, 1fr));
-        width: 95vw; /* Viewport-relative width */
-        height: 95vw; /* Make it square */
+        /* Make board size responsive to screen width */
+        width: 90vw;
+        height: 90vw;
+        max-width: 600px;
+        max-height: 600px;
+        grid-template-columns: repeat(15, 1fr);
+        grid-template-rows: repeat(15, 1fr);
+        gap: 1px;
         margin: 0 auto;
     }
 
-
-    .tile-rack {
-        padding: 10px;
-        gap: 5px;
+    .board-cell {
+        width: 100%;
+        height: 100%;
+        font-size: 12px;
+        /* Remove fixed dimensions to allow scaling */
+        min-width: unset;
+        min-height: unset;
     }
 
     .tile {
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
-    }
-
-    .points {
-        font-size: 8px;
-        top: 1px;
-        right: 2px;
-    }
-
-    .exchange-portal {
-        width: 80px;
-        height: 80px;
-    }
-
-    .hint-box {
-        max-width: 250px;
-        left: 50%;
-        transform: translateX(-50%) translateY(150%);
-    }
-
-    .hint-box.show {
-        transform: translateX(-50%) translateY(0);
+        width: calc(90vw / 15 - 2px);
+        height: calc(90vw / 15 - 2px);
+        font-size: 12px;
+        /* Adjust minimum size */
+        min-width: 20px;
+        min-height: 20px;
     }
 }
 
 @media screen and (max-width: 480px) {
     #scrabble-board {
-        grid-template-columns: repeat(15, minmax(24px, 1fr));
-        grid-template-rows: repeat(15, minmax(24px, 1fr));
         width: 95vw;
         height: 95vw;
-        margin: 0 auto;
+        gap: 1px;
+        padding: 1px;
+    }
+
+    .board-cell {
+        font-size: 10px;
     }
 
     .tile {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
+        width: calc(95vw / 15 - 2px);
+        height: calc(95vw / 15 - 2px);
+        font-size: 10px;
     }
 
     .points {
-        font-size: 8px;
+        font-size: 7px;
         top: 1px;
-        right: 2px;
-    }
-
-    .tile-rack {
-        padding: 8px;
-        gap: 5px;
-    }
-
-    .moves-panel, .info-panel {
-        padding: 10px;
-        margin-top: 10px;
-    }
-
-    button {
-        padding: 8px;
-        font-size: 14px;
-    }
-
-    .hint-box {
-        max-width: 250px;
-        left: 50%;
-        transform: translateX(-50%) translateY(150%);
-    }
-
-    .hint-box.show {
-        transform: translateX(-50%) translateY(0);
+        right: 1px;
     }
 }
 
@@ -690,108 +649,6 @@ button:hover {
 /* Update Mobile Notifications styles */
 .mobile-notifications {
     display: none;
-}
-
-@media screen and (max-width: 768px) {
-    .mobile-notifications {
-        display: block;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-    }
-
-    .mobile-notice {
-        background: rgba(25, 118, 210, 0.95);
-        color: white;
-        padding: 12px 40px 12px 15px;
-        margin-bottom: 1px;
-        font-size: 14px;
-        position: relative;
-        animation: slideDown 0.5s ease-out;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    /* Update close button styles for better touch targets */
-    .notice-close {
-        position: absolute;
-        right: 0;
-        top: 0;
-        width: 44px; /* Increased touch target */
-        height: 100%; /* Full height of notice */
-        background: rgba(0, 0, 0, 0.1);
-        border: none;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
-        transition: background-color 0.3s ease;
-    }
-
-    .notice-close:active {
-        background: rgba(0, 0, 0, 0.2);
-    }
-
-    /* Add swipe indicator */
-    .mobile-notice::after {
-        content: '←';
-        position: absolute;
-        right: 50px;
-        opacity: 0.5;
-        animation: swipeHint 1s infinite;
-    }
-
-    @keyframes swipeHint {
-        0%, 100% { transform: translateX(0); }
-        50% { transform: translateX(-5px); }
-    }
-
-    /* Add swipe functionality styles */
-    .mobile-notice.swiping {
-        transition: transform 0.2s ease;
-    }
-
-    .mobile-notice.removing {
-        transition: all 0.3s ease;
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    /* Reorder game elements for mobile */
-    .game-container {
-        flex-direction: column;
-        padding-top: 120px; /* Space for notifications */
-    }
-
-    .board-container {
-        order: 1;
-    }
-
-    .info-panel {
-        order: 2;
-    }
-
-    .moves-panel {
-        order: 3;
-    }
-
-    @keyframes slideDown {
-        from {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
 }
 
 .tile.selected {
