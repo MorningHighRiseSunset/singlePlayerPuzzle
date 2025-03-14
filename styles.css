@@ -929,11 +929,11 @@ button:hover {
     }
 
     .board-cell.valid-placement {
-        background: linear-gradient(145deg, #e8f5e9, #c8e6c9);
+        background: linear-gradient(145deg, #e8f5e9, #ffffff);
     }
 
     .board-cell.valid-placement:hover {
-        background: linear-gradient(145deg, #c8e6c9, #a5d6a7);
+        background: linear-gradient(145deg, #c8e6c9, #ffffff);
     }
 
     .tile-placed {
@@ -967,4 +967,10 @@ button:hover {
 
 .board-cell.droppable-hover {
     background-color: rgba(0, 255, 0, 0.2);
+}
+
+.tile.selected {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 100, 255, 0.5);
+    border: 2px solid #007bff;
 }
