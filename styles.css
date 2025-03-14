@@ -929,11 +929,11 @@ button:hover {
     }
 
     .board-cell.valid-placement {
-        background: linear-gradient(145deg, #e8f5e9, #ffffff);
+        background: linear-gradient(145deg,);
     }
 
     .board-cell.valid-placement:hover {
-        background: linear-gradient(145deg, #c8e6c9, #ffffff);
+        background: linear-gradient(145deg,);
     }
 
     .tile-placed {
