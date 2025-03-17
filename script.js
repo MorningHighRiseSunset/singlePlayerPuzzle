@@ -1764,15 +1764,30 @@ class ScrabbleGame {
         return Array.from(words);
     }
 
-    getPotentialCrossWords(row, col, letter, direction) {
-        const tempBoard = JSON.parse(JSON.stringify(this.board));
-        tempBoard[row][col] = {
-            letter: letter
-        };
-
-        return direction === "horizontal" ?
-            this.getVerticalWordAt(row, col) :
-            this.getHorizontalWordAt(row, col);
+    getPotentialCrossWords(letter, row, col, isHorizontal, tempBoard) {
+        const crossWords = [];
+        let verticalWord = '';
+        let horizontalWord = '';
+    
+        // Get vertical word
+        let startRow = row;
+        while (startRow > 0 && tempBoard[startRow - 1][col]) startRow--;
+        for (let r = startRow; r < 15 && tempBoard[r][col]; r++) {
+            verticalWord += tempBoard[r][col].letter;
+        }
+    
+        // Get horizontal word
+        let startCol = col;
+        while (startCol > 0 && tempBoard[row][startCol - 1]) startCol--;
+        for (let c = startCol; c < 15 && tempBoard[row][c]; c++) {
+            horizontalWord += tempBoard[row][c].letter;
+        }
+    
+        // Add only valid length words
+        if (isHorizontal && verticalWord.length > 1) crossWords.push(verticalWord);
+        if (!isHorizontal && horizontalWord.length > 1) crossWords.push(horizontalWord);
+    
+        return crossWords;
     }
 
     getAllWordsFromPosition(row, col, isHorizontal) {
@@ -3442,105 +3457,91 @@ evaluateWordWithBlanks(word, blanksUsed) {
     return score;
 }
 
+isValidAIPlacement(word, startRow, startCol, horizontal) {
+    // Basic validation checks
+    if (word.length < 3) {
+        console.log(`Rejecting ${word} - too short`);
+        return false;
+    }
 
-    isValidAIPlacement(word, startRow, startCol, horizontal) {
-        // Enforce minimum 3-letter word length
-        if (word.length < 3) {
-            console.log(`Rejecting ${word} - words must be at least 3 letters long`);
-            return false;
-        }
+    if (!this.dictionary.has(word.toLowerCase())) {
+        console.log(`${word} is not in dictionary`);
+        return false;
+    }
 
-        if (!this.dictionary.has(word.toLowerCase())) {
-            console.log(`${word} is not a valid word in the dictionary`);
-            return false;
-        }
+    // Check boundaries
+    if (horizontal && (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14)) {
+        return false;
+    }
+    if (!horizontal && (startRow < 0 || startRow + word.length > 15 || startCol < 0 || startCol > 14)) {
+        return false;
+    }
 
-        // Check basic boundary conditions
-        if (horizontal) {
-            if (
-                startCol < 0 ||
-                startCol + word.length > 15 ||
-                startRow < 0 ||
-                startRow > 14
-            ) {
+    // First move must use center square
+    if (this.isFirstMove) {
+        const usesCenterSquare = horizontal ? 
+            (startRow === 7 && startCol <= 7 && startCol + word.length > 7) :
+            (startCol === 7 && startRow <= 7 && startRow + word.length > 7);
+        return usesCenterSquare;
+    }
+
+    let hasValidConnection = false;
+    let tempBoard = JSON.parse(JSON.stringify(this.board));
+
+    // Check each position where the word will be placed
+    for (let i = 0; i < word.length; i++) {
+        const row = horizontal ? startRow : startRow + i;
+        const col = horizontal ? startCol + i : startCol;
+
+        // If cell is occupied, check if letters match
+        if (tempBoard[row][col]) {
+            if (tempBoard[row][col].letter !== word[i]) {
                 return false;
             }
+            hasValidConnection = true;
         } else {
-            if (
-                startRow < 0 ||
-                startRow + word.length > 15 ||
-                startCol < 0 ||
-                startCol > 14
-            ) {
-                return false;
-            }
-        }
+            // Place the letter temporarily
+            tempBoard[row][col] = { letter: word[i] };
 
-        // Check for parallel words
-        if (this.hasParallelWord(startRow, startCol, horizontal)) {
-            console.log(`Rejecting ${word} - would create parallel word`);
-            return false;
-        }
-
-        // Check distance from player's last move
-        if (this.placedTiles.length > 0) {
-            const lastPlayerMove = this.placedTiles[0];
-            const distance =
-                Math.abs(startRow - lastPlayerMove.row) +
-                Math.abs(startCol - lastPlayerMove.col);
-            if (distance < 3) {
-                console.log(`Rejecting ${word} - too close to player's last move`);
-                return false;
-            }
-        }
-
-        let tempBoard = JSON.parse(JSON.stringify(this.board));
-        let hasValidConnection = false;
-
-        // Place the word temporarily on the board
-        for (let i = 0; i < word.length; i++) {
-            const row = horizontal ? startRow : startRow + i;
-            const col = horizontal ? startCol + i : startCol;
-
-            if (tempBoard[row][col]) {
-                if (tempBoard[row][col].letter !== word[i]) {
-                    return false;
+            // Check for crosswords at this position
+            const crossWords = this.getPotentialCrossWords(word[i], row, col, horizontal, tempBoard);
+            
+            for (const crossWord of crossWords) {
+                if (crossWord.length > 1) {  // Only check words of length 2 or more
+                    if (!this.dictionary.has(crossWord.toLowerCase())) {
+                        console.log(`Invalid cross word formed: ${crossWord}`);
+                        return false;
+                    }
+                    if (this.isAbbreviation(crossWord)) {
+                        console.log(`Cross word is an abbreviation: ${crossWord}`);
+                        return false;
+                    }
+                    hasValidConnection = true;
                 }
-                hasValidConnection = true;
-            } else {
-                tempBoard[row][col] = {
-                    letter: word[i]
-                };
             }
 
+            // Check adjacent tiles
             if (this.hasAdjacentTile(row, col)) {
                 hasValidConnection = true;
             }
-
-            // Check formed words at this position
-            const formedWords = this.getAllFormedWords(row, col, tempBoard);
-            for (const formedWord of formedWords) {
-                if (!this.dictionary.has(formedWord.toLowerCase())) {
-                    console.log(`Invalid word formed: ${formedWord}`);
-                    return false;
-                }
-            }
         }
+    }
 
-        // First move must use center square
-        if (this.isFirstMove) {
-            const usesCenterSquare = horizontal ?
-                startRow === 7 && startCol <= 7 && startCol + word.length > 7 :
-                startCol === 7 && startRow <= 7 && startRow + word.length > 7;
-
-            if (!usesCenterSquare) {
-                console.log("First move must use center square");
-                return false;
-            }
-            return true;
+    // Verify all formed words are valid
+    const allFormedWords = this.getAllFormedWords(startRow, startCol, horizontal, word, tempBoard);
+    for (const formedWord of allFormedWords) {
+        if (!this.dictionary.has(formedWord.toLowerCase())) {
+            console.log(`Invalid word formed: ${formedWord}`);
+            return false;
         }
+        if (this.isAbbreviation(formedWord)) {
+            console.log(`Formed word is an abbreviation: ${formedWord}`);
+            return false;
+        }
+    }
 
-        return hasValidConnection;
+    return hasValidConnection;
+
     }
 
     getAllCrossWords(row, col, isHorizontal, word) {
@@ -3598,53 +3599,21 @@ evaluateWordWithBlanks(word, blanksUsed) {
         return word;
     }
 
-    getAllFormedWords(row, col, board) {
+    getAllFormedWords(startRow, startCol, horizontal, word, tempBoard) {
         const words = new Set();
-
-        // Check horizontal word
-        let horizontalWord = "";
-        let startCol = col;
-        // Find start of horizontal word
-        while (startCol > 0 && board[row][startCol - 1]) startCol--;
-
-        // Build horizontal word
-        let currentCol = startCol;
-        while (currentCol < 15 && board[row][currentCol]) {
-            if (!board[row][currentCol].letter) {
-                console.log("Invalid board state at:", row, currentCol);
-                return [];
-            }
-            horizontalWord += board[row][currentCol].letter;
-            currentCol++;
+        
+        // Add the main word
+        words.add(word);
+    
+        // Check for cross words at each position
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+            
+            const crossWords = this.getPotentialCrossWords(word[i], row, col, horizontal, tempBoard);
+            crossWords.forEach(word => words.add(word));
         }
-
-        // Check vertical word
-        let verticalWord = "";
-        let startRow = row;
-        // Find start of vertical word
-        while (startRow > 0 && board[startRow - 1][col]) startRow--;
-
-        // Build vertical word
-        let currentRow = startRow;
-        while (currentRow < 15 && board[currentRow][col]) {
-            if (!board[currentRow][col].letter) {
-                console.log("Invalid board state at:", currentRow, col);
-                return [];
-            }
-            verticalWord += board[currentRow][col].letter;
-            currentRow++;
-        }
-
-        // Only add words that are longer than 2 letter
-        if (horizontalWord.length > 2) {
-            words.add(horizontalWord);
-            console.log("Found horizontal word:", horizontalWord);
-        }
-        if (verticalWord.length > 2) {
-            words.add(verticalWord);
-            console.log("Found vertical word:", verticalWord);
-        }
-
+    
         return Array.from(words);
     }
 
@@ -7506,7 +7475,7 @@ evaluateWordWithBlanks(word, blanksUsed) {
             this.updateTilesCount();
 
             // Add to move history
-            this.addToMoveHistory("Computer", "EXCHANGE", 0);
+            this.addToMoveHistory("Computer", "Computer exchanged tiles. Player's turn", 0);
 
             // Switch turn
             this.currentTurn = "player";
