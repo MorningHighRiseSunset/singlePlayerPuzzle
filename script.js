@@ -1136,106 +1136,72 @@ class ScrabbleGame {
         });
     }
 
-    findAIPossiblePlays() {
+    async findAIPossiblePlays() {
         try {
             const possiblePlays = [];
             const anchors = this.findAnchors();
             const availableLetters = this.aiRack.map(tile => tile.letter);
     
-            console.log("=== Starting Enhanced AI Play Search ===");
+            console.log("=== Starting Enhanced AI Word Search ===");
             console.log("Available letters:", availableLetters);
-            console.log("Anchors found:", anchors);
+            
+            // Cache for MW API responses during this turn
+            this.currentTurnMWCache = new Map();
     
-            // Safety check for valid data
-            if (!Array.isArray(anchors) || !Array.isArray(availableLetters)) {
-                console.error("Invalid anchors or available letters");
-                return [];
-            }
-    
-            // Handle first move or empty board with strong preference for longer words
+            // If it's first move or empty board, use MW API to find longer words
             if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
-                const words = Array.from(this.dictionary)
-                    .filter(word => {
-                        // Strongly prefer longer words (minimum 5 letters for first move)
-                        if (word.length < 5) return false;
-                        // Must be formable with available letters
-                        return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
-                    })
-                    .map(word => word.toUpperCase());
+                const mwWords = await this.findMWWords(availableLetters);
+                console.log("MW API suggested words:", mwWords);
     
-                // Sort by length and take top candidates
-                const candidates = words
+                // Sort by length and quality, preferring longer words
+                const candidates = mwWords
                     .sort((a, b) => {
-                        // Primary sort by length (descending)
                         const lengthDiff = b.length - a.length;
                         if (lengthDiff !== 0) return lengthDiff;
-    
-                        // Secondary sort by potential score
-                        const scoreA = this.calculatePotentialScore(a, 7, 7 - Math.floor(a.length/2), true);
-                        const scoreB = this.calculatePotentialScore(b, 7, 7 - Math.floor(b.length/2), true);
-                        return scoreB - scoreA;
+                        return this.evaluateWordQuality(b) - this.evaluateWordQuality(a);
                     })
-                    .slice(0, 15); // Consider top 15 longest possible words
+                    .slice(0, 15); // Take top 15 candidates
     
                 for (const word of candidates) {
-                    // Try to place word through center square
                     const centerPos = {
                         row: 7,
                         col: 7 - Math.floor(word.length / 2)
                     };
                     
                     if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
-                        const baseScore = this.calculateStrategicScore(word, centerPos.row, centerPos.col, true);
-                        const lengthBonus = Math.pow(word.length, 3) * 15; // Cubic scaling for length
-                        
                         possiblePlays.push({
                             word,
                             startPos: centerPos,
                             isHorizontal: true,
-                            score: baseScore + lengthBonus
+                            score: this.calculateStrategicScore(word, centerPos.row, centerPos.col, true)
                         });
                     }
                 }
             } else {
-                // For subsequent moves
+                // For subsequent moves, combine MW suggestions with anchor-based plays
                 for (const anchor of anchors) {
-                    if (!this.isValidPosition(anchor.row, anchor.col)) {
-                        continue;
-                    }
-    
                     try {
-                        // Get prefixes and suffixes for both directions
                         const hPrefix = this.getPrefix(anchor, true);
                         const hSuffix = this.getSuffix(anchor, true);
                         const vPrefix = this.getPrefix(anchor, false);
                         const vSuffix = this.getSuffix(anchor, false);
     
-                        // Find potential words based on available letters and existing patterns
-                        const potentialWords = this.generatePotentialWords(
+                        // Get words from MW API based on available letters and patterns
+                        const mwSuggestions = await this.getMWSuggestions(
                             availableLetters,
                             [hPrefix, hSuffix, vPrefix, vSuffix]
                         );
     
-                        // Try each potential word
-                        for (const word of potentialWords) {
-                            // Strongly prefer longer words
-                            if (word.length < 4 && !this.createsMultipleWords(word, anchor.row, anchor.col, true)) {
-                                continue;
-                            }
-    
+                        for (const word of mwSuggestions) {
                             // Try horizontal placement
                             if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
                                 const startCol = anchor.col - hPrefix.length;
                                 if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
-                                    const baseScore = this.calculateStrategicScore(word, anchor.row, startCol, true);
-                                    const lengthBonus = Math.pow(word.length, 3) * 15;
-                                    const crossWordBonus = this.countIntersections(anchor.row, startCol, true, word) * 30;
-                                    
                                     possiblePlays.push({
                                         word,
                                         startPos: { row: anchor.row, col: startCol },
                                         isHorizontal: true,
-                                        score: baseScore + lengthBonus + crossWordBonus
+                                        score: this.calculateStrategicScore(word, anchor.row, startCol, true)
                                     });
                                 }
                             }
@@ -1244,15 +1210,11 @@ class ScrabbleGame {
                             if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
                                 const startRow = anchor.row - vPrefix.length;
                                 if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
-                                    const baseScore = this.calculateStrategicScore(word, startRow, anchor.col, false);
-                                    const lengthBonus = Math.pow(word.length, 3) * 15;
-                                    const crossWordBonus = this.countIntersections(startRow, anchor.col, false, word) * 30;
-                                    
                                     possiblePlays.push({
                                         word,
                                         startPos: { row: startRow, col: anchor.col },
                                         isHorizontal: false,
-                                        score: baseScore + lengthBonus + crossWordBonus
+                                        score: this.calculateStrategicScore(word, startRow, anchor.col, false)
                                     });
                                 }
                             }
@@ -1265,58 +1227,119 @@ class ScrabbleGame {
             }
     
             // Filter and sort plays
-            const validPlays = possiblePlays
-                .filter(play => {
-                    // Basic validation checks
-                    if (!this.dictionary.has(play.word.toLowerCase())) {
-                        return false;
-                    }
-    
-                    // Check for creative placement
-                    const isCreative = this.isCreativePlacement(
-                        play.startPos.row,
-                        play.startPos.col,
-                        play.isHorizontal,
-                        play.word
-                    );
-    
-                    // Accept plays that are either creative or score well
-                    return isCreative || play.score > 20;
-                })
-                .sort((a, b) => {
-                    // Primary sort by length (heavily weighted)
-                    const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
-                    if (Math.abs(lengthDiff) > 0) return lengthDiff;
-    
-                    // Secondary sort by score
-                    const scoreDiff = b.score - a.score;
-                    if (Math.abs(scoreDiff) > 20) return scoreDiff;
-    
-                    // Tertiary sort by creativity
-                    const aCreative = this.isCreativePlacement(
-                        a.startPos.row,
-                        a.startPos.col,
-                        a.isHorizontal,
-                        a.word
-                    );
-                    const bCreative = this.isCreativePlacement(
-                        b.startPos.row,
-                        b.startPos.col,
-                        b.isHorizontal,
-                        b.word
-                    );
-    
-                    return bCreative - aCreative;
-                });
-    
-            console.log(`Found ${validPlays.length} valid plays after filtering`);
-            return validPlays;
+            return this.filterAndSortPlays(possiblePlays);
     
         } catch (error) {
             console.error("Error in findAIPossiblePlays:", error);
             return [];
         }
-    }    
+    }
+
+    async findMWWords(letters) {
+        const words = new Set();
+        const letterString = letters.join('').toLowerCase();
+    
+        try {
+            // Use stem search to find potential words
+            const response = await fetch(
+                `https://www.dictionaryapi.com/api/v3/references/collegiate/json/stem:${letterString}?key=${this.mwDictionaryKey}`
+            );
+            const data = await response.json();
+    
+            // Process results
+            for (const entry of data) {
+                if (typeof entry === 'object' && entry.meta && entry.meta.stems) {
+                    for (const stem of entry.meta.stems) {
+                        if (this.canFormWord(stem.toUpperCase(), "", "", letters)) {
+                            words.add(stem.toUpperCase());
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching from MW API:", error);
+        }
+    
+        return Array.from(words);
+    }
+
+    async getMWSuggestions(letters, patterns) {
+        const suggestions = new Set();
+        const [hPrefix, hSuffix, vPrefix, vSuffix] = patterns;
+        const maxLength = 15;
+    
+        try {
+            // Try to find words that match our patterns
+            const searchPatterns = [
+                hPrefix && `${hPrefix}*`,
+                hSuffix && `*${hSuffix}`,
+                vPrefix && `${vPrefix}*`,
+                vSuffix && `*${vSuffix}`
+            ].filter(Boolean);
+    
+            for (const pattern of searchPatterns) {
+                const response = await fetch(
+                    `https://www.dictionaryapi.com/api/v3/references/collegiate/json/${pattern}?key=${this.mwDictionaryKey}`
+                );
+                const data = await response.json();
+    
+                // Process results
+                for (const entry of data) {
+                    if (typeof entry === 'object' && entry.meta && entry.meta.stems) {
+                        for (const stem of entry.meta.stems) {
+                            if (stem.length <= maxLength && 
+                                this.canFormWord(stem.toUpperCase(), "", "", letters)) {
+                                suggestions.add(stem.toUpperCase());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error getting MW suggestions:", error);
+        }
+    
+        return Array.from(suggestions);
+    }
+
+    evaluateWordQuality(word) {
+        let quality = 0;
+    
+        // Base points for word length
+        quality += Math.pow(word.length, 2) * 10;
+    
+        // Bonus for words verified by MW dictionary
+        if (this.currentTurnMWCache.has(word)) {
+            quality += 50;
+        }
+    
+        // Existing evaluation logic...
+        quality += this.evaluateLetterBalance(word) * 10;
+        
+        return quality;
+    }
+    
+    // Add throttling for API calls
+    async throttledMWRequest(url, cacheKey) {
+        if (this.currentTurnMWCache.has(cacheKey)) {
+            return this.currentTurnMWCache.get(cacheKey);
+        }
+    
+        // Add delay between requests to respect rate limits
+        if (this.lastMWRequest) {
+            const timeSinceLastRequest = Date.now() - this.lastMWRequest;
+            if (timeSinceLastRequest < 100) { // Minimum 100ms between requests
+                await new Promise(resolve => setTimeout(resolve, 100 - timeSinceLastRequest));
+            }
+        }
+    
+        this.lastMWRequest = Date.now();
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        this.currentTurnMWCache.set(cacheKey, data);
+        return data;
+    }
 
     generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
         const potentialWords = new Set();
@@ -1764,30 +1787,15 @@ class ScrabbleGame {
         return Array.from(words);
     }
 
-    getPotentialCrossWords(letter, row, col, isHorizontal, tempBoard) {
-        const crossWords = [];
-        let verticalWord = '';
-        let horizontalWord = '';
-    
-        // Get vertical word
-        let startRow = row;
-        while (startRow > 0 && tempBoard[startRow - 1][col]) startRow--;
-        for (let r = startRow; r < 15 && tempBoard[r][col]; r++) {
-            verticalWord += tempBoard[r][col].letter;
-        }
-    
-        // Get horizontal word
-        let startCol = col;
-        while (startCol > 0 && tempBoard[row][startCol - 1]) startCol--;
-        for (let c = startCol; c < 15 && tempBoard[row][c]; c++) {
-            horizontalWord += tempBoard[row][c].letter;
-        }
-    
-        // Add only valid length words
-        if (isHorizontal && verticalWord.length > 1) crossWords.push(verticalWord);
-        if (!isHorizontal && horizontalWord.length > 1) crossWords.push(horizontalWord);
-    
-        return crossWords;
+    getPotentialCrossWords(row, col, letter, direction) {
+        const tempBoard = JSON.parse(JSON.stringify(this.board));
+        tempBoard[row][col] = {
+            letter: letter
+        };
+
+        return direction === "horizontal" ?
+            this.getVerticalWordAt(row, col) :
+            this.getHorizontalWordAt(row, col);
     }
 
     getAllWordsFromPosition(row, col, isHorizontal) {
@@ -3457,91 +3465,105 @@ evaluateWordWithBlanks(word, blanksUsed) {
     return score;
 }
 
-isValidAIPlacement(word, startRow, startCol, horizontal) {
-    // Basic validation checks
-    if (word.length < 3) {
-        console.log(`Rejecting ${word} - too short`);
-        return false;
-    }
 
-    if (!this.dictionary.has(word.toLowerCase())) {
-        console.log(`${word} is not in dictionary`);
-        return false;
-    }
+    isValidAIPlacement(word, startRow, startCol, horizontal) {
+        // Enforce minimum 3-letter word length
+        if (word.length < 3) {
+            console.log(`Rejecting ${word} - words must be at least 3 letters long`);
+            return false;
+        }
 
-    // Check boundaries
-    if (horizontal && (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14)) {
-        return false;
-    }
-    if (!horizontal && (startRow < 0 || startRow + word.length > 15 || startCol < 0 || startCol > 14)) {
-        return false;
-    }
+        if (!this.dictionary.has(word.toLowerCase())) {
+            console.log(`${word} is not a valid word in the dictionary`);
+            return false;
+        }
 
-    // First move must use center square
-    if (this.isFirstMove) {
-        const usesCenterSquare = horizontal ? 
-            (startRow === 7 && startCol <= 7 && startCol + word.length > 7) :
-            (startCol === 7 && startRow <= 7 && startRow + word.length > 7);
-        return usesCenterSquare;
-    }
-
-    let hasValidConnection = false;
-    let tempBoard = JSON.parse(JSON.stringify(this.board));
-
-    // Check each position where the word will be placed
-    for (let i = 0; i < word.length; i++) {
-        const row = horizontal ? startRow : startRow + i;
-        const col = horizontal ? startCol + i : startCol;
-
-        // If cell is occupied, check if letters match
-        if (tempBoard[row][col]) {
-            if (tempBoard[row][col].letter !== word[i]) {
+        // Check basic boundary conditions
+        if (horizontal) {
+            if (
+                startCol < 0 ||
+                startCol + word.length > 15 ||
+                startRow < 0 ||
+                startRow > 14
+            ) {
                 return false;
             }
-            hasValidConnection = true;
         } else {
-            // Place the letter temporarily
-            tempBoard[row][col] = { letter: word[i] };
+            if (
+                startRow < 0 ||
+                startRow + word.length > 15 ||
+                startCol < 0 ||
+                startCol > 14
+            ) {
+                return false;
+            }
+        }
 
-            // Check for crosswords at this position
-            const crossWords = this.getPotentialCrossWords(word[i], row, col, horizontal, tempBoard);
-            
-            for (const crossWord of crossWords) {
-                if (crossWord.length > 1) {  // Only check words of length 2 or more
-                    if (!this.dictionary.has(crossWord.toLowerCase())) {
-                        console.log(`Invalid cross word formed: ${crossWord}`);
-                        return false;
-                    }
-                    if (this.isAbbreviation(crossWord)) {
-                        console.log(`Cross word is an abbreviation: ${crossWord}`);
-                        return false;
-                    }
-                    hasValidConnection = true;
+        // Check for parallel words
+        if (this.hasParallelWord(startRow, startCol, horizontal)) {
+            console.log(`Rejecting ${word} - would create parallel word`);
+            return false;
+        }
+
+        // Check distance from player's last move
+        if (this.placedTiles.length > 0) {
+            const lastPlayerMove = this.placedTiles[0];
+            const distance =
+                Math.abs(startRow - lastPlayerMove.row) +
+                Math.abs(startCol - lastPlayerMove.col);
+            if (distance < 3) {
+                console.log(`Rejecting ${word} - too close to player's last move`);
+                return false;
+            }
+        }
+
+        let tempBoard = JSON.parse(JSON.stringify(this.board));
+        let hasValidConnection = false;
+
+        // Place the word temporarily on the board
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+
+            if (tempBoard[row][col]) {
+                if (tempBoard[row][col].letter !== word[i]) {
+                    return false;
                 }
+                hasValidConnection = true;
+            } else {
+                tempBoard[row][col] = {
+                    letter: word[i]
+                };
             }
 
-            // Check adjacent tiles
             if (this.hasAdjacentTile(row, col)) {
                 hasValidConnection = true;
             }
-        }
-    }
 
-    // Verify all formed words are valid
-    const allFormedWords = this.getAllFormedWords(startRow, startCol, horizontal, word, tempBoard);
-    for (const formedWord of allFormedWords) {
-        if (!this.dictionary.has(formedWord.toLowerCase())) {
-            console.log(`Invalid word formed: ${formedWord}`);
-            return false;
+            // Check formed words at this position
+            const formedWords = this.getAllFormedWords(row, col, tempBoard);
+            for (const formedWord of formedWords) {
+                if (!this.dictionary.has(formedWord.toLowerCase())) {
+                    console.log(`Invalid word formed: ${formedWord}`);
+                    return false;
+                }
+            }
         }
-        if (this.isAbbreviation(formedWord)) {
-            console.log(`Formed word is an abbreviation: ${formedWord}`);
-            return false;
+
+        // First move must use center square
+        if (this.isFirstMove) {
+            const usesCenterSquare = horizontal ?
+                startRow === 7 && startCol <= 7 && startCol + word.length > 7 :
+                startCol === 7 && startRow <= 7 && startRow + word.length > 7;
+
+            if (!usesCenterSquare) {
+                console.log("First move must use center square");
+                return false;
+            }
+            return true;
         }
-    }
 
-    return hasValidConnection;
-
+        return hasValidConnection;
     }
 
     getAllCrossWords(row, col, isHorizontal, word) {
@@ -3599,21 +3621,53 @@ isValidAIPlacement(word, startRow, startCol, horizontal) {
         return word;
     }
 
-    getAllFormedWords(startRow, startCol, horizontal, word, tempBoard) {
+    getAllFormedWords(row, col, board) {
         const words = new Set();
-        
-        // Add the main word
-        words.add(word);
-    
-        // Check for cross words at each position
-        for (let i = 0; i < word.length; i++) {
-            const row = horizontal ? startRow : startRow + i;
-            const col = horizontal ? startCol + i : startCol;
-            
-            const crossWords = this.getPotentialCrossWords(word[i], row, col, horizontal, tempBoard);
-            crossWords.forEach(word => words.add(word));
+
+        // Check horizontal word
+        let horizontalWord = "";
+        let startCol = col;
+        // Find start of horizontal word
+        while (startCol > 0 && board[row][startCol - 1]) startCol--;
+
+        // Build horizontal word
+        let currentCol = startCol;
+        while (currentCol < 15 && board[row][currentCol]) {
+            if (!board[row][currentCol].letter) {
+                console.log("Invalid board state at:", row, currentCol);
+                return [];
+            }
+            horizontalWord += board[row][currentCol].letter;
+            currentCol++;
         }
-    
+
+        // Check vertical word
+        let verticalWord = "";
+        let startRow = row;
+        // Find start of vertical word
+        while (startRow > 0 && board[startRow - 1][col]) startRow--;
+
+        // Build vertical word
+        let currentRow = startRow;
+        while (currentRow < 15 && board[currentRow][col]) {
+            if (!board[currentRow][col].letter) {
+                console.log("Invalid board state at:", currentRow, col);
+                return [];
+            }
+            verticalWord += board[currentRow][col].letter;
+            currentRow++;
+        }
+
+        // Only add words that are longer than 2 letter
+        if (horizontalWord.length > 2) {
+            words.add(horizontalWord);
+            console.log("Found horizontal word:", horizontalWord);
+        }
+        if (verticalWord.length > 2) {
+            words.add(verticalWord);
+            console.log("Found vertical word:", verticalWord);
+        }
+
         return Array.from(words);
     }
 
@@ -5004,28 +5058,90 @@ isValidAIPlacement(word, startRow, startCol, horizontal) {
 
     async loadDictionary() {
         try {
-            // Load base dictionary
+            // Primary Scrabble dictionary
             const response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
             const text = await response.text();
             this.dictionary = new Set(text.toLowerCase().split("\n"));
     
-            // Add words from Free Dictionary API
-            try {
-                const additionalWords = await this.loadAdditionalWords();
-                additionalWords.forEach(word => {
-                    if (word.length >= 2) {
-                        this.dictionary.add(word.toLowerCase());
-                    }
-                });
-            } catch (error) {
-                console.error("Error loading additional words:", error);
-            }
+            // Add Merriam-Webster Dictionary validation
+            this.mwDictionaryKey = "98eb66b0-62de-46c3-82e0-85618fc9d0b7";
+            this.mwDictionaryCache = new Map(); // Cache responses to avoid rate limits
     
             console.log("Dictionary loaded successfully");
         } catch (error) {
             console.error("Error loading dictionary:", error);
             this.dictionary = new Set(["scrabble", "game", "play", "word"]);
         }
+    }
+
+    async validateWordWithMW(word) {
+        // Check cache first
+        if (this.mwDictionaryCache.has(word)) {
+            return this.mwDictionaryCache.get(word);
+        }
+    
+        try {
+            const response = await fetch(
+                `https://www.dictionaryapi.com/api/v3/references/collegiate/json/${word}?key=${this.mwDictionaryKey}`
+            );
+            const data = await response.json();
+    
+            // Check if we got a valid word definition
+            const isValid = Array.isArray(data) && data.length > 0 && typeof data[0] === 'object';
+            
+            // Cache the result
+            this.mwDictionaryCache.set(word, isValid);
+            
+            return isValid;
+        } catch (error) {
+            console.error("Error validating word with Merriam-Webster:", error);
+            // Fallback to basic dictionary if API fails
+            return this.dictionary.has(word.toLowerCase());
+        }
+    }   
+    
+    async validateWord() {
+        if (this.placedTiles.length === 0) return false;
+    
+        if (!this.areTilesConnected()) return false;
+    
+        // Get all formed words
+        const formedWords = this.getFormedWords();
+        if (formedWords.length === 0) {
+            console.log("No valid words formed");
+            return false;
+        }
+    
+        // Validate each word
+        for (const wordInfo of formedWords) {
+            const word = wordInfo.word.toLowerCase();
+            
+            // Check basic dictionary first (faster)
+            if (!this.dictionary.has(word)) {
+                console.log(`Invalid word: ${word}`);
+                return false;
+            }
+    
+            // Double check with Merriam-Webster (more authoritative)
+            const isValidMW = await this.validateWordWithMW(word);
+            if (!isValidMW) {
+                console.log(`Word not found in Merriam-Webster: ${word}`);
+                return false;
+            }
+        }
+    
+        // First move must use center square
+        if (this.isFirstMove) {
+            const centerUsed = this.placedTiles.some(
+                (tile) => tile.row === 7 && tile.col === 7
+            );
+            if (!centerUsed) {
+                console.log("First move must use center square");
+                return false;
+            }
+        }
+    
+        return true;
     }
 
     async loadAdditionalWords() {
