@@ -1238,19 +1238,20 @@ class ScrabbleGame {
     async findMWWords(letters) {
         const words = new Set();
         const letterString = letters.join('').toLowerCase();
-    
+        
         try {
             // Use stem search to find potential words
             const response = await fetch(
                 `https://www.dictionaryapi.com/api/v3/references/collegiate/json/stem:${letterString}?key=${this.mwDictionaryKey}`
             );
             const data = await response.json();
-    
-            // Process results
+            
+            // Process results, prioritizing longer words
             for (const entry of data) {
                 if (typeof entry === 'object' && entry.meta && entry.meta.stems) {
                     for (const stem of entry.meta.stems) {
-                        if (this.canFormWord(stem.toUpperCase(), "", "", letters)) {
+                        // Only consider words 4 letters or longer
+                        if (stem.length >= 4 && this.canFormWord(stem.toUpperCase(), "", "", letters)) {
                             words.add(stem.toUpperCase());
                         }
                     }
@@ -1259,8 +1260,9 @@ class ScrabbleGame {
         } catch (error) {
             console.error("Error fetching from MW API:", error);
         }
-    
-        return Array.from(words);
+        
+        // Sort by length and return longer words first
+        return Array.from(words).sort((a, b) => b.length - a.length);
     }
 
     async getMWSuggestions(letters, patterns) {
@@ -1424,21 +1426,21 @@ class ScrabbleGame {
     
     calculateStrategicScore(word, row, col, isHorizontal) {
         let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-    
-        // Bonus for word length
-        score += Math.pow(word.length, 2) * 10;
-    
-        // Bonus for using premium squares
+        
+        // Exponential bonus for word length
+        score += Math.pow(word.length, 3) * 15;
+        
+        // Additional bonuses
+        if (word.length >= 7) score += 100; // Big bonus for 7+ letters
+        if (word.length >= 5) score += 50;  // Medium bonus for 5+ letters
+        
+        // Rest of strategic scoring...
         const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
         score += premiumSquares * 25;
-    
-        // Bonus for creating multiple words
+        
         const crossWords = this.countIntersections(row, col, isHorizontal, word);
         score += crossWords * 30;
-    
-        // Bonus for using complex letters
-        score += this.calculateWordComplexity(word) * 15;
-    
+        
         return score;
     }
 
@@ -1488,27 +1490,6 @@ class ScrabbleGame {
         return complexPatterns.some(pattern => pattern.test(word));
     }
 
-    calculateStrategicScore(word, row, col, isHorizontal) {
-        let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-        
-        // Bonus for word length
-        score += Math.pow(word.length, 2) * 10;
-    
-        // Bonus for using premium squares
-        const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
-        score += premiumSquares * 25;
-    
-        // Bonus for creating multiple words
-        const crossWords = this.countIntersections(row, col, isHorizontal, word);
-        score += crossWords * 30;
-    
-        // Bonus for complex letters
-        const complexityScore = this.calculateWordComplexity(word);
-        score += complexityScore * 15;
-    
-        return score;
-    }
-
     calculateWordComplexity(word) {
         const letterValues = {
             'J': 8, 'K': 7, 'Q': 10, 'X': 9, 'Z': 10,
@@ -1525,41 +1506,24 @@ class ScrabbleGame {
         const validPlays = plays.filter(play => {
             if (!play || !play.word) return false;
             
-            // Validate main word
-            if (!this.dictionary.has(play.word.toLowerCase())) return false;
+            // Minimum word length of 4
+            if (play.word.length < 4) return false;
             
-            // Validate cross-words
-            const crossWords = this.getAllCrossWords(
-                play.startPos.row, 
-                play.startPos.col,
-                play.isHorizontal,
-                play.word
-            );
-            
-            return crossWords.every(word => 
-                this.dictionary.has(word.toLowerCase()) && word.length > 1
-            );
+            // Validate with MW API
+            return this.validateWordWithMW(play.word.toLowerCase());
         });
-    
+        
         if (validPlays.length === 0) return null;
-    
+        
         return validPlays.sort((a, b) => {
-            // Very heavily prefer longer words (cubic scaling)
-            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
+            // Heavily prioritize word length
+            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 10;
             if (Math.abs(lengthDiff) > 0) return lengthDiff;
-    
-            // Consider score as secondary factor
-            const scoreDiff = b.score - a.score;
-            if (Math.abs(scoreDiff) > 10) return scoreDiff;
-    
-            // Consider word complexity
-            const complexityDiff = 
-                this.calculateWordComplexity(b.word) - 
-                this.calculateWordComplexity(a.word);
             
-            return complexityDiff;
+            // Consider score as secondary factor
+            return b.score - a.score;
         })[0];
-    }    
+    }
 
     findCenterPlays(wordCombinations) {
         const centerPlays = [];
@@ -5081,21 +5045,10 @@ evaluateWordWithBlanks(word, blanksUsed) {
     }
 
     async loadDictionary() {
-        try {
-            // Primary Scrabble dictionary
-            const response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-            const text = await response.text();
-            this.dictionary = new Set(text.toLowerCase().split("\n"));
-    
-            // Add Merriam-Webster Dictionary validation
-            this.mwDictionaryKey = "98eb66b0-62de-46c3-82e0-85618fc9d0b7";
-            this.mwDictionaryCache = new Map(); // Cache responses to avoid rate limits
-    
-            console.log("Dictionary loaded successfully");
-        } catch (error) {
-            console.error("Error loading dictionary:", error);
-            this.dictionary = new Set(["scrabble", "game", "play", "word"]);
-        }
+        // Initialize MW Dictionary
+        this.mwDictionaryKey = "98eb66b0-62de-46c3-82e0-85618fc9d0b7";
+        this.mwDictionaryCache = new Map();
+        console.log("Merriam-Webster dictionary initialized");
     }
 
     async validateWordWithMW(word) {
