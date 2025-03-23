@@ -1213,7 +1213,7 @@ class ScrabbleGame {
             // Then consider score
             return b.score - a.score;
         });
-    }    
+    }      
 
     generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
         const potentialWords = new Set();
@@ -1271,34 +1271,6 @@ class ScrabbleGame {
     
         return true;
     }
-    
-    calculateStrategicScore(word, row, col, isHorizontal) {
-        let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-        
-        // Massive bonus for longer words
-        score += Math.pow(word.length, 3) * 20;
-        
-        // Extra bonus for words 5+ letters
-        if (word.length >= 5) {
-            score += 200;
-        }
-        
-        // Even more bonus for 6+ letters
-        if (word.length >= 6) {
-            score += 300;
-        }
-        
-        // Bonus for creating multiple words
-        const crossWords = this.countIntersections(row, col, isHorizontal, word);
-        score += crossWords * 50;
-        
-        // Penalty for short words
-        if (word.length <= 3) {
-            score -= 200;
-        }
-        
-        return score;
-    }    
 
     findAdvancedWordCombinations(availableLetters) {
         const combinations = new Set();
@@ -1345,6 +1317,34 @@ class ScrabbleGame {
     
         return complexPatterns.some(pattern => pattern.test(word));
     }
+
+    calculateStrategicScore(word, row, col, isHorizontal) {
+        let score = this.calculatePotentialScore(word, row, col, isHorizontal);
+        
+        // Massive bonus for longer words
+        score += Math.pow(word.length, 3) * 20;
+        
+        // Extra bonus for words 5+ letters
+        if (word.length >= 5) {
+            score += 200;
+        }
+        
+        // Even more bonus for 6+ letters
+        if (word.length >= 6) {
+            score += 300;
+        }
+        
+        // Bonus for creating multiple words
+        const crossWords = this.countIntersections(row, col, isHorizontal, word);
+        score += crossWords * 50;
+        
+        // Penalty for short words
+        if (word.length <= 3) {
+            score -= 200;
+        }
+        
+        return score;
+    }    
 
     calculateWordComplexity(word) {
         const letterValues = {
