@@ -1136,236 +1136,84 @@ class ScrabbleGame {
         });
     }
 
-    async findAIPossiblePlays() {
-        try {
-            const possiblePlays = [];
-            const anchors = this.findAnchors();
-            const availableLetters = this.aiRack.map(tile => tile.letter);
+    findAIPossiblePlays() {
+        const possiblePlays = [];
+        const maxAttempts = 3; // Try multiple times to find longer words
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const availableLetters = this.aiRack.map(tile => tile.letter);
+                const minWordLength = Math.min(5, availableLetters.length); // Prefer at least 5 letters
+                
+                // First try to find longer words (5+ letters)
+                const longWords = Array.from(this.dictionary)
+                    .filter(word => {
+                        if (word.length < minWordLength) return false;
+                        return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
+                    })
+                    .map(word => word.toUpperCase());
     
-            console.log("=== Starting Enhanced AI Word Search ===");
-            console.log("Available letters:", availableLetters);
-            
-            // Cache for MW API responses during this turn
-            this.currentTurnMWCache = new Map();
-    
-            // If it's first move or empty board, use MW API to find longer words
-            if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
-                const mwWords = await this.findMWWords(availableLetters);
-                console.log("MW API suggested words:", mwWords);
-    
-                // Sort by length and quality, preferring longer words
-                const candidates = mwWords
+                // Sort by length (descending) and take top candidates
+                const candidates = longWords
                     .sort((a, b) => {
+                        // Primary sort by length
                         const lengthDiff = b.length - a.length;
                         if (lengthDiff !== 0) return lengthDiff;
-                        return this.evaluateWordQuality(b) - this.evaluateWordQuality(a);
+                        
+                        // Secondary sort by potential score
+                        const scoreA = this.calculatePotentialScore(a, 7, 7, true);
+                        const scoreB = this.calculatePotentialScore(b, 7, 7, true);
+                        return scoreB - scoreA;
                     })
-                    .slice(0, 15); // Take top 15 candidates
+                    .slice(0, 20); // Consider top 20 candidates
     
                 for (const word of candidates) {
-                    const centerPos = {
-                        row: 7,
-                        col: 7 - Math.floor(word.length / 2)
-                    };
-                    
-                    if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
-                        possiblePlays.push({
-                            word,
-                            startPos: centerPos,
-                            isHorizontal: true,
-                            score: this.calculateStrategicScore(word, centerPos.row, centerPos.col, true)
-                        });
-                    }
-                }
-            } else {
-                // For subsequent moves, combine MW suggestions with anchor-based plays
-                for (const anchor of anchors) {
-                    try {
-                        const hPrefix = this.getPrefix(anchor, true);
-                        const hSuffix = this.getSuffix(anchor, true);
-                        const vPrefix = this.getPrefix(anchor, false);
-                        const vSuffix = this.getSuffix(anchor, false);
-    
-                        // Get words from MW API based on available letters and patterns
-                        const mwSuggestions = await this.getMWSuggestions(
-                            availableLetters,
-                            [hPrefix, hSuffix, vPrefix, vSuffix]
-                        );
-    
-                        for (const word of mwSuggestions) {
-                            // Try horizontal placement
-                            if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
-                                const startCol = anchor.col - hPrefix.length;
-                                if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
-                                    possiblePlays.push({
-                                        word,
-                                        startPos: { row: anchor.row, col: startCol },
-                                        isHorizontal: true,
-                                        score: this.calculateStrategicScore(word, anchor.row, startCol, true)
-                                    });
-                                }
+                    // Try multiple positions for each word
+                    for (let row = 0; row < 15; row++) {
+                        for (let col = 0; col <= 15 - word.length; col++) {
+                            if (this.isValidAIPlacement(word, row, col, true)) {
+                                const score = this.calculateStrategicScore(word, row, col, true);
+                                possiblePlays.push({
+                                    word,
+                                    startPos: { row, col },
+                                    isHorizontal: true,
+                                    score: score + (word.length * 50) // Extra bonus for length
+                                });
                             }
-    
-                            // Try vertical placement
-                            if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
-                                const startRow = anchor.row - vPrefix.length;
-                                if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
-                                    possiblePlays.push({
-                                        word,
-                                        startPos: { row: startRow, col: anchor.col },
-                                        isHorizontal: false,
-                                        score: this.calculateStrategicScore(word, startRow, anchor.col, false)
-                                    });
-                                }
+                            
+                            // Try vertical placement too
+                            if (row <= 15 - word.length && 
+                                this.isValidAIPlacement(word, row, col, false)) {
+                                const score = this.calculateStrategicScore(word, row, col, false);
+                                possiblePlays.push({
+                                    word,
+                                    startPos: { row, col },
+                                    isHorizontal: false,
+                                    score: score + (word.length * 50)
+                                });
                             }
                         }
-                    } catch (anchorError) {
-                        console.error("Error processing anchor:", anchorError);
-                        continue;
                     }
                 }
+    
+                // If we found valid plays, stop trying
+                if (possiblePlays.length > 0) break;
+            } catch (error) {
+                console.error("Error in attempt", attempt, error);
+                continue;
             }
-    
-            // Filter and sort plays
-            return this.filterAndSortPlays(possiblePlays);
-    
-        } catch (error) {
-            console.error("Error in findAIPossiblePlays:", error);
-            return [];
         }
-    }
-
-    async findMWWords(letters) {
-        const words = new Set();
-        const letterString = letters.join('').toLowerCase();
-        
-        try {
-            // Use stem search to find potential words
-            const response = await fetch(
-                `https://www.dictionaryapi.com/api/v3/references/collegiate/json/stem:${letterString}?key=${this.mwDictionaryKey}`
-            );
-            const data = await response.json();
+    
+        // Sort plays by modified score that heavily weights length
+        return possiblePlays.sort((a, b) => {
+            // Heavily weight word length
+            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 10;
+            if (Math.abs(lengthDiff) > 0) return lengthDiff;
             
-            // Process results, prioritizing longer words
-            for (const entry of data) {
-                if (typeof entry === 'object' && entry.meta && entry.meta.stems) {
-                    for (const stem of entry.meta.stems) {
-                        // Only consider words 4 letters or longer
-                        if (stem.length >= 4 && this.canFormWord(stem.toUpperCase(), "", "", letters)) {
-                            words.add(stem.toUpperCase());
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching from MW API:", error);
-        }
-        
-        // Sort by length and return longer words first
-        return Array.from(words).sort((a, b) => b.length - a.length);
-    }
-
-    async getMWSuggestions(letters, patterns) {
-        const suggestions = new Set();
-        const [hPrefix, hSuffix, vPrefix, vSuffix] = patterns;
-        const maxLength = 15;
-    
-        try {
-            // Try to find words that match our patterns
-            const searchPatterns = [
-                hPrefix && `${hPrefix}*`,
-                hSuffix && `*${hSuffix}`,
-                vPrefix && `${vPrefix}*`,
-                vSuffix && `*${vSuffix}`
-            ].filter(Boolean);
-    
-            for (const pattern of searchPatterns) {
-                const response = await fetch(
-                    `https://www.dictionaryapi.com/api/v3/references/collegiate/json/${pattern}?key=${this.mwDictionaryKey}`
-                );
-                const data = await response.json();
-    
-                // Process results
-                for (const entry of data) {
-                    if (typeof entry === 'object' && entry.meta && entry.meta.stems) {
-                        for (const stem of entry.meta.stems) {
-                            if (stem.length <= maxLength && 
-                                this.canFormWord(stem.toUpperCase(), "", "", letters)) {
-                                suggestions.add(stem.toUpperCase());
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error getting MW suggestions:", error);
-        }
-    
-        return Array.from(suggestions);
-    }
-
-    evaluateWordQuality(word) {
-        let quality = 0;
-    
-        // Base points for word length with cubic scaling
-        quality += Math.pow(word.length, 3) * 10;
-    
-        // Letter value quality
-        for (const letter of word) {
-            const letterValue = this.tileValues[letter];
-            quality += letterValue * 5;
-            // Extra points for high-value letters
-            if (letterValue >= 8) quality += 30;  // J, X, Q, Z
-            else if (letterValue >= 4) quality += 15;  // F, H, V, W, Y
-        }
-    
-        // Vowel-consonant balance
-        const vowels = "AEIOU";
-        const vowelCount = [...word].filter(l => vowels.includes(l)).length;
-        const vowelRatio = vowelCount / word.length;
-        if (vowelRatio >= 0.3 && vowelRatio <= 0.6) {
-            quality += 25; // Ideal vowel-consonant ratio
-        }
-    
-        // Common prefixes and suffixes bonus
-        const commonPrefixes = ['RE', 'UN', 'IN', 'DIS'];
-        const commonSuffixes = ['ING', 'ED', 'ER', 'EST', 'TION'];
-        
-        for (const prefix of commonPrefixes) {
-            if (word.startsWith(prefix)) quality += 15;
-        }
-        for (const suffix of commonSuffixes) {
-            if (word.endsWith(suffix)) quality += 20;
-        }
-    
-        // Length bonus for longer words
-        if (word.length >= 7) quality += 100;
-        else if (word.length >= 5) quality += 40;
-    
-        return quality;
+            // Then consider score
+            return b.score - a.score;
+        });
     }    
-    
-    // Add throttling for API calls
-    async throttledMWRequest(url, cacheKey) {
-        if (this.currentTurnMWCache.has(cacheKey)) {
-            return this.currentTurnMWCache.get(cacheKey);
-        }
-    
-        // Add delay between requests to respect rate limits
-        if (this.lastMWRequest) {
-            const timeSinceLastRequest = Date.now() - this.lastMWRequest;
-            if (timeSinceLastRequest < 100) { // Minimum 100ms between requests
-                await new Promise(resolve => setTimeout(resolve, 100 - timeSinceLastRequest));
-            }
-        }
-    
-        this.lastMWRequest = Date.now();
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        this.currentTurnMWCache.set(cacheKey, data);
-        return data;
-    }
 
     generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
         const potentialWords = new Set();
@@ -1427,22 +1275,30 @@ class ScrabbleGame {
     calculateStrategicScore(word, row, col, isHorizontal) {
         let score = this.calculatePotentialScore(word, row, col, isHorizontal);
         
-        // Exponential bonus for word length
-        score += Math.pow(word.length, 3) * 15;
+        // Massive bonus for longer words
+        score += Math.pow(word.length, 3) * 20;
         
-        // Additional bonuses
-        if (word.length >= 7) score += 100; // Big bonus for 7+ letters
-        if (word.length >= 5) score += 50;  // Medium bonus for 5+ letters
+        // Extra bonus for words 5+ letters
+        if (word.length >= 5) {
+            score += 200;
+        }
         
-        // Rest of strategic scoring...
-        const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
-        score += premiumSquares * 25;
+        // Even more bonus for 6+ letters
+        if (word.length >= 6) {
+            score += 300;
+        }
         
+        // Bonus for creating multiple words
         const crossWords = this.countIntersections(row, col, isHorizontal, word);
-        score += crossWords * 30;
+        score += crossWords * 50;
+        
+        // Penalty for short words
+        if (word.length <= 3) {
+            score -= 200;
+        }
         
         return score;
-    }
+    }    
 
     findAdvancedWordCombinations(availableLetters) {
         const combinations = new Set();
@@ -1506,24 +1362,41 @@ class ScrabbleGame {
         const validPlays = plays.filter(play => {
             if (!play || !play.word) return false;
             
-            // Minimum word length of 4
-            if (play.word.length < 4) return false;
+            // Validate main word
+            if (!this.dictionary.has(play.word.toLowerCase())) return false;
             
-            // Validate with MW API
-            return this.validateWordWithMW(play.word.toLowerCase());
+            // Validate cross-words
+            const crossWords = this.getAllCrossWords(
+                play.startPos.row, 
+                play.startPos.col,
+                play.isHorizontal,
+                play.word
+            );
+            
+            return crossWords.every(word => 
+                this.dictionary.has(word.toLowerCase()) && word.length > 1
+            );
         });
-        
+    
         if (validPlays.length === 0) return null;
-        
+    
         return validPlays.sort((a, b) => {
-            // Heavily prioritize word length
-            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 10;
+            // Very heavily prefer longer words (cubic scaling)
+            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
             if (Math.abs(lengthDiff) > 0) return lengthDiff;
-            
+    
             // Consider score as secondary factor
-            return b.score - a.score;
+            const scoreDiff = b.score - a.score;
+            if (Math.abs(scoreDiff) > 10) return scoreDiff;
+    
+            // Consider word complexity
+            const complexityDiff = 
+                this.calculateWordComplexity(b.word) - 
+                this.calculateWordComplexity(a.word);
+            
+            return complexityDiff;
         })[0];
-    }
+    }    
 
     findCenterPlays(wordCombinations) {
         const centerPlays = [];
@@ -5045,80 +4918,29 @@ evaluateWordWithBlanks(word, blanksUsed) {
     }
 
     async loadDictionary() {
-        // Initialize MW Dictionary
-        this.mwDictionaryKey = "98eb66b0-62de-46c3-82e0-85618fc9d0b7";
-        this.mwDictionaryCache = new Map();
-        console.log("Merriam-Webster dictionary initialized");
-    }
-
-    async validateWordWithMW(word) {
-        // Check cache first
-        if (this.mwDictionaryCache.has(word)) {
-            return this.mwDictionaryCache.get(word);
-        }
-    
         try {
-            const response = await fetch(
-                `https://www.dictionaryapi.com/api/v3/references/collegiate/json/${word}?key=${this.mwDictionaryKey}`
-            );
-            const data = await response.json();
+            // Load base dictionary
+            const response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+            const text = await response.text();
+            this.dictionary = new Set(text.toLowerCase().split("\n"));
     
-            // Check if we got a valid word definition
-            const isValid = Array.isArray(data) && data.length > 0 && typeof data[0] === 'object';
-            
-            // Cache the result
-            this.mwDictionaryCache.set(word, isValid);
-            
-            return isValid;
+            // Add words from Free Dictionary API
+            try {
+                const additionalWords = await this.loadAdditionalWords();
+                additionalWords.forEach(word => {
+                    if (word.length >= 2) {
+                        this.dictionary.add(word.toLowerCase());
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading additional words:", error);
+            }
+    
+            console.log("Dictionary loaded successfully");
         } catch (error) {
-            console.error("Error validating word with Merriam-Webster:", error);
-            // Fallback to basic dictionary if API fails
-            return this.dictionary.has(word.toLowerCase());
+            console.error("Error loading dictionary:", error);
+            this.dictionary = new Set(["scrabble", "game", "play", "word"]);
         }
-    }   
-    
-    async validateWord() {
-        if (this.placedTiles.length === 0) return false;
-    
-        if (!this.areTilesConnected()) return false;
-    
-        // Get all formed words
-        const formedWords = this.getFormedWords();
-        if (formedWords.length === 0) {
-            console.log("No valid words formed");
-            return false;
-        }
-    
-        // Validate each word
-        for (const wordInfo of formedWords) {
-            const word = wordInfo.word.toLowerCase();
-            
-            // Check basic dictionary first (faster)
-            if (!this.dictionary.has(word)) {
-                console.log(`Invalid word: ${word}`);
-                return false;
-            }
-    
-            // Double check with Merriam-Webster (more authoritative)
-            const isValidMW = await this.validateWordWithMW(word);
-            if (!isValidMW) {
-                console.log(`Word not found in Merriam-Webster: ${word}`);
-                return false;
-            }
-        }
-    
-        // First move must use center square
-        if (this.isFirstMove) {
-            const centerUsed = this.placedTiles.some(
-                (tile) => tile.row === 7 && tile.col === 7
-            );
-            if (!centerUsed) {
-                console.log("First move must use center square");
-                return false;
-            }
-        }
-    
-        return true;
     }
 
     async loadAdditionalWords() {
