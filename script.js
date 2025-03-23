@@ -1305,19 +1305,43 @@ class ScrabbleGame {
     evaluateWordQuality(word) {
         let quality = 0;
     
-        // Base points for word length
-        quality += Math.pow(word.length, 2) * 10;
+        // Base points for word length with cubic scaling
+        quality += Math.pow(word.length, 3) * 10;
     
-        // Bonus for words verified by MW dictionary
-        if (this.currentTurnMWCache.has(word)) {
-            quality += 50;
+        // Letter value quality
+        for (const letter of word) {
+            const letterValue = this.tileValues[letter];
+            quality += letterValue * 5;
+            // Extra points for high-value letters
+            if (letterValue >= 8) quality += 30;  // J, X, Q, Z
+            else if (letterValue >= 4) quality += 15;  // F, H, V, W, Y
         }
     
-        // Existing evaluation logic...
-        quality += this.evaluateLetterBalance(word) * 10;
+        // Vowel-consonant balance
+        const vowels = "AEIOU";
+        const vowelCount = [...word].filter(l => vowels.includes(l)).length;
+        const vowelRatio = vowelCount / word.length;
+        if (vowelRatio >= 0.3 && vowelRatio <= 0.6) {
+            quality += 25; // Ideal vowel-consonant ratio
+        }
+    
+        // Common prefixes and suffixes bonus
+        const commonPrefixes = ['RE', 'UN', 'IN', 'DIS'];
+        const commonSuffixes = ['ING', 'ED', 'ER', 'EST', 'TION'];
         
+        for (const prefix of commonPrefixes) {
+            if (word.startsWith(prefix)) quality += 15;
+        }
+        for (const suffix of commonSuffixes) {
+            if (word.endsWith(suffix)) quality += 20;
+        }
+    
+        // Length bonus for longer words
+        if (word.length >= 7) quality += 100;
+        else if (word.length >= 5) quality += 40;
+    
         return quality;
-    }
+    }    
     
     // Add throttling for API calls
     async throttledMWRequest(url, cacheKey) {
