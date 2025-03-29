@@ -2495,191 +2495,170 @@ class ScrabbleGame {
         }
     }
 
-    generatePrintContent(gameDate, wordDefinitions) {
-        // Generate header with game information
-        const header = `
-          <div class="header">
-              <h1>Scrabble Game History</h1>
-              <p>Game played on: ${gameDate}</p>
-              <div class="scores">
-                  <h2>Final Scores</h2>
-                  <p>Player: ${this.playerScore} points</p>
-                  <p>Computer: ${this.aiScore} points</p>
-                  <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
-              </div>
-          </div>
-      `;
+    // Modify the generatePrintContent method to handle undefined words
+generatePrintContent(gameDate, wordDefinitions) {
+    // Generate header with game information
+    const header = `
+        <div class="header">
+            <h1>Scrabble Game History</h1>
+            <p>Game played on: ${gameDate}</p>
+            <div class="scores">
+                <h2>Final Scores</h2>
+                <p>Player: ${this.playerScore} points</p>
+                <p>Computer: ${this.aiScore} points</p>
+                <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
+            </div>
+        </div>
+    `;
 
-        // Generate content for each move
-        const moves = this.moveHistory
-            .map((move, index) => {
-                // Handle special moves (SKIP, EXCHANGE, QUIT)
-                if (
-                    move.word === "SKIP" ||
-                    move.word === "EXCHANGE" ||
-                    move.word === "QUIT"
-                ) {
-                    return `
-                  <div class="move">
-                      <div class="move-header">
-                          <h3>Move ${index + 1}</h3>
-                          <p><strong>Player:</strong> ${move.player}</p>
-                          <p><strong>Action:</strong> ${move.word}</p>
-                          <p><strong>Score:</strong> ${move.score}</p>
-                      </div>
-                  </div>
-              `;
-                }
+    // Generate content for each move with validation
+    const moves = this.moveHistory
+        .map((move, index) => {
+            if (!move || !move.word) {
+                console.log('Invalid move found:', move);
+                return ''; // Skip invalid moves
+            }
 
-                // Handle regular word moves
-                let wordContent = "";
-                let words;
+            // Handle special moves
+            if (["SKIP", "EXCHANGE", "QUIT"].includes(move.word)) {
+                return `
+                    <div class="move">
+                        <div class="move-header">
+                            <h3>Move ${index + 1}</h3>
+                            <p><strong>Player:</strong> ${move.player}</p>
+                            <p><strong>Action:</strong> ${move.word}</p>
+                            <p><strong>Score:</strong> ${move.score}</p>
+                        </div>
+                    </div>
+                `;
+            }
 
+            // Handle regular word moves
+            let wordContent = "";
+            let words = [];
+
+            try {
                 // Handle multiple words (separated by &)
                 if (move.word.includes("&")) {
-                    words = move.word.split("&").map((w) => {
-                        // Extract word and score from format "WORD (score)"
-                        const match = w.trim().match(/([A-Z]+)\s*\((\d+)\)/);
-                        return match ? match[1] : w.trim();
-                    });
+                    words = move.word.split("&")
+                        .map(w => w.trim())
+                        .map(w => {
+                            const match = w.match(/([A-Z]+)\s*\((\d+)\)/);
+                            return match ? match[1] : w;
+                        });
                 } else {
                     // Handle single word
                     const match = move.word.match(/([A-Z]+)\s*(?:\((\d+)\))?/);
                     words = match ? [match[1]] : [move.word];
                 }
 
-                // Generate definition sections for each word
+                // Generate definition sections for valid words
                 const definitions = words
-                    .map((word) => {
+                    .filter(word => word && typeof word === 'string')
+                    .map(word => {
                         const def = wordDefinitions.get(word);
                         if (!def) return "";
 
                         return `
-                  <div class="word-section">
-                      <div class="word-header">
-                          <h4>${word}</h4>
-                      </div>
-                      <div class="definitions">
-                          ${def
-                            .map(
-                              (meaning) => `
-                              <div class="meaning">
-                                  <span class="part-of-speech">${meaning.partOfSpeech}</span>
-                                  <ul>
-                                      ${meaning.definitions
-                                        .map(
-                                          (d) => `
-                                          <li>${d}</li>
-                                      `,
-                                        )
-                                        .join("")}
-                                  </ul>
-                              </div>
-                          `,
-                            )
-                            .join("")}
-                      </div>
-                  </div>
-              `;
+                            <div class="word-section">
+                                <div class="word-header">
+                                    <h4>${word}</h4>
+                                </div>
+                                <div class="definitions">
+                                    ${def.map(meaning => `
+                                        <div class="meaning">
+                                            <span class="part-of-speech">${meaning.partOfSpeech}</span>
+                                            <ul>
+                                                ${meaning.definitions.map(d => `
+                                                    <li>${d}</li>
+                                                `).join("")}
+                                            </ul>
+                                        </div>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        `;
                     })
                     .join("");
 
-                // Combine all elements for this move
                 return `
-              <div class="move">
-                  <div class="move-header">
-                      <h3>Move ${index + 1}</h3>
-                      <p><strong>Player:</strong> ${move.player}</p>
-                      <p><strong>Word(s):</strong> ${move.word}</p>
-                      <p><strong>Score:</strong> ${move.score}</p>
-                  </div>
-                  <div class="definitions-container">
-                      ${definitions}
-                  </div>
-              </div>
-          `;
-            })
-            .join("");
+                    <div class="move">
+                        <div class="move-header">
+                            <h3>Move ${index + 1}</h3>
+                            <p><strong>Player:</strong> ${move.player}</p>
+                            <p><strong>Word(s):</strong> ${move.word}</p>
+                            <p><strong>Score:</strong> ${move.score}</p>
+                        </div>
+                        <div class="definitions-container">
+                            ${definitions}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error processing move:', move, error);
+                return ''; // Skip problematic moves
+            }
+        })
+        .filter(Boolean) // Remove empty strings from invalid moves
+        .join("");
 
-        // Add additional styling
-        const styles = `
-          <style>
-              body {
-                  font-family: Arial, sans-serif;
-                  margin: 20px;
-                  line-height: 1.6;
-                  color: #333;
-              }
-              .header {
-                  text-align: center;
-                  margin-bottom: 30px;
-                  padding-bottom: 20px;
-                  border-bottom: 2px solid #333;
-              }
-              .scores {
-                  margin: 20px 0;
-                  padding: 15px;
-                  background: #f5f5f5;
-                  border-radius: 5px;
-              }
-              .move {
-                  margin: 20px 0;
-                  padding: 20px;
-                  border: 1px solid #ddd;
-                  border-radius: 5px;
-                  background: #f9f9f9;
-              }
-              .move-header {
-                  margin-bottom: 15px;
-                  padding-bottom: 10px;
-                  border-bottom: 1px solid #ddd;
-              }
-              .word-section {
-                  margin: 15px 0;
-                  padding-left: 20px;
-                  border-left: 3px solid #3498db;
-              }
-              .word-header {
-                  font-size: 1.2em;
-                  color: #2c3e50;
-                  margin-bottom: 10px;
-              }
-              .part-of-speech {
-                  color: #e67e22;
-                  font-style: italic;
-                  font-weight: bold;
-              }
-              .definitions {
-                  margin-left: 20px;
-              }
-              .meaning {
-                  margin: 10px 0;
-              }
-              ul {
-                  margin: 5px 0;
-                  padding-left: 20px;
-              }
-              li {
-                  margin: 5px 0;
-              }
-              @media print {
-                  .move {
-                      break-inside: avoid;
-                      page-break-inside: avoid;
-                  }
-              }
-          </style>
-      `;
+    // Return complete HTML content with error handling
+    return `
+        ${this.getPrintStyles()}
+        ${header}
+        <div class="moves-container">
+            ${moves || '<p>No moves to display</p>'}
+        </div>
+    `;
+}
 
-        // Return complete HTML content
-        return `
-          ${styles}
-          ${header}
-          <div class="moves-container">
-              ${moves}
-          </div>
-      `;
-    }
+// Add a helper method for print styles
+getPrintStyles() {
+    return `
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                line-height: 1.6;
+                color: #333;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #333;
+            }
+            .move {
+                margin: 20px 0;
+                padding: 20px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                background: #f9f9f9;
+            }
+            .word-section {
+                margin: 15px 0;
+                padding-left: 20px;
+                border-left: 3px solid #3498db;
+            }
+            .word-header {
+                font-size: 1.2em;
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }
+            .part-of-speech {
+                color: #e67e22;
+                font-style: italic;
+                font-weight: bold;
+            }
+            @media print {
+                .move {
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+            }
+        </style>
+    `;
+}
 
     getPrefix(anchor, isHorizontal) {
         let prefix = "";
