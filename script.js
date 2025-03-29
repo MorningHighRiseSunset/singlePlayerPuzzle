@@ -1137,83 +1137,186 @@ class ScrabbleGame {
     }
 
     findAIPossiblePlays() {
-        const possiblePlays = [];
-        const maxAttempts = 3; // Try multiple times to find longer words
-        
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            try {
-                const availableLetters = this.aiRack.map(tile => tile.letter);
-                const minWordLength = Math.min(5, availableLetters.length); // Prefer at least 5 letters
-                
-                // First try to find longer words (5+ letters)
-                const longWords = Array.from(this.dictionary)
+        try {
+            const possiblePlays = [];
+            const anchors = this.findAnchors();
+            const availableLetters = this.aiRack.map(tile => tile.letter);
+    
+            console.log("=== Starting Enhanced AI Play Search ===");
+            console.log("Available letters:", availableLetters);
+            console.log("Anchors found:", anchors);
+    
+            // Safety check for valid data
+            if (!Array.isArray(anchors) || !Array.isArray(availableLetters)) {
+                console.error("Invalid anchors or available letters");
+                return [];
+            }
+    
+            // Handle first move or empty board with strong preference for longer words
+            if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
+                const words = Array.from(this.dictionary)
                     .filter(word => {
-                        if (word.length < minWordLength) return false;
+                        // Strongly prefer longer words (minimum 5 letters for first move)
+                        if (word.length < 5) return false;
+                        // Must be formable with available letters
                         return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
                     })
                     .map(word => word.toUpperCase());
     
-                // Sort by length (descending) and take top candidates
-                const candidates = longWords
+                // Sort by length and take top candidates
+                const candidates = words
                     .sort((a, b) => {
-                        // Primary sort by length
+                        // Primary sort by length (descending)
                         const lengthDiff = b.length - a.length;
                         if (lengthDiff !== 0) return lengthDiff;
-                        
+    
                         // Secondary sort by potential score
-                        const scoreA = this.calculatePotentialScore(a, 7, 7, true);
-                        const scoreB = this.calculatePotentialScore(b, 7, 7, true);
+                        const scoreA = this.calculatePotentialScore(a, 7, 7 - Math.floor(a.length/2), true);
+                        const scoreB = this.calculatePotentialScore(b, 7, 7 - Math.floor(b.length/2), true);
                         return scoreB - scoreA;
                     })
-                    .slice(0, 20); // Consider top 20 candidates
+                    .slice(0, 15); // Consider top 15 longest possible words
     
                 for (const word of candidates) {
-                    // Try multiple positions for each word
-                    for (let row = 0; row < 15; row++) {
-                        for (let col = 0; col <= 15 - word.length; col++) {
-                            if (this.isValidAIPlacement(word, row, col, true)) {
-                                const score = this.calculateStrategicScore(word, row, col, true);
-                                possiblePlays.push({
-                                    word,
-                                    startPos: { row, col },
-                                    isHorizontal: true,
-                                    score: score + (word.length * 50) // Extra bonus for length
-                                });
-                            }
-                            
-                            // Try vertical placement too
-                            if (row <= 15 - word.length && 
-                                this.isValidAIPlacement(word, row, col, false)) {
-                                const score = this.calculateStrategicScore(word, row, col, false);
-                                possiblePlays.push({
-                                    word,
-                                    startPos: { row, col },
-                                    isHorizontal: false,
-                                    score: score + (word.length * 50)
-                                });
-                            }
-                        }
+                    // Try to place word through center square
+                    const centerPos = {
+                        row: 7,
+                        col: 7 - Math.floor(word.length / 2)
+                    };
+                    
+                    if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
+                        const baseScore = this.calculateStrategicScore(word, centerPos.row, centerPos.col, true);
+                        const lengthBonus = Math.pow(word.length, 3) * 15; // Cubic scaling for length
+                        
+                        possiblePlays.push({
+                            word,
+                            startPos: centerPos,
+                            isHorizontal: true,
+                            score: baseScore + lengthBonus
+                        });
                     }
                 }
+            } else {
+                // For subsequent moves
+                for (const anchor of anchors) {
+                    if (!this.isValidPosition(anchor.row, anchor.col)) {
+                        continue;
+                    }
     
-                // If we found valid plays, stop trying
-                if (possiblePlays.length > 0) break;
-            } catch (error) {
-                console.error("Error in attempt", attempt, error);
-                continue;
+                    try {
+                        // Get prefixes and suffixes for both directions
+                        const hPrefix = this.getPrefix(anchor, true);
+                        const hSuffix = this.getSuffix(anchor, true);
+                        const vPrefix = this.getPrefix(anchor, false);
+                        const vSuffix = this.getSuffix(anchor, false);
+    
+                        // Find potential words based on available letters and existing patterns
+                        const potentialWords = this.generatePotentialWords(
+                            availableLetters,
+                            [hPrefix, hSuffix, vPrefix, vSuffix]
+                        );
+    
+                        // Try each potential word
+                        for (const word of potentialWords) {
+                            // Strongly prefer longer words
+                            if (word.length < 4 && !this.createsMultipleWords(word, anchor.row, anchor.col, true)) {
+                                continue;
+                            }
+    
+                            // Try horizontal placement
+                            if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
+                                const startCol = anchor.col - hPrefix.length;
+                                if (this.isValidAIPlacement(word, anchor.row, startCol, true)) {
+                                    const baseScore = this.calculateStrategicScore(word, anchor.row, startCol, true);
+                                    const lengthBonus = Math.pow(word.length, 3) * 15;
+                                    const crossWordBonus = this.countIntersections(anchor.row, startCol, true, word) * 30;
+                                    
+                                    possiblePlays.push({
+                                        word,
+                                        startPos: { row: anchor.row, col: startCol },
+                                        isHorizontal: true,
+                                        score: baseScore + lengthBonus + crossWordBonus
+                                    });
+                                }
+                            }
+    
+                            // Try vertical placement
+                            if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
+                                const startRow = anchor.row - vPrefix.length;
+                                if (this.isValidAIPlacement(word, startRow, anchor.col, false)) {
+                                    const baseScore = this.calculateStrategicScore(word, startRow, anchor.col, false);
+                                    const lengthBonus = Math.pow(word.length, 3) * 15;
+                                    const crossWordBonus = this.countIntersections(startRow, anchor.col, false, word) * 30;
+                                    
+                                    possiblePlays.push({
+                                        word,
+                                        startPos: { row: startRow, col: anchor.col },
+                                        isHorizontal: false,
+                                        score: baseScore + lengthBonus + crossWordBonus
+                                    });
+                                }
+                            }
+                        }
+                    } catch (anchorError) {
+                        console.error("Error processing anchor:", anchorError);
+                        continue;
+                    }
+                }
             }
-        }
     
-        // Sort plays by modified score that heavily weights length
-        return possiblePlays.sort((a, b) => {
-            // Heavily weight word length
-            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 10;
-            if (Math.abs(lengthDiff) > 0) return lengthDiff;
-            
-            // Then consider score
-            return b.score - a.score;
-        });
-    }      
+            // Filter and sort plays
+            const validPlays = possiblePlays
+                .filter(play => {
+                    // Basic validation checks
+                    if (!this.dictionary.has(play.word.toLowerCase())) {
+                        return false;
+                    }
+    
+                    // Check for creative placement
+                    const isCreative = this.isCreativePlacement(
+                        play.startPos.row,
+                        play.startPos.col,
+                        play.isHorizontal,
+                        play.word
+                    );
+    
+                    // Accept plays that are either creative or score well
+                    return isCreative || play.score > 20;
+                })
+                .sort((a, b) => {
+                    // Primary sort by length (heavily weighted)
+                    const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
+                    if (Math.abs(lengthDiff) > 0) return lengthDiff;
+    
+                    // Secondary sort by score
+                    const scoreDiff = b.score - a.score;
+                    if (Math.abs(scoreDiff) > 20) return scoreDiff;
+    
+                    // Tertiary sort by creativity
+                    const aCreative = this.isCreativePlacement(
+                        a.startPos.row,
+                        a.startPos.col,
+                        a.isHorizontal,
+                        a.word
+                    );
+                    const bCreative = this.isCreativePlacement(
+                        b.startPos.row,
+                        b.startPos.col,
+                        b.isHorizontal,
+                        b.word
+                    );
+    
+                    return bCreative - aCreative;
+                });
+    
+            console.log(`Found ${validPlays.length} valid plays after filtering`);
+            return validPlays;
+    
+        } catch (error) {
+            console.error("Error in findAIPossiblePlays:", error);
+            return [];
+        }
+    }    
 
     generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
         const potentialWords = new Set();
@@ -1271,6 +1374,26 @@ class ScrabbleGame {
     
         return true;
     }
+    
+    calculateStrategicScore(word, row, col, isHorizontal) {
+        let score = this.calculatePotentialScore(word, row, col, isHorizontal);
+    
+        // Bonus for word length
+        score += Math.pow(word.length, 2) * 10;
+    
+        // Bonus for using premium squares
+        const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
+        score += premiumSquares * 25;
+    
+        // Bonus for creating multiple words
+        const crossWords = this.countIntersections(row, col, isHorizontal, word);
+        score += crossWords * 30;
+    
+        // Bonus for using complex letters
+        score += this.calculateWordComplexity(word) * 15;
+    
+        return score;
+    }
 
     findAdvancedWordCombinations(availableLetters) {
         const combinations = new Set();
@@ -1321,30 +1444,23 @@ class ScrabbleGame {
     calculateStrategicScore(word, row, col, isHorizontal) {
         let score = this.calculatePotentialScore(word, row, col, isHorizontal);
         
-        // Massive bonus for longer words
-        score += Math.pow(word.length, 3) * 20;
-        
-        // Extra bonus for words 5+ letters
-        if (word.length >= 5) {
-            score += 200;
-        }
-        
-        // Even more bonus for 6+ letters
-        if (word.length >= 6) {
-            score += 300;
-        }
-        
+        // Bonus for word length
+        score += Math.pow(word.length, 2) * 10;
+    
+        // Bonus for using premium squares
+        const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
+        score += premiumSquares * 25;
+    
         // Bonus for creating multiple words
         const crossWords = this.countIntersections(row, col, isHorizontal, word);
-        score += crossWords * 50;
-        
-        // Penalty for short words
-        if (word.length <= 3) {
-            score -= 200;
-        }
-        
+        score += crossWords * 30;
+    
+        // Bonus for complex letters
+        const complexityScore = this.calculateWordComplexity(word);
+        score += complexityScore * 15;
+    
         return score;
-    }    
+    }
 
     calculateWordComplexity(word) {
         const letterValues = {
