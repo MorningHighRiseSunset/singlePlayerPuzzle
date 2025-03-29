@@ -1602,33 +1602,25 @@ class ScrabbleGame {
 
     getVerticalWordAt(row, col) {
         if (!this.isValidPosition(row, col)) return null;
-
+    
         let word = "";
         let startRow = row;
-
+    
         // Find start of word
-        while (
-            startRow > 0 &&
-            this.board[startRow - 1] &&
-            this.board[startRow - 1][col]
-        ) {
+        while (startRow > 0 && this.board[startRow - 1][col]) {
             startRow--;
         }
-
-        // Build word from start position
+    
+        // Build word
         let currentRow = startRow;
-        while (
-            currentRow < 15 &&
-            this.board[currentRow] &&
-            this.board[currentRow][col]
-        ) {
+        while (currentRow < 15 && this.board[currentRow][col]) {
             word += this.board[currentRow][col].letter;
             currentRow++;
         }
-
+    
         return word.length > 1 ? word : null;
     }
-
+    
     getHorizontalWordAt(row, col) {
         if (!this.isValidPosition(row, col)) return null;
 
@@ -1640,9 +1632,9 @@ class ScrabbleGame {
             startCol--;
         }
 
-        // Build word from start position
+        // Build word
         let currentCol = startCol;
-        while (currentCol < 15 && this.board[row] && this.board[row][currentCol]) {
+        while (currentCol < 15 && this.board[row][currentCol]) {
             word += this.board[row][currentCol].letter;
             currentCol++;
         }
@@ -2332,17 +2324,6 @@ class ScrabbleGame {
         }
 
         return false;
-    }
-
-    isValidPosition(row, col) {
-        return (
-            row >= 0 &&
-            row < 15 &&
-            col >= 0 &&
-            col < 15 &&
-            this.board[row] !== undefined &&
-            this.board[row][col] !== undefined
-        );
     }
 
     findSimpleWords(letters) {
@@ -3393,33 +3374,33 @@ getPrintStyles() {
     }
 
     // New helper function to evaluate words using blank tiles
-evaluateWordWithBlanks(word, blanksUsed) {
-    let score = 0;
-    
-    // Base score for word length
-    score += word.length * 10;
+    evaluateWordWithBlanks(word, blanksUsed) {
+        let score = 0;
+        
+        // Base score for word length
+        score += word.length * 10;
 
-    // Premium for longer words
-    if (word.length >= 7) score += 50;
-    
-    // Score for valuable letters
-    for (const letter of word) {
-        score += this.tileValues[letter] || 0;
+        // Premium for longer words
+        if (word.length >= 7) score += 50;
+        
+        // Score for valuable letters
+        for (const letter of word) {
+            score += this.tileValues[letter] || 0;
+        }
+
+        // Adjust score based on blank tile usage efficiency
+        // Prefer using blanks for high-value letters
+        const lettersUsingBlanks = word.split('')
+            .sort((a, b) => this.tileValues[b] - this.tileValues[a])
+            .slice(0, blanksUsed);
+        
+        const blankEfficiency = lettersUsingBlanks.reduce((sum, letter) => 
+            sum + this.tileValues[letter], 0) / blanksUsed;
+
+        score += blankEfficiency * 5;
+
+        return score;
     }
-
-    // Adjust score based on blank tile usage efficiency
-    // Prefer using blanks for high-value letters
-    const lettersUsingBlanks = word.split('')
-        .sort((a, b) => this.tileValues[b] - this.tileValues[a])
-        .slice(0, blanksUsed);
-    
-    const blankEfficiency = lettersUsingBlanks.reduce((sum, letter) => 
-        sum + this.tileValues[letter], 0) / blanksUsed;
-
-    score += blankEfficiency * 5;
-
-    return score;
-}
 
 
     isValidAIPlacement(word, startRow, startCol, horizontal) {
@@ -3436,39 +3417,11 @@ evaluateWordWithBlanks(word, blanksUsed) {
 
         // Check basic boundary conditions
         if (horizontal) {
-            if (
-                startCol < 0 ||
-                startCol + word.length > 15 ||
-                startRow < 0 ||
-                startRow > 14
-            ) {
+            if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
                 return false;
             }
         } else {
-            if (
-                startRow < 0 ||
-                startRow + word.length > 15 ||
-                startCol < 0 ||
-                startCol > 14
-            ) {
-                return false;
-            }
-        }
-
-        // Check for parallel words
-        if (this.hasParallelWord(startRow, startCol, horizontal)) {
-            console.log(`Rejecting ${word} - would create parallel word`);
-            return false;
-        }
-
-        // Check distance from player's last move
-        if (this.placedTiles.length > 0) {
-            const lastPlayerMove = this.placedTiles[0];
-            const distance =
-                Math.abs(startRow - lastPlayerMove.row) +
-                Math.abs(startCol - lastPlayerMove.col);
-            if (distance < 3) {
-                console.log(`Rejecting ${word} - too close to player's last move`);
+            if (startRow < 0 || startRow + word.length > 15 || startCol < 0 || startCol > 14) {
                 return false;
             }
         }
@@ -3487,21 +3440,48 @@ evaluateWordWithBlanks(word, blanksUsed) {
                 }
                 hasValidConnection = true;
             } else {
-                tempBoard[row][col] = {
-                    letter: word[i]
-                };
+                tempBoard[row][col] = { letter: word[i] };
+            }
+
+            // Check each position for valid cross-words
+            const crossWord = horizontal ? 
+                this.getVerticalWordAt(row, col) :
+                this.getHorizontalWordAt(row, col);
+
+            if (crossWord && crossWord.length > 1) {
+                if (!this.dictionary.has(crossWord.toLowerCase())) {
+                    console.log(`Invalid cross word formed: ${crossWord}`);
+                    return false;
+                }
             }
 
             if (this.hasAdjacentTile(row, col)) {
                 hasValidConnection = true;
             }
+        }
 
-            // Check formed words at this position
-            const formedWords = this.getAllFormedWords(row, col, tempBoard);
-            for (const formedWord of formedWords) {
-                if (!this.dictionary.has(formedWord.toLowerCase())) {
-                    console.log(`Invalid word formed: ${formedWord}`);
-                    return false;
+        // Check for invalid parallel words
+        for (let i = 0; i < word.length; i++) {
+            const row = horizontal ? startRow : startRow + i;
+            const col = horizontal ? startCol + i : startCol;
+            
+            // Check adjacent positions for parallel words
+            const positions = horizontal ? 
+                [[row - 1, col], [row + 1, col]] : 
+                [[row, col - 1], [row, col + 1]];
+
+            for (const [checkRow, checkCol] of positions) {
+                if (this.isValidPosition(checkRow, checkCol) && tempBoard[checkRow][checkCol]) {
+                    const parallelWord = horizontal ?
+                        this.getHorizontalWordAt(checkRow, checkCol) :
+                        this.getVerticalWordAt(checkRow, checkCol);
+                    
+                    if (parallelWord && parallelWord.length > 1) {
+                        if (!this.dictionary.has(parallelWord.toLowerCase())) {
+                            console.log(`Invalid parallel word formed: ${parallelWord}`);
+                            return false;
+                        }
+                    }
                 }
             }
         }
