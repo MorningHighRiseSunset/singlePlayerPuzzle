@@ -1600,45 +1600,41 @@ class ScrabbleGame {
             this.getHorizontalWordAt(row, col);
     }
 
-    getVerticalWordAt(row, col) {
+    getVerticalWordAt(row, col, board = this.board) {
         if (!this.isValidPosition(row, col)) return null;
     
         let word = "";
         let startRow = row;
     
-        // Find start of word
-        while (startRow > 0 && this.board[startRow - 1][col]) {
+        while (startRow > 0 && board[startRow - 1][col]) {
             startRow--;
         }
     
-        // Build word
         let currentRow = startRow;
-        while (currentRow < 15 && this.board[currentRow][col]) {
-            word += this.board[currentRow][col].letter;
+        while (currentRow < 15 && board[currentRow][col]) {
+            word += board[currentRow][col].letter;
             currentRow++;
         }
     
         return word.length > 1 ? word : null;
-    }
+    }    
     
-    getHorizontalWordAt(row, col) {
+    getHorizontalWordAt(row, col, board = this.board) {
         if (!this.isValidPosition(row, col)) return null;
-
+    
         let word = "";
         let startCol = col;
-
-        // Find start of word
-        while (startCol > 0 && this.board[row][startCol - 1]) {
+    
+        while (startCol > 0 && board[row][startCol - 1]) {
             startCol--;
         }
-
-        // Build word
+    
         let currentCol = startCol;
-        while (currentCol < 15 && this.board[row][currentCol]) {
-            word += this.board[row][currentCol].letter;
+        while (currentCol < 15 && board[row][currentCol]) {
+            word += board[row][currentCol].letter;
             currentCol++;
         }
-
+    
         return word.length > 1 ? word : null;
     }
 
@@ -3402,20 +3398,17 @@ getPrintStyles() {
         return score;
     }
 
-
     isValidAIPlacement(word, startRow, startCol, horizontal) {
-        // Enforce minimum 3-letter word length
         if (word.length < 3) {
             console.log(`Rejecting ${word} - words must be at least 3 letters long`);
             return false;
         }
-
+    
         if (!this.dictionary.has(word.toLowerCase())) {
             console.log(`${word} is not a valid word in the dictionary`);
             return false;
         }
-
-        // Check basic boundary conditions
+    
         if (horizontal) {
             if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
                 return false;
@@ -3425,82 +3418,64 @@ getPrintStyles() {
                 return false;
             }
         }
-
+    
+        let hasValidIntersection = false;
         let tempBoard = JSON.parse(JSON.stringify(this.board));
-        let hasValidConnection = false;
-
-        // Place the word temporarily on the board
+    
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
-
+    
             if (tempBoard[row][col]) {
                 if (tempBoard[row][col].letter !== word[i]) {
+                    console.log(`Letter mismatch at position [${row},${col}]`);
                     return false;
                 }
-                hasValidConnection = true;
+                hasValidIntersection = true;
             } else {
                 tempBoard[row][col] = { letter: word[i] };
             }
-
-            // Check each position for valid cross-words
-            const crossWord = horizontal ? 
-                this.getVerticalWordAt(row, col) :
-                this.getHorizontalWordAt(row, col);
-
-            if (crossWord && crossWord.length > 1) {
-                if (!this.dictionary.has(crossWord.toLowerCase())) {
-                    console.log(`Invalid cross word formed: ${crossWord}`);
-                    return false;
-                }
-            }
-
-            if (this.hasAdjacentTile(row, col)) {
-                hasValidConnection = true;
-            }
-        }
-
-        // Check for invalid parallel words
-        for (let i = 0; i < word.length; i++) {
-            const row = horizontal ? startRow : startRow + i;
-            const col = horizontal ? startCol + i : startCol;
-            
-            // Check adjacent positions for parallel words
-            const positions = horizontal ? 
+    
+            const adjacentPositions = horizontal ? 
                 [[row - 1, col], [row + 1, col]] : 
                 [[row, col - 1], [row, col + 1]];
-
-            for (const [checkRow, checkCol] of positions) {
-                if (this.isValidPosition(checkRow, checkCol) && tempBoard[checkRow][checkCol]) {
-                    const parallelWord = horizontal ?
-                        this.getHorizontalWordAt(checkRow, checkCol) :
-                        this.getVerticalWordAt(checkRow, checkCol);
-                    
-                    if (parallelWord && parallelWord.length > 1) {
-                        if (!this.dictionary.has(parallelWord.toLowerCase())) {
-                            console.log(`Invalid parallel word formed: ${parallelWord}`);
+    
+            for (const [adjRow, adjCol] of adjacentPositions) {
+                if (this.isValidPosition(adjRow, adjCol) && tempBoard[adjRow][adjCol]) {
+                    const crossWord = horizontal ? 
+                        this.getVerticalWordAt(row, col, tempBoard) :
+                        this.getHorizontalWordAt(row, col, tempBoard);
+    
+                    if (crossWord && crossWord.length > 1) {
+                        if (!this.dictionary.has(crossWord.toLowerCase())) {
+                            console.log(`Invalid cross word formed: ${crossWord}`);
                             return false;
                         }
+                        hasValidIntersection = true;
                     }
                 }
             }
         }
-
-        // First move must use center square
+    
         if (this.isFirstMove) {
             const usesCenterSquare = horizontal ?
                 startRow === 7 && startCol <= 7 && startCol + word.length > 7 :
                 startCol === 7 && startRow <= 7 && startRow + word.length > 7;
-
+    
             if (!usesCenterSquare) {
                 console.log("First move must use center square");
                 return false;
             }
             return true;
         }
-
-        return hasValidConnection;
-    }
+    
+        if (!hasValidIntersection) {
+            console.log("Word must connect with existing tiles");
+            return false;
+        }
+    
+        return true;
+    }    
 
     getAllCrossWords(row, col, isHorizontal, word) {
         const crossWords = [];
