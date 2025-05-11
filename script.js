@@ -1475,44 +1475,51 @@ class ScrabbleGame {
     }
 
     selectBestPlay(plays) {
-        const validPlays = plays.filter(play => {
-            if (!play || !play.word) return false;
-            
-            // Validate main word
-            if (!this.dictionary.has(play.word.toLowerCase())) return false;
-            
-            // Validate cross-words
-            const crossWords = this.getAllCrossWords(
-                play.startPos.row, 
-                play.startPos.col,
-                play.isHorizontal,
-                play.word
-            );
-            
+    // Enable strict mode if near endgame
+    const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
+
+    const validPlays = plays.filter(play => {
+        if (!play || !play.word) return false;
+
+        // Always check main word
+        if (!this.dictionary.has(play.word.toLowerCase())) return false;
+
+        // Always check cross-words
+        const crossWords = this.getAllCrossWords(
+            play.startPos.row, 
+            play.startPos.col,
+            play.isHorizontal,
+            play.word
+        );
+
+        // In strict mode, ALL cross-words must be valid and >1 letter
+        if (strictMode) {
             return crossWords.every(word => 
                 this.dictionary.has(word.toLowerCase()) && word.length > 1
             );
-        });
-    
-        if (validPlays.length === 0) return null;
-    
-        return validPlays.sort((a, b) => {
-            // Very heavily prefer longer words (cubic scaling)
-            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
-            if (Math.abs(lengthDiff) > 0) return lengthDiff;
-    
-            // Consider score as secondary factor
-            const scoreDiff = b.score - a.score;
-            if (Math.abs(scoreDiff) > 10) return scoreDiff;
-    
-            // Consider word complexity
-            const complexityDiff = 
-                this.calculateWordComplexity(b.word) - 
-                this.calculateWordComplexity(a.word);
-            
-            return complexityDiff;
-        })[0];
-    }    
+        } else {
+            // In normal mode, allow if most cross-words are valid
+            const validCount = crossWords.filter(word => 
+                this.dictionary.has(word.toLowerCase()) && word.length > 1
+            ).length;
+            return validCount === crossWords.length;
+        }
+    });
+
+    if (validPlays.length === 0) return null;
+
+    return validPlays.sort((a, b) => {
+        // Prefer longer words, then score, then complexity
+        const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
+        if (Math.abs(lengthDiff) > 0) return lengthDiff;
+        const scoreDiff = b.score - a.score;
+        if (Math.abs(scoreDiff) > 10) return scoreDiff;
+        const complexityDiff = 
+            this.calculateWordComplexity(b.word) - 
+            this.calculateWordComplexity(a.word);
+        return complexityDiff;
+    })[0];
+}  
 
     findCenterPlays(wordCombinations) {
         const centerPlays = [];
