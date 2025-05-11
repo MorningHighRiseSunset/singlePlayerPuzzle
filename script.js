@@ -117,26 +117,26 @@ class ScrabbleGame {
     setupEventListeners() {
         // Initial highlight of valid placements
         this.highlightValidPlacements();
-    
+
         // Update highlights when game state changes
         document.addEventListener("click", () => {
             this.highlightValidPlacements();
         });
-    
+
         // Add exchange system setup
         this.setupExchangeSystem();
-    
+
         // Play word button
         document.getElementById("play-word").addEventListener("click", () => this.playWord());
-    
+
         // Shuffle rack button
         document.getElementById("shuffle-rack").addEventListener("click", async () => {
             const rack = document.getElementById("tile-rack");
             const tiles = [...rack.children];
-    
+
             // Disable tile dragging during animation
             tiles.forEach((tile) => (tile.draggable = false));
-    
+
             // Visual shuffle animation
             for (let i = 0; i < 5; i++) { // 5 visual shuffles
                 await new Promise((resolve) => {
@@ -147,30 +147,30 @@ class ScrabbleGame {
                     setTimeout(resolve, 200);
                 });
             }
-    
+
             // Reset positions with transition
             tiles.forEach((tile) => {
                 tile.style.transform = "none";
             });
-    
+
             // Actual shuffle logic
             for (let i = this.playerRack.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
             }
-    
+
             // Wait for position reset animation to complete
             setTimeout(() => {
                 this.renderRack();
             }, 200);
-    
+
             // Re-enable dragging
             setTimeout(() => {
                 const newTiles = document.querySelectorAll("#tile-rack .tile");
                 newTiles.forEach((tile) => (tile.draggable = true));
             }, 400);
         });
-    
+
         // Skip turn button
         document.getElementById("skip-turn").addEventListener("click", () => {
             if (this.currentTurn === "player") {
@@ -184,16 +184,16 @@ class ScrabbleGame {
                 }
             }
         });
-    
+
         // Mobile-specific tile selection and placement
         if (this.isMobile) {
             // Handle tile selection from rack
             document.getElementById("tile-rack").addEventListener("click", (e) => {
                 if (this.currentTurn !== "player") return;
-                
+
                 const tileElement = e.target.closest(".tile");
                 if (!tileElement) return;
-        
+
                 // Toggle selection
                 if (this.selectedTile === tileElement) {
                     this.deselectTile();
@@ -201,22 +201,22 @@ class ScrabbleGame {
                     this.selectTile(tileElement);
                 }
             });
-        
+
             // Handle board cell clicks for placement
             document.querySelectorAll(".board-cell").forEach(cell => {
                 cell.addEventListener("click", (e) => {
                     if (this.currentTurn !== "player") return;
-                    
+
                     if (this.selectedTile) {
                         const row = parseInt(cell.dataset.row);
                         const col = parseInt(cell.dataset.col);
                         const tileIndex = this.selectedTile.dataset.index;
-                        
+
                         if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
                             // Create a nice flying animation
                             const startRect = this.selectedTile.getBoundingClientRect();
                             const endRect = cell.getBoundingClientRect();
-                            
+
                             const clone = this.selectedTile.cloneNode(true);
                             clone.style.position = "fixed";
                             clone.style.left = `${startRect.left}px`;
@@ -226,13 +226,13 @@ class ScrabbleGame {
                             clone.style.transition = "all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2)";
                             clone.style.zIndex = "1000";
                             document.body.appendChild(clone);
-        
+
                             requestAnimationFrame(() => {
                                 clone.style.left = `${endRect.left}px`;
                                 clone.style.top = `${endRect.top}px`;
                                 clone.style.transform = "scale(1.1) rotate(360deg)";
                             });
-        
+
                             setTimeout(() => {
                                 clone.remove();
                                 this.placeTile(this.playerRack[tileIndex], row, col);
@@ -244,22 +244,22 @@ class ScrabbleGame {
                     }
                 });
             });
-        
+
             // Handle placed tile clicks for returning to rack
             document.addEventListener("click", (e) => {
                 if (this.currentTurn !== "player") return;
-                
+
                 const tileElement = e.target.closest(".tile");
                 if (!tileElement || !tileElement.closest(".board-cell")) return;
-        
+
                 const cell = tileElement.closest(".board-cell");
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-        
+
                 // Find the placed tile
-                const placedTileIndex = this.placedTiles.findIndex(t => 
+                const placedTileIndex = this.placedTiles.findIndex(t =>
                     t.row === row && t.col === col);
-        
+
                 if (placedTileIndex !== -1) {
                     // Return tile to rack
                     const placedTile = this.placedTiles[placedTileIndex];
@@ -272,21 +272,21 @@ class ScrabbleGame {
                 }
             });
         }
-    
+
         // Quit game button
         const quitButton = document.getElementById("quit-game");
         if (quitButton) {
             quitButton.addEventListener("click", () => {
                 if (this.gameEnded) return; // Prevent multiple triggers
-    
+
                 // Set the computer as winner since player quit
                 this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
                 this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
                 this.gameEnded = true;
-    
+
                 // Update scores before animation
                 this.updateScores();
-    
+
                 // Add the quit move to history
                 if (this.moveHistory) {
                     this.moveHistory.push({
@@ -297,17 +297,17 @@ class ScrabbleGame {
                     });
                     this.updateMoveHistory();
                 }
-    
+
                 // Trigger game over animation
                 this.announceWinner();
             });
         }
-    
+
         // Print history button
         document.getElementById("print-history").addEventListener("click", async () => {
             const printWindow = window.open("", "_blank");
             const gameDate = new Date().toLocaleString();
-    
+
             // Show loading message
             printWindow.document.write(`
                 <html>
@@ -329,14 +329,14 @@ class ScrabbleGame {
                     </body>
                 </html>
             `);
-    
+
             // Gather all unique words from move history
             const uniqueWords = [...new Set(
                 this.moveHistory
-                    .map((move) => move.word)
-                    .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+                .map((move) => move.word)
+                .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
             )];
-    
+
             // Fetch definitions for all words
             const wordDefinitions = new Map();
             for (const word of uniqueWords) {
@@ -345,7 +345,7 @@ class ScrabbleGame {
                     wordDefinitions.set(word, definitions);
                 }
             }
-    
+
             // Generate and set the content
             const content = this.generatePrintContent(gameDate, wordDefinitions);
             printWindow.document.body.innerHTML = content;
@@ -353,22 +353,22 @@ class ScrabbleGame {
             printWindow.focus();
             printWindow.print();
         });
-    }    
+    }
 
     selectTile(tileElement) {
         // Deselect previously selected tile
         if (this.selectedTile) {
             this.selectedTile.classList.remove("selected");
         }
-        
+
         // Select new tile
         this.selectedTile = tileElement;
         tileElement.classList.add("selected");
-    
+
         // Highlight valid placements
         this.highlightValidPlacements();
     }
-    
+
     deselectTile() {
         if (this.selectedTile) {
             this.selectedTile.classList.remove("selected");
@@ -378,7 +378,7 @@ class ScrabbleGame {
 
     async aiTurn() {
         console.log("AI thinking...");
-    
+
         // Show "AI is thinking..." message
         const thinkingMessage = document.createElement("div");
         thinkingMessage.className = "ai-thinking-message";
@@ -398,9 +398,9 @@ class ScrabbleGame {
         `;
         document.body.appendChild(thinkingMessage);
         setTimeout(() => thinkingMessage.style.opacity = "1", 100);
-    
+
         console.log("AI rack:", this.aiRack.map(t => t.letter));
-    
+
         try {
             // Only exchange if rack is severely unbalanced
             const shouldExchange = this.shouldExchangeTiles();
@@ -415,11 +415,11 @@ class ScrabbleGame {
                 }, 1000);
                 return;
             }
-    
+
             // Try to find valid moves with increased persistence
             const possiblePlays = this.findAIPossiblePlays();
             console.log("Possible plays found:", possiblePlays?.length || 0);
-    
+
             if (possiblePlays && possiblePlays.length > 0) {
                 const bestPlay = this.selectBestPlay(possiblePlays);
                 if (bestPlay) {
@@ -434,7 +434,7 @@ class ScrabbleGame {
                     return;
                 }
             }
-    
+
             // If no plays found, try harder to find simple plays
             const simplePlays = this.findSimplePlays();
             if (simplePlays && simplePlays.length > 0) {
@@ -450,7 +450,7 @@ class ScrabbleGame {
                     return;
                 }
             }
-    
+
             // Last resort: try to form two-letter words
             const twoLetterPlay = this.findTwoLetterPlay();
             if (twoLetterPlay) {
@@ -463,7 +463,7 @@ class ScrabbleGame {
                 }, 1000);
                 return;
             }
-    
+
             // Only exchange as absolute last resort
             console.log("No valid plays found - forced to exchange");
             setTimeout(() => {
@@ -473,7 +473,7 @@ class ScrabbleGame {
                     this.handleAIExchange();
                 }, 300);
             }, 1000);
-    
+
         } catch (error) {
             console.error("Error in AI turn:", error);
             // Clean up UI in case of error
@@ -481,7 +481,7 @@ class ScrabbleGame {
             // Fall back to exchanging tiles
             this.handleAIExchange();
         }
-    }    
+    }
 
     shouldExchangeTiles() {
         const rack = this.aiRack.map((t) => t.letter);
@@ -501,7 +501,7 @@ class ScrabbleGame {
         if (difficultCount > 2 && this.tiles.length >= 10) return true;
 
         return false;
-    }    
+    }
 
     evaluatePositionStrategy(play) {
         let value = 0;
@@ -1141,17 +1141,17 @@ class ScrabbleGame {
             const possiblePlays = [];
             const anchors = this.findAnchors();
             const availableLetters = this.aiRack.map(tile => tile.letter);
-    
+
             console.log("=== Starting Enhanced AI Play Search ===");
             console.log("Available letters:", availableLetters);
             console.log("Anchors found:", anchors);
-    
+
             // Safety check for valid data
             if (!Array.isArray(anchors) || !Array.isArray(availableLetters)) {
                 console.error("Invalid anchors or available letters");
                 return [];
             }
-    
+
             // Handle first move or empty board with strong preference for longer words
             if (this.isFirstMove || this.board.every(row => row.every(cell => cell === null))) {
                 const words = Array.from(this.dictionary)
@@ -1162,32 +1162,32 @@ class ScrabbleGame {
                         return this.canFormWord(word.toUpperCase(), "", "", availableLetters);
                     })
                     .map(word => word.toUpperCase());
-    
+
                 // Sort by length and take top candidates
                 const candidates = words
                     .sort((a, b) => {
                         // Primary sort by length (descending)
                         const lengthDiff = b.length - a.length;
                         if (lengthDiff !== 0) return lengthDiff;
-    
+
                         // Secondary sort by potential score
-                        const scoreA = this.calculatePotentialScore(a, 7, 7 - Math.floor(a.length/2), true);
-                        const scoreB = this.calculatePotentialScore(b, 7, 7 - Math.floor(b.length/2), true);
+                        const scoreA = this.calculatePotentialScore(a, 7, 7 - Math.floor(a.length / 2), true);
+                        const scoreB = this.calculatePotentialScore(b, 7, 7 - Math.floor(b.length / 2), true);
                         return scoreB - scoreA;
                     })
                     .slice(0, 15); // Consider top 15 longest possible words
-    
+
                 for (const word of candidates) {
                     // Try to place word through center square
                     const centerPos = {
                         row: 7,
                         col: 7 - Math.floor(word.length / 2)
                     };
-                    
+
                     if (this.isValidAIPlacement(word, centerPos.row, centerPos.col, true)) {
                         const baseScore = this.calculateStrategicScore(word, centerPos.row, centerPos.col, true);
                         const lengthBonus = Math.pow(word.length, 3) * 15; // Cubic scaling for length
-                        
+
                         possiblePlays.push({
                             word,
                             startPos: centerPos,
@@ -1202,27 +1202,27 @@ class ScrabbleGame {
                     if (!this.isValidPosition(anchor.row, anchor.col)) {
                         continue;
                     }
-    
+
                     try {
                         // Get prefixes and suffixes for both directions
                         const hPrefix = this.getPrefix(anchor, true);
                         const hSuffix = this.getSuffix(anchor, true);
                         const vPrefix = this.getPrefix(anchor, false);
                         const vSuffix = this.getSuffix(anchor, false);
-    
+
                         // Find potential words based on available letters and existing patterns
                         const potentialWords = this.generatePotentialWords(
                             availableLetters,
                             [hPrefix, hSuffix, vPrefix, vSuffix]
                         );
-    
+
                         // Try each potential word
                         for (const word of potentialWords) {
                             // Strongly prefer longer words
                             if (word.length < 4 && !this.createsMultipleWords(word, anchor.row, anchor.col, true)) {
                                 continue;
                             }
-    
+
                             // Try horizontal placement
                             if (this.canFormWord(word, hPrefix, hSuffix, availableLetters)) {
                                 const startCol = anchor.col - hPrefix.length;
@@ -1230,16 +1230,19 @@ class ScrabbleGame {
                                     const baseScore = this.calculateStrategicScore(word, anchor.row, startCol, true);
                                     const lengthBonus = Math.pow(word.length, 3) * 15;
                                     const crossWordBonus = this.countIntersections(anchor.row, startCol, true, word) * 30;
-                                    
+
                                     possiblePlays.push({
                                         word,
-                                        startPos: { row: anchor.row, col: startCol },
+                                        startPos: {
+                                            row: anchor.row,
+                                            col: startCol
+                                        },
                                         isHorizontal: true,
                                         score: baseScore + lengthBonus + crossWordBonus
                                     });
                                 }
                             }
-    
+
                             // Try vertical placement
                             if (this.canFormWord(word, vPrefix, vSuffix, availableLetters)) {
                                 const startRow = anchor.row - vPrefix.length;
@@ -1247,10 +1250,13 @@ class ScrabbleGame {
                                     const baseScore = this.calculateStrategicScore(word, startRow, anchor.col, false);
                                     const lengthBonus = Math.pow(word.length, 3) * 15;
                                     const crossWordBonus = this.countIntersections(startRow, anchor.col, false, word) * 30;
-                                    
+
                                     possiblePlays.push({
                                         word,
-                                        startPos: { row: startRow, col: anchor.col },
+                                        startPos: {
+                                            row: startRow,
+                                            col: anchor.col
+                                        },
                                         isHorizontal: false,
                                         score: baseScore + lengthBonus + crossWordBonus
                                     });
@@ -1263,7 +1269,7 @@ class ScrabbleGame {
                     }
                 }
             }
-    
+
             // Filter and sort plays
             const validPlays = possiblePlays
                 .filter(play => {
@@ -1271,7 +1277,7 @@ class ScrabbleGame {
                     if (!this.dictionary.has(play.word.toLowerCase())) {
                         return false;
                     }
-    
+
                     // Check for creative placement
                     const isCreative = this.isCreativePlacement(
                         play.startPos.row,
@@ -1279,7 +1285,7 @@ class ScrabbleGame {
                         play.isHorizontal,
                         play.word
                     );
-    
+
                     // Accept plays that are either creative or score well
                     return isCreative || play.score > 20;
                 })
@@ -1287,11 +1293,11 @@ class ScrabbleGame {
                     // Primary sort by length (heavily weighted)
                     const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
                     if (Math.abs(lengthDiff) > 0) return lengthDiff;
-    
+
                     // Secondary sort by score
                     const scoreDiff = b.score - a.score;
                     if (Math.abs(scoreDiff) > 20) return scoreDiff;
-    
+
                     // Tertiary sort by creativity
                     const aCreative = this.isCreativePlacement(
                         a.startPos.row,
@@ -1305,24 +1311,24 @@ class ScrabbleGame {
                         b.isHorizontal,
                         b.word
                     );
-    
+
                     return bCreative - aCreative;
                 });
-    
+
             console.log(`Found ${validPlays.length} valid plays after filtering`);
             return validPlays;
-    
+
         } catch (error) {
             console.error("Error in findAIPossiblePlays:", error);
             return [];
         }
-    }    
+    }
 
     generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
         const potentialWords = new Set();
         const letterCounts = {};
         let blankCount = 0;
-    
+
         // Count available letters including blanks
         availableLetters.forEach(letter => {
             if (letter === '*') {
@@ -1331,36 +1337,38 @@ class ScrabbleGame {
                 letterCounts[letter] = (letterCounts[letter] || 0) + 1;
             }
         });
-    
+
         // Check dictionary for potential words
         for (const word of this.dictionary) {
             // Skip words that are too short
             if (word.length < 4) continue;
-    
+
             const upperWord = word.toUpperCase();
-            
+
             // Check if word can be formed with available letters and patterns
             if (this.canFormComplexWord(upperWord, letterCounts, blankCount, [hPrefix, hSuffix, vPrefix, vSuffix])) {
                 potentialWords.add(upperWord);
             }
         }
-    
+
         return Array.from(potentialWords);
     }
 
     canFormComplexWord(word, letterCounts, blankCount, patterns) {
-        const tempCounts = { ...letterCounts };
+        const tempCounts = {
+            ...letterCounts
+        };
         let tempBlankCount = blankCount;
-    
+
         // Check if word matches any pattern
         const [hPrefix, hSuffix, vPrefix, vSuffix] = patterns;
-        const matchesPattern = !hPrefix || word.startsWith(hPrefix) || 
-                              !hSuffix || word.endsWith(hSuffix) ||
-                              !vPrefix || word.startsWith(vPrefix) ||
-                              !vSuffix || word.endsWith(vSuffix);
-    
+        const matchesPattern = !hPrefix || word.startsWith(hPrefix) ||
+            !hSuffix || word.endsWith(hSuffix) ||
+            !vPrefix || word.startsWith(vPrefix) ||
+            !vSuffix || word.endsWith(vSuffix);
+
         if (!matchesPattern) return false;
-    
+
         // Check if we have the letters to form the word
         for (const letter of word) {
             if (tempCounts[letter] && tempCounts[letter] > 0) {
@@ -1371,27 +1379,27 @@ class ScrabbleGame {
                 return false;
             }
         }
-    
+
         return true;
     }
-    
+
     calculateStrategicScore(word, row, col, isHorizontal) {
         let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-    
+
         // Bonus for word length
         score += Math.pow(word.length, 2) * 10;
-    
+
         // Bonus for using premium squares
         const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
         score += premiumSquares * 25;
-    
+
         // Bonus for creating multiple words
         const crossWords = this.countIntersections(row, col, isHorizontal, word);
         score += crossWords * 30;
-    
+
         // Bonus for using complex letters
         score += this.calculateWordComplexity(word) * 15;
-    
+
         return score;
     }
 
@@ -1401,20 +1409,20 @@ class ScrabbleGame {
         const blankIndices = lettersWithBlanks
             .map((letter, index) => letter === '*' ? index : -1)
             .filter(index => index !== -1);
-    
+
         // Generate all possible letter combinations with blanks
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         const maxCombinations = Math.pow(26, blankIndices.length);
-        
+
         for (let i = 0; i < maxCombinations && combinations.size < 100; i++) {
             const tempLetters = [...lettersWithBlanks];
-            
+
             // Replace blanks with actual letters
             blankIndices.forEach((blankIndex, position) => {
                 const letterIndex = Math.floor(i / Math.pow(26, position)) % 26;
                 tempLetters[blankIndex] = alphabet[letterIndex];
             });
-    
+
             // Find all possible words using these letters
             this.findPossibleWordsFromLetters(tempLetters).forEach(word => {
                 if (this.isAdvancedWord(word)) {
@@ -1422,14 +1430,14 @@ class ScrabbleGame {
                 }
             });
         }
-    
+
         return Array.from(combinations).sort((a, b) => b.length - a.length);
     }
 
     isAdvancedWord(word) {
         // Minimum length requirement
         if (word.length < 4) return false;
-    
+
         // Check for complexity using letter patterns
         const complexPatterns = [
             /[JQXZ]/, // Uncommon letters
@@ -1437,93 +1445,104 @@ class ScrabbleGame {
             /[AEIOU]{2,}/, // Two or more vowels
             /.{5,}/ // Words of length 5 or more
         ];
-    
+
         return complexPatterns.some(pattern => pattern.test(word));
     }
 
     calculateStrategicScore(word, row, col, isHorizontal) {
         let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-        
+
         // Bonus for word length
         score += Math.pow(word.length, 2) * 10;
-    
+
         // Bonus for using premium squares
         const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
         score += premiumSquares * 25;
-    
+
         // Bonus for creating multiple words
         const crossWords = this.countIntersections(row, col, isHorizontal, word);
         score += crossWords * 30;
-    
+
         // Bonus for complex letters
         const complexityScore = this.calculateWordComplexity(word);
         score += complexityScore * 15;
-    
+
         return score;
     }
 
     calculateWordComplexity(word) {
         const letterValues = {
-            'J': 8, 'K': 7, 'Q': 10, 'X': 9, 'Z': 10,
-            'W': 6, 'V': 6, 'H': 5, 'Y': 5, 'F': 5,
-            'B': 4, 'C': 4, 'M': 4, 'P': 4
+            'J': 8,
+            'K': 7,
+            'Q': 10,
+            'X': 9,
+            'Z': 10,
+            'W': 6,
+            'V': 6,
+            'H': 5,
+            'Y': 5,
+            'F': 5,
+            'B': 4,
+            'C': 4,
+            'M': 4,
+            'P': 4
         };
-    
+
         return word.split('').reduce((score, letter) => {
             return score + (letterValues[letter] || 1);
         }, 0);
     }
 
     selectBestPlay(plays) {
-    // Enable strict mode if near endgame
-    const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
+        // Enable strict mode if near endgame
+        const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
 
-    const validPlays = plays.filter(play => {
-        if (!play || !play.word) return false;
+        const validPlays = plays.filter(play => {
+            if (!play || !play.word) return false;
 
-        // Always check main word
-        if (!this.dictionary.has(play.word.toLowerCase())) return false;
+            // Always check main word
+            if (!this.dictionary.has(play.word.toLowerCase())) return false;
 
-        // Always check cross-words
-        const crossWords = this.getAllCrossWords(
-            play.startPos.row, 
-            play.startPos.col,
-            play.isHorizontal,
-            play.word
-        );
-
-        // In strict mode, ALL cross-words must be valid and >1 letter
-        if (strictMode) {
-            return crossWords.every(word => 
-                this.dictionary.has(word.toLowerCase()) && word.length > 1
+            // Always check cross-words
+            const crossWords = this.getAllCrossWords(
+                play.startPos.row,
+                play.startPos.col,
+                play.isHorizontal,
+                play.word
             );
-        } else {
-            // In normal mode, allow if most cross-words are valid
-            const validCount = crossWords.filter(word => 
-                this.dictionary.has(word.toLowerCase()) && word.length > 1
-            ).length;
-            return validCount === crossWords.length;
-        }
-    });
 
-    if (validPlays.length === 0) return null;
+            // In strict mode, ALL cross-words must be valid and >1 letter
+            if (strictMode) {
+                return crossWords.every(word =>
+                    this.dictionary.has(word.toLowerCase()) && word.length > 1
+                );
+            } else {
+                // In normal mode, allow if most cross-words are valid
+                const validCount = crossWords.filter(word =>
+                    this.dictionary.has(word.toLowerCase()) && word.length > 1
+                ).length;
+                return validCount === crossWords.length;
+            }
+        });
 
-    return validPlays.sort((a, b) => {
-        // Prefer longer words, then score, then complexity
-        const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
-        if (Math.abs(lengthDiff) > 0) return lengthDiff;
-        const scoreDiff = b.score - a.score;
-        if (Math.abs(scoreDiff) > 10) return scoreDiff;
-        const complexityDiff = 
-            this.calculateWordComplexity(b.word) - 
-            this.calculateWordComplexity(a.word);
-        return complexityDiff;
-    })[0];
-}  
+        if (validPlays.length === 0) return null;
+
+        return validPlays.sort((a, b) => {
+            // Prefer longer words, then score, then complexity
+            const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
+            if (Math.abs(lengthDiff) > 0) return lengthDiff;
+            const scoreDiff = b.score - a.score;
+            if (Math.abs(scoreDiff) > 10) return scoreDiff;
+            const complexityDiff =
+                this.calculateWordComplexity(b.word) -
+                this.calculateWordComplexity(a.word);
+            return complexityDiff;
+        })[0];
+    }
 
     findCenterPlays(wordCombinations) {
         const centerPlays = [];
-        
+
         for (const word of wordCombinations) {
             // Try horizontal center placement
             const colStart = Math.max(0, 7 - Math.floor(word.length / 2));
@@ -1531,25 +1550,31 @@ class ScrabbleGame {
                 const score = this.calculateStrategicScore(word, 7, colStart, true);
                 centerPlays.push({
                     word,
-                    startPos: { row: 7, col: colStart },
+                    startPos: {
+                        row: 7,
+                        col: colStart
+                    },
                     isHorizontal: true,
                     score
                 });
             }
-    
+
             // Try vertical center placement
             const rowStart = Math.max(0, 7 - Math.floor(word.length / 2));
             if (this.isValidAIPlacement(word, rowStart, 7, false)) {
                 const score = this.calculateStrategicScore(word, rowStart, 7, false);
                 centerPlays.push({
                     word,
-                    startPos: { row: rowStart, col: 7 },
+                    startPos: {
+                        row: rowStart,
+                        col: 7
+                    },
                     isHorizontal: false,
                     score
                 });
             }
         }
-    
+
         return centerPlays.sort((a, b) => b.score - a.score);
     }
 
@@ -1609,39 +1634,39 @@ class ScrabbleGame {
 
     getVerticalWordAt(row, col, board = this.board) {
         if (!this.isValidPosition(row, col)) return null;
-    
+
         let word = "";
         let startRow = row;
-    
+
         while (startRow > 0 && board[startRow - 1][col]) {
             startRow--;
         }
-    
+
         let currentRow = startRow;
         while (currentRow < 15 && board[currentRow][col]) {
             word += board[currentRow][col].letter;
             currentRow++;
         }
-    
+
         return word.length > 1 ? word : null;
-    }    
-    
+    }
+
     getHorizontalWordAt(row, col, board = this.board) {
         if (!this.isValidPosition(row, col)) return null;
-    
+
         let word = "";
         let startCol = col;
-    
+
         while (startCol > 0 && board[row][startCol - 1]) {
             startCol--;
         }
-    
+
         let currentCol = startCol;
         while (currentCol < 15 && board[row][currentCol]) {
             word += board[row][currentCol].letter;
             currentCol++;
         }
-    
+
         return word.length > 1 ? word : null;
     }
 
@@ -1938,22 +1963,22 @@ class ScrabbleGame {
 
     evaluateWordQuality(word, row, col, horizontal) {
         let quality = 0;
-    
+
         // Give massive bonus for longer words
         quality += Math.pow(word.length, 3) * 10; // Cubic scaling for length
-    
+
         // Bonus for using premium squares
         const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
         quality += premiumSquares * 15;
-    
+
         // Small bonus for cross-words (but less important than length)
         const crossWords = this.countIntersections(row, col, horizontal, word);
         quality += crossWords * 10;
-    
+
         // Minor bonus for balanced letter usage
         const letterBalance = this.evaluateLetterBalance(word);
         quality += letterBalance * 5;
-    
+
         return quality;
     }
 
@@ -2480,32 +2505,32 @@ class ScrabbleGame {
     }
 
     // Modify the generatePrintContent method to handle undefined words
-generatePrintContent(gameDate, wordDefinitions) {
-    // Generate header with game information
-    const header = `
-        <div class="header">
-            <h1>Scrabble Game History</h1>
-            <p>Game played on: ${gameDate}</p>
-            <div class="scores">
-                <h2>Final Scores</h2>
-                <p>Player: ${this.playerScore} points</p>
-                <p>Computer: ${this.aiScore} points</p>
-                <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
+    generatePrintContent(gameDate, wordDefinitions) {
+        // Generate header with game information
+        const header = `
+            <div class="header">
+                <h1>Scrabble Game History</h1>
+                <p>Game played on: ${gameDate}</p>
+                <div class="scores">
+                    <h2>Final Scores</h2>
+                    <p>Player: ${this.playerScore} points</p>
+                    <p>Computer: ${this.aiScore} points</p>
+                    <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    // Generate content for each move with validation
-    const moves = this.moveHistory
-        .map((move, index) => {
-            if (!move || !move.word) {
-                console.log('Invalid move found:', move);
-                return ''; // Skip invalid moves
-            }
+        // Generate content for each move with validation
+        const moves = this.moveHistory
+            .map((move, index) => {
+                if (!move || !move.word) {
+                    console.log('Invalid move found:', move);
+                    return ''; // Skip invalid moves
+                }
 
-            // Handle special moves
-            if (["SKIP", "EXCHANGE", "QUIT"].includes(move.word)) {
-                return `
+                // Handle special moves
+                if (["SKIP", "EXCHANGE", "QUIT"].includes(move.word)) {
+                    return `
                     <div class="move">
                         <div class="move-header">
                             <h3>Move ${index + 1}</h3>
@@ -2515,35 +2540,35 @@ generatePrintContent(gameDate, wordDefinitions) {
                         </div>
                     </div>
                 `;
-            }
-
-            // Handle regular word moves
-            let wordContent = "";
-            let words = [];
-
-            try {
-                // Handle multiple words (separated by &)
-                if (move.word.includes("&")) {
-                    words = move.word.split("&")
-                        .map(w => w.trim())
-                        .map(w => {
-                            const match = w.match(/([A-Z]+)\s*\((\d+)\)/);
-                            return match ? match[1] : w;
-                        });
-                } else {
-                    // Handle single word
-                    const match = move.word.match(/([A-Z]+)\s*(?:\((\d+)\))?/);
-                    words = match ? [match[1]] : [move.word];
                 }
 
-                // Generate definition sections for valid words
-                const definitions = words
-                    .filter(word => word && typeof word === 'string')
-                    .map(word => {
-                        const def = wordDefinitions.get(word);
-                        if (!def) return "";
+                // Handle regular word moves
+                let wordContent = "";
+                let words = [];
 
-                        return `
+                try {
+                    // Handle multiple words (separated by &)
+                    if (move.word.includes("&")) {
+                        words = move.word.split("&")
+                            .map(w => w.trim())
+                            .map(w => {
+                                const match = w.match(/([A-Z]+)\s*\((\d+)\)/);
+                                return match ? match[1] : w;
+                            });
+                    } else {
+                        // Handle single word
+                        const match = move.word.match(/([A-Z]+)\s*(?:\((\d+)\))?/);
+                        words = match ? [match[1]] : [move.word];
+                    }
+
+                    // Generate definition sections for valid words
+                    const definitions = words
+                        .filter(word => word && typeof word === 'string')
+                        .map(word => {
+                            const def = wordDefinitions.get(word);
+                            if (!def) return "";
+
+                            return `
                             <div class="word-section">
                                 <div class="word-header">
                                     <h4>${word}</h4>
@@ -2562,10 +2587,10 @@ generatePrintContent(gameDate, wordDefinitions) {
                                 </div>
                             </div>
                         `;
-                    })
-                    .join("");
+                        })
+                        .join("");
 
-                return `
+                    return `
                     <div class="move">
                         <div class="move-header">
                             <h3>Move ${index + 1}</h3>
@@ -2578,27 +2603,27 @@ generatePrintContent(gameDate, wordDefinitions) {
                         </div>
                     </div>
                 `;
-            } catch (error) {
-                console.error('Error processing move:', move, error);
-                return ''; // Skip problematic moves
-            }
-        })
-        .filter(Boolean) // Remove empty strings from invalid moves
-        .join("");
+                } catch (error) {
+                    console.error('Error processing move:', move, error);
+                    return ''; // Skip problematic moves
+                }
+            })
+            .filter(Boolean) // Remove empty strings from invalid moves
+            .join("");
 
-    // Return complete HTML content with error handling
-    return `
+        // Return complete HTML content with error handling
+        return `
         ${this.getPrintStyles()}
         ${header}
         <div class="moves-container">
             ${moves || '<p>No moves to display</p>'}
         </div>
     `;
-}
+    }
 
-// Add a helper method for print styles
-getPrintStyles() {
-    return `
+    // Add a helper method for print styles
+    getPrintStyles() {
+        return `
         <style>
             body {
                 font-family: Arial, sans-serif;
@@ -2642,7 +2667,7 @@ getPrintStyles() {
             }
         </style>
     `;
-}
+    }
 
     getPrefix(anchor, isHorizontal) {
         let prefix = "";
@@ -2771,58 +2796,61 @@ getPrintStyles() {
 
     // Update inside findAIPossiblePlays method
     canFormWord(word, prefix, suffix, availableLetters) {
-    word = word.toUpperCase();
-    prefix = prefix.toUpperCase();
-    suffix = suffix.toUpperCase();
+        word = word.toUpperCase();
+        prefix = prefix.toUpperCase();
+        suffix = suffix.toUpperCase();
 
-    const letterCount = {};
-    let blankCount = availableLetters.filter(l => l === "*").length;
-    
-    availableLetters.forEach(letter => {
-        if (letter !== "*") {
-            letterCount[letter] = (letterCount[letter] || 0) + 1;
+        const letterCount = {};
+        let blankCount = availableLetters.filter(l => l === "*").length;
+
+        availableLetters.forEach(letter => {
+            if (letter !== "*") {
+                letterCount[letter] = (letterCount[letter] || 0) + 1;
+            }
+        });
+
+        // For first move or starting fresh
+        if (!prefix && !suffix) {
+            for (const letter of word) {
+                if (letterCount[letter] && letterCount[letter] > 0) {
+                    letterCount[letter]--;
+                } else if (blankCount > 0) {
+                    blankCount--; // Use blank tile optimally
+                } else {
+                    return false;
+                }
+            }
+            return true;
         }
-    });
 
-    // For first move or starting fresh
-    if (!prefix && !suffix) {
-        for (const letter of word) {
+        // For subsequent moves
+        if (!word.includes(prefix) || !word.includes(suffix)) {
+            return false;
+        }
+
+        const neededPart = word.replace(prefix, "").replace(suffix, "").split("");
+
+        // Track which letters we'll use blanks for (prefer high-value letters)
+        const letterValues = neededPart.map(letter => ({
+            letter,
+            value: this.tileValues[letter]
+        })).sort((a, b) => b.value - a.value);
+
+        for (const {
+                letter
+            }
+            of letterValues) {
             if (letterCount[letter] && letterCount[letter] > 0) {
                 letterCount[letter]--;
             } else if (blankCount > 0) {
-                blankCount--; // Use blank tile optimally
+                blankCount--; // Use blank for high-value letters first
             } else {
                 return false;
             }
         }
+
         return true;
     }
-
-    // For subsequent moves
-    if (!word.includes(prefix) || !word.includes(suffix)) {
-        return false;
-    }
-
-    const neededPart = word.replace(prefix, "").replace(suffix, "").split("");
-
-    // Track which letters we'll use blanks for (prefer high-value letters)
-    const letterValues = neededPart.map(letter => ({
-        letter,
-        value: this.tileValues[letter]
-    })).sort((a, b) => b.value - a.value);
-
-    for (const {letter} of letterValues) {
-        if (letterCount[letter] && letterCount[letter] > 0) {
-            letterCount[letter]--;
-        } else if (blankCount > 0) {
-            blankCount--; // Use blank for high-value letters first
-        } else {
-            return false;
-        }
-    }
-
-    return true;
-}
 
     createPlay(word, anchor, isHorizontal, prefix, suffix) {
         const startPos = {
@@ -2842,81 +2870,90 @@ getPrintStyles() {
     }
 
     async executeAIPlay(play) {
-    const { word, startPos, isHorizontal, score } = play;
-    console.log("AI executing play:", { word, startPos, isHorizontal, score });
+        const {
+            word,
+            startPos,
+            isHorizontal,
+            score
+        } = play;
+        console.log("AI executing play:", {
+            word,
+            startPos,
+            isHorizontal,
+            score
+        });
 
-    // Double check word validity
-    if (!this.dictionary.has(word.toLowerCase())) {
-        console.log(`Invalid word ${word} - skipping AI turn`);
-        this.skipAITurn();
-        return;
-    }
+        // Double check word validity
+        if (!this.dictionary.has(word.toLowerCase())) {
+            console.log(`Invalid word ${word} - skipping AI turn`);
+            this.skipAITurn();
+            return;
+        }
 
-    // Store the previous board state
-    this.previousBoard = JSON.parse(JSON.stringify(this.board));
+        // Store the previous board state
+        this.previousBoard = JSON.parse(JSON.stringify(this.board));
 
-    // Create the placedTiles array for the AI's move
-    this.placedTiles = Array.from(word).map((letter, i) => ({
-        row: isHorizontal ? startPos.row : startPos.row + i,
-        col: isHorizontal ? startPos.col + i : startPos.col,
-        tile: {
-            letter: letter,
-            value: this.tileValues[letter],
-            id: `ai_${letter}_${Date.now()}_${i}`,
-        },
-    }));
+        // Create the placedTiles array for the AI's move
+        this.placedTiles = Array.from(word).map((letter, i) => ({
+            row: isHorizontal ? startPos.row : startPos.row + i,
+            col: isHorizontal ? startPos.col + i : startPos.col,
+            tile: {
+                letter: letter,
+                value: this.tileValues[letter],
+                id: `ai_${letter}_${Date.now()}_${i}`,
+            },
+        }));
 
-    return new Promise(async (resolve) => {
-        // Start placing tiles with animation
-        for (let i = 0; i < word.length; i++) {
-            const letter = word[i];
-            const row = isHorizontal ? startPos.row : startPos.row + i;
-            const col = isHorizontal ? startPos.col + i : startPos.col;
+        return new Promise(async (resolve) => {
+            // Start placing tiles with animation
+            for (let i = 0; i < word.length; i++) {
+                const letter = word[i];
+                const row = isHorizontal ? startPos.row : startPos.row + i;
+                const col = isHorizontal ? startPos.col + i : startPos.col;
 
-            if (!this.board[row][col]) {
-                // Find matching tile or blank tile
-                let tileIndex = this.aiRack.findIndex((t) => t.letter === letter);
-                if (tileIndex === -1) {
-                    // Try to use blank tile
-                    tileIndex = this.aiRack.findIndex((t) => t.letter === "*");
-                    if (tileIndex !== -1) {
-                        // Convert blank tile to needed letter
-                        this.aiRack[tileIndex] = {
-                            letter: letter,
-                            value: 0, // Blank tiles are worth 0 points
-                            id: `blank_${Date.now()}_${i}`,
-                            isBlank: true,
-                        };
+                if (!this.board[row][col]) {
+                    // Find matching tile or blank tile
+                    let tileIndex = this.aiRack.findIndex((t) => t.letter === letter);
+                    if (tileIndex === -1) {
+                        // Try to use blank tile
+                        tileIndex = this.aiRack.findIndex((t) => t.letter === "*");
+                        if (tileIndex !== -1) {
+                            // Convert blank tile to needed letter
+                            this.aiRack[tileIndex] = {
+                                letter: letter,
+                                value: 0, // Blank tiles are worth 0 points
+                                id: `blank_${Date.now()}_${i}`,
+                                isBlank: true,
+                            };
+                        }
                     }
-                }
 
-                if (tileIndex !== -1) {
-                    const tile = {
-                        letter: letter,
-                        value: this.aiRack[tileIndex].isBlank ? 0 : this.tileValues[letter],
-                        id: this.aiRack[tileIndex].isBlank
-                            ? `blank_${letter}_${Date.now()}_${i}`
-                            : `ai_${letter}_${Date.now()}_${i}`,
-                        isBlank: this.aiRack[tileIndex].isBlank,
-                    };
+                    if (tileIndex !== -1) {
+                        const tile = {
+                            letter: letter,
+                            value: this.aiRack[tileIndex].isBlank ? 0 : this.tileValues[letter],
+                            id: this.aiRack[tileIndex].isBlank ?
+                                `blank_${letter}_${Date.now()}_${i}` : `ai_${letter}_${Date.now()}_${i}`,
+                            isBlank: this.aiRack[tileIndex].isBlank,
+                        };
 
-                    // Create animated tile element
-                    const animatedTile = document.createElement("div");
-                    animatedTile.className = "tile animated-tile";
-                    animatedTile.innerHTML = `
+                        // Create animated tile element
+                        const animatedTile = document.createElement("div");
+                        animatedTile.className = "tile animated-tile";
+                        animatedTile.innerHTML = `
                           ${tile.letter}
                           <span class="points">${tile.value}</span>
                           ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                       `;
 
-                    // Get target cell position
-                    const targetCell = document.querySelector(
-                        `[data-row="${row}"][data-col="${col}"]`,
-                    );
-                    const targetRect = targetCell.getBoundingClientRect();
+                        // Get target cell position
+                        const targetCell = document.querySelector(
+                            `[data-row="${row}"][data-col="${col}"]`,
+                        );
+                        const targetRect = targetCell.getBoundingClientRect();
 
-                    // Animation setup
-                    animatedTile.style.cssText = `
+                        // Animation setup
+                        animatedTile.style.cssText = `
                           position: fixed;
                           top: -50px;
                           left: ${targetRect.left}px;
@@ -2925,129 +2962,133 @@ getPrintStyles() {
                           z-index: 1000;
                       `;
 
-                    document.body.appendChild(animatedTile);
+                        document.body.appendChild(animatedTile);
 
-                    // Animate tile placement
-                    await new Promise((resolve) => {
-                        setTimeout(() => {
-                            animatedTile.style.top = `${targetRect.top}px`;
-                            animatedTile.style.transform = "rotate(0deg)";
-
+                        // Animate tile placement
+                        await new Promise((resolve) => {
                             setTimeout(() => {
-                                // Add bounce effect
-                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
+                                animatedTile.style.top = `${targetRect.top}px`;
+                                animatedTile.style.transform = "rotate(0deg)";
+
                                 setTimeout(() => {
-                                    animatedTile.style.transform = "rotate(0deg) scale(1)";
-                                }, 100);
-                            }, 800);
+                                    // Add bounce effect
+                                    animatedTile.style.transform = "rotate(0deg) scale(1.2)";
+                                    setTimeout(() => {
+                                        animatedTile.style.transform = "rotate(0deg) scale(1)";
+                                    }, 100);
+                                }, 800);
 
-                            // Place tile on board
-                            setTimeout(() => {
-                                targetCell.classList.add("tile-placed");
-                                animatedTile.remove();
+                                // Place tile on board
+                                setTimeout(() => {
+                                    targetCell.classList.add("tile-placed");
+                                    animatedTile.remove();
 
-                                // Remove tile from AI rack and place on board
-                                this.aiRack.splice(tileIndex, 1);
-                                this.board[row][col] = tile;
-                                this.renderAIRack();
+                                    // Remove tile from AI rack and place on board
+                                    this.aiRack.splice(tileIndex, 1);
+                                    this.board[row][col] = tile;
+                                    this.renderAIRack();
 
-                                // Create permanent tile element
-                                const permanentTile = document.createElement("div");
-                                permanentTile.className = "tile";
-                                if (tile.isBlank) {
-                                    permanentTile.classList.add("blank-tile");
-                                }
-                                permanentTile.style.cssText = `
+                                    // Create permanent tile element
+                                    const permanentTile = document.createElement("div");
+                                    permanentTile.className = "tile";
+                                    if (tile.isBlank) {
+                                        permanentTile.classList.add("blank-tile");
+                                    }
+                                    permanentTile.style.cssText = `
                                       background: linear-gradient(145deg, #ffffff, #f0f0f0);
                                       color: #000;
                                   `;
-                                permanentTile.innerHTML = `
+                                    permanentTile.innerHTML = `
                                       ${tile.letter}
                                       <span class="points" style="color: #000;">${tile.value}</span>
                                       ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                                   `;
 
-                                // Clear cell and add permanent tile
-                                targetCell.innerHTML = "";
-                                targetCell.appendChild(permanentTile);
+                                    // Clear cell and add permanent tile
+                                    targetCell.innerHTML = "";
+                                    targetCell.appendChild(permanentTile);
 
-                                setTimeout(() => {
-                                    targetCell.classList.remove("tile-placed");
-                                }, 500);
+                                    setTimeout(() => {
+                                        targetCell.classList.remove("tile-placed");
+                                    }, 500);
 
-                                resolve();
-                            }, 1000);
-                        }, 200);
-                    });
+                                    resolve();
+                                }, 1000);
+                            }, 200);
+                        });
 
-                    // Delay between letters
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                        // Delay between letters
+                        await new Promise((resolve) => setTimeout(resolve, 500));
+                    }
                 }
             }
-        }
 
-        // Update game state after all animations complete
-        setTimeout(() => {
-            // Get all formed words and calculate total score
-            const formedWords = this.getFormedWords();
-            let totalScore = 0;
-            let wordsList = [];
+            // Update game state after all animations complete
+            setTimeout(() => {
+                // Get all formed words and calculate total score
+                const formedWords = this.getFormedWords();
+                let totalScore = 0;
+                let wordsList = [];
 
-            formedWords.forEach((wordInfo) => {
-                const { word, startPos, direction } = wordInfo;
-                const wordScore = this.calculateWordScore(
-                    word,
-                    startPos.row,
-                    startPos.col,
-                    direction === "horizontal",
-                );
-                totalScore += wordScore;
-                wordsList.push({
-                    word,
-                    score: wordScore
+                formedWords.forEach((wordInfo) => {
+                    const {
+                        word,
+                        startPos,
+                        direction
+                    } = wordInfo;
+                    const wordScore = this.calculateWordScore(
+                        word,
+                        startPos.row,
+                        startPos.col,
+                        direction === "horizontal",
+                    );
+                    totalScore += wordScore;
+                    wordsList.push({
+                        word,
+                        score: wordScore
+                    });
+                    console.log(`Word formed: ${word} for ${wordScore} points`);
                 });
-                console.log(`Word formed: ${word} for ${wordScore} points`);
-            });
 
-            // Add bonus for using all 7 tiles
-            if (word.length === 7) {
-                totalScore += 50;
-                console.log("Added 50 point bonus for using all 7 tiles");
-            }
+                // Add bonus for using all 7 tiles
+                if (word.length === 7) {
+                    totalScore += 50;
+                    console.log("Added 50 point bonus for using all 7 tiles");
+                }
 
-            // Format move description for multiple words
-            let moveDescription;
-            if (wordsList.length > 1) {
-                moveDescription = wordsList
-                    .map((w) => `${w.word} (${w.score})`)
-                    .join(" & ");
-            } else {
-                moveDescription = wordsList[0].word;
-            }
+                // Format move description for multiple words
+                let moveDescription;
+                if (wordsList.length > 1) {
+                    moveDescription = wordsList
+                        .map((w) => `${w.word} (${w.score})`)
+                        .join(" & ");
+                } else {
+                    moveDescription = wordsList[0].word;
+                }
 
-            // --- Speak each word formed by AI ---
-            wordsList.forEach(wd => {
-                if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
-            });
+                // --- Speak each word formed by AI ---
+                wordsList.forEach(wd => {
+                    if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
+                });
 
-            console.log(`Total score for move: ${totalScore}`);
+                console.log(`Total score for move: ${totalScore}`);
 
-            this.aiScore += totalScore;
-            this.isFirstMove = false;
-            this.consecutiveSkips = 0;
-            this.currentTurn = "player";
-            this.addToMoveHistory("Computer", moveDescription, totalScore);
+                this.aiScore += totalScore;
+                this.isFirstMove = false;
+                this.consecutiveSkips = 0;
+                this.currentTurn = "player";
+                this.addToMoveHistory("Computer", moveDescription, totalScore);
 
-            // Clear the placed tiles array after scoring
-            this.placedTiles = [];
+                // Clear the placed tiles array after scoring
+                this.placedTiles = [];
 
-            // Refill racks and update display
-            this.fillRacks();
-            this.updateGameState();
-            resolve();
-        }, 500);
-    });
-}
+                // Refill racks and update display
+                this.fillRacks();
+                this.updateGameState();
+                resolve();
+            }, 500);
+        });
+    }
 
     calculateWordScore(word, startRow, startCol, isHorizontal) {
         let wordScore = 0;
@@ -3314,25 +3355,27 @@ getPrintStyles() {
         const words = new Set();
         const letterCount = {};
         const blankCount = letters.filter(l => l === "*").length;
-        
+
         // Count available letters
         letters.forEach(letter => {
             if (letter !== "*") {
                 letterCount[letter] = (letterCount[letter] || 0) + 1;
             }
         });
-    
+
         // Enhanced blank tile usage - prioritize high-value opportunities
         const priorityLetters = new Set(['S', 'R', 'E', 'D', 'L', 'Y']); // Common useful letters
-        
+
         for (const word of this.dictionary) {
             if (word.length >= 3) { // Minimum word length of 3
                 const upperWord = word.toUpperCase();
-                const tempCount = { ...letterCount };
+                const tempCount = {
+                    ...letterCount
+                };
                 let tempBlankCount = blankCount;
                 let canForm = true;
                 let blanksUsed = [];
-    
+
                 // Try to form word
                 for (const letter of upperWord) {
                     if (tempCount[letter] && tempCount[letter] > 0) {
@@ -3354,7 +3397,7 @@ getPrintStyles() {
                         break;
                     }
                 }
-    
+
                 if (canForm) {
                     words.add({
                         word: upperWord,
@@ -3363,20 +3406,20 @@ getPrintStyles() {
                 }
             }
         }
-    
+
         return Array.from(words);
     }
 
     // New helper function to evaluate words using blank tiles
     evaluateWordWithBlanks(word, blanksUsed) {
         let score = 0;
-        
+
         // Base score for word length
         score += word.length * 10;
 
         // Premium for longer words
         if (word.length >= 7) score += 50;
-        
+
         // Score for valuable letters
         for (const letter of word) {
             score += this.tileValues[letter] || 0;
@@ -3387,8 +3430,8 @@ getPrintStyles() {
         const lettersUsingBlanks = word.split('')
             .sort((a, b) => this.tileValues[b] - this.tileValues[a])
             .slice(0, blanksUsed);
-        
-        const blankEfficiency = lettersUsingBlanks.reduce((sum, letter) => 
+
+        const blankEfficiency = lettersUsingBlanks.reduce((sum, letter) =>
             sum + this.tileValues[letter], 0) / blanksUsed;
 
         score += blankEfficiency * 5;
@@ -3401,12 +3444,12 @@ getPrintStyles() {
             console.log(`Rejecting ${word} - words must be at least 3 letters long`);
             return false;
         }
-    
+
         if (!this.dictionary.has(word.toLowerCase())) {
             console.log(`${word} is not a valid word in the dictionary`);
             return false;
         }
-    
+
         if (horizontal) {
             if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
                 return false;
@@ -3416,14 +3459,14 @@ getPrintStyles() {
                 return false;
             }
         }
-    
+
         let hasValidIntersection = false;
         let tempBoard = JSON.parse(JSON.stringify(this.board));
-    
+
         for (let i = 0; i < word.length; i++) {
             const row = horizontal ? startRow : startRow + i;
             const col = horizontal ? startCol + i : startCol;
-    
+
             if (tempBoard[row][col]) {
                 if (tempBoard[row][col].letter !== word[i]) {
                     console.log(`Letter mismatch at position [${row},${col}]`);
@@ -3431,19 +3474,25 @@ getPrintStyles() {
                 }
                 hasValidIntersection = true;
             } else {
-                tempBoard[row][col] = { letter: word[i] };
+                tempBoard[row][col] = {
+                    letter: word[i]
+                };
             }
-    
-            const adjacentPositions = horizontal ? 
-                [[row - 1, col], [row + 1, col]] : 
-                [[row, col - 1], [row, col + 1]];
-    
+
+            const adjacentPositions = horizontal ? [
+                [row - 1, col],
+                [row + 1, col]
+            ] : [
+                [row, col - 1],
+                [row, col + 1]
+            ];
+
             for (const [adjRow, adjCol] of adjacentPositions) {
                 if (this.isValidPosition(adjRow, adjCol) && tempBoard[adjRow][adjCol]) {
-                    const crossWord = horizontal ? 
+                    const crossWord = horizontal ?
                         this.getVerticalWordAt(row, col, tempBoard) :
                         this.getHorizontalWordAt(row, col, tempBoard);
-    
+
                     if (crossWord && crossWord.length > 1) {
                         if (!this.dictionary.has(crossWord.toLowerCase())) {
                             console.log(`Invalid cross word formed: ${crossWord}`);
@@ -3454,52 +3503,54 @@ getPrintStyles() {
                 }
             }
         }
-    
+
         if (this.isFirstMove) {
             const usesCenterSquare = horizontal ?
                 startRow === 7 && startCol <= 7 && startCol + word.length > 7 :
                 startCol === 7 && startRow <= 7 && startRow + word.length > 7;
-    
+
             if (!usesCenterSquare) {
                 console.log("First move must use center square");
                 return false;
             }
             return true;
         }
-    
+
         if (!hasValidIntersection) {
             console.log("Word must connect with existing tiles");
             return false;
         }
-    
+
         return true;
-    }    
+    }
 
     getAllCrossWords(row, col, isHorizontal, word) {
         const crossWords = [];
         const tempBoard = JSON.parse(JSON.stringify(this.board));
-        
+
         // Place the word temporarily
         for (let i = 0; i < word.length; i++) {
             const currentRow = isHorizontal ? row : row + i;
             const currentCol = isHorizontal ? col + i : col;
-            
+
             if (!tempBoard[currentRow][currentCol]) {
-                tempBoard[currentRow][currentCol] = { letter: word[i] };
-                
+                tempBoard[currentRow][currentCol] = {
+                    letter: word[i]
+                };
+
                 // Check for cross-word at this position
-                const crossWord = isHorizontal ? 
+                const crossWord = isHorizontal ?
                     this.getVerticalWordAt(currentRow, currentCol, tempBoard) :
                     this.getHorizontalWordAt(currentRow, currentCol, tempBoard);
-                    
+
                 if (crossWord && crossWord.length > 1) {
                     crossWords.push(crossWord);
                 }
             }
         }
-        
+
         return crossWords;
-    }    
+    }
 
     getWordInDirection(row, col, [dx, dy], board) {
         let word = "";
@@ -4971,7 +5022,7 @@ getPrintStyles() {
             const response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
             const text = await response.text();
             this.dictionary = new Set(text.toLowerCase().split("\n"));
-    
+
             // Add words from Free Dictionary API
             try {
                 const additionalWords = await this.loadAdditionalWords();
@@ -4983,7 +5034,7 @@ getPrintStyles() {
             } catch (error) {
                 console.error("Error loading additional words:", error);
             }
-    
+
             console.log("Dictionary loaded successfully");
         } catch (error) {
             console.error("Error loading dictionary:", error);
@@ -4993,36 +5044,36 @@ getPrintStyles() {
 
     async loadAdditionalWords() {
         const additionalWords = new Set();
-        
+
         // List of common word lengths to query
         const lengths = [4, 5, 6, 7, 8];
-        
+
         for (const length of lengths) {
             try {
                 const response = await fetch(`https://api.datamuse.com/words?ml=common&max=1000&md=d&len=${length}`);
                 const words = await response.json();
-                
+
                 words.forEach(word => {
                     if (word.word && /^[a-zA-Z]+$/.test(word.word)) {
                         additionalWords.add(word.word.toUpperCase());
                     }
                 });
-                
+
                 // Add a small delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
             } catch (error) {
                 console.error(`Error fetching words of length ${length}:`, error);
             }
         }
-        
+
         return Array.from(additionalWords);
     }
 
     fillRacks() {
         // Define letter frequency based on word formation potential
         const commonLetters = {
-            'E': 25,  // Increased frequency for common letters
+            'E': 25, // Increased frequency for common letters
             'A': 20,
             'R': 18,
             'I': 18,
@@ -5049,26 +5100,26 @@ getPrintStyles() {
             'X': 1,
             'Q': 1,
             'Z': 1,
-            '*': 4  // Increased wild tile frequency for AI
+            '*': 4 // Increased wild tile frequency for AI
         };
-    
+
         // Helper function to get weighted random letter
         const getWeightedLetter = () => {
             const totalWeight = Object.values(commonLetters).reduce((a, b) => a + b, 0);
             let random = Math.random() * totalWeight;
-            
+
             for (const [letter, weight] of Object.entries(commonLetters)) {
                 random -= weight;
                 if (random <= 0) return letter;
             }
             return 'E'; // Fallback to most common letter
         };
-    
+
         // Fill player's rack normally
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
             this.playerRack.push(this.tiles.pop());
         }
-    
+
         // Fill AI's rack with weighted distribution
         while (this.aiRack.length < 7 && this.tiles.length > 0) {
             // 70% chance to get a weighted letter, 30% chance for random tile
@@ -5086,7 +5137,7 @@ getPrintStyles() {
                 this.aiRack.push(this.tiles.pop());
             }
         }
-    
+
         // Ensure AI has at least one wild tile if available
         if (!this.aiRack.some(tile => tile.letter === '*')) {
             const wildTileIndex = this.tiles.findIndex(t => t.letter === '*');
@@ -5097,10 +5148,10 @@ getPrintStyles() {
                 this.aiRack[randomIndex] = this.tiles.splice(wildTileIndex, 1)[0];
             }
         }
-    
+
         // Balance vowels and consonants for better word formation
         this.balanceAIRack();
-    
+
         // Update displays
         this.renderRack();
         this.renderAIRack();
@@ -5110,25 +5161,24 @@ getPrintStyles() {
     balanceAIRack() {
         const vowels = ['A', 'E', 'I', 'O', 'U'];
         const vowelCount = this.aiRack.filter(tile => vowels.includes(tile.letter)).length;
-    
+
         // Aim for 2-3 vowels in the rack
         if (vowelCount < 2 || vowelCount > 4) {
             const desiredVowelCount = 3;
-            while (this.tiles.length > 0 && 
-                   this.aiRack.filter(tile => vowels.includes(tile.letter)).length !== desiredVowelCount) {
-                
+            while (this.tiles.length > 0 &&
+                this.aiRack.filter(tile => vowels.includes(tile.letter)).length !== desiredVowelCount) {
+
                 // Remove excess vowels or consonants
-                const indexToRemove = this.aiRack.findIndex(tile => 
+                const indexToRemove = this.aiRack.findIndex(tile =>
                     vowelCount > 3 ? vowels.includes(tile.letter) : !vowels.includes(tile.letter)
                 );
-    
+
                 if (indexToRemove !== -1) {
                     this.tiles.push(this.aiRack.splice(indexToRemove, 1)[0]);
-                    
+
                     // Add needed vowel or consonant
-                    const neededType = vowelCount < 2 ? vowels : 
-                        ['R', 'S', 'T', 'L', 'N']; // Common consonants
-                    
+                    const neededType = vowelCount < 2 ? vowels : ['R', 'S', 'T', 'L', 'N']; // Common consonants
+
                     const tileIndex = this.tiles.findIndex(t => neededType.includes(t.letter));
                     if (tileIndex !== -1) {
                         this.aiRack.push(this.tiles.splice(tileIndex, 1)[0]);
@@ -5143,7 +5193,7 @@ getPrintStyles() {
     renderRack() {
         const rack = document.getElementById("tile-rack");
         rack.innerHTML = "";
-        
+
         this.playerRack.forEach((tile, index) => {
             const tileElement = document.createElement("div");
             tileElement.className = "tile";
@@ -5154,12 +5204,12 @@ getPrintStyles() {
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
             `;
-    
+
             if (this.isMobile) {
                 // For mobile: only add click handling
                 tileElement.addEventListener("click", (e) => {
                     if (this.currentTurn !== "player") return;
-                    
+
                     // Toggle selection
                     if (this.selectedTile === tileElement) {
                         this.deselectTile();
@@ -5176,12 +5226,12 @@ getPrintStyles() {
                         e.target.classList.add("dragging");
                     }
                 });
-    
+
                 tileElement.addEventListener("dragend", (e) => {
                     e.target.classList.remove("dragging");
                 });
             }
-    
+
             rack.appendChild(tileElement);
         });
     }
@@ -5207,43 +5257,43 @@ getPrintStyles() {
 
     setupRackDropZone() {
         const rack = document.getElementById("tile-rack");
-    
+
         rack.addEventListener("dragover", (e) => {
             e.preventDefault();
             if (this.currentTurn === "player") {
                 e.currentTarget.classList.add("rack-droppable");
             }
         });
-    
+
         rack.addEventListener("dragleave", (e) => {
             e.currentTarget.classList.remove("rack-droppable");
         });
-    
+
         rack.addEventListener("drop", (e) => {
             e.preventDefault();
             e.currentTarget.classList.remove("rack-droppable");
-    
+
             if (this.currentTurn !== "player") return;
-    
+
             // Find the dragged tile element
             const draggedTile = document.querySelector(".tile.dragging");
             if (!draggedTile) return;
-    
+
             // Find the placed tile by looking through all board cells
             const boardCell = draggedTile.closest(".board-cell");
             if (!boardCell) return;
-    
+
             const row = parseInt(boardCell.dataset.row);
             const col = parseInt(boardCell.dataset.col);
-    
+
             // Find the corresponding placed tile
             const placedTileIndex = this.placedTiles.findIndex(
                 (t) => t.row === row && t.col === col
             );
-    
+
             if (placedTileIndex !== -1) {
                 const placedTile = this.placedTiles[placedTileIndex];
-    
+
                 // Check if this was originally a wild tile
                 if (placedTile.tile.isBlank || placedTile.tile.originalLetter === "*") {
                     // Reset to original wild tile
@@ -5251,20 +5301,20 @@ getPrintStyles() {
                     placedTile.tile.value = 0;
                     delete placedTile.tile.isBlank;
                 }
-    
+
                 // Return the tile to the rack
                 this.playerRack.push(placedTile.tile);
-    
+
                 // Clear the board cell
                 this.board[row][col] = null;
                 boardCell.innerHTML = "";
-    
+
                 // Remove from placed tiles array
                 this.placedTiles.splice(placedTileIndex, 1);
-    
+
                 // Update the rack display
                 this.renderRack();
-    
+
                 // Update valid placement highlights
                 this.highlightValidPlacements();
             }
@@ -5319,18 +5369,18 @@ getPrintStyles() {
                 // Mobile: click to place
                 cell.addEventListener("click", (e) => {
                     if (this.currentTurn !== "player" || !this.selectedTile) return;
-                    
+
                     const row = parseInt(cell.dataset.row);
                     const col = parseInt(cell.dataset.col);
                     const tileIndex = parseInt(this.selectedTile.dataset.index);
-                    
+
                     if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
                         const tile = this.playerRack[tileIndex];
-                        
+
                         // Create flying animation
                         const startRect = this.selectedTile.getBoundingClientRect();
                         const endRect = cell.getBoundingClientRect();
-                        
+
                         const clone = this.selectedTile.cloneNode(true);
                         clone.style.position = "fixed";
                         clone.style.left = `${startRect.left}px`;
@@ -5340,13 +5390,13 @@ getPrintStyles() {
                         clone.style.transition = "all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2)";
                         clone.style.zIndex = "1000";
                         document.body.appendChild(clone);
-    
+
                         requestAnimationFrame(() => {
                             clone.style.left = `${endRect.left}px`;
                             clone.style.top = `${endRect.top}px`;
                             clone.style.transform = "scale(1.1) rotate(360deg)";
                         });
-    
+
                         setTimeout(() => {
                             clone.remove();
                             this.placeTile(tile, row, col);
@@ -5359,32 +5409,32 @@ getPrintStyles() {
             } else {
                 // Desktop: drag and drop
                 cell.setAttribute("droppable", "true");
-                
+
                 cell.addEventListener("dragover", (e) => {
                     e.preventDefault();
                     if (this.currentTurn === "player") {
                         cell.classList.add("droppable-hover");
                     }
                 });
-    
+
                 cell.addEventListener("drop", (e) => {
                     e.preventDefault();
                     cell.classList.remove("droppable-hover");
-                    
+
                     if (this.currentTurn !== "player") return;
-                    
+
                     const tileIndex = e.dataTransfer.getData("text/plain");
                     const tile = this.playerRack[tileIndex];
                     const row = parseInt(cell.dataset.row);
                     const col = parseInt(cell.dataset.col);
-                    
+
                     if (this.isValidPlacement(row, col, tile)) {
                         this.placeTile(tile, row, col);
                     } else {
                         alert("Invalid placement! Check placement rules.");
                     }
                 });
-    
+
                 cell.addEventListener("dragleave", (e) => {
                     e.preventDefault();
                     cell.classList.remove("droppable-hover");
@@ -6590,7 +6640,7 @@ getPrintStyles() {
             utter.rate = 0.9;
             window.speechSynthesis.speak(utter);
         }
-    }    
+    }
 
     async playWord() {
         if (this.placedTiles.length === 0) {
@@ -6991,14 +7041,14 @@ getPrintStyles() {
             mediumConsonants: ['D', 'G', 'B', 'C', 'M', 'P'],
             rareLetters: ['J', 'K', 'Q', 'V', 'W', 'X', 'Y', 'Z']
         };
-    
+
         // AI gets better distribution and higher chance of blank tiles
         while (this.aiRack.length < 7 && this.tiles.length > 0) {
             // 40% chance to get exactly what AI needs
             if (Math.random() < 0.4) {
-                const currentVowels = this.aiRack.filter(tile => 
+                const currentVowels = this.aiRack.filter(tile =>
                     optimalDistribution.vowels.includes(tile.letter)).length;
-                
+
                 // Decide what type of tile AI needs
                 let desiredTile;
                 if (currentVowels < 2) {
@@ -7011,23 +7061,23 @@ getPrintStyles() {
                     // Get blank tile or common letter
                     desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
                 }
-    
+
                 if (desiredTile) {
                     this.aiRack.push(desiredTile);
                     continue;
                 }
             }
-    
+
             // Regular draw with weighted probability
             const tile = this.drawWeightedTile(true); // true for AI
             if (tile) this.aiRack.push(tile);
         }
-    
+
         // Player gets decent but not as optimal distribution
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
-            const currentVowels = this.playerRack.filter(tile => 
+            const currentVowels = this.playerRack.filter(tile =>
                 optimalDistribution.vowels.includes(tile.letter)).length;
-    
+
             // 25% chance to get needed letter type
             if (Math.random() < 0.25) {
                 let desiredTile;
@@ -7036,18 +7086,18 @@ getPrintStyles() {
                 } else if (currentVowels > 3) {
                     desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
                 }
-    
+
                 if (desiredTile) {
                     this.playerRack.push(desiredTile);
                     continue;
                 }
             }
-    
+
             // Regular draw with weighted probability
             const tile = this.drawWeightedTile(false); // false for player
             if (tile) this.playerRack.push(tile);
         }
-    
+
         // Update displays
         this.renderRack();
         this.renderAIRack();
@@ -7061,16 +7111,16 @@ getPrintStyles() {
 
     drawWeightedTile(isAI) {
         if (this.tiles.length === 0) return null;
-    
+
         const weights = {
-            '*': isAI ? 50 : 10,  // AI gets 5x chance for blank tiles
+            '*': isAI ? 50 : 10, // AI gets 5x chance for blank tiles
             'AEIOU': isAI ? 35 : 30,
             'RSTLN': isAI ? 30 : 25,
             'DGBCMP': 20,
             'FHVWY': 15,
             'JKQXZ': 10
         };
-    
+
         // Calculate total weight
         let totalWeight = 0;
         this.tiles.forEach(tile => {
@@ -7081,7 +7131,7 @@ getPrintStyles() {
             else if ('FHVWY'.includes(tile.letter)) totalWeight += weights['FHVWY'];
             else totalWeight += weights['JKQXZ'];
         });
-    
+
         // Random weighted selection
         let random = Math.random() * totalWeight;
         for (let i = 0; i < this.tiles.length; i++) {
@@ -7092,11 +7142,11 @@ getPrintStyles() {
             else if ('DGBCMP'.includes(this.tiles[i].letter)) weight = weights['DGBCMP'];
             else if ('FHVWY'.includes(this.tiles[i].letter)) weight = weights['FHVWY'];
             else weight = weights['JKQXZ'];
-    
+
             random -= weight;
             if (random <= 0) return this.tiles.splice(i, 1)[0];
         }
-    
+
         return this.tiles.pop();
     }
 
@@ -7677,26 +7727,26 @@ getPrintStyles() {
     setupEventListeners() {
         // Initial highlight of valid placements
         this.highlightValidPlacements();
-    
+
         // Update highlights when game state changes
         document.addEventListener("click", () => {
             this.highlightValidPlacements();
         });
-    
+
         // Add exchange system setup
         this.setupExchangeSystem();
-    
+
         // Play word button
         document.getElementById("play-word").addEventListener("click", () => this.playWord());
-    
+
         // Shuffle rack button
         document.getElementById("shuffle-rack").addEventListener("click", async () => {
             const rack = document.getElementById("tile-rack");
             const tiles = [...rack.children];
-    
+
             // Disable tile dragging during animation
             tiles.forEach((tile) => (tile.draggable = false));
-    
+
             // Visual shuffle animation
             for (let i = 0; i < 5; i++) { // 5 visual shuffles
                 await new Promise((resolve) => {
@@ -7707,30 +7757,30 @@ getPrintStyles() {
                     setTimeout(resolve, 200);
                 });
             }
-    
+
             // Reset positions with transition
             tiles.forEach((tile) => {
                 tile.style.transform = "none";
             });
-    
+
             // Actual shuffle logic
             for (let i = this.playerRack.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
             }
-    
+
             // Wait for position reset animation to complete
             setTimeout(() => {
                 this.renderRack();
             }, 200);
-    
+
             // Re-enable dragging
             setTimeout(() => {
                 const newTiles = document.querySelectorAll("#tile-rack .tile");
                 newTiles.forEach((tile) => (tile.draggable = true));
             }, 400);
         });
-    
+
         // Skip turn button
         document.getElementById("skip-turn").addEventListener("click", () => {
             if (this.currentTurn === "player") {
@@ -7744,21 +7794,21 @@ getPrintStyles() {
                 }
             }
         });
-    
+
         // Quit game button
         const quitButton = document.getElementById("quit-game");
         if (quitButton) {
             quitButton.addEventListener("click", () => {
                 if (this.gameEnded) return; // Prevent multiple triggers
-    
+
                 // Set the computer as winner since player quit
                 this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
                 this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
                 this.gameEnded = true;
-    
+
                 // Update scores before animation
                 this.updateScores();
-    
+
                 // Add the quit move to history
                 if (this.moveHistory) {
                     this.moveHistory.push({
@@ -7769,17 +7819,17 @@ getPrintStyles() {
                     });
                     this.updateMoveHistory();
                 }
-    
+
                 // Trigger game over animation
                 this.announceWinner();
             });
         }
-    
+
         // Print history button
         document.getElementById("print-history").addEventListener("click", async () => {
             const printWindow = window.open("", "_blank");
             const gameDate = new Date().toLocaleString();
-    
+
             // Show loading message
             printWindow.document.write(`
                 <html>
@@ -7801,14 +7851,14 @@ getPrintStyles() {
                     </body>
                 </html>
             `);
-    
+
             // Gather all unique words from move history
             const uniqueWords = [...new Set(
                 this.moveHistory
-                    .map((move) => move.word)
-                    .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+                .map((move) => move.word)
+                .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
             )];
-    
+
             // Fetch definitions for all words
             const wordDefinitions = new Map();
             for (const word of uniqueWords) {
@@ -7817,7 +7867,7 @@ getPrintStyles() {
                     wordDefinitions.set(word, definitions);
                 }
             }
-    
+
             // Generate and set the content
             const content = this.generatePrintContent(gameDate, wordDefinitions);
             printWindow.document.body.innerHTML = content;
@@ -7825,7 +7875,7 @@ getPrintStyles() {
             printWindow.focus();
             printWindow.print();
         });
-    
+
         // Mobile notifications handling
         if (isMobileDevice()) {
             const notifications = document.querySelectorAll('.mobile-notice');
@@ -7833,15 +7883,17 @@ getPrintStyles() {
                 let startX;
                 let currentX;
                 let isDragging = false;
-    
+
                 // Touch start handler
                 notice.addEventListener('touchstart', (e) => {
                     startX = e.touches[0].clientX;
                     currentX = startX;
                     isDragging = true;
                     notice.classList.add('swiping');
-                }, { passive: true });
-    
+                }, {
+                    passive: true
+                });
+
                 // Touch move handler
                 notice.addEventListener('touchmove', (e) => {
                     if (!isDragging) return;
@@ -7850,14 +7902,16 @@ getPrintStyles() {
                     if (diff > 0) { // Only allow right swipe
                         notice.style.transform = `translateX(${diff}px)`;
                     }
-                }, { passive: true });
-    
+                }, {
+                    passive: true
+                });
+
                 // Touch end handler
                 notice.addEventListener('touchend', () => {
                     if (!isDragging) return;
                     isDragging = false;
                     notice.classList.remove('swiping');
-                    
+
                     if (currentX - startX > 100) { // Swipe threshold
                         notice.classList.add('removing');
                         setTimeout(() => notice.remove(), 300);
@@ -7865,7 +7919,7 @@ getPrintStyles() {
                         notice.style.transform = '';
                     }
                 });
-    
+
                 // Double-tap to close
                 let lastTap = 0;
                 notice.addEventListener('touchend', (e) => {
@@ -7878,7 +7932,7 @@ getPrintStyles() {
                     }
                     lastTap = currentTime;
                 });
-    
+
                 // Make close button more reliable
                 const closeButton = notice.querySelector('.notice-close');
                 if (closeButton) {
@@ -7888,7 +7942,7 @@ getPrintStyles() {
                         notice.classList.add('removing');
                         setTimeout(() => notice.remove(), 300);
                     });
-    
+
                     closeButton.addEventListener('touchend', (e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -7898,7 +7952,7 @@ getPrintStyles() {
                 }
             });
         }
-    }    
+    }
 }
 
 function preventScrolling(e) {
