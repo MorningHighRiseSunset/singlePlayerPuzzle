@@ -407,95 +407,32 @@ class ScrabbleGame {
     }
 
     async aiTurn() {
-        console.log("AI thinking...");
+    console.log("AI thinking...");
 
-        // Show "AI is thinking..." message
-        const thinkingMessage = document.createElement("div");
-        thinkingMessage.className = "ai-thinking-message";
-        thinkingMessage.textContent = "AI is thinking...";
-        thinkingMessage.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f0f0f0;
-            padding: 10px 20px;
-            border-radius: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(thinkingMessage);
-        setTimeout(() => thinkingMessage.style.opacity = "1", 100);
+    // Show "AI is thinking..." message
+    const thinkingMessage = document.createElement("div");
+    thinkingMessage.className = "ai-thinking-message";
+    thinkingMessage.textContent = "AI is thinking...";
+    thinkingMessage.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #f0f0f0;
+        padding: 10px 20px;
+        border-radius: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    document.body.appendChild(thinkingMessage);
+    setTimeout(() => thinkingMessage.style.opacity = "1", 100);
 
-        console.log("AI rack:", this.aiRack.map(t => t.letter));
-
-        try {
-            // Only exchange if rack is severely unbalanced
-            const shouldExchange = this.shouldExchangeTiles();
-            if (shouldExchange && this.tiles.length >= 5) {
-                console.log("AI choosing to exchange severely unbalanced rack");
-                setTimeout(() => {
-                    thinkingMessage.style.opacity = "0";
-                    setTimeout(() => {
-                        thinkingMessage.remove();
-                        this.handleAIExchange();
-                    }, 300);
-                }, 1000);
-                return;
-            }
-
-            // Try to find valid moves with increased persistence
-            const possiblePlays = this.findAIPossiblePlays();
-            console.log("Possible plays found:", possiblePlays?.length || 0);
-
-            if (possiblePlays && possiblePlays.length > 0) {
-                const bestPlay = this.selectBestPlay(possiblePlays);
-                if (bestPlay) {
-                    console.log("Choosing play:", bestPlay);
-                    setTimeout(() => {
-                        thinkingMessage.style.opacity = "0";
-                        setTimeout(() => {
-                            thinkingMessage.remove();
-                            this.executeAIPlay(bestPlay);
-                        }, 300);
-                    }, 1000);
-                    return;
-                }
-            }
-
-            // If no plays found, try harder to find simple plays
-            const simplePlays = this.findSimplePlays();
-            if (simplePlays && simplePlays.length > 0) {
-                const bestSimplePlay = this.selectBestPlay(simplePlays);
-                if (bestSimplePlay) {
-                    setTimeout(() => {
-                        thinkingMessage.style.opacity = "0";
-                        setTimeout(() => {
-                            thinkingMessage.remove();
-                            this.executeAIPlay(bestSimplePlay);
-                        }, 300);
-                    }, 1000);
-                    return;
-                }
-            }
-
-            // Last resort: try to form two-letter words
-            const twoLetterPlay = this.findTwoLetterPlay();
-            if (twoLetterPlay) {
-                setTimeout(() => {
-                    thinkingMessage.style.opacity = "0";
-                    setTimeout(() => {
-                        thinkingMessage.remove();
-                        this.executeAIPlay(twoLetterPlay);
-                    }, 300);
-                }, 1000);
-                return;
-            }
-
-            // Only exchange as absolute last resort
-            console.log("No valid plays found - forced to exchange");
+    try {
+        // Only exchange if rack is severely unbalanced
+        const shouldExchange = this.shouldExchangeTiles();
+        if (shouldExchange && this.tiles.length >= 5) {
             setTimeout(() => {
                 thinkingMessage.style.opacity = "0";
                 setTimeout(() => {
@@ -503,15 +440,95 @@ class ScrabbleGame {
                     this.handleAIExchange();
                 }, 300);
             }, 1000);
-
-        } catch (error) {
-            console.error("Error in AI turn:", error);
-            // Clean up UI in case of error
-            thinkingMessage.remove();
-            // Fall back to exchanging tiles
-            this.handleAIExchange();
+            return;
         }
+
+        // --- Enhanced: Run multiple searches for up to 100 seconds or until a high quality valid move is found ---
+        const startTime = Date.now();
+        const maxTime = 100 * 1000; // 100 seconds
+        let bestPlay = null;
+        let bestScore = -Infinity;
+        let runCount = 0;
+        let blunderCount = 0;
+        let lastBlunderTime = 0;
+
+        while (Date.now() - startTime < maxTime) {
+            const possiblePlays = this.findAIPossiblePlays();
+            let foundValid = false;
+
+            if (possiblePlays && possiblePlays.length > 0) {
+                for (const candidate of possiblePlays) {
+                    const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+                    if (validity.valid) {
+                        foundValid = true;
+                        if (candidate.score > bestScore) {
+                            bestPlay = candidate;
+                            bestScore = candidate.score;
+                        }
+                    } else {
+                        // Show blunder message if enough time has passed since last
+                        if (Date.now() - lastBlunderTime > 1200) {
+                            thinkingMessage.textContent = `🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Choosing again...`;
+                            blunderCount++;
+                            lastBlunderTime = Date.now();
+                        }
+                        await new Promise(res => setTimeout(res, 400));
+                    }
+                }
+            }
+
+            runCount++;
+
+            // If no valid play found after a while, show "thinking really hard" message
+            if (!bestPlay && runCount % 10 === 0) {
+                thinkingMessage.textContent = "AI is thinking really hard right now... 🤔";
+                await new Promise(res => setTimeout(res, 800));
+            }
+
+            // If stuck for a long time, do a "step back" and refresh search
+            if (!bestPlay && runCount % 30 === 0) {
+                thinkingMessage.textContent = "AI takes a step back to rethink its strategy... 🔄";
+                await new Promise(res => setTimeout(res, 1200));
+                // Optionally, you could reshuffle the AI rack or just continue searching
+                thinkingMessage.textContent = "AI is thinking on a move again...";
+            }
+
+            // Small pause to avoid UI freeze
+            await new Promise(res => setTimeout(res, 60));
+
+            // If a very high quality move is found, break early
+            if (bestPlay && bestPlay.score > 200) break;
+        }
+
+        // If a valid move was found, play it
+        if (bestPlay) {
+            thinkingMessage.textContent = "AI found a move!";
+            setTimeout(() => {
+                thinkingMessage.style.opacity = "0";
+                setTimeout(() => {
+                    thinkingMessage.remove();
+                    this.executeAIPlay(bestPlay);
+                }, 300);
+            }, 1000);
+            return;
+        }
+
+        // If still nothing after all that, exchange as last resort
+        thinkingMessage.textContent = "AI couldn't find a valid move after deep thought. Exchanging tiles...";
+        setTimeout(() => {
+            thinkingMessage.style.opacity = "0";
+            setTimeout(() => {
+                thinkingMessage.remove();
+                this.handleAIExchange();
+            }, 300);
+        }, 1500);
+
+    } catch (error) {
+        console.error("Error in AI turn:", error);
+        thinkingMessage.remove();
+        this.handleAIExchange();
     }
+}
 
     shouldExchangeTiles() {
         const rack = this.aiRack.map((t) => t.letter);
