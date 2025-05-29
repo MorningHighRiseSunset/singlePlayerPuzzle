@@ -5693,220 +5693,223 @@ setupDropListeners() {
     }
 
     placeTile(tile, row, col) {
-        if (this.board[row][col]) {
-            alert("This cell is already occupied!");
-            return;
-        }
-
-        if (tile.letter === "*") {
-            const letterSelectionDialog = document.createElement("div");
-            letterSelectionDialog.className = "letter-selection-dialog";
-            letterSelectionDialog.innerHTML = `
-                    <div class="dialog-content">
-                        <h3>Choose a letter for the blank tile</h3>
-                        <div class="letter-grid">
-                            ${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-                              .map(
-                                (letter) => `
-                                <button class="letter-choice">${letter}</button>
-                            `,
-                              )
-                              .join("")}
-                        </div>
-                    </div>
-                `;
-
-            // Add styles for the dialog
-            const style = document.createElement("style");
-            style.textContent = `
-                    .letter-selection-dialog {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: rgba(0, 0, 0, 0.7);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 1000;
-                    }
-                    .dialog-content {
-                        background: white;
-                        padding: 20px;
-                        border-radius: 10px;
-                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                        max-width: 400px;
-                        width: 90%;
-                    }
-                    .letter-grid {
-                        display: grid;
-                        grid-template-columns: repeat(6, 1fr);
-                        gap: 5px;
-                        margin-top: 15px;
-                    }
-                    .letter-choice {
-                        padding: 10px;
-                        border: 1px solid #ccc;
-                        background: #0047AB;
-                        cursor: pointer;
-                        border-radius: 5px;
-                        transition: all 0.2s;
-                    }
-                    .letter-choice:hover {
-                        background: #e0e0e0;
-                        transform: scale(1.1);
-                    }
-                    h3 {
-                        text-align: center;
-                        margin-top: 0;
-                        color: #333;
-                    }
-                `;
-            document.head.appendChild(style);
-            document.body.appendChild(letterSelectionDialog);
-
-            // Handle letter selection
-            const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
-            buttons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    const selectedLetter = button.textContent;
-
-                    // Create a new tile object with the selected letter but keep point value as 0
-                    const blankTile = {
-                        ...tile,
-                        letter: selectedLetter,
-                        originalLetter: "*",
-                        value: 0,
-                    };
-
-                    // Create proper tile object for the board
-                    const placedTile = {
-                        letter: selectedLetter,
-                        value: 0,
-                        id: tile.id,
-                        isBlank: true,
-                    };
-
-                    this.board[row][col] = placedTile;
-                    const cell = document.querySelector(
-                        `[data-row="${row}"][data-col="${col}"]`,
-                    );
-                    const tileIndex = this.playerRack.indexOf(tile);
-
-                    // Create and add the tile element
-                    const tileElement = document.createElement("div");
-                    tileElement.className = "tile";
-                    tileElement.draggable = true;
-                    tileElement.dataset.index = tileIndex;
-                    tileElement.dataset.id = tile.id;
-                    tileElement.innerHTML = `
-                            ${selectedLetter}
-                            <span class="points">0</span>
-                            <span class="blank-indicator">★</span>
-                        `;
-
-                    // Add drag events to the tile
-                    tileElement.addEventListener("dragstart", (e) => {
-                        if (this.currentTurn === "player") {
-                            e.target.classList.add("dragging");
-                            const cell = e.target.closest(".board-cell");
-                            const row = cell.dataset.row;
-                            const col = cell.dataset.col;
-                            e.dataTransfer.setData("text/plain", `${row},${col}`);
-                        }
-                    });
-
-                    tileElement.addEventListener("dragend", (e) => {
-                        e.target.classList.remove("dragging");
-                    });
-
-                    // Clear the cell and add the new tile
-                    cell.innerHTML = "";
-                    cell.appendChild(tileElement);
-
-                    // Remove tile from rack
-                    if (tileIndex > -1) {
-                        this.playerRack.splice(tileIndex, 1);
-                    }
-
-                    // Add to placed tiles
-                    this.placedTiles.push({
-                        tile: placedTile,
-                        row: row,
-                        col: col,
-                    });
-
-                    // Update rack display
-                    this.renderRack();
-
-                    // Remove the dialog
-                    letterSelectionDialog.remove();
-
-                    // Update valid placement highlights
-                    this.highlightValidPlacements();
-                });
-            });
-        } else {
-            // Normal tile placement (non-blank tile)
-            // Create proper tile object for the board
-            const placedTile = {
-                letter: tile.letter,
-                value: tile.value || this.tileValues[tile.letter],
-                id: tile.id,
-            };
-
-            this.board[row][col] = placedTile;
-            const cell = document.querySelector(
-                `[data-row="${row}"][data-col="${col}"]`,
-            );
-            const tileIndex = this.playerRack.indexOf(tile);
-
-            const tileElement = document.createElement("div");
-            tileElement.className = "tile";
-            tileElement.draggable = true;
-            tileElement.dataset.index = tileIndex;
-            tileElement.dataset.id = tile.id;
-            tileElement.innerHTML = `
-                    ${tile.letter}
-                    <span class="points">${placedTile.value}</span>
-                `;
-
-            // Add drag functionality to the placed tile
-            tileElement.addEventListener("dragstart", (e) => {
-                if (this.currentTurn === "player") {
-                    e.target.classList.add("dragging");
-                    e.dataTransfer.setData("text/plain", e.target.dataset.index);
-                }
-            });
-
-            tileElement.addEventListener("dragend", (e) => {
-                e.target.classList.remove("dragging");
-            });
-
-            // Clear the cell and add the new tile
-            cell.innerHTML = "";
-            cell.appendChild(tileElement);
-
-            // Remove tile from rack
-            if (tileIndex > -1) {
-                this.playerRack.splice(tileIndex, 1);
-            }
-
-            // Add to placed tiles
-            this.placedTiles.push({
-                tile: placedTile,
-                row: row,
-                col: col,
-            });
-
-            // Update rack display
-            this.renderRack();
-
-            // Update valid placement highlights
-            this.highlightValidPlacements();
-        }
+    if (this.board[row][col]) {
+        alert("This cell is already occupied!");
+        return;
     }
+
+    const cell = document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+    );
+    const tileIndex = this.playerRack.indexOf(tile);
+
+    // Remove only existing tile element, not the center star or other decorations
+    const existingTile = cell.querySelector('.tile');
+    if (existingTile) existingTile.remove();
+
+    if (tile.letter === "*") {
+        const letterSelectionDialog = document.createElement("div");
+        letterSelectionDialog.className = "letter-selection-dialog";
+        letterSelectionDialog.innerHTML = `
+            <div class="dialog-content">
+                <h3>Choose a letter for the blank tile</h3>
+                <div class="letter-grid">
+                    ${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                        .map(
+                            (letter) => `
+                        <button class="letter-choice">${letter}</button>
+                    `,
+                        )
+                        .join("")}
+                </div>
+            </div>
+        `;
+
+        // Add styles for the dialog
+        const style = document.createElement("style");
+        style.textContent = `
+            .letter-selection-dialog {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+            .dialog-content {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                max-width: 400px;
+                width: 90%;
+            }
+            .letter-grid {
+                display: grid;
+                grid-template-columns: repeat(6, 1fr);
+                gap: 5px;
+                margin-top: 15px;
+            }
+            .letter-choice {
+                padding: 10px;
+                border: 1px solid #ccc;
+                background: #0047AB;
+                cursor: pointer;
+                border-radius: 5px;
+                transition: all 0.2s;
+            }
+            .letter-choice:hover {
+                background: #e0e0e0;
+                transform: scale(1.1);
+            }
+            h3 {
+                text-align: center;
+                margin-top: 0;
+                color: #333;
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(letterSelectionDialog);
+
+        // Handle letter selection
+        const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
+        buttons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const selectedLetter = button.textContent;
+
+                // Create a new tile object with the selected letter but keep point value as 0
+                const blankTile = {
+                    ...tile,
+                    letter: selectedLetter,
+                    originalLetter: "*",
+                    value: 0,
+                };
+
+                // Create proper tile object for the board
+                const placedTile = {
+                    letter: selectedLetter,
+                    value: 0,
+                    id: tile.id,
+                    isBlank: true,
+                };
+
+                this.board[row][col] = placedTile;
+
+                // Create and add the tile element
+                const tileElement = document.createElement("div");
+                tileElement.className = "tile";
+                tileElement.draggable = true;
+                tileElement.dataset.index = tileIndex;
+                tileElement.dataset.id = tile.id;
+                tileElement.innerHTML = `
+                    ${selectedLetter}
+                    <span class="points">0</span>
+                    <span class="blank-indicator">★</span>
+                `;
+
+                // Add drag events to the tile
+                tileElement.addEventListener("dragstart", (e) => {
+                    if (this.currentTurn === "player") {
+                        e.target.classList.add("dragging");
+                        const cell = e.target.closest(".board-cell");
+                        const row = cell.dataset.row;
+                        const col = cell.dataset.col;
+                        e.dataTransfer.setData("text/plain", `${row},${col}`);
+                    }
+                });
+
+                tileElement.addEventListener("dragend", (e) => {
+                    e.target.classList.remove("dragging");
+                });
+
+                // Remove only the tile, not the star
+                const existingTile = cell.querySelector('.tile');
+                if (existingTile) existingTile.remove();
+                cell.appendChild(tileElement);
+
+                // Remove tile from rack
+                if (tileIndex > -1) {
+                    this.playerRack.splice(tileIndex, 1);
+                }
+
+                // Add to placed tiles
+                this.placedTiles.push({
+                    tile: placedTile,
+                    row: row,
+                    col: col,
+                });
+
+                // Update rack display
+                this.renderRack();
+
+                // Remove the dialog
+                letterSelectionDialog.remove();
+
+                // Update valid placement highlights
+                this.highlightValidPlacements();
+            });
+        });
+    } else {
+        // Normal tile placement (non-blank tile)
+        // Create proper tile object for the board
+        const placedTile = {
+            letter: tile.letter,
+            value: tile.value || this.tileValues[tile.letter],
+            id: tile.id,
+        };
+
+        this.board[row][col] = placedTile;
+
+        const tileElement = document.createElement("div");
+        tileElement.className = "tile";
+        tileElement.draggable = true;
+        tileElement.dataset.index = tileIndex;
+        tileElement.dataset.id = tile.id;
+        tileElement.innerHTML = `
+            ${tile.letter}
+            <span class="points">${placedTile.value}</span>
+        `;
+
+        // Add drag functionality to the placed tile
+        tileElement.addEventListener("dragstart", (e) => {
+            if (this.currentTurn === "player") {
+                e.target.classList.add("dragging");
+                e.dataTransfer.setData("text/plain", e.target.dataset.index);
+            }
+        });
+
+        tileElement.addEventListener("dragend", (e) => {
+            e.target.classList.remove("dragging");
+        });
+
+        // Remove only the tile, not the star
+        const existingTile = cell.querySelector('.tile');
+        if (existingTile) existingTile.remove();
+        cell.appendChild(tileElement);
+
+        // Remove tile from rack
+        if (tileIndex > -1) {
+            this.playerRack.splice(tileIndex, 1);
+        }
+
+        // Add to placed tiles
+        this.placedTiles.push({
+            tile: placedTile,
+            row: row,
+            col: col,
+        });
+
+        // Update rack display
+        this.renderRack();
+
+        // Update valid placement highlights
+        this.highlightValidPlacements();
+    }
+}
 
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
