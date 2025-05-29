@@ -409,25 +409,59 @@ class ScrabbleGame {
     async aiTurn() {
     console.log("AI thinking...");
 
-    // Show "AI is thinking..." message
-    const thinkingMessage = document.createElement("div");
+    // Show "AI is thinking..." message with animated dots
+    let thinkingMessage = document.createElement("div");
     thinkingMessage.className = "ai-thinking-message";
-    thinkingMessage.textContent = "AI is thinking...";
+    thinkingMessage.innerHTML = `
+        <span class="ai-thinking-text">AI is thinking...</span>
+        <span class="ai-thinking-indicator">
+            <span class="ai-thinking-dot"></span>
+            <span class="ai-thinking-dot"></span>
+            <span class="ai-thinking-dot"></span>
+        </span>
+    `;
     thinkingMessage.style.cssText = `
         position: fixed;
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
         background-color: #f0f0f0;
-        padding: 10px 20px;
+        padding: 10px 24px;
         border-radius: 20px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         z-index: 1000;
         opacity: 0;
         transition: opacity 0.3s ease;
+        font-size: 1.1em;
     `;
     document.body.appendChild(thinkingMessage);
     setTimeout(() => thinkingMessage.style.opacity = "1", 100);
+
+    let dotsInterval;
+    let running = true;
+    let startTime = Date.now();
+    let maxTime = 5 * 60 * 1000; // 5 minutes
+    let bestPlay = null;
+    let bestScore = -Infinity;
+    let runCount = 0;
+    let blunderCount = 0;
+    let lastBlunderTime = 0;
+    let lastNotifTime = 0;
+
+    // Animate dots (optional, since CSS handles it, but you can update text here)
+    function updateThinkingText(msg) {
+        thinkingMessage.querySelector('.ai-thinking-text').textContent = msg;
+    }
+
+    // After 2 minutes, show "AI is really struggling..."
+    let strugglingTimeout = setTimeout(() => {
+        updateThinkingText("AI is struggling to find a move...");
+    }, 2 * 60 * 1000);
+
+    // After 4 minutes, show "AI is dumbfounded..."
+    let dumbfoundedTimeout = setTimeout(() => {
+        updateThinkingText("AI is dumbfounded and is considering exchanging tiles...");
+    }, 4 * 60 * 1000);
 
     try {
         // Only exchange if rack is severely unbalanced
@@ -443,15 +477,7 @@ class ScrabbleGame {
             return;
         }
 
-        // --- Enhanced: Run multiple searches for up to 100 seconds or until a high quality valid move is found ---
-        const startTime = Date.now();
-        const maxTime = 100 * 1000; // 100 seconds
-        let bestPlay = null;
-        let bestScore = -Infinity;
-        let runCount = 0;
-        let blunderCount = 0;
-        let lastBlunderTime = 0;
-
+        // --- Enhanced: Run multiple searches for up to 5 minutes or until a high quality valid move is found ---
         while (Date.now() - startTime < maxTime) {
             const possiblePlays = this.findAIPossiblePlays();
             let foundValid = false;
@@ -464,11 +490,12 @@ class ScrabbleGame {
                         if (candidate.score > bestScore) {
                             bestPlay = candidate;
                             bestScore = candidate.score;
+                            updateThinkingText("AI found a promising move!");
                         }
                     } else {
                         // Show blunder message if enough time has passed since last
                         if (Date.now() - lastBlunderTime > 1200) {
-                            thinkingMessage.textContent = `🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Choosing again...`;
+                            updateThinkingText(`🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Rethinking...`);
                             blunderCount++;
                             lastBlunderTime = Date.now();
                         }
@@ -480,17 +507,18 @@ class ScrabbleGame {
             runCount++;
 
             // If no valid play found after a while, show "thinking really hard" message
-            if (!bestPlay && runCount % 10 === 0) {
-                thinkingMessage.textContent = "AI is thinking really hard right now... 🤔";
+            if (!bestPlay && runCount % 10 === 0 && Date.now() - lastNotifTime > 2000) {
+                updateThinkingText("AI is thinking really hard right now... 🤔");
+                lastNotifTime = Date.now();
                 await new Promise(res => setTimeout(res, 800));
             }
 
             // If stuck for a long time, do a "step back" and refresh search
-            if (!bestPlay && runCount % 30 === 0) {
-                thinkingMessage.textContent = "AI takes a step back to rethink its strategy... 🔄";
+            if (!bestPlay && runCount % 30 === 0 && Date.now() - lastNotifTime > 2000) {
+                updateThinkingText("AI takes a step back to rethink its strategy... 🔄");
+                lastNotifTime = Date.now();
                 await new Promise(res => setTimeout(res, 1200));
-                // Optionally, you could reshuffle the AI rack or just continue searching
-                thinkingMessage.textContent = "AI is thinking on a move again...";
+                updateThinkingText("AI is thinking on a move again...");
             }
 
             // Small pause to avoid UI freeze
@@ -500,9 +528,12 @@ class ScrabbleGame {
             if (bestPlay && bestPlay.score > 200) break;
         }
 
+        clearTimeout(strugglingTimeout);
+        clearTimeout(dumbfoundedTimeout);
+
         // If a valid move was found, play it
         if (bestPlay) {
-            thinkingMessage.textContent = "AI found a move!";
+            updateThinkingText("AI found a move!");
             setTimeout(() => {
                 thinkingMessage.style.opacity = "0";
                 setTimeout(() => {
@@ -513,15 +544,14 @@ class ScrabbleGame {
             return;
         }
 
-        // If still nothing after all that, exchange as last resort
-        thinkingMessage.textContent = "AI couldn't find a valid move after deep thought. Exchanging tiles...";
+        // If still nothing after all that, show dumbfounded message and exchange as last resort
+        updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
+        await new Promise(res => setTimeout(res, 3500));
+        thinkingMessage.style.opacity = "0";
         setTimeout(() => {
-            thinkingMessage.style.opacity = "0";
-            setTimeout(() => {
-                thinkingMessage.remove();
-                this.handleAIExchange();
-            }, 300);
-        }, 1500);
+            thinkingMessage.remove();
+            this.handleAIExchange();
+        }, 600);
 
     } catch (error) {
         console.error("Error in AI turn:", error);
@@ -7676,7 +7706,7 @@ setupDropListeners() {
             this.updateTilesCount();
 
             // Add to move history
-            this.addToMoveHistory("Computer", "Computer exchanged tiles. Player's turn", 0);
+            this.addToMoveHistory("Computer", "AI decided to exchange their tiles.", 0);
 
             // Switch turn
             this.currentTurn = "player";
