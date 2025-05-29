@@ -979,3 +979,367 @@ button:hover {
 .valid-placement {
     background-color: rgba(0, 255, 0, 0.1);
 }
+
+.win-overlay.lose {
+    background-color: rgba(255, 255, 255, 0); /* Red background for losing */
+}
+
+.win-message {
+    background: white;
+    padding: 2em;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    text-align: center;
+    z-index: 1001; /* Ensure it's above the overlay */
+}
+
+@keyframes win-particle-fall {
+    to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes lose-particle-fall {
+    to {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Add celebration animation for the message box */
+@keyframes celebrate {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.celebrate {
+    animation: celebrate 0.5s ease-out forwards;
+}
+
+.center-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em;
+    color: #333;
+    pointer-events: none;
+}
+
+/* Mobile Notifications */
+/* Update Mobile Notifications styles */
+.mobile-notifications {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .mobile-notifications {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+    }
+
+    .mobile-notice {
+        background: rgba(25, 118, 210, 0.95);
+        color: white;
+        padding: 12px 40px 12px 15px;
+        margin-bottom: 1px;
+        font-size: 14px;
+        position: relative;
+        animation: slideDown 0.5s ease-out;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Update close button styles for better touch targets */
+    .notice-close {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 44px; /* Increased touch target */
+        height: 100%; /* Full height of notice */
+        background: rgba(0, 0, 0, 0.1);
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color 0.3s ease;
+    }
+
+    .notice-close:active {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    /* Add swipe indicator */
+    .mobile-notice::after {
+        content: '←';
+        position: absolute;
+        right: 50px;
+        opacity: 0.5;
+        animation: swipeHint 1s infinite;
+    }
+
+    @keyframes swipeHint {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(-5px); }
+    }
+
+    /* Add swipe functionality styles */
+    .mobile-notice.swiping {
+        transition: transform 0.2s ease;
+    }
+
+    .mobile-notice.removing {
+        transition: all 0.3s ease;
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    /* Reorder game elements for mobile */
+    .game-container {
+        flex-direction: column;
+        padding-top: 120px; /* Space for notifications */
+    }
+
+    .board-container {
+        order: 1;
+    }
+
+    .info-panel {
+        order: 2;
+    }
+
+    .moves-panel {
+        order: 3;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}
+
+.tile.selected {
+    transform: translateY(-4px);
+    box-shadow: 
+        0 10px 25px rgba(0, 0, 0, 0.3),
+        0 8px 10px rgba(0, 0, 0, 0.2),
+        -3px 0 6px rgba(0, 0, 0, 0.15),
+        3px 0 6px rgba(0, 0, 0, 0.15);
+    border: 2px solid var(--primary-blue);
+}
+
+/* Ensure better touch targets on mobile */
+@media (max-width: 768px) {
+    .tile {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        min-width: 40px; /* Ensure minimum touch target size */
+        min-height: 40px;
+    }
+
+    .board-cell {
+        min-width: 40px;
+        min-height: 40px;
+    }
+}
+
+.language-button {
+    padding: 8px 15px;
+    background: linear-gradient(145deg, #42a5f5, #1976d2);
+    color: rgb(0, 0, 0);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.language-button:hover {
+    background: linear-gradient(145deg, #1976d2, #1565c0);
+    transform: translateY(-2px);
+}
+
+/* Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1500; /* Above other elements */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7); /* Black with opacity */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 300px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.modal-header {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.modal-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-button {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-button:hover {
+    background: var(--secondary-blue);
+}
+
+.modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .tile {
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .tile.selected {
+        transform: translateY(-4px);
+        box-shadow: 
+            0 8px 16px rgba(0, 0, 0, 0.2),
+            0 4px 8px rgba(0, 0, 0, 0.1);
+        border: 2px solid #1976d2;
+        background: linear-gradient(145deg, #e3f2fd, #bbdefb);
+    }
+
+    .board-cell {
+        cursor: pointer;
+    }
+
+    .board-cell.valid-placement {
+        background: linear-gradient(145deg,);
+    }
+
+    .board-cell.valid-placement:hover {
+        background: linear-gradient(145deg,);
+    }
+
+    .tile-placed {
+        animation: tilePlace 0.3s ease-out;
+    }
+
+    /* Improve touch targets */
+    .board-cell, .tile {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    /* Visual feedback for interactive elements */
+    .board-cell:active, .tile:active {
+        transform: scale(0.95);
+    }
+}
+
+.tile {
+    touch-action: none; /* Prevents default touch actions */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.tile.dragging {
+    opacity: 0.8;
+    transform: scale(1.1);
+    transition: transform 0.1s ease;
+}
+
+.board-cell.droppable-hover {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.tile.selected {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 100, 255, 0.5);
+    border: 2px solid #007bff;
+    z-index: 2;
+}
+
+.valid-placement {
+    background-color: rgba(0, 255, 0, 0.1);
+}
+
+/* Add to your CSS file or <style> tag */
+.ai-thinking-indicator {
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.ai-thinking-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 2px;
+  background: #0047AB;
+  border-radius: 50%;
+  animation: ai-bounce 1s infinite;
+}
+.ai-thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ai-bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+}
