@@ -5418,84 +5418,131 @@ async executeAIPlay(play) {
     }
 
     setupDropListeners() {
-        document.querySelectorAll(".board-cell").forEach((cell) => {
-            if (this.isMobile) {
-                // Mobile: click to place
-                cell.addEventListener("click", (e) => {
-                    if (this.currentTurn !== "player" || !this.selectedTile) return;
+    document.querySelectorAll(".board-cell").forEach((cell) => {
+        if (this.isMobile) {
+            // Mobile: click to place or move
+            cell.addEventListener("click", (e) => {
+                if (this.currentTurn !== "player") return;
 
+                // If a tile is selected from rack or board, move it here
+                if (this.selectedTile) {
                     const row = parseInt(cell.dataset.row);
                     const col = parseInt(cell.dataset.col);
-                    const tileIndex = parseInt(this.selectedTile.dataset.index);
 
-                    if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
-                        const tile = this.playerRack[tileIndex];
-
-                        // Create flying animation
-                        const startRect = this.selectedTile.getBoundingClientRect();
-                        const endRect = cell.getBoundingClientRect();
-
-                        const clone = this.selectedTile.cloneNode(true);
-                        clone.style.position = "fixed";
-                        clone.style.left = `${startRect.left}px`;
-                        clone.style.top = `${startRect.top}px`;
-                        clone.style.width = `${startRect.width}px`;
-                        clone.style.height = `${startRect.height}px`;
-                        clone.style.transition = "all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2)";
-                        clone.style.zIndex = "1000";
-                        document.body.appendChild(clone);
-
-                        requestAnimationFrame(() => {
-                            clone.style.left = `${endRect.left}px`;
-                            clone.style.top = `${endRect.top}px`;
-                            clone.style.transform = "scale(1.1) rotate(360deg)";
-                        });
-
-                        setTimeout(() => {
-                            clone.remove();
-                            this.placeTile(tile, row, col);
+                    // If selectedTile is from rack
+                    if (this.selectedTile.classList.contains("tile") && this.selectedTile.closest("#tile-rack")) {
+                        const tileIndex = parseInt(this.selectedTile.dataset.index);
+                        if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
+                            this.placeTile(this.playerRack[tileIndex], row, col);
                             this.deselectTile();
-                        }, 500);
+                        } else {
+                            alert("Invalid placement! Check placement rules.");
+                        }
+                    }
+                    // If selectedTile is from board (move placed tile)
+                    else if (this.selectedTile.classList.contains("tile") && this.selectedTile.closest(".board-cell")) {
+                        const fromCell = this.selectedTile.closest(".board-cell");
+                        const fromRow = parseInt(fromCell.dataset.row);
+                        const fromCol = parseInt(fromCell.dataset.col);
+
+                        // Only allow moving to empty cell
+                        if (!this.board[row][col] && this.board[fromRow][fromCol]) {
+                            // Move the tile object
+                            const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
+                            if (placedIdx !== -1) {
+                                const placedTile = this.placedTiles[placedIdx];
+                                // Remove from old spot
+                                this.board[fromRow][fromCol] = null;
+                                fromCell.innerHTML = "";
+                                this.placedTiles.splice(placedIdx, 1);
+
+                                // Place at new spot
+                                this.placeTile(placedTile.tile, row, col);
+                                this.deselectTile();
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Allow selecting placed tiles for moving
+            cell.addEventListener("click", (e) => {
+                if (this.currentTurn !== "player") return;
+                const tileElement = e.target.closest(".tile");
+                if (tileElement && tileElement.closest(".board-cell")) {
+                    // Select this placed tile for moving
+                    if (this.selectedTile === tileElement) {
+                        this.deselectTile();
                     } else {
-                        alert("Invalid placement! Check placement rules.");
+                        this.selectTile(tileElement);
                     }
-                });
-            } else {
-                // Desktop: drag and drop
-                cell.setAttribute("droppable", "true");
+                }
+            });
+        } else {
+            // Desktop: drag and drop
+            cell.setAttribute("droppable", "true");
 
-                cell.addEventListener("dragover", (e) => {
-                    e.preventDefault();
-                    if (this.currentTurn === "player") {
-                        cell.classList.add("droppable-hover");
-                    }
-                });
+            cell.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                if (this.currentTurn === "player") {
+                    cell.classList.add("droppable-hover");
+                }
+            });
 
-                cell.addEventListener("drop", (e) => {
-                    e.preventDefault();
-                    cell.classList.remove("droppable-hover");
+            cell.addEventListener("drop", (e) => {
+                e.preventDefault();
+                cell.classList.remove("droppable-hover");
 
-                    if (this.currentTurn !== "player") return;
+                if (this.currentTurn !== "player") return;
 
-                    const tileIndex = e.dataTransfer.getData("text/plain");
+                // Find the dragged tile element
+                const draggedTile = document.querySelector(".tile.dragging");
+                if (!draggedTile) return;
+
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+
+                // If dragging from rack
+                if (draggedTile.closest("#tile-rack")) {
+                    const tileIndex = draggedTile.dataset.index;
                     const tile = this.playerRack[tileIndex];
-                    const row = parseInt(cell.dataset.row);
-                    const col = parseInt(cell.dataset.col);
-
                     if (this.isValidPlacement(row, col, tile)) {
                         this.placeTile(tile, row, col);
                     } else {
                         alert("Invalid placement! Check placement rules.");
                     }
-                });
+                }
+                // If dragging from board (move placed tile)
+                else if (draggedTile.closest(".board-cell")) {
+                    const fromCell = draggedTile.closest(".board-cell");
+                    const fromRow = parseInt(fromCell.dataset.row);
+                    const fromCol = parseInt(fromCell.dataset.col);
 
-                cell.addEventListener("dragleave", (e) => {
-                    e.preventDefault();
-                    cell.classList.remove("droppable-hover");
-                });
-            }
-        });
-    }
+                    // Only allow moving to empty cell
+                    if (!this.board[row][col] && this.board[fromRow][fromCol]) {
+                        // Move the tile object
+                        const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
+                        if (placedIdx !== -1) {
+                            const placedTile = this.placedTiles[placedIdx];
+                            // Remove from old spot
+                            this.board[fromRow][fromCol] = null;
+                            fromCell.innerHTML = "";
+                            this.placedTiles.splice(placedIdx, 1);
+
+                            // Place at new spot
+                            this.placeTile(placedTile.tile, row, col);
+                        }
+                    }
+                }
+            });
+
+            cell.addEventListener("dragleave", (e) => {
+                e.preventDefault();
+                cell.classList.remove("droppable-hover");
+            });
+        }
+    });
+}
 
     isValidPlacement(row, col, tile) {
         console.log("Checking placement validity:", {
