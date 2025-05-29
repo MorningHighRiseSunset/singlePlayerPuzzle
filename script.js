@@ -5417,7 +5417,7 @@ async executeAIPlay(play) {
         });
     }
 
-    setupDropListeners() {
+setupDropListeners() {
     document.querySelectorAll(".board-cell").forEach((cell) => {
         if (this.isMobile) {
             // Mobile: click to place or move
