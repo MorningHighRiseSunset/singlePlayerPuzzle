@@ -114,6 +114,36 @@ class ScrabbleGame {
         this.init();
     }
 
+    showAINotification(message) {
+        // Remove any existing notification
+        let existing = document.querySelector('.ai-blunder-notification');
+        if (existing) existing.remove();
+
+        const note = document.createElement('div');
+        note.className = 'ai-blunder-notification';
+        note.textContent = message;
+        note.style.cssText = `
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffeb3b;
+            color: #222;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-family: inherit;
+            z-index: 2000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            opacity: 0.97;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        `;
+        document.body.appendChild(note);
+        setTimeout(() => { note.style.opacity = '0'; }, 2500);
+        setTimeout(() => { note.remove(); }, 3000);
+    }
+
     setupEventListeners() {
         // Initial highlight of valid placements
         this.highlightValidPlacements();
@@ -1987,26 +2017,32 @@ class ScrabbleGame {
         const commonLetters = "AEIOURST";
 
         for (let i = 0; i < word.length; i++) {
-            const letter = word[i];
-            const currentRow = horizontal ? row : row + i;
-            const currentCol = horizontal ? col + i : col;
+        const row = horizontal ? startRow : startRow + i;
+        const col = horizontal ? startCol + i : startCol;
 
-            // Bonus for common letters in good positions
-            if (commonLetters.includes(letter)) {
-                // Check if position allows for cross-word formation
-                if (this.hasAdjacentSpace(currentRow, currentCol, !horizontal)) {
-                    potential++;
-                }
+        if (tempBoard[row][col]) {
+            if (tempBoard[row][col].letter !== word[i]) {
+                console.log(`Letter mismatch at position [${row},${col}]`);
+                return false;
             }
+            hasValidIntersection = true;
+        } else {
+            tempBoard[row][col] = { letter: word[i] };
 
-            // Extra bonus for S in good positions
-            if (
-                letter === "S" &&
-                this.isGoodPositionForS(currentRow, currentCol, horizontal)
-            ) {
-                potential += 2;
+            // Always check the perpendicular word for every new tile placed
+            const crossWord = horizontal
+                ? this.getVerticalWordAt(row, col, tempBoard)
+                : this.getHorizontalWordAt(row, col, tempBoard);
+
+            if (crossWord && crossWord.length > 1) {
+                if (!this.dictionary.has(crossWord.toLowerCase())) {
+                    console.log(`Invalid cross word formed: ${crossWord}`);
+                    return false;
+                }
+                hasValidIntersection = true;
             }
         }
+    }
 
         return potential;
     }
@@ -2869,226 +2905,315 @@ class ScrabbleGame {
         };
     }
 
-    async executeAIPlay(play) {
-        const {
-            word,
-            startPos,
-            isHorizontal,
-            score
-        } = play;
-        console.log("AI executing play:", {
-            word,
-            startPos,
-            isHorizontal,
-            score
-        });
+// Place this inside your ScrabbleGame class
 
-        // Double check word validity
-        if (!this.dictionary.has(word.toLowerCase())) {
-            console.log(`Invalid word ${word} - skipping AI turn`);
-            this.skipAITurn();
-            return;
+checkAIMoveValidity(word, startPos, isHorizontal) {
+    // Simulate the move on a temporary board
+    let tempBoard = JSON.parse(JSON.stringify(this.board));
+    for (let i = 0; i < word.length; i++) {
+        const row = isHorizontal ? startPos.row : startPos.row + i;
+        const col = isHorizontal ? startPos.col + i : startPos.col;
+        if (!tempBoard[row][col]) {
+            tempBoard[row][col] = { letter: word[i] };
+        }
+    }
+
+    // Collect all words formed (main and crosswords)
+    let invalidWords = [];
+    let checkedWords = new Set();
+
+    for (let i = 0; i < word.length; i++) {
+        const row = isHorizontal ? startPos.row : startPos.row + i;
+        const col = isHorizontal ? startPos.col + i : startPos.col;
+
+        // Main word (only check once)
+        if (i === 0) {
+            const mainWord = isHorizontal
+                ? this.getHorizontalWordAt(row, col, tempBoard)
+                : this.getVerticalWordAt(row, col, tempBoard);
+            if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
+                invalidWords.push(mainWord);
+            } else if (mainWord && mainWord.length > 1) {
+                checkedWords.add(mainWord);
+            }
         }
 
-        // Store the previous board state
-        this.previousBoard = JSON.parse(JSON.stringify(this.board));
+        // Crosswords for each new tile
+        const crossWord = isHorizontal
+            ? this.getVerticalWordAt(row, col, tempBoard)
+            : this.getHorizontalWordAt(row, col, tempBoard);
+        if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
+            if (!this.dictionary.has(crossWord.toLowerCase())) {
+                invalidWords.push(crossWord);
+            } else {
+                checkedWords.add(crossWord);
+            }
+        }
+    }
 
-        // Create the placedTiles array for the AI's move
-        this.placedTiles = Array.from(word).map((letter, i) => ({
-            row: isHorizontal ? startPos.row : startPos.row + i,
-            col: isHorizontal ? startPos.col + i : startPos.col,
-            tile: {
-                letter: letter,
-                value: this.tileValues[letter],
-                id: `ai_${letter}_${Date.now()}_${i}`,
-            },
-        }));
+    return invalidWords.length === 0 ? { valid: true } : { valid: false, invalidWords };
+}
 
-        return new Promise(async (resolve) => {
-            // Start placing tiles with animation
-            for (let i = 0; i < word.length; i++) {
-                const letter = word[i];
-                const row = isHorizontal ? startPos.row : startPos.row + i;
-                const col = isHorizontal ? startPos.col + i : startPos.col;
+async executeAIPlay(play) {
+    const { word, startPos, isHorizontal, score } = play;
+    console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
 
-                if (!this.board[row][col]) {
-                    // Find matching tile or blank tile
-                    let tileIndex = this.aiRack.findIndex((t) => t.letter === letter);
-                    if (tileIndex === -1) {
-                        // Try to use blank tile
-                        tileIndex = this.aiRack.findIndex((t) => t.letter === "*");
-                        if (tileIndex !== -1) {
-                            // Convert blank tile to needed letter
-                            this.aiRack[tileIndex] = {
-                                letter: letter,
-                                value: 0, // Blank tiles are worth 0 points
-                                id: `blank_${Date.now()}_${i}`,
-                                isBlank: true,
-                            };
-                        }
-                    }
+    // --- GHOST CHECK: Simulate placing the word and check all words formed ---
+    let tempBoard = JSON.parse(JSON.stringify(this.board));
+    for (let i = 0; i < word.length; i++) {
+        const row = isHorizontal ? startPos.row : startPos.row + i;
+        const col = isHorizontal ? startPos.col + i : startPos.col;
+        if (!tempBoard[row][col]) {
+            tempBoard[row][col] = { letter: word[i] };
+        }
+    }
 
+    // Gather all words formed by this move (main and crosswords)
+    let allWordsValid = true;
+    let invalidWords = [];
+    let checkedWords = new Set();
+
+    for (let i = 0; i < word.length; i++) {
+        const row = isHorizontal ? startPos.row : startPos.row + i;
+        const col = isHorizontal ? startPos.col + i : startPos.col;
+
+        // Main word (only check once)
+        if (i === 0) {
+            const mainWord = isHorizontal
+                ? this.getHorizontalWordAt(row, col, tempBoard)
+                : this.getVerticalWordAt(row, col, tempBoard);
+            if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
+                allWordsValid = false;
+                invalidWords.push(mainWord);
+                console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
+            } else if (mainWord && mainWord.length > 1) {
+                checkedWords.add(mainWord);
+                console.log(`[AI Ghost Check] Main word valid: ${mainWord}`);
+            }
+        }
+
+        // Crosswords for each new tile
+        const crossWord = isHorizontal
+            ? this.getVerticalWordAt(row, col, tempBoard)
+            : this.getHorizontalWordAt(row, col, tempBoard);
+        if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
+            if (!this.dictionary.has(crossWord.toLowerCase())) {
+                allWordsValid = false;
+                invalidWords.push(crossWord);
+                console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
+            } else {
+                checkedWords.add(crossWord);
+                console.log(`[AI Ghost Check] Cross word valid: ${crossWord}`);
+            }
+        }
+    }
+
+    if (!allWordsValid) {
+        // Human-like notification
+        this.showAINotification(
+            `🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
+        );
+        console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
+        // Remove this play from possible plays and try again
+        setTimeout(() => this.aiTurn(), 1000);
+        return;
+    }
+
+    // --- If all words valid, proceed as normal ---
+    console.log("[AI Ghost Check] All words valid. Proceeding with move.");
+
+    // Store the previous board state
+    this.previousBoard = JSON.parse(JSON.stringify(this.board));
+
+    // Create the placedTiles array for the AI's move
+    this.placedTiles = Array.from(word).map((letter, i) => ({
+        row: isHorizontal ? startPos.row : startPos.row + i,
+        col: isHorizontal ? startPos.col + i : startPos.col,
+        tile: {
+            letter: letter,
+            value: this.tileValues[letter],
+            id: `ai_${letter}_${Date.now()}_${i}`,
+        },
+    }));
+
+    return new Promise(async (resolve) => {
+        // Start placing tiles with animation
+        for (let i = 0; i < word.length; i++) {
+            const letter = word[i];
+            const row = isHorizontal ? startPos.row : startPos.row + i;
+            const col = isHorizontal ? startPos.col + i : startPos.col;
+
+            if (!this.board[row][col]) {
+                // Find matching tile or blank tile
+                let tileIndex = this.aiRack.findIndex((t) => t.letter === letter);
+                if (tileIndex === -1) {
+                    // Try to use blank tile
+                    tileIndex = this.aiRack.findIndex((t) => t.letter === "*");
                     if (tileIndex !== -1) {
-                        const tile = {
+                        // Convert blank tile to needed letter
+                        this.aiRack[tileIndex] = {
                             letter: letter,
-                            value: this.aiRack[tileIndex].isBlank ? 0 : this.tileValues[letter],
-                            id: this.aiRack[tileIndex].isBlank ?
-                                `blank_${letter}_${Date.now()}_${i}` : `ai_${letter}_${Date.now()}_${i}`,
-                            isBlank: this.aiRack[tileIndex].isBlank,
+                            value: 0, // Blank tiles are worth 0 points
+                            id: `blank_${Date.now()}_${i}`,
+                            isBlank: true,
                         };
-
-                        // Create animated tile element
-                        const animatedTile = document.createElement("div");
-                        animatedTile.className = "tile animated-tile";
-                        animatedTile.innerHTML = `
-                          ${tile.letter}
-                          <span class="points">${tile.value}</span>
-                          ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                      `;
-
-                        // Get target cell position
-                        const targetCell = document.querySelector(
-                            `[data-row="${row}"][data-col="${col}"]`,
-                        );
-                        const targetRect = targetCell.getBoundingClientRect();
-
-                        // Animation setup
-                        animatedTile.style.cssText = `
-                          position: fixed;
-                          top: -50px;
-                          left: ${targetRect.left}px;
-                          transform: rotate(-180deg);
-                          transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                          z-index: 1000;
-                      `;
-
-                        document.body.appendChild(animatedTile);
-
-                        // Animate tile placement
-                        await new Promise((resolve) => {
-                            setTimeout(() => {
-                                animatedTile.style.top = `${targetRect.top}px`;
-                                animatedTile.style.transform = "rotate(0deg)";
-
-                                setTimeout(() => {
-                                    // Add bounce effect
-                                    animatedTile.style.transform = "rotate(0deg) scale(1.2)";
-                                    setTimeout(() => {
-                                        animatedTile.style.transform = "rotate(0deg) scale(1)";
-                                    }, 100);
-                                }, 800);
-
-                                // Place tile on board
-                                setTimeout(() => {
-                                    targetCell.classList.add("tile-placed");
-                                    animatedTile.remove();
-
-                                    // Remove tile from AI rack and place on board
-                                    this.aiRack.splice(tileIndex, 1);
-                                    this.board[row][col] = tile;
-                                    this.renderAIRack();
-
-                                    // Create permanent tile element
-                                    const permanentTile = document.createElement("div");
-                                    permanentTile.className = "tile";
-                                    if (tile.isBlank) {
-                                        permanentTile.classList.add("blank-tile");
-                                    }
-                                    permanentTile.style.cssText = `
-                                      background: linear-gradient(145deg, #ffffff, #f0f0f0);
-                                      color: #000;
-                                  `;
-                                    permanentTile.innerHTML = `
-                                      ${tile.letter}
-                                      <span class="points" style="color: #000;">${tile.value}</span>
-                                      ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                                  `;
-
-                                    // Clear cell and add permanent tile
-                                    targetCell.innerHTML = "";
-                                    targetCell.appendChild(permanentTile);
-
-                                    setTimeout(() => {
-                                        targetCell.classList.remove("tile-placed");
-                                    }, 500);
-
-                                    resolve();
-                                }, 1000);
-                            }, 200);
-                        });
-
-                        // Delay between letters
-                        await new Promise((resolve) => setTimeout(resolve, 500));
                     }
+                }
+
+                if (tileIndex !== -1) {
+                    const tile = {
+                        letter: letter,
+                        value: this.aiRack[tileIndex].isBlank ? 0 : this.tileValues[letter],
+                        id: this.aiRack[tileIndex].isBlank ?
+                            `blank_${letter}_${Date.now()}_${i}` : `ai_${letter}_${Date.now()}_${i}`,
+                        isBlank: this.aiRack[tileIndex].isBlank,
+                    };
+
+                    // Create animated tile element
+                    const animatedTile = document.createElement("div");
+                    animatedTile.className = "tile animated-tile";
+                    animatedTile.innerHTML = `
+                      ${tile.letter}
+                      <span class="points">${tile.value}</span>
+                      ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                  `;
+
+                    // Get target cell position
+                    const targetCell = document.querySelector(
+                        `[data-row="${row}"][data-col="${col}"]`,
+                    );
+                    const targetRect = targetCell.getBoundingClientRect();
+
+                    // Animation setup
+                    animatedTile.style.cssText = `
+                      position: fixed;
+                      top: -50px;
+                      left: ${targetRect.left}px;
+                      transform: rotate(-180deg);
+                      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                      z-index: 1000;
+                  `;
+
+                    document.body.appendChild(animatedTile);
+
+                    // Animate tile placement
+                    await new Promise((resolve) => {
+                        setTimeout(() => {
+                            animatedTile.style.top = `${targetRect.top}px`;
+                            animatedTile.style.transform = "rotate(0deg)";
+
+                            setTimeout(() => {
+                                // Add bounce effect
+                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
+                                setTimeout(() => {
+                                    animatedTile.style.transform = "rotate(0deg) scale(1)";
+                                }, 100);
+                            }, 800);
+
+                            // Place tile on board
+                            setTimeout(() => {
+                                targetCell.classList.add("tile-placed");
+                                animatedTile.remove();
+
+                                // Remove tile from AI rack and place on board
+                                this.aiRack.splice(tileIndex, 1);
+                                this.board[row][col] = tile;
+                                this.renderAIRack();
+
+                                // Create permanent tile element
+                                const permanentTile = document.createElement("div");
+                                permanentTile.className = "tile";
+                                if (tile.isBlank) {
+                                    permanentTile.classList.add("blank-tile");
+                                }
+                                permanentTile.style.cssText = `
+                                  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+                                  color: #000;
+                              `;
+                                permanentTile.innerHTML = `
+                                  ${tile.letter}
+                                  <span class="points" style="color: #000;">${tile.value}</span>
+                                  ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                              `;
+
+                                // Clear cell and add permanent tile
+                                targetCell.innerHTML = "";
+                                targetCell.appendChild(permanentTile);
+
+                                setTimeout(() => {
+                                    targetCell.classList.remove("tile-placed");
+                                }, 500);
+
+                                resolve();
+                            }, 1000);
+                        }, 200);
+                    });
+
+                    // Delay between letters
+                    await new Promise((resolve) => setTimeout(resolve, 500));
                 }
             }
+        }
 
-            // Update game state after all animations complete
-            setTimeout(() => {
-                // Get all formed words and calculate total score
-                const formedWords = this.getFormedWords();
-                let totalScore = 0;
-                let wordsList = [];
+        // Update game state after all animations complete
+        setTimeout(() => {
+            // Get all formed words and calculate total score
+            const formedWords = this.getFormedWords();
+            let totalScore = 0;
+            let wordsList = [];
 
-                formedWords.forEach((wordInfo) => {
-                    const {
-                        word,
-                        startPos,
-                        direction
-                    } = wordInfo;
-                    const wordScore = this.calculateWordScore(
-                        word,
-                        startPos.row,
-                        startPos.col,
-                        direction === "horizontal",
-                    );
-                    totalScore += wordScore;
-                    wordsList.push({
-                        word,
-                        score: wordScore
-                    });
-                    console.log(`Word formed: ${word} for ${wordScore} points`);
-                });
+            formedWords.forEach((wordInfo) => {
+                const { word, startPos, direction } = wordInfo;
+                const wordScore = this.calculateWordScore(
+                    word,
+                    startPos.row,
+                    startPos.col,
+                    direction === "horizontal",
+                );
+                totalScore += wordScore;
+                wordsList.push({ word, score: wordScore });
+                console.log(`Word formed: ${word} for ${wordScore} points`);
+            });
 
-                // Add bonus for using all 7 tiles
-                if (word.length === 7) {
-                    totalScore += 50;
-                    console.log("Added 50 point bonus for using all 7 tiles");
-                }
+            // Add bonus for using all 7 tiles
+            if (word.length === 7) {
+                totalScore += 50;
+                console.log("Added 50 point bonus for using all 7 tiles");
+            }
 
-                // Format move description for multiple words
-                let moveDescription;
-                if (wordsList.length > 1) {
-                    moveDescription = wordsList
-                        .map((w) => `${w.word} (${w.score})`)
-                        .join(" & ");
-                } else {
-                    moveDescription = wordsList[0].word;
-                }
+            // Format move description for multiple words
+            let moveDescription;
+            if (wordsList.length > 1) {
+                moveDescription = wordsList
+                    .map((w) => `${w.word} (${w.score})`)
+                    .join(" & ");
+            } else {
+                moveDescription = wordsList[0].word;
+            }
 
-                // --- Speak each word formed by AI ---
-                wordsList.forEach(wd => {
-                    if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
-                });
+            // --- Speak each word formed by AI ---
+            wordsList.forEach(wd => {
+                if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
+            });
 
-                console.log(`Total score for move: ${totalScore}`);
+            console.log(`Total score for move: ${totalScore}`);
 
-                this.aiScore += totalScore;
-                this.isFirstMove = false;
-                this.consecutiveSkips = 0;
-                this.currentTurn = "player";
-                this.addToMoveHistory("Computer", moveDescription, totalScore);
+            this.aiScore += totalScore;
+            this.isFirstMove = false;
+            this.consecutiveSkips = 0;
+            this.currentTurn = "player";
+            this.addToMoveHistory("Computer", moveDescription, totalScore);
 
-                // Clear the placed tiles array after scoring
-                this.placedTiles = [];
+            // Clear the placed tiles array after scoring
+            this.placedTiles = [];
 
-                // Refill racks and update display
-                this.fillRacks();
-                this.updateGameState();
-                resolve();
-            }, 500);
-        });
-    }
+            // Refill racks and update display
+            this.fillRacks();
+            this.updateGameState();
+            resolve();
+        }, 500);
+    });
+}
 
     calculateWordScore(word, startRow, startCol, isHorizontal) {
         let wordScore = 0;
@@ -7953,7 +8078,140 @@ class ScrabbleGame {
             });
         }
     }
+
+    simulateEndgameScenario() 
+{
+    // Clear board first
+    this.board = Array(15).fill().map(() => Array(15).fill(null));
+
+    // Place valid words, no illegal overlaps, and leave a few gaps
+    const words = [
+        { word: "START", row: 7, col: 5, horizontal: true },
+        { word: "EARN", row: 6, col: 7, horizontal: false },
+        { word: "TILE", row: 9, col: 7, horizontal: false },
+        { word: "QUIZ", row: 4, col: 10, horizontal: true },
+        { word: "DOG", row: 11, col: 8, horizontal: true },
+        { word: "FINE", row: 12, col: 5, horizontal: true },
+        { word: "BEE", row: 2, col: 12, horizontal: false },
+        { word: "SUN", row: 13, col: 10, horizontal: true }
+    ];
+
+    for (const { word, row, col, horizontal } of words) {
+        for (let i = 0; i < word.length; i++) {
+            const r = horizontal ? row : row + i;
+            const c = horizontal ? col + i : col;
+            this.board[r][c] = {
+                letter: word[i],
+                value: this.tileValues[word[i]],
+                id: `pre_${word[i]}_${r}_${c}`
+            };
+        }
+    }
+
+    // Leave a few open spots for play
+    this.board[7][10] = null;
+    this.board[9][7] = null;
+    this.board[12][7] = null;
+    this.board[13][11] = null;
+
+    // Give AI and player racks
+    this.aiRack = [
+        { letter: "A", value: 1, id: "A1" },
+        { letter: "T", value: 1, id: "T1" },
+        { letter: "E", value: 1, id: "E1" },
+        { letter: "S", value: 1, id: "S1" },
+        { letter: "R", value: 1, id: "R1" },
+        { letter: "O", value: 1, id: "O1" },
+        { letter: "N", value: 1, id: "N1" }
+    ];
+    this.playerRack = [
+        { letter: "L", value: 1, id: "L1" },
+        { letter: "D", value: 2, id: "D1" },
+        { letter: "E", value: 1, id: "E2" },
+        { letter: "S", value: 1, id: "S2" }
+    ];
+    this.tiles = [
+        { letter: "U", value: 1, id: "U1" },
+        { letter: "M", value: 3, id: "M1" },
+        { letter: "C", value: 3, id: "C1" },
+        { letter: "B", value: 3, id: "B1" },
+        { letter: "I", value: 1, id: "I1" }
+    ];
+
+    this.playerScore = 172;
+    this.aiScore = 168;
+    this.isFirstMove = false;
+
+    // Update UI
+    this.renderBoard();
+    this.renderRack();
+    this.renderAIRack();
+    this.updateGameState();
+
+    // Debug print
+    console.log("Simulated close-to-endgame board:");
+    for (let r = 0; r < 15; r++) {
+        let rowStr = "";
+        for (let c = 0; c < 15; c++) {
+            rowStr += this.board[r][c] ? this.board[r][c].letter : ".";
+        }
+        console.log(rowStr);
+    }
+    console.log("AI rack:", this.aiRack.map(t => t.letter));
+    console.log("Player rack:", this.playerRack.map(t => t.letter));
+    console.log("Tiles left in bag:", this.tiles.length);
 }
+
+    renderBoard() {
+    const board = document.getElementById("scrabble-board");
+    if (!board) return;
+    board.innerHTML = "";
+
+    const premiumSquares = this.getPremiumSquares();
+
+    for (let row = 0; row < 15; row++) {
+        for (let col = 0; col < 15; col++) {
+            const cell = document.createElement("div");
+            cell.className = "board-cell";
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+
+            // Add premium square classes
+            const key = `${row},${col}`;
+            if (premiumSquares[key]) {
+                cell.classList.add(premiumSquares[key]);
+            }
+
+            // Add center star
+            if (row === 7 && col === 7) {
+                const centerStar = document.createElement("span");
+                centerStar.textContent = "⚜";
+                centerStar.className = "center-star";
+                cell.appendChild(centerStar);
+            }
+
+            // Use the same tile HTML as rack tiles
+            if (this.board[row][col]) {
+                const tile = this.board[row][col];
+                const tileDiv = document.createElement("div");
+                tileDiv.className = "tile";
+                tileDiv.innerHTML = `
+                    ${tile.letter}
+                    <span class="points">${tile.value}</span>
+                    ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                `;
+                cell.appendChild(tileDiv);
+            }
+
+            board.appendChild(cell);
+        }
+    }
+
+    // Re-attach drag-and-drop listeners after re-rendering
+    this.setupDropListeners();
+}
+}
+
 
 function preventScrolling(e) {
     e.preventDefault();
@@ -7961,5 +8219,14 @@ function preventScrolling(e) {
 
 // Initialize game when document is loaded
 document.addEventListener("DOMContentLoaded", () => {
-    new ScrabbleGame();
+    const game = new ScrabbleGame();
+
+    // Wire up the simulate endgame button
+    const endgameBtn = document.getElementById("simulate-endgame-btn");
+    if (endgameBtn) {
+        endgameBtn.onclick = () => {
+            game.simulateEndgameScenario();
+            game.showAINotification("Endgame scenario loaded! It's time to test the AI.");
+        };
+    }
 });
