@@ -5189,10 +5189,30 @@ async executeAIPlay(play) {
     }
 
     async loadDictionary() {
-    const response = await fetch('words.txt');
-    const text = await response.text();
-    this.dictionary = new Set(text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean));
-}
+        try {
+            // Load base dictionary
+            const response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+            const text = await response.text();
+            this.dictionary = new Set(text.toLowerCase().split("\n"));
+
+            // Add words from Free Dictionary API
+            try {
+                const additionalWords = await this.loadAdditionalWords();
+                additionalWords.forEach(word => {
+                    if (word.length >= 2) {
+                        this.dictionary.add(word.toLowerCase());
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading additional words:", error);
+            }
+
+            console.log("Dictionary loaded successfully");
+        } catch (error) {
+            console.error("Error loading dictionary:", error);
+            this.dictionary = new Set(["scrabble", "game", "play", "word"]);
+        }
+    }
 
     async loadAdditionalWords() {
         const additionalWords = new Set();
