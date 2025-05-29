@@ -5191,7 +5191,7 @@ async executeAIPlay(play) {
     async loadDictionary() {
     const response = await fetch('words.txt');
     const text = await response.text();
-    this.dictionary = new Set(text.split(/\r?\n/).map(w => w.trim().toUpperCase()).filter(Boolean));
+    this.dictionary = new Set(text.split(/\r?\n/).map(w => w.trim().toLowerCase()).filter(Boolean));
 }
 
     async loadAdditionalWords() {
