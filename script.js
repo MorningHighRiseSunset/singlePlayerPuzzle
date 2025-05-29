@@ -5195,94 +5195,6 @@ async executeAIPlay(play) {
         return Array.from(additionalWords);
     }
 
-    fillRacks() {
-        // Define letter frequency based on word formation potential
-        const commonLetters = {
-            'E': 25, // Increased frequency for common letters
-            'A': 20,
-            'R': 18,
-            'I': 18,
-            'O': 18,
-            'T': 15,
-            'N': 15,
-            'S': 15,
-            'L': 12,
-            'U': 10,
-            // Less common letters have reduced frequency
-            'D': 8,
-            'G': 6,
-            'B': 4,
-            'C': 4,
-            'M': 4,
-            'P': 4,
-            'F': 4,
-            'H': 4,
-            'V': 3,
-            'W': 3,
-            'Y': 3,
-            'K': 2,
-            'J': 1,
-            'X': 1,
-            'Q': 1,
-            'Z': 1,
-            '*': 4 // Increased wild tile frequency for AI
-        };
-
-        // Helper function to get weighted random letter
-        const getWeightedLetter = () => {
-            const totalWeight = Object.values(commonLetters).reduce((a, b) => a + b, 0);
-            let random = Math.random() * totalWeight;
-
-            for (const [letter, weight] of Object.entries(commonLetters)) {
-                random -= weight;
-                if (random <= 0) return letter;
-            }
-            return 'E'; // Fallback to most common letter
-        };
-
-        // Fill player's rack normally
-        while (this.playerRack.length < 7 && this.tiles.length > 0) {
-            this.playerRack.push(this.tiles.pop());
-        }
-
-        // Fill AI's rack with weighted distribution
-        while (this.aiRack.length < 7 && this.tiles.length > 0) {
-            // 70% chance to get a weighted letter, 30% chance for random tile
-            if (Math.random() < 0.7) {
-                const letter = getWeightedLetter();
-                // Find a tile with this letter in the bag
-                const tileIndex = this.tiles.findIndex(t => t.letter === letter);
-                if (tileIndex !== -1) {
-                    this.aiRack.push(this.tiles.splice(tileIndex, 1)[0]);
-                } else {
-                    // If letter not found, take random tile
-                    this.aiRack.push(this.tiles.pop());
-                }
-            } else {
-                this.aiRack.push(this.tiles.pop());
-            }
-        }
-
-        // Ensure AI has at least one wild tile if available
-        if (!this.aiRack.some(tile => tile.letter === '*')) {
-            const wildTileIndex = this.tiles.findIndex(t => t.letter === '*');
-            if (wildTileIndex !== -1) {
-                const randomIndex = Math.floor(Math.random() * this.aiRack.length);
-                // Swap a random tile with the wild tile
-                this.tiles.push(this.aiRack[randomIndex]);
-                this.aiRack[randomIndex] = this.tiles.splice(wildTileIndex, 1)[0];
-            }
-        }
-
-        // Balance vowels and consonants for better word formation
-        this.balanceAIRack();
-
-        // Update displays
-        this.renderRack();
-        this.renderAIRack();
-        this.updateTilesCount();
-    }
-
     balanceAIRack() {
         const vowels = ['A', 'E', 'I', 'O', 'U'];
         const vowelCount = this.aiRack.filter(tile => vowels.includes(tile.letter)).length;
@@ -7158,7 +7070,7 @@ async executeAIPlay(play) {
         });
     }
 
-    fillRacks() {
+        fillRacks() {
         // Define optimal letter distributions
         const optimalDistribution = {
             vowels: ['A', 'E', 'I', 'O', 'U'],
@@ -7198,18 +7110,35 @@ async executeAIPlay(play) {
             if (tile) this.aiRack.push(tile);
         }
 
-        // Player gets decent but not as optimal distribution
+        // --- MODIFIED PLAYER RACK LOGIC: Limit vowels to max 3, prefer consonants ---
         while (this.playerRack.length < 7 && this.tiles.length > 0) {
             const currentVowels = this.playerRack.filter(tile =>
                 optimalDistribution.vowels.includes(tile.letter)).length;
 
-            // 25% chance to get needed letter type
+            // If already 3 vowels, force consonant
+            if (currentVowels >= 3) {
+                let desiredTile = this.findTileInBag(
+                    optimalDistribution.commonConsonants
+                        .concat(optimalDistribution.mediumConsonants)
+                        .concat(optimalDistribution.rareLetters)
+                );
+                if (desiredTile) {
+                    this.playerRack.push(desiredTile);
+                    continue;
+                }
+            }
+
+            // 25% chance to get needed letter type (prefer consonant if too many vowels)
             if (Math.random() < 0.25) {
                 let desiredTile;
                 if (currentVowels < 2) {
                     desiredTile = this.findTileInBag(optimalDistribution.vowels);
-                } else if (currentVowels > 3) {
-                    desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
+                } else {
+                    desiredTile = this.findTileInBag(
+                        optimalDistribution.commonConsonants
+                            .concat(optimalDistribution.mediumConsonants)
+                            .concat(optimalDistribution.rareLetters)
+                    );
                 }
 
                 if (desiredTile) {
@@ -7218,8 +7147,8 @@ async executeAIPlay(play) {
                 }
             }
 
-            // Regular draw with weighted probability
-            const tile = this.drawWeightedTile(false); // false for player
+            // Regular draw with weighted probability, but reduce vowel weight for player
+            const tile = this.drawWeightedTile(false, /*playerMode=*/true);
             if (tile) this.playerRack.push(tile);
         }
 
@@ -7227,6 +7156,58 @@ async executeAIPlay(play) {
         this.renderRack();
         this.renderAIRack();
         this.updateTilesCount();
+    }
+
+    // Modify drawWeightedTile to support playerMode (less vowels)
+    drawWeightedTile(isAI, playerMode = false) {
+        if (this.tiles.length === 0) return null;
+
+        // Lower vowel weights for player if playerMode is true
+        const weights = playerMode
+            ? {
+                '*': 10,
+                'AEIOU': 10, // Lowered from 30
+                'RSTLN': 30,
+                'DGBCMP': 20,
+                'FHVWY': 15,
+                'JKQXZ': 10
+            }
+            : {
+                '*': isAI ? 50 : 10,
+                'AEIOU': isAI ? 35 : 30,
+                'RSTLN': isAI ? 30 : 25,
+                'DGBCMP': 20,
+                'FHVWY': 15,
+                'JKQXZ': 10
+            };
+
+        // Calculate total weight
+        let totalWeight = 0;
+        this.tiles.forEach(tile => {
+            if (tile.letter === '*') totalWeight += weights['*'];
+            else if ('AEIOU'.includes(tile.letter)) totalWeight += weights['AEIOU'];
+            else if ('RSTLN'.includes(tile.letter)) totalWeight += weights['RSTLN'];
+            else if ('DGBCMP'.includes(tile.letter)) totalWeight += weights['DGBCMP'];
+            else if ('FHVWY'.includes(tile.letter)) totalWeight += weights['FHVWY'];
+            else totalWeight += weights['JKQXZ'];
+        });
+
+        // Random weighted selection
+        let random = Math.random() * totalWeight;
+        for (let i = 0; i < this.tiles.length; i++) {
+            let weight;
+            if (this.tiles[i].letter === '*') weight = weights['*'];
+            else if ('AEIOU'.includes(this.tiles[i].letter)) weight = weights['AEIOU'];
+            else if ('RSTLN'.includes(this.tiles[i].letter)) weight = weights['RSTLN'];
+            else if ('DGBCMP'.includes(this.tiles[i].letter)) weight = weights['DGBCMP'];
+            else if ('FHVWY'.includes(this.tiles[i].letter)) weight = weights['FHVWY'];
+            else weight = weights['JKQXZ'];
+
+            random -= weight;
+            if (random <= 0) return this.tiles.splice(i, 1)[0];
+        }
+
+        return this.tiles.pop();
     }
 
     findTileInBag(desiredLetters) {
