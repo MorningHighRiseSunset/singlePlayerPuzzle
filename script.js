@@ -8435,3 +8435,25 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const drawer = document.getElementById('mobile-drawer');
+    const toggle = document.getElementById('mobile-menu-toggle');
+    const closeBtn = drawer.querySelector('.drawer-close');
+
+    toggle.addEventListener('click', () => {
+        drawer.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    });
+    closeBtn.addEventListener('click', () => {
+        drawer.classList.remove('open');
+        document.body.style.overflow = '';
+    });
+    // Optional: close drawer when clicking outside
+    drawer.addEventListener('click', (e) => {
+        if (e.target === drawer) {
+            drawer.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    });
+});

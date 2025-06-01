@@ -1,166 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Puzzle Game</title>
-        <link rel="stylesheet" href="styles.css">
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFT3E5F6HX"></script>
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-VFT3E5F6HX');
-        </script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Puzzle Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFT3E5F6HX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-VFT3E5F6HX');
+    </script>
     <style>
-        .modal {
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+        .modal.show { opacity: 1; }
+        .modal-content { background: #0047AB; color: white; margin: 15% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 10px; position: relative; transform: scale(0.7); opacity: 0; transition: all 0.3s; max-height: 40vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .modal-content::-webkit-scrollbar { display: none; }
+        .modal.show .modal-content { transform: scale(1); opacity: 1; }
+        .close-button { position: fixed; right: 20px; top: 20px; color: white; font-size: 28px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border-radius: 50%; transition: all 0.2s; z-index: 1001; }
+        .close-button:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg);}
+        .instructions-text { line-height: 1.6; padding: 10px; }
+        .instructions-text ul { padding-left: 20px; margin-bottom: 20px; }
+        .instructions-text li { margin-bottom: 8px; }
+        #show-instructions { background: #0047AB; color: white; transition: all 0.2s; }
+        #show-instructions:hover { background: #003380; transform: translateY(-2px);}
+        /* Hamburger and drawer styles */
+        .mobile-menu-toggle {
             display: none;
             position: fixed;
-            top: 0px;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        .modal.show {
-            opacity: 1;
-        }
-
-        .modal-content {
-            background-color: #0047AB;
-            color: white;
-            margin: 15% auto;
-            padding: 20px;
-            width: 80%;
-            max-width: 600px;
-            border-radius: 10px;
-            position: relative;
-            transform: scale(0.7);
-            opacity: 0;
-            transition: all 0.3s ease-in-out;
-            max-height: 40vh;
-            overflow-y: auto;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE and Edge */
-        }
-
-        .modal-content::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
-        }
-
-        .modal.show .modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        .close-button {
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            color: white;
-            font-size: 28px;
+            top: 14px;
+            left: 14px;
+            z-index: 3001;
+            background: #fff;
+            color: #1a237e;
+            border: none;
+            border-radius: 8px;
+            font-size: 2em;
+            padding: 6px 16px 8px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
             cursor: pointer;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            transition: all 0.2s ease-in-out;
-            z-index: 1001;
+            transition: background 0.2s;
         }
-
-        .close-button:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: rotate(90deg);
+        .mobile-menu-toggle:active,
+        .mobile-menu-toggle:focus {
+            background: #e6e6e6;
         }
-
-        .instructions-text {
-            line-height: 1.6;
-            padding: 10px;
+        .mobile-drawer {
+            position: fixed;
+            top: 0; left: 0;
+            width: 85vw;
+            max-width: 350px;
+            height: 100vh;
+            background: #fff;
+            box-shadow: 2px 0 24px rgba(0,0,0,0.18);
+            z-index: 3002;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+            overflow-y: auto;
         }
-
-        .instructions-text ul {
-            padding-left: 20px;
-            margin-bottom: 20px;
+        .mobile-drawer.open {
+            transform: translateX(0);
         }
-
-        .instructions-text li {
-            margin-bottom: 8px;
+        .drawer-close {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: #e53935;
+            cursor: pointer;
+            z-index: 1;
         }
-
-        #show-instructions {
-            background-color: #0047AB;
-            color: white;
-            transition: all 0.2s ease-in-out;
+        .drawer-content {
+            padding: 60px 16px 24px 16px;
         }
-
-        #show-instructions:hover {
-            background-color: #003380;
-            transform: translateY(-2px);
+        .mobile-drawer .moves-panel,
+        .mobile-drawer .info-panel {
+            width: 100%;
+            min-width: 0;
+            margin-bottom: 24px;
+            box-shadow: none;
+            border-radius: 8px;
+        }
+        @media (max-width: 768px) {
+            .mobile-menu-toggle { display: block; }
+            .moves-panel, .info-panel {
+                display: none !important;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-menu-toggle, .mobile-drawer { display: none !important; }
         }
     </style>
 </head>
 <body>
-    <!-- Main Game Container with Horizontal Scroll for Mobile -->
-    <div class="game-container">
-        <!-- Left Panel -->
-        <div class="moves-panel">
-            <h2>Definitions History</h2>
-            <button id="print-history" class="print-button">Print Definition History (Shows Word Definitions)</button>
-            <div id="move-history"></div>
+    <!-- Hamburger menu for mobile -->
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Open menu">&#9776;</button>
+    <div id="mobile-drawer" class="mobile-drawer">
+        <button class="drawer-close" aria-label="Close menu">&times;</button>
+        <div class="drawer-content">
+            <aside class="moves-panel">
+                <h2>Definitions History</h2>
+                <button id="print-history" class="print-button">Print Definition History (Shows Word Definitions)</button>
+                <div id="move-history"></div>
+            </aside>
+            <aside class="info-panel">
+                <h2>Game Info</h2>
+                <div class="score-box">
+                    <h3>Scores</h3>
+                    <p>Player: <span id="player-score">0</span></p>
+                    <p>Computer: <span id="computer-score">0</span></p>
+                </div>
+                <div class="tiles-left">
+                    <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+                </div>
+                <section class="exchange-area">
+                    <h3>Exchange Tiles</h3>
+                    <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
+                    <div id="exchange-portal" class="exchange-portal">
+                        <div class="portal-ring outer"></div>
+                        <div class="portal-ring middle"></div>
+                        <div class="portal-ring inner"></div>
+                        <div class="portal-core"></div>
+                        <div class="portal-particles"></div>
+                    </div>
+                    <div class="exchange-instructions">
+                        Drag tiles here to exchange them
+                    </div>
+                </section>
+                <nav class="controls">
+                    <button id="play-word">Submit</button>
+                    <button id="shuffle-rack">Shuffle Rack</button>
+                    <button id="skip-turn">Skip Turn</button>
+                    <button id="show-instructions">How to Play</button>
+                    <button id="quit-game" class="quit-button">Quit / End Game</button>
+                </nav>
+                <div class="language-selector">
+                    <select id="language-selector" class="language-button">
+                        <option value="" disabled selected hidden>Click to change language</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                        <option value="fr">French</option>
+                    </select>
+                </div>
+            </aside>
         </div>
+    </div>
 
-        <!-- Center Panel -->
-        <div class="board-container">
+    <!-- Mobile Notifications (always at top, outside .game-container) -->
+    <div class="mobile-notifications">
+        <div class="mobile-notice landscape-notice">
+            <span class="notice-icon">📱</span>
+            For the best experience, please rotate your device to landscape mode
+            <button class="notice-close" aria-label="Close notification">&times;</button>
+        </div>
+        <div class="mobile-notice scroll-notice">
+            <span class="notice-icon">👆</span>
+            You can scroll up and down to access your rack, game controls, and move history
+            <button class="notice-close" aria-label="Close notification">&times;</button>
+        </div>
+        <div class="mobile-notice instruction-notice">
+            <span class="notice-icon">📖</span>
+            Please click "How to Play" to read the instructions before starting
+            <button class="notice-close" aria-label="Close notification">&times;</button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <!-- Board Panel -->
+        <main class="board-container">
             <div id="ai-rack" class="tile-rack ai-rack"></div>
             <div id="scrabble-board"></div>
             <div id="tile-rack" class="tile-rack"></div>
-        </div>
-
-                <!-- Mobile Notifications -->
-        <div class="mobile-notifications">
-            <div class="mobile-notice landscape-notice">
-                <span class="notice-icon">📱</span>
-                For the best experience, please rotate your device to landscape mode
-                <button class="notice-close">×</button>
-            </div>
-            <div class="mobile-notice scroll-notice">
-                <span class="notice-icon">👆</span>
-                You can scroll up and down to access your rack, game controls, and move history
-                <button class="notice-close">×</button>
-            </div>
-            <div class="mobile-notice instruction-notice">
-                <span class="notice-icon">📖</span>
-                Please click "How to Play" to read the instructions before starting
-                <button class="notice-close">×</button>
-            </div>
-        </div>
-
-
-        <!-- Right Panel -->
-        <div class="info-panel">
+        </main>
+        <!-- Desktop Definitions/History Panel -->
+        <aside class="moves-panel">
+            <h2>Definitions History</h2>
+            <button id="print-history-desktop" class="print-button">Print Definition History (Shows Word Definitions)</button>
+            <div id="move-history-desktop"></div>
+        </aside>
+        <!-- Desktop Info Panel -->
+        <aside class="info-panel">
             <h2>Game Info</h2>
             <div class="score-box">
                 <h3>Scores</h3>
-                <p>Player: <span id="player-score">0</span></p>
-                <p>Computer: <span id="computer-score">0</span></p>
+                <p>Player: <span id="player-score-desktop">0</span></p>
+                <p>Computer: <span id="computer-score-desktop">0</span></p>
             </div>
-
             <div class="tiles-left">
-                <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+                <h3>Tiles Remaining: <span id="tiles-count-desktop">98</span></h3>
             </div>
-
-            <div class="exchange-area">
+            <section class="exchange-area">
                 <h3>Exchange Tiles</h3>
-                <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
-                <div id="exchange-portal" class="exchange-portal">
+                <button id="activate-exchange-desktop" class="exchange-button">Activate Exchange Portal</button>
+                <div id="exchange-portal-desktop" class="exchange-portal">
                     <div class="portal-ring outer"></div>
                     <div class="portal-ring middle"></div>
                     <div class="portal-ring inner"></div>
@@ -170,18 +206,16 @@
                 <div class="exchange-instructions">
                     Drag tiles here to exchange them
                 </div>
-            </div>
-
-            <div class="controls">
-                <button id="play-word">Submit</button>
-                <button id="shuffle-rack">Shuffle Rack</button>
-                <button id="skip-turn">Skip Turn</button>
-                <button id="show-instructions">How to Play</button>
-                <button id="quit-game" class="quit-button">Quit / End Game</button>
-            </div>
-
+            </section>
+            <nav class="controls">
+                <button id="play-word-desktop">Submit</button>
+                <button id="shuffle-rack-desktop">Shuffle Rack</button>
+                <button id="skip-turn-desktop">Skip Turn</button>
+                <button id="show-instructions-desktop">How to Play</button>
+                <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
+            </nav>
             <div class="language-selector">
-                <select id="language-selector" class="language-button">
+                <select id="language-selector-desktop" class="language-button">
                     <option value="" disabled selected hidden>Click to change language</option>
                     <option value="en">English</option>
                     <option value="es">Español</option>
@@ -189,20 +223,7 @@
                     <option value="fr">French</option>
                 </select>
             </div>
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const languageSelector = document.getElementById('language-selector');
-            
-                    languageSelector.addEventListener('focus', function() {
-                        // Remove the placeholder option when the dropdown is focused
-                        if (languageSelector.options[0].value === "") {
-                            languageSelector.remove(0);
-                        }
-                    });
-                });
-            </script>      
-            </script>                        
-        </div>
+        </aside>
     </div>
 
     <!-- Hint Box -->
@@ -224,7 +245,7 @@
     <!-- Instructions Modal -->
     <div id="instructions-modal" class="modal">
         <div class="modal-content">
-            <span class="close-button">×</span>
+            <span class="close-button" tabindex="0" aria-label="Close instructions">&times;</span>
             <h2>How to Play</h2>
             <div class="instructions-text">
                 <p>1. Playing Tiles:</p>
@@ -233,7 +254,6 @@
                     <li>On mobile: Touch and hold a tile for 1 second, then drag to place it</li>
                     <li>To remove a tile, drag it back to your rack</li>
                 </ul>
-            
                 <p>2. Creating Words:</p>
                 <ul>
                     <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
@@ -241,14 +261,12 @@
                     <li>New words must connect to existing tiles on the board</li>
                     <li>All words formed must be valid dictionary words</li>
                 </ul>
-            
                 <p>3. Submitting Your Move:</p>
                 <ul>
                     <li>After placing your tiles, click the "Submit" button</li>
                     <li>Invalid words will be rejected and tiles returned to your rack</li>
                     <li>Points will be automatically calculated and added to your score</li>
                 </ul>
-            
                 <p>4. Exchanging Tiles:</p>
                 <ul>
                     <li>Click "Activate Exchange Portal" to start an exchange</li>
@@ -256,54 +274,76 @@
                     <li>You'll receive the same number of new tiles</li>
                     <li>This counts as your turn</li>
                 </ul>
-            
                 <p>5. Skipping and Game End:</p>
                 <ul>
                     <li>Use "Skip Turn" if you can't make a valid move</li>
                     <li>The game ends when all tiles are used or both players skip twice in a row</li>
                     <li>Your score is based on the letter values and bonus squares</li>
                 </ul>
-            </div>           
+            </div>
         </div>
     </div>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-          const modal = document.getElementById('instructions-modal');
-          const showButton = document.getElementById('show-instructions');
-          const closeButton = document.querySelector('.close-button');
-  
-          function openModal() {
-              modal.style.display = 'block';
-              // Trigger reflow
-              modal.offsetHeight;
-              modal.classList.add('show');
-          }
-  
-          function closeModal() {
-              modal.classList.remove('show');
-              setTimeout(() => {
-                  modal.style.display = 'none';
-              }, 300);
-          }
-  
-          showButton.addEventListener('click', openModal);
-          closeButton.addEventListener('click', closeModal);
-  
-          window.addEventListener('click', function(event) {
-              if (event.target.classList.contains('modal')) {
-                  closeModal();
-              }
-          });
-  
-          // Close with Escape key
-          document.addEventListener('keydown', function(event) {
-              if (event.key === 'Escape') {
-                  closeModal();
-              }
-          });
-      });
-  </script>
+        // Hamburger drawer logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const drawer = document.getElementById('mobile-drawer');
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const closeBtn = drawer.querySelector('.drawer-close');
+            toggle.addEventListener('click', () => {
+                drawer.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            });
+            closeBtn.addEventListener('click', () => {
+                drawer.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+            drawer.addEventListener('click', (e) => {
+                if (e.target === drawer) {
+                    drawer.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Close mobile notices
+            document.querySelectorAll('.notice-close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.parentElement.style.display = 'none';
+                });
+            });
+
+            // Language selector placeholder removal (both desktop and mobile)
+            document.querySelectorAll('.language-selector select').forEach(languageSelector => {
+                languageSelector.addEventListener('focus', function() {
+                    if (languageSelector.options[0].value === "") {
+                        languageSelector.remove(0);
+                    }
+                });
+            });
+
+            // Modal logic
+            const modal = document.getElementById('instructions-modal');
+            const showButtons = document.querySelectorAll('#show-instructions, #show-instructions-desktop');
+            const closeButton = document.querySelector('.close-button');
+            function openModal() {
+                modal.style.display = 'block';
+                modal.offsetHeight;
+                modal.classList.add('show');
+            }
+            function closeModal() {
+                modal.classList.remove('show');
+                setTimeout(() => { modal.style.display = 'none'; }, 300);
+            }
+            showButtons.forEach(btn => btn && btn.addEventListener('click', openModal));
+            closeButton.addEventListener('click', closeModal);
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) closeModal();
+            });
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') closeModal();
+            });
+        });
+    </script>
     <script src="script.js"></script>
 </body>
 </html>

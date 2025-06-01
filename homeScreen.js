@@ -9,6 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
 
+        // Responsive tile size for mobile/desktop
+        const isMobile = window.innerWidth <= 600;
+        const tileSize = isMobile ? 32 : 48;
+        const fontSize = isMobile ? "1.2rem" : "2rem";
+
         // Get all cells in the true center row (row 4, 0-based, the 5th row)
         const centerRow = board.querySelectorAll(".mini-row")[4];
         const cells = centerRow.querySelectorAll(".mini-cell");
@@ -33,17 +38,17 @@ document.addEventListener("DOMContentLoaded", () => {
             // Start at play button
             const btnRect = playBtn.getBoundingClientRect();
             tile.style.position = "fixed";
-            tile.style.left = `${btnRect.left + btnRect.width / 2 - 24}px`;
-            tile.style.top = `${btnRect.top + btnRect.height / 2 - 24}px`;
-            tile.style.width = "48px";
-            tile.style.height = "48px";
+            tile.style.left = `${btnRect.left + btnRect.width / 2 - tileSize / 2}px`;
+            tile.style.top = `${btnRect.top + btnRect.height / 2 - tileSize / 2}px`;
+            tile.style.width = `${tileSize}px`;
+            tile.style.height = `${tileSize}px`;
             tile.style.background = "linear-gradient(145deg, #e3eafc 70%, #b6c7e6 100%)";
             tile.style.border = "3px solid #1976d2";
             tile.style.borderRadius = "8px";
             tile.style.boxShadow = "0 8px 24px #00338077, 0 2px 0 #fff8";
             tile.style.color = "#003380";
             tile.style.fontWeight = "bold";
-            tile.style.fontSize = "2rem";
+            tile.style.fontSize = fontSize;
             tile.style.display = "flex";
             tile.style.alignItems = "center";
             tile.style.justifyContent = "center";
@@ -55,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 const cellRect = l.cell.getBoundingClientRect();
                 tile.style.opacity = "1";
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - 24)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - 24)}px) scale(1.1)`;
+                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1.1)`;
             }, 100 + i * 120);
 
             // Add a little bounce
@@ -66,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Settle back to normal scale (but stay on board)
             setTimeout(() => {
                 const cellRect = l.cell.getBoundingClientRect();
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - 24)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - 24)}px) scale(1)`;
+                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1)`;
             }, 1000 + i * 120);
         });
 
