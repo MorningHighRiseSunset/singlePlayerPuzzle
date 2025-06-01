@@ -4611,6 +4611,70 @@ class ScrabbleGame {
         return opportunities;
     }
 
+    setupTouchDragForTiles() {
+    const rack = document.getElementById("tile-rack");
+    let ghostTile = null;
+    let draggingTile = null;
+    let startIndex = null;
+
+    rack.addEventListener("touchstart", (e) => {
+        const tileElem = e.target.closest(".tile");
+        if (!tileElem || this.currentTurn !== "player") return;
+
+        e.preventDefault();
+        draggingTile = tileElem;
+        startIndex = tileElem.dataset.index;
+
+        // Create ghost tile
+        ghostTile = tileElem.cloneNode(true);
+        ghostTile.style.position = "fixed";
+        ghostTile.style.pointerEvents = "none";
+        ghostTile.style.zIndex = 2000;
+        ghostTile.style.opacity = 0.85;
+        ghostTile.classList.add("dragging");
+        document.body.appendChild(ghostTile);
+
+        moveGhost(e.touches[0]);
+    }, { passive: false });
+
+    rack.addEventListener("touchmove", (e) => {
+        if (!ghostTile) return;
+        e.preventDefault();
+        moveGhost(e.touches[0]);
+    }, { passive: false });
+
+    rack.addEventListener("touchend", (e) => {
+        if (!ghostTile || !draggingTile) return;
+        e.preventDefault();
+
+        // Get drop position
+        const touch = e.changedTouches[0];
+        const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+        const cell = elem && elem.closest(".board-cell");
+
+        if (cell && this.currentTurn === "player") {
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const tile = this.playerRack[startIndex];
+            if (this.isValidPlacement(row, col, tile)) {
+                this.placeTile(tile, row, col);
+            }
+        }
+
+        // Cleanup
+        ghostTile.remove();
+        ghostTile = null;
+        draggingTile = null;
+        startIndex = null;
+    }, { passive: false });
+
+    function moveGhost(touch) {
+        if (!ghostTile) return;
+        ghostTile.style.left = (touch.clientX - 20) + "px";
+        ghostTile.style.top = (touch.clientY - 20) + "px";
+    }
+}
+
     wouldCreateStackedShortWords(word, row, col, horizontal) {
         const checkRadius = 2; // Check 2 cells above/below or left/right
         let shortWordCount = 0;
