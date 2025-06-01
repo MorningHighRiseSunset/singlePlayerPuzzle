@@ -5364,46 +5364,30 @@ class ScrabbleGame {
     }
 
     setupDragListeners() {
-        document.addEventListener("dragstart", (e) => {
-            if (
-                e.target.classList.contains("tile") &&
-                this.currentTurn === "player"
-            ) {
-                e.target.classList.add("dragging");
-                const tileData = {
-                    index: e.target.dataset.index,
-                    id: e.target.dataset.id,
-                };
-                e.dataTransfer.setData("text/plain", e.target.dataset.index);
+    document.addEventListener("dragstart", (e) => {
+        if (
+            e.target.classList.contains("tile") &&
+            this.currentTurn === "player"
+        ) {
+            e.target.classList.add("dragging");
+            e.dataTransfer.setData("text/plain", e.target.dataset.index);
 
-                console.log("Drag started:", tileData);
+            // --- Prevent scrolling on touch devices while dragging ---
+            document.body.style.overflow = "hidden";
+            document.body.addEventListener("touchmove", preventScrolling, { passive: false });
+        }
+    });
 
-                e.dataTransfer.effectAllowed = "move";
+    document.addEventListener("dragend", (e) => {
+        if (e.target.classList.contains("tile")) {
+            e.target.classList.remove("dragging");
 
-                const dragImage = e.target.cloneNode(true);
-                dragImage.style.opacity = "0.8";
-                dragImage.style.position = "absolute";
-                dragImage.style.top = "-1000px";
-                document.body.appendChild(dragImage);
-
-                e.dataTransfer.setDragImage(
-                    dragImage,
-                    dragImage.offsetWidth / 2,
-                    dragImage.offsetHeight / 2,
-                );
-
-                setTimeout(() => {
-                    document.body.removeChild(dragImage);
-                }, 0);
-            }
-        });
-
-        document.addEventListener("dragend", (e) => {
-            if (e.target.classList.contains("tile")) {
-                e.target.classList.remove("dragging");
-            }
-        });
-    }
+            // --- Restore scrolling after drag ---
+            document.body.style.overflow = "";
+            document.body.removeEventListener("touchmove", preventScrolling, { passive: false });
+        }
+    });
+}
 
 setupDropListeners() {
     document.querySelectorAll(".board-cell").forEach((cell) => {
