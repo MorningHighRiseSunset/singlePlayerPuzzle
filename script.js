@@ -220,92 +220,7 @@ class ScrabbleGame {
         });
 
         // Mobile-specific tile selection and placement
-        if (this.isMobile) {
-            // Handle tile selection from rack
-            document.getElementById("tile-rack").addEventListener("click", (e) => {
-                if (this.currentTurn !== "player") return;
-
-                const tileElement = e.target.closest(".tile");
-                if (!tileElement) return;
-
-                // Toggle selection
-                if (this.selectedTile === tileElement) {
-                    this.deselectTile();
-                } else {
-                    this.selectTile(tileElement);
-                }
-            });
-
-            // Handle board cell clicks for placement
-            document.querySelectorAll(".board-cell").forEach(cell => {
-                cell.addEventListener("click", (e) => {
-                    if (this.currentTurn !== "player") return;
-
-                    if (this.selectedTile) {
-                        const row = parseInt(cell.dataset.row);
-                        const col = parseInt(cell.dataset.col);
-                        const tileIndex = this.selectedTile.dataset.index;
-
-                        if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
-                            // Create a nice flying animation
-                            const startRect = this.selectedTile.getBoundingClientRect();
-                            const endRect = cell.getBoundingClientRect();
-
-                            const clone = this.selectedTile.cloneNode(true);
-                            clone.style.position = "fixed";
-                            clone.style.left = `${startRect.left}px`;
-                            clone.style.top = `${startRect.top}px`;
-                            clone.style.width = `${startRect.width}px`;
-                            clone.style.height = `${startRect.height}px`;
-                            clone.style.transition = "all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.2)";
-                            clone.style.zIndex = "1000";
-                            document.body.appendChild(clone);
-
-                            requestAnimationFrame(() => {
-                                clone.style.left = `${endRect.left}px`;
-                                clone.style.top = `${endRect.top}px`;
-                                clone.style.transform = "scale(1.1) rotate(360deg)";
-                            });
-
-                            setTimeout(() => {
-                                clone.remove();
-                                this.placeTile(this.playerRack[tileIndex], row, col);
-                                this.deselectTile();
-                            }, 500);
-                        } else {
-                            alert("Invalid placement! Check placement rules.");
-                        }
-                    }
-                });
-            });
-
-            // Handle placed tile clicks for returning to rack
-            document.addEventListener("click", (e) => {
-                if (this.currentTurn !== "player") return;
-
-                const tileElement = e.target.closest(".tile");
-                if (!tileElement || !tileElement.closest(".board-cell")) return;
-
-                const cell = tileElement.closest(".board-cell");
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-
-                // Find the placed tile
-                const placedTileIndex = this.placedTiles.findIndex(t =>
-                    t.row === row && t.col === col);
-
-                if (placedTileIndex !== -1) {
-                    // Return tile to rack
-                    const placedTile = this.placedTiles[placedTileIndex];
-                    this.playerRack.push(placedTile.tile);
-                    this.board[row][col] = null;
-                    cell.innerHTML = "";
-                    this.placedTiles.splice(placedTileIndex, 1);
-                    this.renderRack();
-                    this.highlightValidPlacements();
-                }
-            });
-        }
+        
 
         // Quit game button
         const quitButton = document.getElementById("quit-game");
@@ -5490,132 +5405,70 @@ class ScrabbleGame {
         });
     }
 
-    setupDropListeners() {
-        document.querySelectorAll(".board-cell").forEach((cell) => {
-            if (this.isMobile) {
-                // Mobile: click to place or move
-                cell.addEventListener("click", (e) => {
-                    if (this.currentTurn !== "player") return;
+setupDropListeners() {
+    document.querySelectorAll(".board-cell").forEach((cell) => {
+        cell.setAttribute("droppable", "true");
 
-                    // If a tile is selected from rack or board, move it here
-                    if (this.selectedTile) {
-                        const row = parseInt(cell.dataset.row);
-                        const col = parseInt(cell.dataset.col);
-
-                        // If selectedTile is from rack
-                        if (this.selectedTile.classList.contains("tile") && this.selectedTile.closest("#tile-rack")) {
-                            const tileIndex = parseInt(this.selectedTile.dataset.index);
-                            if (this.isValidPlacement(row, col, this.playerRack[tileIndex])) {
-                                this.placeTile(this.playerRack[tileIndex], row, col);
-                                this.deselectTile();
-                            } else {
-                                alert("Invalid placement! Check placement rules.");
-                            }
-                        }
-                        // If selectedTile is from board (move placed tile)
-                        else if (this.selectedTile.classList.contains("tile") && this.selectedTile.closest(".board-cell")) {
-                            const fromCell = this.selectedTile.closest(".board-cell");
-                            const fromRow = parseInt(fromCell.dataset.row);
-                            const fromCol = parseInt(fromCell.dataset.col);
-
-                            // Only allow moving to empty cell
-                            if (!this.board[row][col] && this.board[fromRow][fromCol]) {
-                                // Move the tile object
-                                const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
-                                if (placedIdx !== -1) {
-                                    const placedTile = this.placedTiles[placedIdx];
-                                    // Remove from old spot
-                                    this.board[fromRow][fromCol] = null;
-                                    fromCell.innerHTML = "";
-                                    this.placedTiles.splice(placedIdx, 1);
-
-                                    // Place at new spot
-                                    this.placeTile(placedTile.tile, row, col);
-                                    this.deselectTile();
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Allow selecting placed tiles for moving
-                cell.addEventListener("click", (e) => {
-                    if (this.currentTurn !== "player") return;
-                    const tileElement = e.target.closest(".tile");
-                    if (tileElement && tileElement.closest(".board-cell")) {
-                        // Select this placed tile for moving
-                        if (this.selectedTile === tileElement) {
-                            this.deselectTile();
-                        } else {
-                            this.selectTile(tileElement);
-                        }
-                    }
-                });
-            } else {
-                // Desktop: drag and drop
-                cell.setAttribute("droppable", "true");
-
-                cell.addEventListener("dragover", (e) => {
-                    e.preventDefault();
-                    if (this.currentTurn === "player") {
-                        cell.classList.add("droppable-hover");
-                    }
-                });
-
-                cell.addEventListener("drop", (e) => {
-                    e.preventDefault();
-                    cell.classList.remove("droppable-hover");
-
-                    if (this.currentTurn !== "player") return;
-
-                    // Find the dragged tile element
-                    const draggedTile = document.querySelector(".tile.dragging");
-                    if (!draggedTile) return;
-
-                    const row = parseInt(cell.dataset.row);
-                    const col = parseInt(cell.dataset.col);
-
-                    // If dragging from rack
-                    if (draggedTile.closest("#tile-rack")) {
-                        const tileIndex = draggedTile.dataset.index;
-                        const tile = this.playerRack[tileIndex];
-                        if (this.isValidPlacement(row, col, tile)) {
-                            this.placeTile(tile, row, col);
-                        } else {
-                            alert("Invalid placement! Check placement rules.");
-                        }
-                    }
-                    // If dragging from board (move placed tile)
-                    else if (draggedTile.closest(".board-cell")) {
-                        const fromCell = draggedTile.closest(".board-cell");
-                        const fromRow = parseInt(fromCell.dataset.row);
-                        const fromCol = parseInt(fromCell.dataset.col);
-
-                        // Only allow moving to empty cell
-                        if (!this.board[row][col] && this.board[fromRow][fromCol]) {
-                            // Move the tile object
-                            const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
-                            if (placedIdx !== -1) {
-                                const placedTile = this.placedTiles[placedIdx];
-                                // Remove from old spot
-                                this.board[fromRow][fromCol] = null;
-                                fromCell.innerHTML = "";
-                                this.placedTiles.splice(placedIdx, 1);
-
-                                // Place at new spot
-                                this.placeTile(placedTile.tile, row, col);
-                            }
-                        }
-                    }
-                });
-
-                cell.addEventListener("dragleave", (e) => {
-                    e.preventDefault();
-                    cell.classList.remove("droppable-hover");
-                });
+        cell.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            if (this.currentTurn === "player") {
+                cell.classList.add("droppable-hover");
             }
         });
-    }
+
+        cell.addEventListener("drop", (e) => {
+            e.preventDefault();
+            cell.classList.remove("droppable-hover");
+
+            if (this.currentTurn !== "player") return;
+
+            // Find the dragged tile element
+            const draggedTile = document.querySelector(".tile.dragging");
+            if (!draggedTile) return;
+
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            // If dragging from rack
+            if (draggedTile.closest("#tile-rack")) {
+                const tileIndex = draggedTile.dataset.index;
+                const tile = this.playerRack[tileIndex];
+                if (this.isValidPlacement(row, col, tile)) {
+                    this.placeTile(tile, row, col);
+                } else {
+                    alert("Invalid placement! Check placement rules.");
+                }
+            }
+            // If dragging from board (move placed tile)
+            else if (draggedTile.closest(".board-cell")) {
+                const fromCell = draggedTile.closest(".board-cell");
+                const fromRow = parseInt(fromCell.dataset.row);
+                const fromCol = parseInt(fromCell.dataset.col);
+
+                // Only allow moving to empty cell
+                if (!this.board[row][col] && this.board[fromRow][fromCol]) {
+                    // Move the tile object
+                    const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
+                    if (placedIdx !== -1) {
+                        const placedTile = this.placedTiles[placedIdx];
+                        // Remove from old spot
+                        this.board[fromRow][fromCol] = null;
+                        fromCell.innerHTML = "";
+                        this.placedTiles.splice(placedIdx, 1);
+
+                        // Place at new spot
+                        this.placeTile(placedTile.tile, row, col);
+                    }
+                }
+            }
+        });
+
+        cell.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            cell.classList.remove("droppable-hover");
+        });
+    });
+}
 
     isValidPlacement(row, col, tile) {
         console.log("Checking placement validity:", {
@@ -5887,14 +5740,10 @@ class ScrabbleGame {
                     // Add drag events to the tile
                     tileElement.addEventListener("dragstart", (e) => {
                         if (this.currentTurn === "player") {
+                            e.dataTransfer.setData("text/plain", index.toString());
                             e.target.classList.add("dragging");
-                            const cell = e.target.closest(".board-cell");
-                            const row = cell.dataset.row;
-                            const col = cell.dataset.col;
-                            e.dataTransfer.setData("text/plain", `${row},${col}`);
                         }
                     });
-
                     tileElement.addEventListener("dragend", (e) => {
                         e.target.classList.remove("dragging");
                     });
