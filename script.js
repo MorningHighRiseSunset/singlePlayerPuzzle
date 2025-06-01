@@ -5249,20 +5249,38 @@ renderRack() {
 
         // Always enable drag-and-drop for all devices
         tileElement.draggable = true;
+
+        // --- Touch: Start dragging immediately, prevent scroll ---
+        tileElement.addEventListener("touchstart", (e) => {
+            if (this.currentTurn === "player") {
+                tileElement.classList.add("dragging");
+                document.body.style.overflow = "hidden";
+            }
+        }, { passive: false });
+
+        tileElement.addEventListener("touchmove", (e) => {
+            if (tileElement.classList.contains("dragging")) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        tileElement.addEventListener("touchend", (e) => {
+            tileElement.classList.remove("dragging");
+            document.body.style.overflow = "";
+        }, { passive: false });
+
+        // --- Desktop: Use drag events as before ---
         tileElement.addEventListener("dragstart", (e) => {
             if (this.currentTurn === "player") {
                 e.dataTransfer.setData("text/plain", index.toString());
                 e.target.classList.add("dragging");
-                // Prevent scrolling on mobile while dragging
                 document.body.style.overflow = "hidden";
-                document.body.addEventListener("touchmove", preventScrolling, { passive: false });
             }
         });
 
         tileElement.addEventListener("dragend", (e) => {
             e.target.classList.remove("dragging");
             document.body.style.overflow = "";
-            document.body.removeEventListener("touchmove", preventScrolling, { passive: false });
         });
 
         rack.appendChild(tileElement);
@@ -5354,7 +5372,8 @@ renderRack() {
         });
     }
 
-    setupDragListeners() {
+setupDragListeners() {
+    // --- Desktop: Use drag events as before ---
     document.addEventListener("dragstart", (e) => {
         if (
             e.target.classList.contains("tile") &&
@@ -5363,21 +5382,42 @@ renderRack() {
             e.target.classList.add("dragging");
             e.dataTransfer.setData("text/plain", e.target.dataset.index);
 
-            // --- Prevent scrolling on touch devices while dragging ---
+            // Prevent scrolling on all devices while dragging
             document.body.style.overflow = "hidden";
-            document.body.addEventListener("touchmove", preventScrolling, { passive: false });
         }
     });
 
     document.addEventListener("dragend", (e) => {
         if (e.target.classList.contains("tile")) {
             e.target.classList.remove("dragging");
-
-            // --- Restore scrolling after drag ---
             document.body.style.overflow = "";
-            document.body.removeEventListener("touchmove", preventScrolling, { passive: false });
         }
     });
+
+    // --- Touch devices: Make drag start immediately on touch ---
+    document.addEventListener("touchstart", (e) => {
+        const tile = e.target.closest(".tile");
+        if (tile && this.currentTurn === "player") {
+            tile.classList.add("dragging");
+            // Prevent scrolling as soon as touch starts
+            document.body.style.overflow = "hidden";
+        }
+    }, { passive: false });
+
+    document.addEventListener("touchmove", (e) => {
+        // If a tile is being dragged, prevent scrolling
+        if (document.querySelector(".tile.dragging")) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    document.addEventListener("touchend", (e) => {
+        const tile = document.querySelector(".tile.dragging");
+        if (tile) {
+            tile.classList.remove("dragging");
+            document.body.style.overflow = "";
+        }
+    }, { passive: false });
 }
 
 setupDropListeners() {
