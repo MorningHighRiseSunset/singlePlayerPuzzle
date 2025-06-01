@@ -6865,6 +6865,33 @@ setupDropListeners() {
     }
 
     announceWinner() {
+        // Calculate leftover tile points for both players
+        let playerLeftover = 0;
+        let aiLeftover = 0;
+
+        // Sum up leftover points for player
+        this.playerRack.forEach(tile => {
+            playerLeftover += tile.value || 0;
+        });
+
+        // Sum up leftover points for AI
+        this.aiRack.forEach(tile => {
+            aiLeftover += tile.value || 0;
+        });
+
+        // Adjust scores: subtract own leftover, add opponent's leftover
+        this.playerScore -= playerLeftover;
+        this.aiScore -= aiLeftover;
+        this.aiScore += playerLeftover;
+        this.playerScore += aiLeftover;
+
+        // Prevent negative scores
+        this.playerScore = Math.max(0, this.playerScore);
+        this.aiScore = Math.max(0, this.aiScore);
+
+        // Update scores before animation
+        this.updateScores();
+
         const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
         const finalScore = Math.max(this.playerScore, this.aiScore);
 
@@ -6888,6 +6915,11 @@ setupDropListeners() {
           <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
           <p>Player: ${this.playerScore}</p>
           <p>Computer: ${this.aiScore}</p>
+          <p style="margin-top:10px;font-size:1em;">
+            <strong>Leftover tiles:</strong><br>
+            Player lost ${playerLeftover} point${playerLeftover === 1 ? '' : 's'} for leftover tiles.<br>
+            Computer lost ${aiLeftover} point${aiLeftover === 1 ? '' : 's'} for leftover tiles.
+          </p>
           <button onclick="location.reload()" 
                   style="padding: 10px 20px; 
                          margin-top: 20px; 
