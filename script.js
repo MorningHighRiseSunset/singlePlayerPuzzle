@@ -5232,51 +5232,42 @@ class ScrabbleGame {
         }
     }
 
-    renderRack() {
-        const rack = document.getElementById("tile-rack");
-        rack.innerHTML = "";
+renderRack() {
+    const rack = document.getElementById("tile-rack");
+    rack.innerHTML = "";
 
-        this.playerRack.forEach((tile, index) => {
-            const tileElement = document.createElement("div");
-            tileElement.className = "tile";
-            tileElement.dataset.index = index;
-            tileElement.dataset.id = tile.id;
-            tileElement.innerHTML = `
-                ${tile.letter}
-                <span class="points">${tile.value}</span>
-                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-            `;
+    this.playerRack.forEach((tile, index) => {
+        const tileElement = document.createElement("div");
+        tileElement.className = "tile";
+        tileElement.dataset.index = index;
+        tileElement.dataset.id = tile.id;
+        tileElement.innerHTML = `
+            ${tile.letter}
+            <span class="points">${tile.value}</span>
+            ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+        `;
 
-            if (this.isMobile) {
-                // For mobile: only add click handling
-                tileElement.addEventListener("click", (e) => {
-                    if (this.currentTurn !== "player") return;
-
-                    // Toggle selection
-                    if (this.selectedTile === tileElement) {
-                        this.deselectTile();
-                    } else {
-                        this.selectTile(tileElement);
-                    }
-                });
-            } else {
-                // For desktop: only add drag functionality
-                tileElement.draggable = true;
-                tileElement.addEventListener("dragstart", (e) => {
-                    if (this.currentTurn === "player") {
-                        e.dataTransfer.setData("text/plain", index.toString());
-                        e.target.classList.add("dragging");
-                    }
-                });
-
-                tileElement.addEventListener("dragend", (e) => {
-                    e.target.classList.remove("dragging");
-                });
+        // Always enable drag-and-drop for all devices
+        tileElement.draggable = true;
+        tileElement.addEventListener("dragstart", (e) => {
+            if (this.currentTurn === "player") {
+                e.dataTransfer.setData("text/plain", index.toString());
+                e.target.classList.add("dragging");
+                // Prevent scrolling on mobile while dragging
+                document.body.style.overflow = "hidden";
+                document.body.addEventListener("touchmove", preventScrolling, { passive: false });
             }
-
-            rack.appendChild(tileElement);
         });
-    }
+
+        tileElement.addEventListener("dragend", (e) => {
+            e.target.classList.remove("dragging");
+            document.body.style.overflow = "";
+            document.body.removeEventListener("touchmove", preventScrolling, { passive: false });
+        });
+
+        rack.appendChild(tileElement);
+    });
+}
 
     createTileElement(tile, index) {
         const tileElement = document.createElement("div");
