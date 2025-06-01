@@ -5311,44 +5311,18 @@ renderRack() {
             ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
         `;
 
-        // Always enable drag-and-drop for all devices
-        tileElement.draggable = true;
-
-        // --- Touch: Start dragging immediately, prevent scroll ---
-        tileElement.addEventListener("touchstart", (e) => {
-            if (this.currentTurn === "player") {
-                tileElement.classList.add("dragging");
-                document.body.style.overflow = "hidden";
-            }
-        }, { passive: false });
-
-        tileElement.addEventListener("touchmove", (e) => {
-            if (tileElement.classList.contains("dragging")) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
-        tileElement.addEventListener("touchend", (e) => {
-            tileElement.classList.remove("dragging");
-            document.body.style.overflow = "";
-        }, { passive: false });
-
-        // --- Desktop: Use drag events as before ---
-        tileElement.addEventListener("dragstart", (e) => {
-            if (this.currentTurn === "player") {
-                e.dataTransfer.setData("text/plain", index.toString());
-                e.target.classList.add("dragging");
-                document.body.style.overflow = "hidden";
-            }
-        });
-
-        tileElement.addEventListener("dragend", (e) => {
-            e.target.classList.remove("dragging");
-            document.body.style.overflow = "";
-        });
+        if (!this.isMobile) {
+            tileElement.draggable = true;
+            // Attach desktop drag events here if needed
+        }
 
         rack.appendChild(tileElement);
     });
+
+    // Enable touch drag for mobile
+    if (this.isMobile) {
+        this.setupTouchDragForTiles();
+    }
 }
 
     createTileElement(tile, index) {
