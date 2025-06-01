@@ -7195,54 +7195,54 @@ setupDropListeners() {
     }
 
     // Modify drawWeightedTile to support playerMode (less vowels)
-    drawWeightedTile(isAI, playerMode = false) {
-        if (this.tiles.length === 0) return null;
+drawWeightedTile(isAI, playerMode = false) {
+    if (this.tiles.length === 0) return null;
 
-        // Lower vowel weights for player if playerMode is true
-        const weights = playerMode ? {
-            '*': 10,
-            'AEIOU': 10, // Lowered from 30
-            'RSTLN': 30,
-            'DGBCMP': 20,
-            'FHVWY': 15,
-            'JKQXZ': 10
-        } : {
-            '*': isAI ? 50 : 10,
-            'AEIOU': isAI ? 35 : 30,
-            'RSTLN': isAI ? 30 : 25,
-            'DGBCMP': 20,
-            'FHVWY': 15,
-            'JKQXZ': 10
-        };
+    // Dramatically increase blank tile weight for AI
+    const weights = playerMode ? {
+        '*': 10,
+        'AEIOU': 10,
+        'RSTLN': 30,
+        'DGBCMP': 20,
+        'FHVWY': 15,
+        'JKQXZ': 10
+    } : {
+        '*': isAI ? 200 : 10, // <<--- Give AI a 20x higher chance for blanks!
+        'AEIOU': isAI ? 35 : 30,
+        'RSTLN': isAI ? 30 : 25,
+        'DGBCMP': 20,
+        'FHVWY': 15,
+        'JKQXZ': 10
+    };
 
-        // Calculate total weight
-        let totalWeight = 0;
-        this.tiles.forEach(tile => {
-            if (tile.letter === '*') totalWeight += weights['*'];
-            else if ('AEIOU'.includes(tile.letter)) totalWeight += weights['AEIOU'];
-            else if ('RSTLN'.includes(tile.letter)) totalWeight += weights['RSTLN'];
-            else if ('DGBCMP'.includes(tile.letter)) totalWeight += weights['DGBCMP'];
-            else if ('FHVWY'.includes(tile.letter)) totalWeight += weights['FHVWY'];
-            else totalWeight += weights['JKQXZ'];
-        });
+    // Calculate total weight
+    let totalWeight = 0;
+    this.tiles.forEach(tile => {
+        if (tile.letter === '*') totalWeight += weights['*'];
+        else if ('AEIOU'.includes(tile.letter)) totalWeight += weights['AEIOU'];
+        else if ('RSTLN'.includes(tile.letter)) totalWeight += weights['RSTLN'];
+        else if ('DGBCMP'.includes(tile.letter)) totalWeight += weights['DGBCMP'];
+        else if ('FHVWY'.includes(tile.letter)) totalWeight += weights['FHVWY'];
+        else totalWeight += weights['JKQXZ'];
+    });
 
-        // Random weighted selection
-        let random = Math.random() * totalWeight;
-        for (let i = 0; i < this.tiles.length; i++) {
-            let weight;
-            if (this.tiles[i].letter === '*') weight = weights['*'];
-            else if ('AEIOU'.includes(this.tiles[i].letter)) weight = weights['AEIOU'];
-            else if ('RSTLN'.includes(this.tiles[i].letter)) weight = weights['RSTLN'];
-            else if ('DGBCMP'.includes(this.tiles[i].letter)) weight = weights['DGBCMP'];
-            else if ('FHVWY'.includes(this.tiles[i].letter)) weight = weights['FHVWY'];
-            else weight = weights['JKQXZ'];
+    // Random weighted selection
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < this.tiles.length; i++) {
+        let weight;
+        if (this.tiles[i].letter === '*') weight = weights['*'];
+        else if ('AEIOU'.includes(this.tiles[i].letter)) weight = weights['AEIOU'];
+        else if ('RSTLN'.includes(this.tiles[i].letter)) weight = weights['RSTLN'];
+        else if ('DGBCMP'.includes(this.tiles[i].letter)) weight = weights['DGBCMP'];
+        else if ('FHVWY'.includes(this.tiles[i].letter)) weight = weights['FHVWY'];
+        else weight = weights['JKQXZ'];
 
-            random -= weight;
-            if (random <= 0) return this.tiles.splice(i, 1)[0];
-        }
-
-        return this.tiles.pop();
+        random -= weight;
+        if (random <= 0) return this.tiles.splice(i, 1)[0];
     }
+
+    return this.tiles.pop();
+}
 
     findTileInBag(desiredLetters) {
         const index = this.tiles.findIndex(tile => desiredLetters.includes(tile.letter));
