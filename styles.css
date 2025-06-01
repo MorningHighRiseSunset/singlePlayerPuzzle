@@ -421,16 +421,18 @@ button:active {
 .mobile-menu-toggle {
   display: block;
   position: fixed;
-  top: 14px;
+  /* Move from top left to bottom left */
+  bottom: 20px;   /* Add this */
   left: 14px;
+  top: auto;      /* Add this to override top */
   z-index: 3001;
   background: #fff;
   color: var(--primary);
   border: none;
   border-radius: 8px;
-  font-size: 1.2em;         /* Smaller font size */
-  padding: 4px 8px;         /* Less padding = smaller width */
-  width: auto;              /* Let width shrink to fit content */
+  font-size: 1.2em;
+  padding: 4px 8px;
+  width: auto;
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   cursor: pointer;
   transition: background 0.2s;
