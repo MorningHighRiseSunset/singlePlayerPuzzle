@@ -419,7 +419,7 @@ button:active {
 
 /* Hamburger button */
 .mobile-menu-toggle {
-  display: none;
+  display: block;
   position: fixed;
   top: 14px;
   left: 14px;
@@ -428,8 +428,9 @@ button:active {
   color: var(--primary);
   border: none;
   border-radius: 8px;
-  font-size: 2em;
-  padding: 6px 16px 8px 16px;
+  font-size: 1.2em;         /* Smaller font size */
+  padding: 4px 8px;         /* Less padding = smaller width */
+  width: auto;              /* Let width shrink to fit content */
   box-shadow: 0 2px 8px rgba(0,0,0,0.10);
   cursor: pointer;
   transition: background 0.2s;
@@ -483,6 +484,10 @@ button:active {
   .mobile-menu-toggle { display: block; }
   .moves-panel, .info-panel {
     display: none !important;
+  }
+  .mobile-drawer.open .moves-panel,
+  .mobile-drawer.open .info-panel {
+    display: block !important;
   }
 }
 @media (min-width: 769px) {
