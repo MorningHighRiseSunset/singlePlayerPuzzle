@@ -415,9 +415,11 @@ button:active {
   /* Bottom left bar for hamburger + submit */
   #mobile-top-bar {
     position: fixed;
-    bottom: 20px;
-    left: 14px;
+    left: 0;
+    bottom: 0;
     top: auto;
+    right: auto;
+    display: flex;
     flex-direction: row;
     align-items: center;
     gap: 8px;
@@ -425,6 +427,9 @@ button:active {
     width: auto;
     background: none;
     box-shadow: none;
+    padding: 12px 10px 12px 10px;
+    /* Optional: add a subtle background for visibility */
+    /* background: rgba(255,255,255,0.85); */
   }
   #play-word-mobile {
     display: inline-block;
@@ -440,7 +445,7 @@ button:active {
     border: none;
     cursor: pointer;
     transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-    height: 42px; /* Ensures consistent height */
+    height: 42px;
     line-height: 22px;
   }
   .mobile-menu-toggle {
@@ -457,7 +462,7 @@ button:active {
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
     cursor: pointer;
     transition: background 0.2s;
-    height: 42px; /* Match submit button height */
+    height: 42px;
     line-height: 22px;
     display: flex;
     align-items: center;
