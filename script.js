@@ -304,91 +304,89 @@ class ScrabbleGame {
         });
     }
 
-    setupMobileTapPlacement() {
-    if (!this.isMobile) return;
+    setupTapPlacement() {
+        // Helper to clear selection
+        const deselect = () => {
+            if (this.selectedTile) this.selectedTile.classList.remove("selected");
+            this.selectedTile = null;
+            this.selectedTileSource = null;
+        };
 
-    // Helper to clear selection
-    const deselect = () => {
-        if (this.selectedTile) this.selectedTile.classList.remove("selected");
-        this.selectedTile = null;
-        this.selectedTileSource = null;
-    };
-
-    // Tap rack tile to select
-    document.getElementById("tile-rack").addEventListener("click", (e) => {
-        const tileElem = e.target.closest(".tile");
-        if (!tileElem || this.currentTurn !== "player") return;
-        deselect();
-        this.selectedTile = tileElem;
-        this.selectedTileSource = "rack";
-        tileElem.classList.add("selected");
-    });
-
-    // Tap board cell to place or pick up
-    document.getElementById("scrabble-board").addEventListener("click", (e) => {
-        const cell = e.target.closest(".board-cell");
-        if (!cell || this.currentTurn !== "player") return;
-
-        const tileElem = cell.querySelector(".tile");
-        const row = parseInt(cell.dataset.row);
-        const col = parseInt(cell.dataset.col);
-
-        // If a tile is selected and tap on empty cell, place it (from rack or board)
-        if (this.selectedTile && !tileElem) {
-            let tile, tileIndex, fromRow, fromCol;
-            if (this.selectedTileSource === "rack") {
-                tileIndex = this.selectedTile.dataset.index;
-                tile = this.playerRack[tileIndex];
-            } else if (this.selectedTileSource === "board") {
-                fromRow = parseInt(this.selectedTile.dataset.row);
-                fromCol = parseInt(this.selectedTile.dataset.col);
-                const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
-                if (placedIdx === -1) return;
-                tile = this.placedTiles[placedIdx].tile;
-
-                // Remove from old spot
-                this.board[fromRow][fromCol] = null;
-                document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
-                this.placedTiles.splice(placedIdx, 1);
-            }
-            if (this.isValidPlacement(row, col, tile)) {
-                this.placeTile(tile, row, col);
-                deselect();
-            }
-            return;
-        }
-
-        // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
-        if (tileElem && this.placedTiles.some(t => t.row === row && t.col === col)) {
+        // Tap/click rack tile to select
+        document.getElementById("tile-rack").addEventListener("click", (e) => {
+            const tileElem = e.target.closest(".tile");
+            if (!tileElem || this.currentTurn !== "player") return;
             deselect();
             this.selectedTile = tileElem;
-            this.selectedTileSource = "board";
+            this.selectedTileSource = "rack";
             tileElem.classList.add("selected");
-            tileElem.dataset.row = row;
-            tileElem.dataset.col = col;
-        }
-    });
+        });
 
-    // Tap rack to place a selected tile back (from board)
-    document.getElementById("tile-rack").addEventListener("click", (e) => {
-        if (!this.selectedTile || this.selectedTileSource !== "board") return;
-        const fromRow = parseInt(this.selectedTile.dataset.row);
-        const fromCol = parseInt(this.selectedTile.dataset.col);
-        const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
-        if (placedIdx === -1) return;
-        const tile = this.placedTiles[placedIdx].tile;
-        // Remove from board
-        this.board[fromRow][fromCol] = null;
-        document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
-        // Remove from placedTiles
-        this.placedTiles.splice(placedIdx, 1);
-        // Add back to rack
-        this.playerRack.push(tile);
-        this.renderRack();
-        this.highlightValidPlacements();
-        deselect();
-    });
-}
+        // Tap/click board cell to place or pick up
+        document.getElementById("scrabble-board").addEventListener("click", (e) => {
+            const cell = e.target.closest(".board-cell");
+            if (!cell || this.currentTurn !== "player") return;
+
+            const tileElem = cell.querySelector(".tile");
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            // If a tile is selected and tap on empty cell, place it (from rack or board)
+            if (this.selectedTile && !tileElem) {
+                let tile, tileIndex, fromRow, fromCol;
+                if (this.selectedTileSource === "rack") {
+                    tileIndex = this.selectedTile.dataset.index;
+                    tile = this.playerRack[tileIndex];
+                } else if (this.selectedTileSource === "board") {
+                    fromRow = parseInt(this.selectedTile.dataset.row);
+                    fromCol = parseInt(this.selectedTile.dataset.col);
+                    const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
+                    if (placedIdx === -1) return;
+                    tile = this.placedTiles[placedIdx].tile;
+
+                    // Remove from old spot
+                    this.board[fromRow][fromCol] = null;
+                    document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
+                    this.placedTiles.splice(placedIdx, 1);
+                }
+                if (this.isValidPlacement(row, col, tile)) {
+                    this.placeTile(tile, row, col);
+                    deselect();
+                }
+                return;
+            }
+
+            // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
+            if (tileElem && this.placedTiles.some(t => t.row === row && t.col === col)) {
+                deselect();
+                this.selectedTile = tileElem;
+                this.selectedTileSource = "board";
+                tileElem.classList.add("selected");
+                tileElem.dataset.row = row;
+                tileElem.dataset.col = col;
+            }
+        });
+
+        // Tap/click rack to place a selected tile back (from board)
+        document.getElementById("tile-rack").addEventListener("click", (e) => {
+            if (!this.selectedTile || this.selectedTileSource !== "board") return;
+            const fromRow = parseInt(this.selectedTile.dataset.row);
+            const fromCol = parseInt(this.selectedTile.dataset.col);
+            const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
+            if (placedIdx === -1) return;
+            const tile = this.placedTiles[placedIdx].tile;
+            // Remove from board
+            this.board[fromRow][fromCol] = null;
+            document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
+            // Remove from placedTiles
+            this.placedTiles.splice(placedIdx, 1);
+            // Add back to rack
+            this.playerRack.push(tile);
+            this.renderRack();
+            this.highlightValidPlacements();
+            deselect();
+        });
+    }
 
     selectTile(tileElement) {
         // Deselect previously selected tile
@@ -5382,34 +5380,37 @@ class ScrabbleGame {
         }
     }
 
-renderRack() {
-    const rack = document.getElementById("tile-rack");
-    rack.innerHTML = "";
+    renderRack() {
+        const rack = document.getElementById("tile-rack");
+        rack.innerHTML = "";
 
-    this.playerRack.forEach((tile, index) => {
-        const tileElement = document.createElement("div");
-        tileElement.className = "tile";
-        tileElement.dataset.index = index;
-        tileElement.dataset.id = tile.id;
-        tileElement.innerHTML = `
-            ${tile.letter}
-            <span class="points">${tile.value}</span>
-            ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-        `;
+        this.playerRack.forEach((tile, index) => {
+            const tileElement = document.createElement("div");
+            tileElement.className = "tile";
+            tileElement.dataset.index = index;
+            tileElement.dataset.id = tile.id;
+            tileElement.innerHTML = `
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+            `;
 
-        if (!this.isMobile) {
-            tileElement.draggable = true;
-            // Attach desktop drag events here if needed
+            // Enable drag-and-drop for desktop
+            if (!this.isMobile) {
+                tileElement.draggable = true;
+            }
+
+            rack.appendChild(tileElement);
+        });
+
+        // Enable tap/click-to-select and place for all devices
+        this.setupTapPlacement();
+
+        // Enable touch drag for mobile (optional, if you want both)
+        if (this.isMobile) {
+            this.setupTouchDragForTiles();
         }
-
-        rack.appendChild(tileElement);
-    });
-
-    // Enable touch drag for mobile
-    if (this.isMobile) {
-        this.setupMobileTapPlacement();
     }
-}
 
     createTileElement(tile, index) {
         const tileElement = document.createElement("div");
