@@ -324,27 +324,32 @@ class ScrabbleGame {
         tileElem.classList.add("selected");
     });
 
-    // Tap board tile to pick up (only if it's a just-placed tile)
+    // Tap board cell to place or pick up
     document.getElementById("scrabble-board").addEventListener("click", (e) => {
         const cell = e.target.closest(".board-cell");
         if (!cell || this.currentTurn !== "player") return;
 
-        // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
         const tileElem = cell.querySelector(".tile");
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
 
-        // If a tile is selected and tap on empty cell, place it
+        // If a tile is selected and tap on empty cell, place it (from rack or board)
         if (this.selectedTile && !tileElem) {
-            let tile, tileIndex;
+            let tile, tileIndex, fromRow, fromCol;
             if (this.selectedTileSource === "rack") {
                 tileIndex = this.selectedTile.dataset.index;
                 tile = this.playerRack[tileIndex];
             } else if (this.selectedTileSource === "board") {
-                // Find the placed tile object
-                const placedIdx = this.placedTiles.findIndex(t => t.row === this.selectedTile.dataset.row && t.col === this.selectedTile.dataset.col);
+                fromRow = parseInt(this.selectedTile.dataset.row);
+                fromCol = parseInt(this.selectedTile.dataset.col);
+                const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
                 if (placedIdx === -1) return;
                 tile = this.placedTiles[placedIdx].tile;
+
+                // Remove from old spot
+                this.board[fromRow][fromCol] = null;
+                document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
+                this.placedTiles.splice(placedIdx, 1);
             }
             if (this.isValidPlacement(row, col, tile)) {
                 this.placeTile(tile, row, col);
@@ -359,22 +364,22 @@ class ScrabbleGame {
             this.selectedTile = tileElem;
             this.selectedTileSource = "board";
             tileElem.classList.add("selected");
-            // Store position for later
             tileElem.dataset.row = row;
             tileElem.dataset.col = col;
         }
     });
 
-    // Tap rack to place a selected tile back
+    // Tap rack to place a selected tile back (from board)
     document.getElementById("tile-rack").addEventListener("click", (e) => {
         if (!this.selectedTile || this.selectedTileSource !== "board") return;
-        // Place back on rack (find first empty slot)
-        const placedIdx = this.placedTiles.findIndex(t => t.row == this.selectedTile.dataset.row && t.col == this.selectedTile.dataset.col);
+        const fromRow = parseInt(this.selectedTile.dataset.row);
+        const fromCol = parseInt(this.selectedTile.dataset.col);
+        const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
         if (placedIdx === -1) return;
         const tile = this.placedTiles[placedIdx].tile;
         // Remove from board
-        this.board[this.selectedTile.dataset.row][this.selectedTile.dataset.col] = null;
-        document.querySelector(`[data-row="${this.selectedTile.dataset.row}"][data-col="${this.selectedTile.dataset.col}"]`).innerHTML = "";
+        this.board[fromRow][fromCol] = null;
+        document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
         // Remove from placedTiles
         this.placedTiles.splice(placedIdx, 1);
         // Add back to rack
