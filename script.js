@@ -304,6 +304,38 @@ class ScrabbleGame {
         });
     }
 
+    setupMobileTapPlacement() {
+    if (!this.isMobile) return;
+
+    // Select tile on tap
+    document.getElementById("tile-rack").addEventListener("click", (e) => {
+        const tileElem = e.target.closest(".tile");
+        if (!tileElem || this.currentTurn !== "player") return;
+
+        // Deselect previous
+        if (this.selectedTile) this.selectedTile.classList.remove("selected");
+        this.selectedTile = tileElem;
+        tileElem.classList.add("selected");
+    });
+
+    // Place tile on board tap
+    document.getElementById("scrabble-board").addEventListener("click", (e) => {
+        if (!this.selectedTile || this.currentTurn !== "player") return;
+        const cell = e.target.closest(".board-cell");
+        if (!cell) return;
+
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        const tileIndex = this.selectedTile.dataset.index;
+        const tile = this.playerRack[tileIndex];
+        if (this.isValidPlacement(row, col, tile)) {
+            this.placeTile(tile, row, col);
+            this.selectedTile.classList.remove("selected");
+            this.selectedTile = null;
+        }
+    });
+}
+
     selectTile(tileElement) {
         // Deselect previously selected tile
         if (this.selectedTile) {
@@ -5321,7 +5353,7 @@ renderRack() {
 
     // Enable touch drag for mobile
     if (this.isMobile) {
-        this.setupTouchDragForTiles();
+        this.setupMobileTapPlacement();
     }
 }
 
