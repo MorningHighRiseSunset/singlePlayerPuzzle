@@ -307,32 +307,81 @@ class ScrabbleGame {
     setupMobileTapPlacement() {
     if (!this.isMobile) return;
 
-    // Select tile on tap
+    // Helper to clear selection
+    const deselect = () => {
+        if (this.selectedTile) this.selectedTile.classList.remove("selected");
+        this.selectedTile = null;
+        this.selectedTileSource = null;
+    };
+
+    // Tap rack tile to select
     document.getElementById("tile-rack").addEventListener("click", (e) => {
         const tileElem = e.target.closest(".tile");
         if (!tileElem || this.currentTurn !== "player") return;
-
-        // Deselect previous
-        if (this.selectedTile) this.selectedTile.classList.remove("selected");
+        deselect();
         this.selectedTile = tileElem;
+        this.selectedTileSource = "rack";
         tileElem.classList.add("selected");
     });
 
-    // Place tile on board tap
+    // Tap board tile to pick up (only if it's a just-placed tile)
     document.getElementById("scrabble-board").addEventListener("click", (e) => {
-        if (!this.selectedTile || this.currentTurn !== "player") return;
         const cell = e.target.closest(".board-cell");
-        if (!cell) return;
+        if (!cell || this.currentTurn !== "player") return;
 
+        // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
+        const tileElem = cell.querySelector(".tile");
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
-        const tileIndex = this.selectedTile.dataset.index;
-        const tile = this.playerRack[tileIndex];
-        if (this.isValidPlacement(row, col, tile)) {
-            this.placeTile(tile, row, col);
-            this.selectedTile.classList.remove("selected");
-            this.selectedTile = null;
+
+        // If a tile is selected and tap on empty cell, place it
+        if (this.selectedTile && !tileElem) {
+            let tile, tileIndex;
+            if (this.selectedTileSource === "rack") {
+                tileIndex = this.selectedTile.dataset.index;
+                tile = this.playerRack[tileIndex];
+            } else if (this.selectedTileSource === "board") {
+                // Find the placed tile object
+                const placedIdx = this.placedTiles.findIndex(t => t.row === this.selectedTile.dataset.row && t.col === this.selectedTile.dataset.col);
+                if (placedIdx === -1) return;
+                tile = this.placedTiles[placedIdx].tile;
+            }
+            if (this.isValidPlacement(row, col, tile)) {
+                this.placeTile(tile, row, col);
+                deselect();
+            }
+            return;
         }
+
+        // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
+        if (tileElem && this.placedTiles.some(t => t.row === row && t.col === col)) {
+            deselect();
+            this.selectedTile = tileElem;
+            this.selectedTileSource = "board";
+            tileElem.classList.add("selected");
+            // Store position for later
+            tileElem.dataset.row = row;
+            tileElem.dataset.col = col;
+        }
+    });
+
+    // Tap rack to place a selected tile back
+    document.getElementById("tile-rack").addEventListener("click", (e) => {
+        if (!this.selectedTile || this.selectedTileSource !== "board") return;
+        // Place back on rack (find first empty slot)
+        const placedIdx = this.placedTiles.findIndex(t => t.row == this.selectedTile.dataset.row && t.col == this.selectedTile.dataset.col);
+        if (placedIdx === -1) return;
+        const tile = this.placedTiles[placedIdx].tile;
+        // Remove from board
+        this.board[this.selectedTile.dataset.row][this.selectedTile.dataset.col] = null;
+        document.querySelector(`[data-row="${this.selectedTile.dataset.row}"][data-col="${this.selectedTile.dataset.col}"]`).innerHTML = "";
+        // Remove from placedTiles
+        this.placedTiles.splice(placedIdx, 1);
+        // Add back to rack
+        this.playerRack.push(tile);
+        this.renderRack();
+        this.highlightValidPlacements();
+        deselect();
     });
 }
 
