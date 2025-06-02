@@ -251,101 +251,6 @@ setupTapPlacement() {
     });
 }
 
-    setupTapPlacement() {
-        // Helper to clear selection
-        const deselect = () => {
-            if (this.selectedTile) this.selectedTile.classList.remove("selected");
-            this.selectedTile = null;
-            this.selectedTileSource = null;
-        };
-
-        // Tap/click rack tile to select
-        document.getElementById("tile-rack").addEventListener("click", (e) => {
-            const tileElem = e.target.closest(".tile");
-            if (!tileElem || this.currentTurn !== "player") return;
-            deselect();
-            this.selectedTile = tileElem;
-            this.selectedTileSource = "rack";
-            tileElem.classList.add("selected");
-        });
-
-        // Tap/click board cell to place or pick up
-document.getElementById("scrabble-board").addEventListener("click", (e) => {
-    const cell = e.target.closest(".board-cell");
-    if (!cell || this.currentTurn !== "player") return;
-
-    const tileElem = cell.querySelector(".tile");
-    const row = parseInt(cell.dataset.row);
-    const col = parseInt(cell.dataset.col);
-
-    // If a tile is selected and tap on empty cell, place it (from rack or board)
-    if (this.selectedTile && !tileElem) {
-        let tile, tileIndex, fromRow, fromCol;
-        let movedFromBoard = false;
-        if (this.selectedTileSource === "rack") {
-            tileIndex = this.selectedTile.dataset.index;
-            tile = this.playerRack[tileIndex];
-        } else if (this.selectedTileSource === "board") {
-            fromRow = parseInt(this.selectedTile.dataset.row);
-            fromCol = parseInt(this.selectedTile.dataset.col);
-            const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
-            if (placedIdx === -1) {
-                deselect();
-                return;
-            }
-            tile = this.placedTiles[placedIdx].tile;
-            movedFromBoard = true;
-        }
-        if (this.isValidPlacement(row, col, tile)) {
-            // Only remove from old spot if placement is valid
-            if (movedFromBoard) {
-                this.board[fromRow][fromCol] = null;
-                document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
-                this.placedTiles.splice(this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol), 1);
-            }
-            this.placeTile(tile, row, col);
-        }
-        // Always deselect after any placement attempt
-        deselect();
-        return;
-    }
-
-    // If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
-    if (tileElem && this.placedTiles.some(t => t.row === row && t.col === col)) {
-        deselect();
-        this.selectedTile = tileElem;
-        this.selectedTileSource = "board";
-        tileElem.classList.add("selected");
-        tileElem.dataset.row = row;
-        tileElem.dataset.col = col;
-        return;
-    }
-
-    // If clicking anywhere else on the board, deselect
-    deselect();
-});
-
-        // Tap/click rack to place a selected tile back (from board)
-        document.getElementById("tile-rack").addEventListener("click", (e) => {
-            if (!this.selectedTile || this.selectedTileSource !== "board") return;
-            const fromRow = parseInt(this.selectedTile.dataset.row);
-            const fromCol = parseInt(this.selectedTile.dataset.col);
-            const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
-            if (placedIdx === -1) return;
-            const tile = this.placedTiles[placedIdx].tile;
-            // Remove from board
-            this.board[fromRow][fromCol] = null;
-            document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
-            // Remove from placedTiles
-            this.placedTiles.splice(placedIdx, 1);
-            // Add back to rack
-            this.playerRack.push(tile);
-            this.renderRack();
-            this.highlightValidPlacements();
-            deselect();
-        });
-    }
-
     selectTile(tileElement) {
         // Deselect previously selected tile
         if (this.selectedTile) {
@@ -4653,70 +4558,6 @@ document.getElementById("scrabble-board").addEventListener("click", (e) => {
         return opportunities;
     }
 
-    setupTouchDragForTiles() {
-    const rack = document.getElementById("tile-rack");
-    let ghostTile = null;
-    let draggingTile = null;
-    let startIndex = null;
-
-    rack.addEventListener("touchstart", (e) => {
-        const tileElem = e.target.closest(".tile");
-        if (!tileElem || this.currentTurn !== "player") return;
-
-        e.preventDefault();
-        draggingTile = tileElem;
-        startIndex = tileElem.dataset.index;
-
-        // Create ghost tile
-        ghostTile = tileElem.cloneNode(true);
-        ghostTile.style.position = "fixed";
-        ghostTile.style.pointerEvents = "none";
-        ghostTile.style.zIndex = 2000;
-        ghostTile.style.opacity = 0.85;
-        ghostTile.classList.add("dragging");
-        document.body.appendChild(ghostTile);
-
-        moveGhost(e.touches[0]);
-    }, { passive: false });
-
-    rack.addEventListener("touchmove", (e) => {
-        if (!ghostTile) return;
-        e.preventDefault();
-        moveGhost(e.touches[0]);
-    }, { passive: false });
-
-    rack.addEventListener("touchend", (e) => {
-        if (!ghostTile || !draggingTile) return;
-        e.preventDefault();
-
-        // Get drop position
-        const touch = e.changedTouches[0];
-        const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-        const cell = elem && elem.closest(".board-cell");
-
-        if (cell && this.currentTurn === "player") {
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-            const tile = this.playerRack[startIndex];
-            if (this.isValidPlacement(row, col, tile)) {
-                this.placeTile(tile, row, col);
-            }
-        }
-
-        // Cleanup
-        ghostTile.remove();
-        ghostTile = null;
-        draggingTile = null;
-        startIndex = null;
-    }, { passive: false });
-
-    function moveGhost(touch) {
-        if (!ghostTile) return;
-        ghostTile.style.left = (touch.clientX - 20) + "px";
-        ghostTile.style.top = (touch.clientY - 20) + "px";
-    }
-}
-
     wouldCreateStackedShortWords(word, row, col, horizontal) {
         const checkRadius = 2; // Check 2 cells above/below or left/right
         let shortWordCount = 0;
@@ -5132,7 +4973,6 @@ document.getElementById("scrabble-board").addEventListener("click", (e) => {
         await this.loadDictionary();
         this.createBoard();
         this.fillRacks();
-        this.setupDragAndDrop();
         this.setupTapPlacement();
         this.setupEventListeners();
         this.updateGameState();
@@ -5157,14 +4997,12 @@ document.getElementById("scrabble-board").addEventListener("click", (e) => {
                     cell.appendChild(centerStar);
                 }
 
-                cell.addEventListener("click", () => {
-                    console.log(`Clicked cell [${i}, ${j}]`);
-                });
-
                 const key = `${i},${j}`;
                 if (premiumSquares[key]) {
                     cell.classList.add(premiumSquares[key]);
                 }
+
+                // Only log if cell is empty (no tile)
 
                 board.appendChild(cell);
             }
@@ -5353,19 +5191,9 @@ document.getElementById("scrabble-board").addEventListener("click", (e) => {
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
             `;
-
-            // Enable drag-and-drop for desktop
-            if (!this.isMobile) {
-                tileElement.draggable = true;
-            }
-
+            // DO NOT set draggable or add any drag/touch logic
             rack.appendChild(tileElement);
         });
-
-        // Enable touch drag for mobile (optional, if you want both)
-        if (this.isMobile) {
-            this.setupTouchDragForTiles();
-        }
     }
 
     createTileElement(tile, index) {
@@ -5380,191 +5208,6 @@ document.getElementById("scrabble-board").addEventListener("click", (e) => {
                 `;
         return tileElement;
     }
-
-    setupDragAndDrop() {
-        this.setupDragListeners();
-        this.setupDropListeners();
-        this.setupRackDropZone();
-    }
-
-    setupRackDropZone() {
-        const rack = document.getElementById("tile-rack");
-
-        rack.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            if (this.currentTurn === "player") {
-                e.currentTarget.classList.add("rack-droppable");
-            }
-        });
-
-        rack.addEventListener("dragleave", (e) => {
-            e.currentTarget.classList.remove("rack-droppable");
-        });
-
-        rack.addEventListener("drop", (e) => {
-            e.preventDefault();
-            e.currentTarget.classList.remove("rack-droppable");
-
-            if (this.currentTurn !== "player") return;
-
-            // Find the dragged tile element
-            const draggedTile = document.querySelector(".tile.dragging");
-            if (!draggedTile) return;
-
-            // Find the placed tile by looking through all board cells
-            const boardCell = draggedTile.closest(".board-cell");
-            if (!boardCell) return;
-
-            const row = parseInt(boardCell.dataset.row);
-            const col = parseInt(boardCell.dataset.col);
-
-            // Find the corresponding placed tile
-            const placedTileIndex = this.placedTiles.findIndex(
-                (t) => t.row === row && t.col === col
-            );
-
-            if (placedTileIndex !== -1) {
-                const placedTile = this.placedTiles[placedTileIndex];
-
-                // Check if this was originally a wild tile
-                if (placedTile.tile.isBlank || placedTile.tile.originalLetter === "*") {
-                    // Reset to original wild tile
-                    placedTile.tile.letter = "*";
-                    placedTile.tile.value = 0;
-                    delete placedTile.tile.isBlank;
-                }
-
-                // Return the tile to the rack
-                this.playerRack.push(placedTile.tile);
-
-                // Clear the board cell
-                this.board[row][col] = null;
-                boardCell.innerHTML = "";
-
-                // Remove from placed tiles array
-                this.placedTiles.splice(placedTileIndex, 1);
-
-                // Update the rack display
-                this.renderRack();
-
-                // Update valid placement highlights
-                this.highlightValidPlacements();
-            }
-        });
-    }
-
-setupDragListeners() {
-    // --- Desktop: Use drag events as before ---
-    document.addEventListener("dragstart", (e) => {
-        if (
-            e.target.classList.contains("tile") &&
-            this.currentTurn === "player"
-        ) {
-            e.target.classList.add("dragging");
-            e.dataTransfer.setData("text/plain", e.target.dataset.index);
-
-            // Prevent scrolling on all devices while dragging
-            document.body.style.overflow = "hidden";
-        }
-    });
-
-    document.addEventListener("dragend", (e) => {
-        if (e.target.classList.contains("tile")) {
-            e.target.classList.remove("dragging");
-            document.body.style.overflow = "";
-        }
-    });
-
-    // --- Touch devices: Make drag start immediately on touch ---
-    document.addEventListener("touchstart", (e) => {
-        const tile = e.target.closest(".tile");
-        if (tile && this.currentTurn === "player") {
-            tile.classList.add("dragging");
-            // Prevent scrolling as soon as touch starts
-            document.body.style.overflow = "hidden";
-        }
-    }, { passive: false });
-
-    document.addEventListener("touchmove", (e) => {
-        // If a tile is being dragged, prevent scrolling
-        if (document.querySelector(".tile.dragging")) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
-    document.addEventListener("touchend", (e) => {
-        const tile = document.querySelector(".tile.dragging");
-        if (tile) {
-            tile.classList.remove("dragging");
-            document.body.style.overflow = "";
-        }
-    }, { passive: false });
-}
-
-setupDropListeners() {
-    document.querySelectorAll(".board-cell").forEach((cell) => {
-        cell.setAttribute("droppable", "true");
-
-        cell.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            if (this.currentTurn === "player") {
-                cell.classList.add("droppable-hover");
-            }
-        });
-
-        cell.addEventListener("drop", (e) => {
-            e.preventDefault();
-            cell.classList.remove("droppable-hover");
-
-            if (this.currentTurn !== "player") return;
-
-            // Find the dragged tile element
-            const draggedTile = document.querySelector(".tile.dragging");
-            if (!draggedTile) return;
-
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-
-            // If dragging from rack
-            if (draggedTile.closest("#tile-rack")) {
-                const tileIndex = draggedTile.dataset.index;
-                const tile = this.playerRack[tileIndex];
-                if (this.isValidPlacement(row, col, tile)) {
-                    this.placeTile(tile, row, col);
-                } else {
-                    alert("Invalid placement! Check placement rules.");
-                }
-            }
-            // If dragging from board (move placed tile)
-            else if (draggedTile.closest(".board-cell")) {
-                const fromCell = draggedTile.closest(".board-cell");
-                const fromRow = parseInt(fromCell.dataset.row);
-                const fromCol = parseInt(fromCell.dataset.col);
-
-                // Only allow moving to empty cell
-                if (!this.board[row][col] && this.board[fromRow][fromCol]) {
-                    // Move the tile object
-                    const placedIdx = this.placedTiles.findIndex(t => t.row === fromRow && t.col === fromCol);
-                    if (placedIdx !== -1) {
-                        const placedTile = this.placedTiles[placedIdx];
-                        // Remove from old spot
-                        this.board[fromRow][fromCol] = null;
-                        fromCell.innerHTML = "";
-                        this.placedTiles.splice(placedIdx, 1);
-
-                        // Place at new spot
-                        this.placeTile(placedTile.tile, row, col);
-                    }
-                }
-            }
-        });
-
-        cell.addEventListener("dragleave", (e) => {
-            e.preventDefault();
-            cell.classList.remove("droppable-hover");
-        });
-    });
-}
 
     isValidPlacement(row, col, tile) {
         console.log("Checking placement validity:", {
@@ -5715,24 +5358,24 @@ setupDropListeners() {
     }
 
     placeTile(tile, row, col) {
-        if (this.board[row][col]) {
-            alert("This cell is already occupied!");
-            return;
-        }
+    if (this.board[row][col]) {
+        alert("This cell is already occupied!");
+        return;
+    }
 
-        const cell = document.querySelector(
-            `[data-row="${row}"][data-col="${col}"]`,
-        );
-        const tileIndex = this.playerRack.indexOf(tile);
+    const cell = document.querySelector(
+        `[data-row="${row}"][data-col="${col}"]`,
+    );
+    const tileIndex = this.playerRack.indexOf(tile);
 
-        // Remove only existing tile element, not the center star or other decorations
-        const existingTile = cell.querySelector('.tile');
-        if (existingTile) existingTile.remove();
+    // Remove only existing tile element, not the center star or other decorations
+    const existingTile = cell.querySelector('.tile');
+    if (existingTile) existingTile.remove();
 
-        if (tile.letter === "*") {
-            const letterSelectionDialog = document.createElement("div");
-            letterSelectionDialog.className = "letter-selection-dialog";
-            letterSelectionDialog.innerHTML = `
+    if (tile.letter === "*") {
+        const letterSelectionDialog = document.createElement("div");
+        letterSelectionDialog.className = "letter-selection-dialog";
+        letterSelectionDialog.innerHTML = `
             <div class="dialog-content">
                 <h3>Choose a letter for the blank tile</h3>
                 <div class="letter-grid">
@@ -5747,9 +5390,9 @@ setupDropListeners() {
             </div>
         `;
 
-            // Add styles for the dialog
-            const style = document.createElement("style");
-            style.textContent = `
+        // Add styles for the dialog
+        const style = document.createElement("style");
+        style.textContent = `
             .letter-selection-dialog {
                 position: fixed;
                 top: 0;
@@ -5794,140 +5437,115 @@ setupDropListeners() {
                 color: #333;
             }
         `;
-            document.head.appendChild(style);
-            document.body.appendChild(letterSelectionDialog);
+        document.head.appendChild(style);
+        document.body.appendChild(letterSelectionDialog);
 
-            // Handle letter selection
-            const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
-            buttons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    const selectedLetter = button.textContent;
+        // Handle letter selection
+        const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
+        buttons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const selectedLetter = button.textContent;
 
-                    // Create a new tile object with the selected letter but keep point value as 0
-                    const blankTile = {
-                        ...tile,
-                        letter: selectedLetter,
-                        originalLetter: "*",
-                        value: 0,
-                    };
+                // Create a new tile object with the selected letter but keep point value as 0
+                const blankTile = {
+                    ...tile,
+                    letter: selectedLetter,
+                    originalLetter: "*",
+                    value: 0,
+                };
 
-                    // Create proper tile object for the board
-                    const placedTile = {
-                        letter: selectedLetter,
-                        value: 0,
-                        id: tile.id,
-                        isBlank: true,
-                    };
+                // Create proper tile object for the board
+                const placedTile = {
+                    letter: selectedLetter,
+                    value: 0,
+                    id: tile.id,
+                    isBlank: true,
+                };
 
-                    this.board[row][col] = placedTile;
+                this.board[row][col] = placedTile;
 
-                    // Create and add the tile element
-                    const tileElement = document.createElement("div");
-                    tileElement.className = "tile";
-                    tileElement.draggable = true;
-                    tileElement.dataset.index = tileIndex;
-                    tileElement.dataset.id = tile.id;
-                    tileElement.innerHTML = `
+                // Create and add the tile element (NO draggable, NO drag events)
+                const tileElement = document.createElement("div");
+                tileElement.className = "tile";
+                tileElement.dataset.index = tileIndex;
+                tileElement.dataset.id = tile.id;
+                tileElement.innerHTML = `
                     ${selectedLetter}
                     <span class="points">0</span>
                     <span class="blank-indicator">★</span>
                 `;
 
-                    // Add drag events to the tile
-                    tileElement.addEventListener("dragstart", (e) => {
-                        if (this.currentTurn === "player") {
-                            e.dataTransfer.setData("text/plain", index.toString());
-                            e.target.classList.add("dragging");
-                        }
-                    });
-                    tileElement.addEventListener("dragend", (e) => {
-                        e.target.classList.remove("dragging");
-                    });
+                // Remove only the tile, not the star
+                const existingTile = cell.querySelector('.tile');
+                if (existingTile) existingTile.remove();
+                cell.appendChild(tileElement);
 
-                    // Remove only the tile, not the star
-                    const existingTile = cell.querySelector('.tile');
-                    if (existingTile) existingTile.remove();
-                    cell.appendChild(tileElement);
+                // Remove tile from rack
+                if (tileIndex > -1) {
+                    this.playerRack.splice(tileIndex, 1);
+                }
 
-                    // Remove tile from rack
-                    if (tileIndex > -1) {
-                        this.playerRack.splice(tileIndex, 1);
-                    }
-
-                    // Add to placed tiles
-                    this.placedTiles.push({
-                        tile: placedTile,
-                        row: row,
-                        col: col,
-                    });
-
-                    // Update rack display
-                    this.renderRack();
-
-                    // Remove the dialog
-                    letterSelectionDialog.remove();
-
-                    // Update valid placement highlights
-                    this.highlightValidPlacements();
+                // Add to placed tiles
+                this.placedTiles.push({
+                    tile: placedTile,
+                    row: row,
+                    col: col,
                 });
+
+                // Update rack display
+                this.renderRack();
+
+                // Remove the dialog
+                letterSelectionDialog.remove();
+
+                // Update valid placement highlights
+                this.highlightValidPlacements();
             });
-        } else {
-            // Normal tile placement (non-blank tile)
-            // Create proper tile object for the board
-            const placedTile = {
-                letter: tile.letter,
-                value: tile.value || this.tileValues[tile.letter],
-                id: tile.id,
-            };
+        });
+    } else {
+        // Normal tile placement (non-blank tile)
+        // Create proper tile object for the board
+        const placedTile = {
+            letter: tile.letter,
+            value: tile.value || this.tileValues[tile.letter],
+            id: tile.id,
+        };
 
-            this.board[row][col] = placedTile;
+        this.board[row][col] = placedTile;
 
-            const tileElement = document.createElement("div");
-            tileElement.className = "tile";
-            tileElement.draggable = true;
-            tileElement.dataset.index = tileIndex;
-            tileElement.dataset.id = tile.id;
-            tileElement.innerHTML = `
+        const tileElement = document.createElement("div");
+        tileElement.className = "tile";
+        tileElement.dataset.index = tileIndex;
+        tileElement.dataset.id = tile.id;
+        tileElement.innerHTML = `
             ${tile.letter}
             <span class="points">${placedTile.value}</span>
         `;
 
-            // Add drag functionality to the placed tile
-            tileElement.addEventListener("dragstart", (e) => {
-                if (this.currentTurn === "player") {
-                    e.target.classList.add("dragging");
-                    e.dataTransfer.setData("text/plain", e.target.dataset.index);
-                }
-            });
+        // Remove only the tile, not the star
+        const existingTile = cell.querySelector('.tile');
+        if (existingTile) existingTile.remove();
+        cell.appendChild(tileElement);
 
-            tileElement.addEventListener("dragend", (e) => {
-                e.target.classList.remove("dragging");
-            });
-
-            // Remove only the tile, not the star
-            const existingTile = cell.querySelector('.tile');
-            if (existingTile) existingTile.remove();
-            cell.appendChild(tileElement);
-
-            // Remove tile from rack
-            if (tileIndex > -1) {
-                this.playerRack.splice(tileIndex, 1);
-            }
-
-            // Add to placed tiles
-            this.placedTiles.push({
-                tile: placedTile,
-                row: row,
-                col: col,
-            });
-
-            // Update rack display
-            this.renderRack();
-
-            // Update valid placement highlights
-            this.highlightValidPlacements();
+        // Remove tile from rack
+        if (tileIndex > -1) {
+            this.playerRack.splice(tileIndex, 1);
         }
+
+        // Add to placed tiles
+        this.placedTiles.push({
+            tile: placedTile,
+            row: row,
+            col: col,
+        });
+
+        // Update rack display
+        this.renderRack();
+
+        // Update valid placement highlights
+        this.highlightValidPlacements();
     }
+}
 
     areTilesConnected() {
         if (this.placedTiles.length <= 1) return true;
