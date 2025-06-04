@@ -541,3 +541,27 @@ button:active {
 @media (min-width: 769px) {
   .mobile-menu-toggle, .mobile-drawer { display: none !important; }
 }
+
+@media (max-width: 768px) {
+  .ai-thinking-message {
+    left: auto !important;
+    right: 16px !important;
+    top: auto !important;
+    bottom: 16px !important;
+    width: 180px !important;
+    min-width: 0 !important;
+    max-width: 80vw !important;
+    font-size: 0.98em !important;
+    padding: 8px 14px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13) !important;
+    z-index: 3100 !important;
+  }
+  .ai-thinking-message .ai-thinking-text {
+    font-size: 1em !important;
+  }
+  .ai-thinking-indicator {
+    margin-left: 4px !important;
+    scale: 0.95;
+  }
+}

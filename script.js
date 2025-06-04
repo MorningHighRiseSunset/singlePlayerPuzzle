@@ -279,27 +279,51 @@ class ScrabbleGame {
 		let thinkingMessage = document.createElement("div");
 		thinkingMessage.className = "ai-thinking-message";
 		thinkingMessage.innerHTML = `
-        <span class="ai-thinking-text">AI is thinking...</span>
-        <span class="ai-thinking-indicator">
-            <span class="ai-thinking-dot"></span>
-            <span class="ai-thinking-dot"></span>
-            <span class="ai-thinking-dot"></span>
-        </span>
-    `;
-		thinkingMessage.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #f0f0f0;
-        padding: 10px 24px;
-        border-radius: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1000;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        font-size: 1.1em;
-    `;
+			<span class="ai-thinking-text">AI is thinking...</span>
+			<span class="ai-thinking-indicator">
+				<span class="ai-thinking-dot"></span>
+				<span class="ai-thinking-dot"></span>
+				<span class="ai-thinking-dot"></span>
+			</span>
+		`;
+
+		// Responsive positioning: bottom right on mobile, centered on desktop
+		if (window.innerWidth <= 768) {
+			thinkingMessage.style.cssText = `
+				position: fixed;
+				right: 16px;
+				bottom: 16px;
+				left: auto;
+				top: auto;
+				background-color: #f0f0f0;
+				padding: 8px 14px;
+				border-radius: 16px;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.13);
+				z-index: 3100;
+				opacity: 0;
+				transition: opacity 0.3s ease;
+				font-size: 0.98em;
+				width: 180px;
+				min-width: 0;
+				max-width: 80vw;
+			`;
+		} else {
+			thinkingMessage.style.cssText = `
+				position: fixed;
+				top: 20px;
+				left: 50%;
+				transform: translateX(-50%);
+				background-color: #f0f0f0;
+				padding: 10px 24px;
+				border-radius: 20px;
+				box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+				z-index: 1000;
+				opacity: 0;
+				transition: opacity 0.3s ease;
+				font-size: 1.1em;
+			`;
+		}
+
 		document.body.appendChild(thinkingMessage);
 		setTimeout(() => thinkingMessage.style.opacity = "1", 100);
 
@@ -314,23 +338,19 @@ class ScrabbleGame {
 		let lastBlunderTime = 0;
 		let lastNotifTime = 0;
 
-		// Animate dots (optional, since CSS handles it, but you can update text here)
 		function updateThinkingText(msg) {
 			thinkingMessage.querySelector('.ai-thinking-text').textContent = msg;
 		}
 
-		// After 2 minutes, show "AI is really struggling..."
 		let strugglingTimeout = setTimeout(() => {
 			updateThinkingText("AI is struggling to find a move...");
 		}, 2 * 60 * 1000);
 
-		// After 4 minutes, show "AI is dumbfounded..."
 		let dumbfoundedTimeout = setTimeout(() => {
 			updateThinkingText("AI is dumbfounded and is considering exchanging tiles...");
 		}, 4 * 60 * 1000);
 
 		try {
-			// Only exchange if rack is severely unbalanced
 			const shouldExchange = this.shouldExchangeTiles();
 			if (shouldExchange && this.tiles.length >= 5) {
 				setTimeout(() => {
@@ -343,7 +363,6 @@ class ScrabbleGame {
 				return;
 			}
 
-			// --- Enhanced: Run multiple searches for up to 5 minutes or until a high quality valid move is found ---
 			while (Date.now() - startTime < maxTime) {
 				const possiblePlays = this.findAIPossiblePlays();
 				let foundValid = false;
@@ -359,7 +378,6 @@ class ScrabbleGame {
 								updateThinkingText("AI found a promising move!");
 							}
 						} else {
-							// Show blunder message if enough time has passed since last
 							if (Date.now() - lastBlunderTime > 1200) {
 								updateThinkingText(`🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Rethinking...`);
 								blunderCount++;
@@ -372,14 +390,12 @@ class ScrabbleGame {
 
 				runCount++;
 
-				// If no valid play found after a while, show "thinking really hard" message
 				if (!bestPlay && runCount % 10 === 0 && Date.now() - lastNotifTime > 2000) {
 					updateThinkingText("AI is thinking really hard right now... 🤔");
 					lastNotifTime = Date.now();
 					await new Promise(res => setTimeout(res, 800));
 				}
 
-				// If stuck for a long time, do a "step back" and refresh search
 				if (!bestPlay && runCount % 30 === 0 && Date.now() - lastNotifTime > 2000) {
 					updateThinkingText("AI takes a step back to rethink its strategy... 🔄");
 					lastNotifTime = Date.now();
@@ -387,17 +403,14 @@ class ScrabbleGame {
 					updateThinkingText("AI is thinking on a move again...");
 				}
 
-				// Small pause to avoid UI freeze
 				await new Promise(res => setTimeout(res, 60));
 
-				// If a very high quality move is found, break early
 				if (bestPlay && bestPlay.score > 200) break;
 			}
 
 			clearTimeout(strugglingTimeout);
 			clearTimeout(dumbfoundedTimeout);
 
-			// If a valid move was found, play it
 			if (bestPlay) {
 				updateThinkingText("AI found a move!");
 				setTimeout(() => {
@@ -410,7 +423,6 @@ class ScrabbleGame {
 				return;
 			}
 
-			// If still nothing after all that, show dumbfounded message and exchange as last resort
 			updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
 			await new Promise(res => setTimeout(res, 3500));
 			thinkingMessage.style.opacity = "0";
