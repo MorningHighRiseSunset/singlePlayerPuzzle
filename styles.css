@@ -345,11 +345,6 @@ button:active {
 }
 
 /* --- Utility --- */
-.valid-placement {
-  background: #b3e5fc !important; /* Light blue */
-  box-shadow: 0 0 0 3px #4fc3f7 inset;
-  transition: background 0.2s, box-shadow 0.2s;
-}
 .board-cell.droppable-hover { background: rgba(0,120,255,0.18); }
 .hint-box {
   position: fixed; bottom: 20px; right: 20px;
