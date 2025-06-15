@@ -6,12 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
     playBtn.addEventListener("click", function (e) {
         e.preventDefault();
 
-    // Say "Puzzle!" aloud
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance("Puzzle!");
-    utterance.rate = 1.1;
-    window.speechSynthesis.speak(utterance);
-
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
 
@@ -80,6 +74,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1)`;
             }, 1000 + i * 120);
         });
+
+        // --- SPEECH: Enthusiastic "Puzzle!" immediately ---
+        window.speechSynthesis.cancel();
+        const voices = window.speechSynthesis.getVoices();
+        const femaleVoice = voices.find(v => v.name.toLowerCase().includes("female") || v.gender === "female" || v.name.toLowerCase().includes("woman") || v.name.toLowerCase().includes("girl"));
+        const enFemale = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"));
+        const chosenVoice = femaleVoice || enFemale || null;
+
+        const utter = new SpeechSynthesisUtterance("Puzzle!");
+        utter.rate = 1.25;
+        utter.pitch = 1.3;
+        utter.volume = 1.0;
+        if (chosenVoice) utter.voice = chosenVoice;
+        window.speechSynthesis.speak(utter);
 
         // Fade to white after 4 seconds, then redirect
         setTimeout(() => {
