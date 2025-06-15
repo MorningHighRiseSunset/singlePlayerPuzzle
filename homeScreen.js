@@ -6,6 +6,12 @@ document.addEventListener("DOMContentLoaded", () => {
     playBtn.addEventListener("click", function (e) {
         e.preventDefault();
 
+    // Say "Puzzle!" aloud
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance("Puzzle!");
+    utterance.rate = 1.1;
+    window.speechSynthesis.speak(utterance);
+
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
 
