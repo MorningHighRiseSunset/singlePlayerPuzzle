@@ -5542,69 +5542,101 @@ class ScrabbleGame {
 		return true;
 	}
 
-	resetPlacedTiles() {
-		this.placedTiles.forEach(({
-			tile,
-			row,
-			col
-		}) => {
-			this.board[row][col] = null;
-			const cell = document.querySelector(
-				`[data-row="${row}"][data-col="${col}"]`,
-			);
-			cell.innerHTML = "";
-			this.playerRack.push(tile);
-		});
+    resetPlacedTiles() {
+        this.placedTiles.forEach(({ tile, row, col }) => {
+            this.board[row][col] = null;
+            const cell = document.querySelector(
+                `[data-row="${row}"][data-col="${col}"]`
+            );
+            cell.innerHTML = "";
 
-		this.placedTiles = [];
-		this.renderRack();
-	}
+            // --- FIX: Restore the center star if this is the center cell ---
+            if (row === 7 && col === 7) {
+                const centerStar = document.createElement("span");
+                centerStar.textContent = "⚜";
+                centerStar.className = "center-star";
+                cell.appendChild(centerStar);
+            }
 
-	validateWord() {
-		if (this.placedTiles.length === 0) return false;
+            this.playerRack.push(tile);
+        });
 
-		// Check if tiles are properly connected
-		if (!this.areTilesConnected()) return false;
+        this.placedTiles = [];
+        this.renderRack();
+    }
 
-		// Get all formed words (including connected words)
-		const formedWords = this.getFormedWords();
-		console.log(
-			"Formed words:",
-			formedWords.map((w) => w.word),
-		);
+    validateWord() {
+        if (this.placedTiles.length === 0) return false;
 
-		// If no valid words are formed, return false
-		if (formedWords.length === 0) {
-			console.log("No valid words formed");
-			return false;
-		}
+        // Check if tiles are properly connected (same row/col, no gaps)
+        if (!this.areTilesConnected()) return false;
 
-		// Validate each word
-		let allWordsValid = true;
-		formedWords.forEach((wordInfo) => {
-			const word = wordInfo.word.toLowerCase();
-			if (!this.dictionary.has(word)) {
-				console.log(`Invalid word: ${word}`);
-				allWordsValid = false;
-			} else {
-				console.log(`Valid word found: ${word}`);
-			}
-		});
+        // --- NEW: Ensure at least one placed tile is adjacent to or touching an existing tile (except first move) ---
+        if (!this.isFirstMove) {
+            const touchesExisting = this.placedTiles.some(({ row, col }) => {
+                // Check all 4 directions for an existing tile
+                const directions = [
+                    [-1, 0], [1, 0], [0, -1], [0, 1]
+                ];
+                return directions.some(([dx, dy]) => {
+                    const newRow = row + dx;
+                    const newCol = col + dy;
+                    return (
+                        newRow >= 0 &&
+                        newRow < 15 &&
+                        newCol >= 0 &&
+                        newCol < 15 &&
+                        this.board[newRow][newCol] !== null &&
+                        // Make sure it's not one of the newly placed tiles
+                        !this.placedTiles.some(t => t.row === newRow && t.col === newCol)
+                    );
+                });
+            });
+            if (!touchesExisting) {
+                console.log("Placed tiles are not connected to any existing word.");
+                return false;
+            }
+        }
 
-		// First move must use center square
-		if (this.isFirstMove) {
-			// At least one placed tile must be on the center
-			const centerUsed = this.placedTiles.some(
-				(tile) => tile.row === 7 && tile.col === 7,
-			);
-			if (!centerUsed) {
-				console.log("First move must use center square");
-				return false;
-			}
-		}
+        // Get all formed words (including connected words)
+        const formedWords = this.getFormedWords();
+        console.log(
+            "Formed words:",
+            formedWords.map((w) => w.word),
+        );
 
-		return allWordsValid;
-	}
+        // If no valid words are formed, return false
+        if (formedWords.length === 0) {
+            console.log("No valid words formed");
+            return false;
+        }
+
+        // Validate each word
+        let allWordsValid = true;
+        formedWords.forEach((wordInfo) => {
+            const word = wordInfo.word.toLowerCase();
+            if (!this.dictionary.has(word)) {
+                console.log(`Invalid word: ${word}`);
+                allWordsValid = false;
+            } else {
+                console.log(`Valid word found: ${word}`);
+            }
+        });
+
+        // First move must use center square
+        if (this.isFirstMove) {
+            // At least one placed tile must be on the center
+            const centerUsed = this.placedTiles.some(
+                (tile) => tile.row === 7 && tile.col === 7,
+            );
+            if (!centerUsed) {
+                console.log("First move must use center square");
+                return false;
+            }
+        }
+
+        return allWordsValid;
+    }
 
 	getCrossWords(row, col) {
 		const words = [];
@@ -7516,235 +7548,238 @@ class ScrabbleGame {
 		portal.classList.remove("active");
 	}
 
-	setupEventListeners() {
-		// Initial highlight of valid placements
-		this.highlightValidPlacements();
+setupEventListeners() {
+    // Initial highlight of valid placements
+    this.highlightValidPlacements();
 
-		// Update highlights when game state changes
-		document.addEventListener("click", () => {
-			this.highlightValidPlacements();
-		});
+    // Update highlights when game state changes
+    document.addEventListener("click", () => {
+        this.highlightValidPlacements();
+    });
 
-		// Add exchange system setup
-		this.setupExchangeSystem();
+    // Add exchange system setup
+    this.setupExchangeSystem();
 
-		// Play word button
-		document.getElementById("play-word").addEventListener("click", () => this.playWord());
+    // --- Play word buttons (desktop and mobile) ---
+    const playWordBtn = document.getElementById("play-word");
+    if (playWordBtn) playWordBtn.addEventListener("click", () => this.playWord());
 
-		// Shuffle rack button
-		document.getElementById("shuffle-rack").addEventListener("click", async () => {
-			const rack = document.getElementById("tile-rack");
-			const tiles = [...rack.children];
+    const playWordDesktopBtn = document.getElementById("play-word-desktop");
+    if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
 
-			// Disable tile dragging during animation
-			tiles.forEach((tile) => (tile.draggable = false));
+    const playWordMobileBtn = document.getElementById("play-word-mobile");
+    if (playWordMobileBtn) playWordMobileBtn.addEventListener("click", () => this.playWord());
 
-			// Visual shuffle animation
-			for (let i = 0; i < 5; i++) { // 5 visual shuffles
-				await new Promise((resolve) => {
-					tiles.forEach((tile) => {
-						tile.style.transition = "transform 0.2s ease";
-						tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
-					});
-					setTimeout(resolve, 200);
-				});
-			}
+    // Shuffle rack button
+    document.getElementById("shuffle-rack").addEventListener("click", async () => {
+        const rack = document.getElementById("tile-rack");
+        const tiles = [...rack.children];
 
-			// Reset positions with transition
-			tiles.forEach((tile) => {
-				tile.style.transform = "none";
-			});
+        // Disable tile dragging during animation
+        tiles.forEach((tile) => (tile.draggable = false));
 
-			// Actual shuffle logic
-			for (let i = this.playerRack.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
-			}
+        // Visual shuffle animation
+        for (let i = 0; i < 5; i++) { // 5 visual shuffles
+            await new Promise((resolve) => {
+                tiles.forEach((tile) => {
+                    tile.style.transition = "transform 0.2s ease";
+                    tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
+                });
+                setTimeout(resolve, 200);
+            });
+        }
 
-			// Wait for position reset animation to complete
-			setTimeout(() => {
-				this.renderRack();
-			}, 200);
+        // Reset positions with transition
+        tiles.forEach((tile) => {
+            tile.style.transform = "none";
+        });
 
-			// Re-enable dragging
-			setTimeout(() => {
-				const newTiles = document.querySelectorAll("#tile-rack .tile");
-				newTiles.forEach((tile) => (tile.draggable = true));
-			}, 400);
-		});
+        // Actual shuffle logic
+        for (let i = this.playerRack.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+        }
 
-		// Skip turn button
-		document.getElementById("skip-turn").addEventListener("click", () => {
-			if (this.currentTurn === "player") {
-				this.consecutiveSkips++;
-				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", "SKIP", 0);
-				this.updateGameState();
-				this.highlightValidPlacements();
-				if (!this.checkGameEnd()) {
-					this.aiTurn();
-				}
-			}
-		});
+        // Wait for position reset animation to complete
+        setTimeout(() => {
+            this.renderRack();
+        }, 200);
 
-		// Quit game button
-		const quitButton = document.getElementById("quit-game");
-		if (quitButton) {
-			quitButton.addEventListener("click", () => {
-				if (this.gameEnded) return; // Prevent multiple triggers
+        // Re-enable dragging
+        setTimeout(() => {
+            const newTiles = document.querySelectorAll("#tile-rack .tile");
+            newTiles.forEach((tile) => (tile.draggable = true));
+        }, 400);
+    });
 
-				// Set the computer as winner since player quit
-				this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
-				this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
-				this.gameEnded = true;
+    // Skip turn button
+    document.getElementById("skip-turn").addEventListener("click", () => {
+        if (this.currentTurn === "player") {
+            this.consecutiveSkips++;
+            this.currentTurn = "ai";
+            this.addToMoveHistory("Player", "SKIP", 0);
+            this.updateGameState();
+            this.highlightValidPlacements();
+            if (!this.checkGameEnd()) {
+                this.aiTurn();
+            }
+        }
+    });
 
-				// Update scores before animation
-				this.updateScores();
+    // Quit game button
+    const quitButton = document.getElementById("quit-game");
+    if (quitButton) {
+        quitButton.addEventListener("click", () => {
+            if (this.gameEnded) return; // Prevent multiple triggers
 
-				// Add the quit move to history
-				if (this.moveHistory) {
-					this.moveHistory.push({
-						player: "Player",
-						word: "QUIT",
-						score: 0,
-						timestamp: new Date(),
-					});
-					this.updateMoveHistory();
-				}
+            // Set the computer as winner since player quit
+            this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+            this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+            this.gameEnded = true;
 
-				// Trigger game over animation
-				this.announceWinner();
-			});
-		}
+            // Update scores before animation
+            this.updateScores();
 
-		// Print history button
-		document.getElementById("print-history").addEventListener("click", async () => {
-			const printWindow = window.open("", "_blank");
-			const gameDate = new Date().toLocaleString();
+            // Add the quit move to history
+            if (this.moveHistory) {
+                this.moveHistory.push({
+                    player: "Player",
+                    word: "QUIT",
+                    score: 0,
+                    timestamp: new Date(),
+                });
+                this.updateMoveHistory();
+            }
 
-			// Show loading message
-			printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Puzzle Game History - ${gameDate}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-                            .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
-                            .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
-                            .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
-                            .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
-                            .part-of-speech { color: #e67e22; font-style: italic; }
-                            .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
-                            .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="loading">Loading definitions...</div>
-                    </body>
-                </html>
-            `);
+            // Trigger game over animation
+            this.announceWinner();
+        });
+    }
 
-			// Gather all unique words from move history
-			const uniqueWords = [...new Set(
-				this.moveHistory
-				.map((move) => move.word)
-				.filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
-			)];
+    // Print history button
+    document.getElementById("print-history").addEventListener("click", async () => {
+        const printWindow = window.open("", "_blank");
+        const gameDate = new Date().toLocaleString();
 
-			// Fetch definitions for all words
-			const wordDefinitions = new Map();
-			for (const word of uniqueWords) {
-				const definitions = await this.getWordDefinition(word);
-				if (definitions) {
-					wordDefinitions.set(word, definitions);
-				}
-			}
+        // Show loading message
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Puzzle Game History - ${gameDate}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                        .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+                        .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                        .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
+                        .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
+                        .part-of-speech { color: #e67e22; font-style: italic; }
+                        .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+                        .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="loading">Loading definitions...</div>
+                </body>
+            </html>
+        `);
 
-			// Generate and set the content
-			const content = this.generatePrintContent(gameDate, wordDefinitions);
-			printWindow.document.body.innerHTML = content;
-			printWindow.document.close();
-			printWindow.focus();
-			printWindow.print();
-		});
+        // Gather all unique words from move history
+        const uniqueWords = [...new Set(
+            this.moveHistory
+                .map((move) => move.word)
+                .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+        )];
 
-		// Mobile notifications handling
-		if (isMobileDevice()) {
-			const notifications = document.querySelectorAll('.mobile-notice');
-			notifications.forEach(notice => {
-				let startX;
-				let currentX;
-				let isDragging = false;
+        // Fetch definitions for all words
+        const wordDefinitions = new Map();
+        for (const word of uniqueWords) {
+            const definitions = await this.getWordDefinition(word);
+            if (definitions) {
+                wordDefinitions.set(word, definitions);
+            }
+        }
 
-				// Touch start handler
-				notice.addEventListener('touchstart', (e) => {
-					startX = e.touches[0].clientX;
-					currentX = startX;
-					isDragging = true;
-					notice.classList.add('swiping');
-				}, {
-					passive: true
-				});
+        // Generate and set the content
+        const content = this.generatePrintContent(gameDate, wordDefinitions);
+        printWindow.document.body.innerHTML = content;
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    });
 
-				// Touch move handler
-				notice.addEventListener('touchmove', (e) => {
-					if (!isDragging) return;
-					currentX = e.touches[0].clientX;
-					const diff = currentX - startX;
-					if (diff > 0) { // Only allow right swipe
-						notice.style.transform = `translateX(${diff}px)`;
-					}
-				}, {
-					passive: true
-				});
+    // Mobile notifications handling
+    if (isMobileDevice()) {
+        const notifications = document.querySelectorAll('.mobile-notice');
+        notifications.forEach(notice => {
+            let startX;
+            let currentX;
+            let isDragging = false;
 
-				// Touch end handler
-				notice.addEventListener('touchend', () => {
-					if (!isDragging) return;
-					isDragging = false;
-					notice.classList.remove('swiping');
+            // Touch start handler
+            notice.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                currentX = startX;
+                isDragging = true;
+                notice.classList.add('swiping');
+            }, { passive: true });
 
-					if (currentX - startX > 100) { // Swipe threshold
-						notice.classList.add('removing');
-						setTimeout(() => notice.remove(), 300);
-					} else {
-						notice.style.transform = '';
-					}
-				});
+            // Touch move handler
+            notice.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                if (diff > 0) { // Only allow right swipe
+                    notice.style.transform = `translateX(${diff}px)`;
+                }
+            }, { passive: true });
 
-				// Double-tap to close
-				let lastTap = 0;
-				notice.addEventListener('touchend', (e) => {
-					const currentTime = new Date().getTime();
-					const tapLength = currentTime - lastTap;
-					if (tapLength < 500 && tapLength > 0) {
-						notice.classList.add('removing');
-						setTimeout(() => notice.remove(), 300);
-						e.preventDefault();
-					}
-					lastTap = currentTime;
-				});
+            // Touch end handler
+            notice.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                notice.classList.remove('swiping');
 
-				// Make close button more reliable
-				const closeButton = notice.querySelector('.notice-close');
-				if (closeButton) {
-					closeButton.addEventListener('click', (e) => {
-						e.stopPropagation();
-						e.preventDefault();
-						notice.classList.add('removing');
-						setTimeout(() => notice.remove(), 300);
-					});
+                if (currentX - startX > 100) { // Swipe threshold
+                    notice.classList.add('removing');
+                    setTimeout(() => notice.remove(), 300);
+                } else {
+                    notice.style.transform = '';
+                }
+            });
 
-					closeButton.addEventListener('touchend', (e) => {
-						e.stopPropagation();
-						e.preventDefault();
-						notice.classList.add('removing');
-						setTimeout(() => notice.remove(), 300);
-					});
-				}
-			});
-		}
-	}
+            // Double-tap to close
+            let lastTap = 0;
+            notice.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    notice.classList.add('removing');
+                    setTimeout(() => notice.remove(), 300);
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            });
+
+            // Make close button more reliable
+            const closeButton = notice.querySelector('.notice-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    notice.classList.add('removing');
+                    setTimeout(() => notice.remove(), 300);
+                });
+
+                closeButton.addEventListener('touchend', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    notice.classList.add('removing');
+                    setTimeout(() => notice.remove(), 300);
+                });
+            }
+        });
+    }
+}
 
 	simulateEndgameScenario() {
 		// Clear board first
