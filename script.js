@@ -428,7 +428,7 @@ class ScrabbleGame {
 							}
 						} else {
 							if (Date.now() - lastBlunderTime > 1200) {
-								updateThinkingText(`🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Rethinking...`);
+								updateThinkingText(`🤦 AI made a blunder: ${validity.invalidWords.join(", ")}. Rethinking...`);
 								blunderCount++;
 								lastBlunderTime = Date.now();
 							}
