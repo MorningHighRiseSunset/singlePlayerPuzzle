@@ -1126,92 +1126,88 @@ class ScrabbleGame {
 		});
 	}
 
-	findAIPossiblePlays() {
-		try {
-			const possiblePlays = [];
-			const availableLetters = this.aiRack.map(tile => tile.letter);
+findAIPossiblePlays() {
+    try {
+        const possiblePlays = [];
+        const availableLetters = this.aiRack.map(tile => tile.letter);
 
-			// Use the Trie for all possible words AI can form (2+ letters for first move, 3+ otherwise)
-			const minWordLength = this.isFirstMove ? 2 : 3;
-			const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
+        // Use anchor squares only (except first move)
+        const anchors = this.isFirstMove
+            ? [{ row: 7, col: 7 }]
+            : this.findAnchors();
 
-			// For first move, must cover center
-			if (this.isFirstMove) {
-				for (const word of possibleWords) {
-					for (let i = 0; i <= 15 - word.length; i++) {
-						// Horizontal through center
-						if (i <= 7 && i + word.length > 7) {
-							if (this.isValidAIPlacement(word, 7, i, true)) {
-								possiblePlays.push({
-									word,
-									startPos: { row: 7, col: i },
-									isHorizontal: true,
-									score: this.calculatePotentialScore(word, 7, i, true)
-								});
-							}
-						}
-						// Vertical through center
-						if (i <= 7 && i + word.length > 7) {
-							if (this.isValidAIPlacement(word, i, 7, false)) {
-								possiblePlays.push({
-									word,
-									startPos: { row: i, col: 7 },
-									isHorizontal: false,
-									score: this.calculatePotentialScore(word, i, 7, false)
-								});
-							}
-						}
-					}
-				}
-			} else {
-				// For every empty cell, try all possible placements
-				for (let row = 0; row < 15; row++) {
-					for (let col = 0; col < 15; col++) {
-						if (this.board[row][col]) continue; // Only empty cells
+        const minWordLength = this.isFirstMove ? 2 : 2; // Allow 2-letter words always
 
-						for (const word of possibleWords) {
-							// Horizontal
-							if (col + word.length <= 15) {
-								if (this.isValidAIPlacement(word, row, col, true)) {
-									possiblePlays.push({
-										word,
-										startPos: { row, col },
-										isHorizontal: true,
-										score: this.calculatePotentialScore(word, row, col, true)
-									});
-								}
-							}
-							// Vertical
-							if (row + word.length <= 15) {
-								if (this.isValidAIPlacement(word, row, col, false)) {
-									possiblePlays.push({
-										word,
-										startPos: { row, col },
-										isHorizontal: false,
-										score: this.calculatePotentialScore(word, row, col, false)
-									});
-								}
-							}
-						}
-					}
-				}
-			}
+        // Try all valid words from rack
+        const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
 
-			// Max difficulty: sort by score, then by word length, then by strategic value
-			return possiblePlays
-				.filter(play => play.score > 0)
-				.sort((a, b) => {
-					if (b.score !== a.score) return b.score - a.score;
-					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
-					const stratA = this.evaluatePositionStrategy(a);
-					const stratB = this.evaluatePositionStrategy(b);
-					return stratB - stratA;
-				});
-		} catch (error) {
-			console.error("Error in findAIPossiblePlays:", error);
-			return [];
-		}
-	}
+        for (const anchor of anchors) {
+            for (const word of possibleWords) {
+                // Try both directions
+                for (const isHorizontal of [true, false]) {
+                    // Try to fit the word so it covers the anchor
+                    for (let offset = 0; offset < word.length; offset++) {
+                        const row = anchor.row - (isHorizontal ? 0 : offset);
+                        const col = anchor.col - (isHorizontal ? offset : 0);
+                        if (row < 0 || col < 0) continue;
+                        if (row > 14 || col > 14) continue;
+                        if (isHorizontal && col + word.length > 15) continue;
+                        if (!isHorizontal && row + word.length > 15) continue;
+
+                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal,
+                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Always try high-value two-letter words as a fallback
+        const highValueShortWords = ["QI", "XI", "ZA", "JO", "QO", "EX", "OX", "AX"];
+        for (const word of highValueShortWords) {
+            for (const anchor of anchors) {
+                for (const isHorizontal of [true, false]) {
+                    for (let offset = 0; offset < word.length; offset++) {
+                        const row = anchor.row - (isHorizontal ? 0 : offset);
+                        const col = anchor.col - (isHorizontal ? offset : 0);
+                        if (row < 0 || col < 0) continue;
+                        if (row > 14 || col > 14) continue;
+                        if (isHorizontal && col + word.length > 15) continue;
+                        if (!isHorizontal && row + word.length > 15) continue;
+
+                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal,
+                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by score, then by word length, then by strategic value
+        return possiblePlays
+            .filter(play => play.score > 0)
+            .sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+                const stratA = this.evaluatePositionStrategy(a);
+                const stratB = this.evaluatePositionStrategy(b);
+                return stratB - stratA;
+            });
+    } catch (error) {
+        console.error("Error in findAIPossiblePlays:", error);
+        return [];
+    }
+}
 
 	generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
 		const potentialWords = new Set();
