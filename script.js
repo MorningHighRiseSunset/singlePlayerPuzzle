@@ -47,43 +47,31 @@ class Trie {
     }
 
     // Generate all words from rack (with blanks)
-	findWordsFromRack(rack, minLen = 2, maxLen = 7) {
-		const results = new Set();
-		const freq = {};
-		for (const l of rack) freq[l] = (freq[l] || 0) + 1;
-
-		const memo = new Map();
-
-		const recurse = (node, path, freqMap, usedBlanks, depth) => {
-			// Memoization key: path + sorted freqMap + usedBlanks
-			const key = path + "|" + Object.entries(freqMap).sort().map(([k, v]) => k + v).join("") + "|" + usedBlanks;
-			if (memo.has(key)) return;
-			memo.set(key, true);
-
-			// Early pruning: if not enough tiles left to reach minLen, stop
-			const tilesLeft = Object.values(freqMap).reduce((a, b) => a + b, 0);
-			if (path.length + tilesLeft < minLen) return;
-
-			if (node.isWord && path.length >= minLen && path.length <= maxLen) {
-				results.add(path);
-			}
-			if (path.length >= maxLen) return;
-
-			for (const c in node.children) {
-				if (freqMap[c] > 0) {
-					freqMap[c]--;
-					recurse(node.children[c], path + c, freqMap, usedBlanks, depth + 1);
-					freqMap[c]++;
-				} else if (freqMap["*"] > 0) {
-					freqMap["*"]--;
-					recurse(node.children[c], path + c, freqMap, usedBlanks + 1, depth + 1);
-					freqMap["*"]++;
-				}
-			}
-		};
-		recurse(this.root, "", { ...freq }, 0, 0);
-		return Array.from(results);
-	}
+    findWordsFromRack(rack, minLen = 2, maxLen = 7) {
+        const results = new Set();
+        const recurse = (node, path, letters, usedBlanks) => {
+            if (node.isWord && path.length >= minLen && path.length <= maxLen) {
+                results.add(path);
+            }
+            if (path.length >= maxLen) return;
+            const used = new Set();
+            for (let i = 0; i < letters.length; i++) {
+                const letter = letters[i];
+                if (used.has(letter)) continue; // Avoid duplicate branches
+                used.add(letter);
+                if (letter === "*") {
+                    // Try all possible letters for blank
+                    for (const c in node.children) {
+                        recurse(node.children[c], path + c, letters.slice(0, i).concat(letters.slice(i + 1)), usedBlanks + 1);
+                    }
+                } else if (node.children[letter]) {
+                    recurse(node.children[letter], path + letter, letters.slice(0, i).concat(letters.slice(i + 1)), usedBlanks);
+                }
+            }
+        };
+        recurse(this.root, "", rack, 0);
+        return Array.from(results);
+    }
 }
 
 class ScrabbleGame {
@@ -440,7 +428,7 @@ class ScrabbleGame {
 							}
 						} else {
 							if (Date.now() - lastBlunderTime > 1200) {
-								updateThinkingText(`🤦 AI made a blunder: ${validity.invalidWords.join(", ")}. Rethinking...`);
+								updateThinkingText(`🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Rethinking...`);
 								blunderCount++;
 								lastBlunderTime = Date.now();
 							}
@@ -1138,88 +1126,92 @@ class ScrabbleGame {
 		});
 	}
 
-findAIPossiblePlays() {
-    try {
-        const possiblePlays = [];
-        const availableLetters = this.aiRack.map(tile => tile.letter);
+	findAIPossiblePlays() {
+		try {
+			const possiblePlays = [];
+			const availableLetters = this.aiRack.map(tile => tile.letter);
 
-        // Use anchor squares only (except first move)
-        const anchors = this.isFirstMove
-            ? [{ row: 7, col: 7 }]
-            : this.findAnchors();
+			// Use the Trie for all possible words AI can form (2+ letters for first move, 3+ otherwise)
+			const minWordLength = this.isFirstMove ? 2 : 3;
+			const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
 
-        const minWordLength = this.isFirstMove ? 2 : 2; // Allow 2-letter words always
+			// For first move, must cover center
+			if (this.isFirstMove) {
+				for (const word of possibleWords) {
+					for (let i = 0; i <= 15 - word.length; i++) {
+						// Horizontal through center
+						if (i <= 7 && i + word.length > 7) {
+							if (this.isValidAIPlacement(word, 7, i, true)) {
+								possiblePlays.push({
+									word,
+									startPos: { row: 7, col: i },
+									isHorizontal: true,
+									score: this.calculatePotentialScore(word, 7, i, true)
+								});
+							}
+						}
+						// Vertical through center
+						if (i <= 7 && i + word.length > 7) {
+							if (this.isValidAIPlacement(word, i, 7, false)) {
+								possiblePlays.push({
+									word,
+									startPos: { row: i, col: 7 },
+									isHorizontal: false,
+									score: this.calculatePotentialScore(word, i, 7, false)
+								});
+							}
+						}
+					}
+				}
+			} else {
+				// For every empty cell, try all possible placements
+				for (let row = 0; row < 15; row++) {
+					for (let col = 0; col < 15; col++) {
+						if (this.board[row][col]) continue; // Only empty cells
 
-        // Try all valid words from rack
-        const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
+						for (const word of possibleWords) {
+							// Horizontal
+							if (col + word.length <= 15) {
+								if (this.isValidAIPlacement(word, row, col, true)) {
+									possiblePlays.push({
+										word,
+										startPos: { row, col },
+										isHorizontal: true,
+										score: this.calculatePotentialScore(word, row, col, true)
+									});
+								}
+							}
+							// Vertical
+							if (row + word.length <= 15) {
+								if (this.isValidAIPlacement(word, row, col, false)) {
+									possiblePlays.push({
+										word,
+										startPos: { row, col },
+										isHorizontal: false,
+										score: this.calculatePotentialScore(word, row, col, false)
+									});
+								}
+							}
+						}
+					}
+				}
+			}
 
-        for (const anchor of anchors) {
-            for (const word of possibleWords) {
-                // Try both directions
-                for (const isHorizontal of [true, false]) {
-                    // Try to fit the word so it covers the anchor
-                    for (let offset = 0; offset < word.length; offset++) {
-                        const row = anchor.row - (isHorizontal ? 0 : offset);
-                        const col = anchor.col - (isHorizontal ? offset : 0);
-                        if (row < 0 || col < 0) continue;
-                        if (row > 14 || col > 14) continue;
-                        if (isHorizontal && col + word.length > 15) continue;
-                        if (!isHorizontal && row + word.length > 15) continue;
-
-                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
-                            possiblePlays.push({
-                                word,
-                                startPos: { row, col },
-                                isHorizontal,
-                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        // Always try high-value two-letter words as a fallback
-        const highValueShortWords = ["QI", "XI", "ZA", "JO", "QO", "EX", "OX", "AX"];
-        for (const word of highValueShortWords) {
-            for (const anchor of anchors) {
-                for (const isHorizontal of [true, false]) {
-                    for (let offset = 0; offset < word.length; offset++) {
-                        const row = anchor.row - (isHorizontal ? 0 : offset);
-                        const col = anchor.col - (isHorizontal ? offset : 0);
-                        if (row < 0 || col < 0) continue;
-                        if (row > 14 || col > 14) continue;
-                        if (isHorizontal && col + word.length > 15) continue;
-                        if (!isHorizontal && row + word.length > 15) continue;
-
-                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
-                            possiblePlays.push({
-                                word,
-                                startPos: { row, col },
-                                isHorizontal,
-                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        // Sort by score, then by word length, then by strategic value
-        return possiblePlays
-            .filter(play => play.score > 0)
-            .sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                if (b.word.length !== a.word.length) return b.word.length - a.word.length;
-                const stratA = this.evaluatePositionStrategy(a);
-                const stratB = this.evaluatePositionStrategy(b);
-                return stratB - stratA;
-            });
-    } catch (error) {
-        console.error("Error in findAIPossiblePlays:", error);
-        return [];
-    }
-}
+			// Max difficulty: sort by score, then by word length, then by strategic value
+			return possiblePlays
+				.filter(play => play.score > 0)
+				.sort((a, b) => {
+					if (b.score !== a.score) return b.score - a.score;
+					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+					const stratA = this.evaluatePositionStrategy(a);
+					const stratB = this.evaluatePositionStrategy(b);
+					return stratB - stratA;
+				});
+		} catch (error) {
+			console.error("Error in findAIPossiblePlays:", error);
+			return [];
+		}
+	}
 
 	generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
 		const potentialWords = new Set();
@@ -3121,30 +3113,30 @@ findAIPossiblePlays() {
 		});
 	}
 
-    calculateWordScore(word, startRow, startCol, isHorizontal) {
-        let wordScore = 0;
-        let wordMultiplier = 1;
+	calculateWordScore(word, startRow, startCol, isHorizontal) {
+		let wordScore = 0;
+		let wordMultiplier = 1;
 
-        for (let i = 0; i < word.length; i++) {
-            const row = isHorizontal ? startRow : startRow + i;
-            const col = isHorizontal ? startCol + i : startCol;
-            const tile = this.board[row][col];
-            let letterScore = tile.value;
+		for (let i = 0; i < word.length; i++) {
+			const row = isHorizontal ? startRow : startRow + i;
+			const col = isHorizontal ? startCol + i : startCol;
+			const tile = this.board[row][col];
+			let letterScore = tile.value;
 
-            // Only apply premium squares if this tile was just placed
-            if (!this.previousBoard || !this.previousBoard[row][col]) {
-                const premium = this.getPremiumSquareType(row, col);
-                if (premium === "dl") letterScore *= 2;
-                if (premium === "tl") letterScore *= 3; // <--- was 2, now 3
-                if (premium === "dw") wordMultiplier *= 2;
-                if (premium === "tw") wordMultiplier *= 3;
-            }
+			// Only apply premium squares if this tile was just placed
+			if (!this.previousBoard || !this.previousBoard[row][col]) {
+				const premium = this.getPremiumSquareType(row, col);
+				if (premium === "dl") letterScore *= 2;
+				if (premium === "tl") letterScore *= 3;
+				if (premium === "dw") wordMultiplier *= 2;
+				if (premium === "tw") wordMultiplier *= 3;
+			}
 
-            wordScore += letterScore;
-        }
+			wordScore += letterScore;
+		}
 
-        return wordScore * wordMultiplier;
-    }
+		return wordScore * wordMultiplier;
+	}
 
 	findBestMove() {
 		const possibleMoves = this.findPossibleMoves();
@@ -4969,87 +4961,87 @@ findAIPossiblePlays() {
 		}
 	}
 
-    getPremiumSquares() {
-        const premium = {};
+	getPremiumSquares() {
+		const premium = {};
 
-        // Triple Word Scores (red squares)
-        [
-            [0, 0],
-            [0, 7],
-            [0, 14],
-            [7, 0],
-            [7, 14],
-            [14, 0],
-            [14, 7],
-            [14, 14],
-        ].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+		// Triple Word Scores (red squares)
+		[
+			[0, 0],
+			[0, 7],
+			[0, 14],
+			[7, 0],
+			[7, 14],
+			[14, 0],
+			[14, 7],
+			[14, 14],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
-        // Double Word Scores (pink squares)
-        [
-            [1, 1],
-            [1, 13],
-            [2, 2],
-            [2, 12],
-            [3, 3],
-            [3, 11],
-            [4, 4],
-            [4, 10],
-            [10, 4],
-            [10, 10],
-            [11, 3],
-            [11, 11],
-            [12, 2],
-            [12, 12],
-            [13, 1],
-            [13, 13],
-        ].forEach(([row, col]) => (premium[`${row},${col}`] = "dw"));
+		// Double Word Scores (pink squares)
+		[
+			[1, 1],
+			[1, 13],
+			[2, 2],
+			[2, 12],
+			[3, 3],
+			[3, 11],
+			[4, 4],
+			[4, 10],
+			[10, 4],
+			[10, 10],
+			[11, 3],
+			[11, 11],
+			[12, 2],
+			[12, 12],
+			[13, 1],
+			[13, 13],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "dw"));
 
-        // Triple Letter Scores (dark blue squares)
-        [
-            [1, 5],
-            [1, 9],
-            [5, 1],
-            [5, 5],
-            [5, 9],
-            [5, 13],
-            [9, 1],
-            [9, 5],
-            [9, 9],
-            [9, 13],
-            [13, 5],
-            [13, 9],
-        ].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+		// Triple Letter Scores (dark blue squares)
+		[
+			[1, 5],
+			[1, 9],
+			[5, 1],
+			[5, 5],
+			[5, 9],
+			[5, 13],
+			[9, 1],
+			[9, 5],
+			[9, 9],
+			[9, 13],
+			[13, 5],
+			[13, 9],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
-        // Double Letter Scores (light blue squares)
-        [
-            [0, 3],
-            [0, 11],
-            [2, 6],
-            [2, 8],
-            [3, 0],
-            [3, 7],
-            [3, 14],
-            [6, 2],
-            [6, 6],
-            [6, 8],
-            [6, 12],
-            [7, 3],
-            [7, 11],
-            [8, 2],
-            [8, 6],
-            [8, 8],
-            [8, 12],
-            [11, 0],
-            [11, 7],
-            [11, 14],
-            [12, 6],
-            [12, 8],
-            [14, 3],
-            [14, 11],
-        ].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
+		// Double Letter Scores (light blue squares)
+		[
+			[0, 3],
+			[0, 11],
+			[2, 6],
+			[2, 8],
+			[3, 0],
+			[3, 7],
+			[3, 14],
+			[6, 2],
+			[6, 6],
+			[6, 8],
+			[6, 12],
+			[7, 3],
+			[7, 11],
+			[8, 2],
+			[8, 6],
+			[8, 8],
+			[8, 12],
+			[11, 0],
+			[11, 7],
+			[11, 14],
+			[12, 6],
+			[12, 8],
+			[14, 3],
+			[14, 11],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
 
-        return premium;
-    }
+		return premium;
+	}
 
 	async loadDictionary() {
 		try {
@@ -5550,28 +5542,28 @@ findAIPossiblePlays() {
 		return true;
 	}
 
-    resetPlacedTiles() {
-        this.placedTiles.forEach(({ tile, row, col }) => {
-            this.board[row][col] = null;
-            const cell = document.querySelector(
-                `[data-row="${row}"][data-col="${col}"]`
-            );
-            cell.innerHTML = "";
+	resetPlacedTiles() {
+		this.placedTiles.forEach(({ tile, row, col }) => {
+			this.board[row][col] = null;
+			const cell = document.querySelector(
+				`[data-row="${row}"][data-col="${col}"]`
+			);
+			cell.innerHTML = "";
 
-            // --- FIX: Restore the center star if this is the center cell ---
-            if (row === 7 && col === 7) {
-                const centerStar = document.createElement("span");
-                centerStar.textContent = "⚜";
-                centerStar.className = "center-star";
-                cell.appendChild(centerStar);
-            }
+			// --- FIX: Restore the center star ONLY if the cell is empty and it's the center cell ---
+			if (row === 7 && col === 7 && cell.childElementCount === 0) {
+				const centerStar = document.createElement("span");
+				centerStar.textContent = "⚜";
+				centerStar.className = "center-star";
+				cell.appendChild(centerStar);
+			}
 
-            this.playerRack.push(tile);
-        });
+			this.playerRack.push(tile);
+		});
 
-        this.placedTiles = [];
-        this.renderRack();
-    }
+		this.placedTiles = [];
+		this.renderRack();
+	}
 
     validateWord() {
         if (this.placedTiles.length === 0) return false;
@@ -5885,95 +5877,95 @@ findAIPossiblePlays() {
 		return word;
 	}
 
-    calculateScore() {
-        let totalScore = 0;
-        const words = new Set();
+	calculateScore() {
+		let totalScore = 0;
+		const words = new Set();
 
-        console.log("=== Starting Score Calculation ===");
+		console.log("=== Starting Score Calculation ===");
 
-        // Get all formed words (main word + perpendicular words + modified words)
-        const formedWords = this.getFormedWords();
-        console.log("Words formed:", formedWords);
+		// Get all formed words (main word + perpendicular words + modified words)
+		const formedWords = this.getFormedWords();
+		console.log("Words formed:", formedWords);
 
-        // Calculate score for each formed word
-        formedWords.forEach((wordInfo) => {
-            let wordScore = 0;
-            let wordMultiplier = 1;
-            const {
-                word,
-                startPos,
-                direction
-            } = wordInfo;
+		// Calculate score for each formed word
+		formedWords.forEach((wordInfo) => {
+			let wordScore = 0;
+			let wordMultiplier = 1;
+			const {
+				word,
+				startPos,
+				direction
+			} = wordInfo;
 
-            console.log(`\nCalculating score for word: ${word}`);
+			console.log(`\nCalculating score for word: ${word}`);
 
-            // Calculate score for each letter in the word
-            for (let i = 0; i < word.length; i++) {
-                const row =
-                    direction === "horizontal" ? startPos.row : startPos.row + i;
-                const col =
-                    direction === "horizontal" ? startPos.col + i : startPos.col;
-                const tile = this.board[row][col];
+			// Calculate score for each letter in the word
+			for (let i = 0; i < word.length; i++) {
+				const row =
+					direction === "horizontal" ? startPos.row : startPos.row + i;
+				const col =
+					direction === "horizontal" ? startPos.col + i : startPos.col;
+				const tile = this.board[row][col];
 
-                let letterScore = tile.value;
+				let letterScore = tile.value;
 
-                // Apply premium squares only for newly placed tiles
-                if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-                    const premium = this.getPremiumSquareType(row, col);
-                    if (premium === "dl") {
-                        letterScore *= 2;
-                        console.log(`Double letter score applied to ${tile.letter}`);
-                    }
-                    if (premium === "tl") {
-                        letterScore *= 3; // <--- was 2, now 3
-                        console.log(`Triple letter score applied to ${tile.letter}`);
-                    }
-                    if (premium === "dw") {
-                        wordMultiplier *= 2;
-                        console.log("Double word score will be applied");
-                    }
-                    if (premium === "tw") {
-                        wordMultiplier *= 3;
-                        console.log("Triple word score will be applied");
-                    }
-                }
+				// Apply premium squares only for newly placed tiles
+				if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+					const premium = this.getPremiumSquareType(row, col);
+					if (premium === "dl") {
+						letterScore *= 2;
+						console.log(`Double letter score applied to ${tile.letter}`);
+					}
+					if (premium === "tl") {
+						letterScore *= 3;
+						console.log(`Triple letter score applied to ${tile.letter}`);
+					}
+					if (premium === "dw") {
+						wordMultiplier *= 2;
+						console.log("Double word score will be applied");
+					}
+					if (premium === "tw") {
+						wordMultiplier *= 3;
+						console.log("Triple word score will be applied");
+					}
+				}
 
-                wordScore += letterScore;
-                console.log(`Letter ${tile.letter} adds ${letterScore} points`);
-            }
+				wordScore += letterScore;
+				console.log(`Letter ${tile.letter} adds ${letterScore} points`);
+			}
 
-            // Apply word multiplier
-            wordScore *= wordMultiplier;
-            console.log(`Final score for "${word}": ${wordScore} points`);
+			// Apply word multiplier
+			wordScore *= wordMultiplier;
+			console.log(`Final score for "${word}": ${wordScore} points`);
 
-            // Add to total score
-            totalScore += wordScore;
+			// Add to total score
+			totalScore += wordScore;
 
-            // Store word and its score for display
-            words.add(
-                JSON.stringify({
-                    word: word,
-                    score: wordScore,
-                }),
-            );
-        });
+			// Store word and its score for display
+			words.add(
+				JSON.stringify({
+					word: word,
+					score: wordScore,
+				}),
+			);
+		});
 
-        // Add bonus for using all 7 tiles
-        if (this.placedTiles.length === 7) {
-            console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles");
-            totalScore += 50;
-        }
+		// Add bonus for using all 7 tiles
+		if (this.placedTiles.length === 7) {
+			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles");
+			totalScore += 50;
+		}
 
-        console.log(`\n=== Final Score Calculation ===`);
-        console.log(
-            `Words formed: ${Array.from(words)
+		console.log(`\n=== Final Score Calculation ===`);
+		console.log(
+			`Words formed: ${Array.from(words)
           .map((w) => JSON.parse(w).word)
           .join(" & ")}`,
-        );
-        console.log(`Total score for this move: ${totalScore}`);
+		);
+		console.log(`Total score for this move: ${totalScore}`);
 
-        return totalScore;
-    }
+		return totalScore;
+	}
 
 	findWordPosition(word) {
 		// Search the board for the starting position of the word
@@ -6376,8 +6368,6 @@ findAIPossiblePlays() {
 	}
 
 	async playWord() {
-		await new Promise(r => setTimeout(r, 0));
-
 		if (this.placedTiles.length === 0) {
 			alert("Please place some tiles first!");
 			return;
@@ -7558,241 +7548,235 @@ findAIPossiblePlays() {
 		portal.classList.remove("active");
 	}
 
-setupEventListeners() {
-    // Initial highlight of valid placements
-    this.highlightValidPlacements();
+	setupEventListeners() {
+		// Initial highlight of valid placements
+		this.highlightValidPlacements();
 
-    // Update highlights when game state changes
-    document.addEventListener("click", () => {
-        this.highlightValidPlacements();
-    });
+		// Update highlights when game state changes
+		document.addEventListener("click", () => {
+			this.highlightValidPlacements();
+		});
 
-    // Add exchange system setup
-    this.setupExchangeSystem();
+		// Add exchange system setup
+		this.setupExchangeSystem();
 
-    // --- Play word buttons (desktop and mobile) ---
-	const playWordBtn = document.getElementById("play-word");
-	if (playWordBtn) playWordBtn.addEventListener("click", () => {
-		// Let the button press effect render first
-		setTimeout(() => this.playWord(), 10);
-	});
+		// Play word button
+		document.getElementById("play-word").addEventListener("click", () => this.playWord());
 
-    const playWordDesktopBtn = document.getElementById("play-word-desktop");
-    if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
+		// Shuffle rack button
+		document.getElementById("shuffle-rack").addEventListener("click", async () => {
+			const rack = document.getElementById("tile-rack");
+			const tiles = [...rack.children];
 
-    const playWordMobileBtn = document.getElementById("play-word-mobile");
-    if (playWordMobileBtn) playWordMobileBtn.addEventListener("click", () => this.playWord());
+			// Disable tile dragging during animation
+			tiles.forEach((tile) => (tile.draggable = false));
 
-    // Shuffle rack button
-    document.getElementById("shuffle-rack").addEventListener("click", async () => {
-        const rack = document.getElementById("tile-rack");
-        const tiles = [...rack.children];
+			// Visual shuffle animation
+			for (let i = 0; i < 5; i++) { // 5 visual shuffles
+				await new Promise((resolve) => {
+					tiles.forEach((tile) => {
+						tile.style.transition = "transform 0.2s ease";
+						tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
+					});
+					setTimeout(resolve, 200);
+				});
+			}
 
-        // Disable tile dragging during animation
-        tiles.forEach((tile) => (tile.draggable = false));
+			// Reset positions with transition
+			tiles.forEach((tile) => {
+				tile.style.transform = "none";
+			});
 
-        // Visual shuffle animation
-        for (let i = 0; i < 5; i++) { // 5 visual shuffles
-            await new Promise((resolve) => {
-                tiles.forEach((tile) => {
-                    tile.style.transition = "transform 0.2s ease";
-                    tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
-                });
-                setTimeout(resolve, 200);
-            });
-        }
+			// Actual shuffle logic
+			for (let i = this.playerRack.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+			}
 
-        // Reset positions with transition
-        tiles.forEach((tile) => {
-            tile.style.transform = "none";
-        });
+			// Wait for position reset animation to complete
+			setTimeout(() => {
+				this.renderRack();
+			}, 200);
 
-        // Actual shuffle logic
-        for (let i = this.playerRack.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
-        }
+			// Re-enable dragging
+			setTimeout(() => {
+				const newTiles = document.querySelectorAll("#tile-rack .tile");
+				newTiles.forEach((tile) => (tile.draggable = true));
+			}, 400);
+		});
 
-        // Wait for position reset animation to complete
-        setTimeout(() => {
-            this.renderRack();
-        }, 200);
+		// Skip turn button
+		document.getElementById("skip-turn").addEventListener("click", () => {
+			if (this.currentTurn === "player") {
+				this.consecutiveSkips++;
+				this.currentTurn = "ai";
+				this.addToMoveHistory("Player", "SKIP", 0);
+				this.updateGameState();
+				this.highlightValidPlacements();
+				if (!this.checkGameEnd()) {
+					this.aiTurn();
+				}
+			}
+		});
 
-        // Re-enable dragging
-        setTimeout(() => {
-            const newTiles = document.querySelectorAll("#tile-rack .tile");
-            newTiles.forEach((tile) => (tile.draggable = true));
-        }, 400);
-    });
+		// Quit game button
+		const quitButton = document.getElementById("quit-game");
+		if (quitButton) {
+			quitButton.addEventListener("click", () => {
+				if (this.gameEnded) return; // Prevent multiple triggers
 
-    // Skip turn button
-    document.getElementById("skip-turn").addEventListener("click", () => {
-        if (this.currentTurn === "player") {
-            this.consecutiveSkips++;
-            this.currentTurn = "ai";
-            this.addToMoveHistory("Player", "SKIP", 0);
-            this.updateGameState();
-            this.highlightValidPlacements();
-            if (!this.checkGameEnd()) {
-                this.aiTurn();
-            }
-        }
-    });
+				// Set the computer as winner since player quit
+				this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+				this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+				this.gameEnded = true;
 
-    // Quit game button
-    const quitButton = document.getElementById("quit-game");
-    if (quitButton) {
-        quitButton.addEventListener("click", () => {
-            if (this.gameEnded) return; // Prevent multiple triggers
+				// Update scores before animation
+				this.updateScores();
 
-            // Set the computer as winner since player quit
-            this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
-            this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
-            this.gameEnded = true;
+				// Add the quit move to history
+				if (this.moveHistory) {
+					this.moveHistory.push({
+						player: "Player",
+						word: "QUIT",
+						score: 0,
+						timestamp: new Date(),
+					});
+					this.updateMoveHistory();
+				}
 
-            // Update scores before animation
-            this.updateScores();
+				// Trigger game over animation
+				this.announceWinner();
+			});
+		}
 
-            // Add the quit move to history
-            if (this.moveHistory) {
-                this.moveHistory.push({
-                    player: "Player",
-                    word: "QUIT",
-                    score: 0,
-                    timestamp: new Date(),
-                });
-                this.updateMoveHistory();
-            }
+		// Print history button
+		document.getElementById("print-history").addEventListener("click", async () => {
+			const printWindow = window.open("", "_blank");
+			const gameDate = new Date().toLocaleString();
 
-            // Trigger game over animation
-            this.announceWinner();
-        });
-    }
+			// Show loading message
+			printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Puzzle Game History - ${gameDate}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+                            .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                            .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
+                            .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
+                            .part-of-speech { color: #e67e22; font-style: italic; }
+                            .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+                            .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loading">Loading definitions...</div>
+                    </body>
+                </html>
+            `);
 
-    // Print history button
-    document.getElementById("print-history").addEventListener("click", async () => {
-        const printWindow = window.open("", "_blank");
-        const gameDate = new Date().toLocaleString();
+			// Gather all unique words from move history
+			const uniqueWords = [...new Set(
+				this.moveHistory
+				.map((move) => move.word)
+				.filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+			)];
 
-        // Show loading message
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Puzzle Game History - ${gameDate}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-                        .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
-                        .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
-                        .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
-                        .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
-                        .part-of-speech { color: #e67e22; font-style: italic; }
-                        .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
-                        .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
-                    </style>
-                </head>
-                <body>
-                    <div class="loading">Loading definitions...</div>
-                </body>
-            </html>
-        `);
+			// Fetch definitions for all words
+			const wordDefinitions = new Map();
+			for (const word of uniqueWords) {
+				const definitions = await this.getWordDefinition(word);
+				if (definitions) {
+					wordDefinitions.set(word, definitions);
+				}
+			}
 
-        // Gather all unique words from move history
-        const uniqueWords = [...new Set(
-            this.moveHistory
-                .map((move) => move.word)
-                .filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
-        )];
+			// Generate and set the content
+			const content = this.generatePrintContent(gameDate, wordDefinitions);
+			printWindow.document.body.innerHTML = content;
+			printWindow.document.close();
+			printWindow.focus();
+			printWindow.print();
+		});
 
-        // Fetch definitions for all words
-        const wordDefinitions = new Map();
-        for (const word of uniqueWords) {
-            const definitions = await this.getWordDefinition(word);
-            if (definitions) {
-                wordDefinitions.set(word, definitions);
-            }
-        }
+		// Mobile notifications handling
+		if (isMobileDevice()) {
+			const notifications = document.querySelectorAll('.mobile-notice');
+			notifications.forEach(notice => {
+				let startX;
+				let currentX;
+				let isDragging = false;
 
-        // Generate and set the content
-        const content = this.generatePrintContent(gameDate, wordDefinitions);
-        printWindow.document.body.innerHTML = content;
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-    });
+				// Touch start handler
+				notice.addEventListener('touchstart', (e) => {
+					startX = e.touches[0].clientX;
+					currentX = startX;
+					isDragging = true;
+					notice.classList.add('swiping');
+				}, {
+					passive: true
+				});
 
-    // Mobile notifications handling
-    if (isMobileDevice()) {
-        const notifications = document.querySelectorAll('.mobile-notice');
-        notifications.forEach(notice => {
-            let startX;
-            let currentX;
-            let isDragging = false;
+				// Touch move handler
+				notice.addEventListener('touchmove', (e) => {
+					if (!isDragging) return;
+					currentX = e.touches[0].clientX;
+					const diff = currentX - startX;
+					if (diff > 0) { // Only allow right swipe
+						notice.style.transform = `translateX(${diff}px)`;
+					}
+				}, {
+					passive: true
+				});
 
-            // Touch start handler
-            notice.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                currentX = startX;
-                isDragging = true;
-                notice.classList.add('swiping');
-            }, { passive: true });
+				// Touch end handler
+				notice.addEventListener('touchend', () => {
+					if (!isDragging) return;
+					isDragging = false;
+					notice.classList.remove('swiping');
 
-            // Touch move handler
-            notice.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
-                if (diff > 0) { // Only allow right swipe
-                    notice.style.transform = `translateX(${diff}px)`;
-                }
-            }, { passive: true });
+					if (currentX - startX > 100) { // Swipe threshold
+						notice.classList.add('removing');
+						setTimeout(() => notice.remove(), 300);
+					} else {
+						notice.style.transform = '';
+					}
+				});
 
-            // Touch end handler
-            notice.addEventListener('touchend', () => {
-                if (!isDragging) return;
-                isDragging = false;
-                notice.classList.remove('swiping');
+				// Double-tap to close
+				let lastTap = 0;
+				notice.addEventListener('touchend', (e) => {
+					const currentTime = new Date().getTime();
+					const tapLength = currentTime - lastTap;
+					if (tapLength < 500 && tapLength > 0) {
+						notice.classList.add('removing');
+						setTimeout(() => notice.remove(), 300);
+						e.preventDefault();
+					}
+					lastTap = currentTime;
+				});
 
-                if (currentX - startX > 100) { // Swipe threshold
-                    notice.classList.add('removing');
-                    setTimeout(() => notice.remove(), 300);
-                } else {
-                    notice.style.transform = '';
-                }
-            });
+				// Make close button more reliable
+				const closeButton = notice.querySelector('.notice-close');
+				if (closeButton) {
+					closeButton.addEventListener('click', (e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						notice.classList.add('removing');
+						setTimeout(() => notice.remove(), 300);
+					});
 
-            // Double-tap to close
-            let lastTap = 0;
-            notice.addEventListener('touchend', (e) => {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-                if (tapLength < 500 && tapLength > 0) {
-                    notice.classList.add('removing');
-                    setTimeout(() => notice.remove(), 300);
-                    e.preventDefault();
-                }
-                lastTap = currentTime;
-            });
-
-            // Make close button more reliable
-            const closeButton = notice.querySelector('.notice-close');
-            if (closeButton) {
-                closeButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    notice.classList.add('removing');
-                    setTimeout(() => notice.remove(), 300);
-                });
-
-                closeButton.addEventListener('touchend', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    notice.classList.add('removing');
-                    setTimeout(() => notice.remove(), 300);
-                });
-            }
-        });
-    }
-}
+					closeButton.addEventListener('touchend', (e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						notice.classList.add('removing');
+						setTimeout(() => notice.remove(), 300);
+					});
+				}
+			});
+		}
+	}
 
 	simulateEndgameScenario() {
 		// Clear board first

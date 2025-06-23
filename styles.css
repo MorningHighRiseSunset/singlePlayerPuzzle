@@ -369,23 +369,50 @@ button:active {
 
 /* --- Utility --- */
 .board-cell.droppable-hover { background: rgba(0,120,255,0.18); }
+
 .hint-box {
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-  background: #fffbe7;
-  padding: 6px 12px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  max-width: 180px;
-  min-width: 0;
-  font-size: 0.92em;
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Place it just below the board/tile rack */
+  bottom: 70px; /* Height of mobile bottom bar or enough to clear submit button */
   z-index: 1200;
-  transform: translateY(120%);
-  transition: transform 0.3s, opacity 0.2s;
-  opacity: 0.95;
+  background: #fffbe7;
+  padding: 10px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  max-width: none;
+  min-width: 0;
+  font-size: 1em;
+  opacity: 0.97;
   pointer-events: auto;
+  margin: 0 auto;
+  transform: none;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.hint-box.show {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .hint-box {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    bottom: 60px; /* Just above the mobile bottom bar */
+    padding: 12px 8vw;
+    font-size: 1em;
+    z-index: 3100;
+  }
+}
+
 .hint-box.show {
   transform: translateY(0);
   opacity: 1;
