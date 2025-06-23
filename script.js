@@ -1,3 +1,5 @@
+let shownBlunders = new Set();
+
 function isMobileDevice() {
 	return (
 		window.innerWidth <= 768 ||
@@ -157,10 +159,23 @@ class ScrabbleGame {
 		this.generateTileBag();
 		this.selectedTile = null;
 		this.isMobile = isMobileDevice();
+		this.hintBoxBlocked = false;
+		this.hintBoxTimeout = null;
+		this.hintInterval = null;
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
 		this.init();
+	}
+
+	// Helper to block/unblock the hint box
+	blockHintBox() {
+		this.hintBoxBlocked = true;
+		if (this.hintBox) this.hintBox.classList.remove("show");
+		clearTimeout(this.hintBoxTimeout);
+	}
+	unblockHintBox() {
+		this.hintBoxBlocked = false;
 	}
 
 	showAINotification(message) {
@@ -324,6 +339,9 @@ class ScrabbleGame {
 	async aiTurn() {
 		console.log("AI thinking...");
 
+		// --- Block hint popup while AI is thinking ---
+		this.blockHintBox();
+
 		// Show "AI is thinking..." message with animated dots
 		let thinkingMessage = document.createElement("div");
 		thinkingMessage.className = "ai-thinking-message";
@@ -376,8 +394,6 @@ class ScrabbleGame {
 		document.body.appendChild(thinkingMessage);
 		setTimeout(() => thinkingMessage.style.opacity = "1", 100);
 
-		let dotsInterval;
-		let running = true;
 		let startTime = Date.now();
 		let maxTime = 5 * 60 * 1000; // 5 minutes
 		let bestPlay = null;
@@ -399,6 +415,9 @@ class ScrabbleGame {
 			updateThinkingText("AI is dumbfounded and is considering exchanging tiles...");
 		}, 4 * 60 * 1000);
 
+		// --- Track shown blunders to avoid repeats ---
+		const shownBlunders = new Set();
+
 		try {
 			const shouldExchange = this.shouldExchangeTiles();
 			if (shouldExchange && this.tiles.length >= 5) {
@@ -406,6 +425,7 @@ class ScrabbleGame {
 					thinkingMessage.style.opacity = "0";
 					setTimeout(() => {
 						thinkingMessage.remove();
+						this.unblockHintBox();
 						this.handleAIExchange();
 					}, 300);
 				}, 1000);
@@ -427,10 +447,13 @@ class ScrabbleGame {
 								updateThinkingText("AI found a promising move!");
 							}
 						} else {
-							if (Date.now() - lastBlunderTime > 1200) {
-								updateThinkingText(`🤦 AI made a blunder: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Rethinking...`);
+							// Only show new blunders
+							const blunderKey = validity.invalidWords.join(",");
+							if (!shownBlunders.has(blunderKey) && Date.now() - lastBlunderTime > 1200) {
+								updateThinkingText(`🤦 AI made a blunder: ${validity.invalidWords.join(", ")}. Rethinking...`);
 								blunderCount++;
 								lastBlunderTime = Date.now();
+								shownBlunders.add(blunderKey);
 							}
 							await new Promise(res => setTimeout(res, 400));
 						}
@@ -466,6 +489,7 @@ class ScrabbleGame {
 					thinkingMessage.style.opacity = "0";
 					setTimeout(() => {
 						thinkingMessage.remove();
+						this.unblockHintBox();
 						this.executeAIPlay(bestPlay);
 					}, 300);
 				}, 1000);
@@ -477,12 +501,14 @@ class ScrabbleGame {
 			thinkingMessage.style.opacity = "0";
 			setTimeout(() => {
 				thinkingMessage.remove();
+				this.unblockHintBox();
 				this.handleAIExchange();
 			}, 600);
 
 		} catch (error) {
 			console.error("Error in AI turn:", error);
 			thinkingMessage.remove();
+			this.unblockHintBox();
 			this.handleAIExchange();
 		}
 	}
@@ -1012,72 +1038,41 @@ class ScrabbleGame {
 		const hints = [
 			"Triple Word Score (TW) squares multiply the entire word score by 3!",
 			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
-			"Using all 7 tiles in one move gives you a 50-point bonus!",
-			"Blank tiles can be any letter, but are worth 0 points.",
-			"Q and Z are worth 10 points each - try to use them on multiplier squares!",
-			"Words must connect to existing tiles on the board (except for the first move).",
-			"The center square (marked with ⚜) must be used in the first move.",
-			"Try to save S tiles - they're great for making parallel words!",
-			"High-scoring letters on TL squares can lead to massive points!",
-			"Plan ahead - save valuable tiles for premium squares.",
-			"Remember: all new words formed must be valid dictionary words.",
-			"Cross-words count too! Check both directions when placing tiles.",
-			"You can exchange tiles instead of playing a word - but you'll lose your turn.",
-			"The letter 'S' can often be added to existing words to form new ones!",
-			"Look for opportunities to play parallel words along existing ones.",
-			"Short two-letter words can be valuable for creating multiple scoring opportunities.",
-			"Common prefixes like 'RE-', 'UN-', and 'IN-' can help extend words.",
-			"Common suffixes like '-ING', '-ED', and '-S' can help extend words.",
-			"Keep a balance of vowels and consonants in your rack.",
-			"Try to use high-scoring letters (J, X, Q, Z) on premium squares.",
-			"Playing through existing words can create multiple scoring opportunities.",
-			"Look for hook letters that can change existing words (e.g., HEAT to CHEAT).",
-			"Save some good letters for later when better opportunities arise.",
-			"Consider exchanging tiles if you have too many consonants or vowels.",
-			"The letter 'Q' is usually followed by 'U' - save a 'U' if you have a 'Q'.",
-			"Think defensively - avoid setting up TW squares for your opponent.",
-			"The letters A, E, I, O, U are most common - use them wisely to connect words.",
-			"Playing across multiple premium squares multiplies your score significantly!",
-			"Look for opportunities to form two or more words in a single play.",
-			"The more letters you play, the higher your potential score.",
-			"Remember common two-letter words like AA, AB, AD, AE, AG, AH, AI, AL, AM, AN, AR, AS, AT, AW, AX, AY.",
-			"Challenge yourself to use all seven tiles for the 50-point bonus!",
-			"Position high-value letters strategically to maximize points.",
-			"Watch out for blocked positions where no more words can be played.",
-			"Try to keep at least two vowels in your rack for flexibility.",
-			"The board edges can be valuable for high-scoring plays.",
-			"Look for opportunities to create multiple small words simultaneously.",
-			"Some letters (like S, E, R, T) can be saved for extending existing words.",
-			"Consider blocking premium squares if your opponent is leading.",
-			"Use blank tiles strategically - they're most valuable for high-scoring plays.",
-			"Remember that longer words aren't always better - sometimes short words score more.",
-			"Keep track of which high-value letters have been played.",
-			"Look for opportunities to play 'bingos' (using all 7 tiles) for the bonus.",
-			"Consider the remaining tiles when planning your strategy.",
-			"Some premium squares are more valuable than others based on playable words.",
-			"Contact Maurice's Email @ Maurice13stu@gmail.com if you have any suggestions!",
-			"Blank tiles (★) can represent any letter - choose wisely for maximum impact!",
-			"The center star (⚜) in the middle of the board must be covered on the first turn.",
-			"Premium squares with multiple effects compound - plan combinations carefully!",
-			"Letters like J, X, Q, and Z are rare - save them for special squares if possible.",
-			"Special colored squares only apply their bonus when first covered.",
-			"Premium square bonuses stack with the 50-point bonus for using all tiles!",
-			"Once a premium square is used, it no longer provides its bonus in future turns.",
-			"Blank tiles keep their assigned letter for the entire game.",
-			"Some squares multiply your entire word score - aim for these with long words!",
-			"Premium squares near the edges can be reached with shorter words.",
-			"Special squares work best with high-value letters - plan your rack accordingly.",
-			"The rarest letters (J, X, Q, Z) paired with premium squares can score big points!",
-			"Center star (⚜) starts the game - build outward from there strategically.",
-			"Premium square effects apply only to newly placed tiles, not existing ones.",
-			"Multiple word bonuses can apply when forming several words in one turn!",
+			"Double Word Score (DW) squares double your entire word score.",
+			"Double Letter Score (DL) squares double the value of a single letter.",
+			"Try to use all 7 tiles in one turn for a 50-point BINGO bonus!",
+			"You can exchange tiles if you don't like your rack.",
+			"Short words like 'QI', 'ZA', and 'JO' are valid and useful.",
+			"Parallel plays can score big by forming multiple words at once.",
+			"Try to block your opponent from premium squares.",
+			"Save high-value letters like Q, Z, X, and J for premium squares.",
+			"Don't forget: the first word must cover the center star.",
+			"You can shuffle your rack to get a new perspective.",
+			"Use blank tiles (*) as any letter, but they score zero points.",
+			"Keep a good balance of vowels and consonants in your rack.",
+			"Adding an 'S' can pluralize and create new words for extra points.",
+			"Look for hooks: adding a letter to an existing word to form a new one.",
+			"Try to build off existing words for more scoring opportunities.",
+			"If you're stuck, exchange some tiles or skip your turn.",
+			"The game ends when all tiles are used or both players pass 2 times.",
+			"You can print your move history and word definitions after the game.",
+			"Hover over a tile to see its point value.",
+			"You can undo your move before submitting if you make a mistake.",
+			"Use the exchange portal to swap out unwanted tiles.",
+			"Plan ahead: don't open up triple word squares for your opponent!",
+			"Try to form two or more words in one move for extra points.",
+			"The AI gets smarter as the game progresses—watch out!",
+			"You can click the 'Simulate Endgame' button to test the AI.",
+			"Words must be connected to existing tiles after the first move.",
+			"Use the 'Skip Turn' button if you can't play.",
+			"Good luck and have fun!"
 		];
 
 		let currentHintIndex = 0;
 		const hintBox = document.getElementById("hint-box");
 		const hintText = document.getElementById("hint-text");
 
-		// Fisher-Yates shuffle algorithm
+		// Fisher-Yates shuffle
 		const shuffleArray = (array) => {
 			for (let i = array.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1));
@@ -1086,44 +1081,45 @@ class ScrabbleGame {
 			return array;
 		};
 
-		// Create a shuffled copy of hints
 		let shuffledHints = shuffleArray([...hints]);
 
+		// Show a hint, but only if not blocked
 		const showNextHint = () => {
-			// If we've shown all hints, reshuffle and start over
+			if (this.hintBoxBlocked) return;
 			if (currentHintIndex >= shuffledHints.length) {
 				shuffledHints = shuffleArray([...hints]);
 				currentHintIndex = 0;
 			}
-
 			hintText.textContent = shuffledHints[currentHintIndex];
 			hintBox.classList.add("show");
 
-			setTimeout(() => {
+			clearTimeout(this.hintBoxTimeout);
+			this.hintBoxTimeout = setTimeout(() => {
 				hintBox.classList.remove("show");
-			}, 5000); // Hide after 5 seconds
+			}, 5000);
 
 			currentHintIndex++;
 		};
 
-		// Show first hint after 5 seconds
+		// Show first hint after 5 seconds, then every 30 seconds
 		setTimeout(() => {
 			showNextHint();
-			// Then show new hints every 30 seconds
-			setInterval(showNextHint, 30000);
+			this.hintInterval = setInterval(showNextHint, 30000);
 		}, 5000);
 
 		// Show random hint on hover
 		hintBox.addEventListener("mouseenter", () => {
-			// Show a random hint from the shuffled array
-			hintText.textContent =
-				shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
+			if (this.hintBoxBlocked) return;
+			hintText.textContent = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
 			hintBox.classList.add("show");
 		});
-
 		hintBox.addEventListener("mouseleave", () => {
 			hintBox.classList.remove("show");
 		});
+
+		// Store for later use
+		this.hintBox = hintBox;
+		this.showNextHint = showNextHint;
 	}
 
 	findAIPossiblePlays() {
