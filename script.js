@@ -5546,14 +5546,18 @@ class ScrabbleGame {
 			);
 			cell.innerHTML = "";
 
-			// --- FIX: Restore the center star ONLY if the cell is empty and it's the center cell ---
-			if (row === 7 && col === 7 && cell.childElementCount === 0) {
-				const centerStar = document.createElement("span");
-				centerStar.textContent = "⚜";
-				centerStar.className = "center-star";
-				cell.appendChild(centerStar);
+			// Always restore the center star if this is the center cell and it's empty
+			if (row === 7 && col === 7) {
+				const existingStar = cell.querySelector('.center-star');
+				if (!existingStar && !cell.querySelector('.tile')) {
+					const centerStar = document.createElement("span");
+					centerStar.textContent = "⚜";
+					centerStar.className = "center-star";
+					cell.appendChild(centerStar);
+				}
 			}
 
+			// Always return the tile to the player's rack
 			this.playerRack.push(tile);
 		});
 
@@ -6584,52 +6588,82 @@ class ScrabbleGame {
 		return false;
 	}
 
-	announceWinner() {
-		// Calculate leftover tile points for both players
-		let playerLeftover = 0;
-		let aiLeftover = 0;
+	    announceWinner() {
+        // Calculate leftover tile points for both players
+        let playerLeftover = 0;
+        let aiLeftover = 0;
 
-		// Sum up leftover points for player
-		this.playerRack.forEach(tile => {
-			playerLeftover += tile.value || 0;
-		});
+        // Sum up leftover points for player
+        this.playerRack.forEach(tile => {
+            playerLeftover += tile.value || 0;
+        });
 
-		// Sum up leftover points for AI
-		this.aiRack.forEach(tile => {
-			aiLeftover += tile.value || 0;
-		});
+        // Sum up leftover points for AI
+        this.aiRack.forEach(tile => {
+            aiLeftover += tile.value || 0;
+        });
 
-		// Adjust scores: subtract own leftover, add opponent's leftover
-		this.playerScore -= playerLeftover;
-		this.aiScore -= aiLeftover;
-		this.aiScore += playerLeftover;
-		this.playerScore += aiLeftover;
+        // Adjust scores: subtract own leftover, add opponent's leftover
+        this.playerScore -= playerLeftover;
+        this.aiScore -= aiLeftover;
+        this.aiScore += playerLeftover;
+        this.playerScore += aiLeftover;
 
-		// Prevent negative scores
-		this.playerScore = Math.max(0, this.playerScore);
-		this.aiScore = Math.max(0, this.aiScore);
+        // Prevent negative scores
+        this.playerScore = Math.max(0, this.playerScore);
+        this.aiScore = Math.max(0, this.aiScore);
 
-		// Update scores before animation
-		this.updateScores();
+        // Update scores before animation
+        this.updateScores();
 
-		const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
-		const finalScore = Math.max(this.playerScore, this.aiScore);
+        const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
+        const finalScore = Math.max(this.playerScore, this.aiScore);
 
-		let winOverlay = document.querySelector(".win-overlay");
-		if (!winOverlay) {
-			winOverlay = document.createElement("div");
-			winOverlay.className = "win-overlay";
+        let winOverlay = document.querySelector(".win-overlay");
+        if (!winOverlay) {
+            winOverlay = document.createElement("div");
+            winOverlay.className = "win-overlay";
 
-			const messageBox = document.createElement("div");
-			messageBox.className = "win-message";
-			winOverlay.appendChild(messageBox);
+            const messageBox = document.createElement("div");
+            messageBox.className = "win-message";
+            winOverlay.appendChild(messageBox);
 
-			document.body.appendChild(winOverlay);
-		}
+            document.body.appendChild(winOverlay);
+        }
 
-		// Get the message box
-		const messageBox = winOverlay.querySelector(".win-message");
-		messageBox.innerHTML = `
+        // --- ADD "X" CLOSE BUTTON ---
+        let closeBtn = winOverlay.querySelector('.win-close-btn');
+        if (!closeBtn) {
+            closeBtn = document.createElement('button');
+            closeBtn.className = 'win-close-btn';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.title = 'Close';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 18px;
+                right: 24px;
+                font-size: 2em;
+                background: transparent;
+                border: none;
+                color: #888;
+                cursor: pointer;
+                z-index: 10;
+                transition: color 0.2s;
+            `;
+            closeBtn.onmouseenter = () => closeBtn.style.color = "#222";
+            closeBtn.onmouseleave = () => closeBtn.style.color = "#888";
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                winOverlay.classList.remove("active", "lose");
+                winOverlay.style.display = "none";
+            };
+            winOverlay.appendChild(closeBtn);
+        }
+        winOverlay.style.display = ""; // Ensure overlay is visible if re-used
+
+        // Get the message box
+        const messageBox = winOverlay.querySelector(".win-message");
+        messageBox.innerHTML = `
           <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
           <p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
           <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
@@ -6653,24 +6687,24 @@ class ScrabbleGame {
           </button>
       `;
 
-		// Clear any existing classes
-		winOverlay.classList.remove("active", "lose");
-		messageBox.classList.remove("celebrate");
+        // Clear any existing classes
+        winOverlay.classList.remove("active", "lose");
+        messageBox.classList.remove("celebrate");
 
-		// Add appropriate classes
-		if (winner === "Computer") {
-			winOverlay.classList.add("lose");
-		}
+        // Add appropriate classes
+        if (winner === "Computer") {
+            winOverlay.classList.add("lose");
+        }
 
-		// Small delay to ensure transitions work properly
-		requestAnimationFrame(() => {
-			winOverlay.classList.add("active");
-			messageBox.classList.add("celebrate");
+        // Small delay to ensure transitions work properly
+        requestAnimationFrame(() => {
+            winOverlay.classList.add("active");
+            messageBox.classList.add("celebrate");
 
-			// Create the confetti/emoji effect
-			this.createConfettiEffect();
-		});
-	}
+            // Create the confetti/emoji effect
+            this.createConfettiEffect();
+        });
+    }
 
 	createConfettiEffect() {
 		// Different effects for win vs lose

@@ -227,11 +227,12 @@ body {
 }
 
 /* --- Buttons --- */
-button, .language-button {
+button, .language-button,
+#play-word-mobile, .play-word-mobile {
   background: linear-gradient(145deg, var(--primary), #151d69);
   color: #fff;
   border: none;
-  padding: 12px;
+  padding: 12px 18px;
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
@@ -243,7 +244,8 @@ button, .language-button {
   overflow: hidden;
   outline: none;
 }
-button:after, .language-button:after {
+button:after, .language-button:after,
+#play-word-mobile:after, .play-word-mobile:after {
   content: "";
   display: block;
   position: absolute;
@@ -255,18 +257,22 @@ button:after, .language-button:after {
   transition: width 0.4s ease, height 0.4s ease;
   pointer-events: none;
 }
-button:active:after, .language-button:active:after {
+button:active:after, .language-button:active:after,
+#play-word-mobile:active:after, .play-word-mobile:active:after {
   width: 200px; height: 200px;
 }
-button:hover, .language-button:hover {
+button:hover, .language-button:hover,
+#play-word-mobile:hover, .play-word-mobile:hover {
   background: linear-gradient(145deg, var(--secondary), #403991);
   transform: translateY(-2px) scale(1.03);
   box-shadow: 0 4px 16px var(--accent), 0 2px 8px rgba(0,0,0,0.12), 0 0 16px 2px #ffd70055;
 }
-button:focus-visible {
+button:focus-visible,
+#play-word-mobile:focus-visible, .play-word-mobile:focus-visible {
   outline: 2px solid var(--accent);
 }
-button:active {
+button:active,
+#play-word-mobile:active, .play-word-mobile:active {
   box-shadow: 0 0 0 4px #ffd70044, 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -363,26 +369,31 @@ button:active {
 
 /* --- Hint Box --- */
 #hint-box {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 70px;
-  z-index: 1200;
-  background: #fffbe7;
-  padding: 10px 24px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  max-width: 100vw;
+  border-radius: 0;
+  bottom: 300px;   /* <-- Move the hint box higher up on mobile */
+  top: auto;
+  margin-top: 0;
+  padding: 12px 8vw 12px 0;
   font-size: 1em;
-  opacity: 0.97;
-  pointer-events: auto;
-  transition: opacity 0.2s;
+  z-index: 3100;
+  transform: none;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   opacity: 0;
   visibility: hidden;
+  background: #fffbe7;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  pointer-events: auto;
+  transition: opacity 0.2s;
 }
 
+/* Show the hint box */
 #hint-box.show {
   opacity: 1;
   visibility: visible;
@@ -485,7 +496,7 @@ button:active {
     /* Optional: add a subtle background for visibility */
     /* background: rgba(255,255,255,0.85); */
   }
-  #play-word-mobile {
+  #play-word-mobile, .play-word-mobile {
       display: inline-block;
       min-width: 0;
       width: auto;
@@ -529,11 +540,22 @@ button:active {
     width: 100vw;
     max-width: 100vw;
     border-radius: 0;
-    bottom: 60px;
-    padding: 12px 8vw;
+    bottom: 300px;   /* <-- Move the hint box higher up on mobile */
+    top: auto;
+    margin-top: 0;
+    padding: 12px 8vw 12px 0;
     font-size: 1em;
     z-index: 3100;
     transform: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    opacity: 0;
+    visibility: hidden;
+    background: #fffbe7;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    pointer-events: auto;
+    transition: opacity 0.2s;
   }
 }
 
