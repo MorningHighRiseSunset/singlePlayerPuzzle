@@ -391,7 +391,7 @@ class ScrabbleGame {
 		let dotsInterval;
 		let running = true;
 		let startTime = Date.now();
-		let maxTime = 5000;
+		let maxTime = 5 * 60 * 1000; // 5 minutes
 		let bestPlay = null;
 		let bestScore = -Infinity;
 		let runCount = 0;
