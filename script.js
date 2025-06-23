@@ -46,47 +46,44 @@ class Trie {
         node.isWord = true;
     }
 
-    // Find all words matching a pattern (e.g. "A..E.")
-    findWordsWithPattern(pattern, rack, node = this.root, index = 0, path = "", used = {}, blanks = 0, results = new Set()) {
-        if (index === pattern.length) {
-            if (node.isWord) results.add(path);
-            return results;
-        }
-        const c = pattern[index];
-        if (c === ".") {
-            // Try all rack letters
-            for (const letter of rack) {
-                if ((used[letter] || 0) < rack.filter(l => l === letter).length) {
-                    if (node.children[letter]) {
-                        used[letter] = (used[letter] || 0) + 1;
-                        this.findWordsWithPattern(pattern, rack, node.children[letter], index + 1, path + letter, used, blanks, results);
-                        used[letter]--;
-                    }
-                }
-            }
-            // Try blank tile as any letter
-            if ((used["*"] || 0) < rack.filter(l => l === "*").length) {
-                for (const letter in node.children) {
-                    used["*"] = (used["*"] || 0) + 1;
-                    this.findWordsWithPattern(pattern, rack, node.children[letter], index + 1, path + letter, used, blanks + 1, results);
-                    used["*"]--;
-                }
-            }
-        } else {
-            // Fixed letter (from board)
-            if (node.children[c]) {
-                this.findWordsWithPattern(pattern, rack, node.children[c], index + 1, path + c, used, blanks, results);
-            }
-        }
-        return results;
-    }
+    // Generate all words from rack (with blanks)
+	findWordsFromRack(rack, minLen = 2, maxLen = 7) {
+		const results = new Set();
+		const freq = {};
+		for (const l of rack) freq[l] = (freq[l] || 0) + 1;
 
-    // Find all words that can be formed with rack and must fit anchor pattern (e.g. ".A.E.")
-    findWordsWithAnchors(anchorPattern, rack) {
-        // anchorPattern: string, e.g. ".A.E."
-        // rack: array of letters (including "*")
-        return Array.from(this.findWordsWithPattern(anchorPattern, rack));
-    }
+		const memo = new Map();
+
+		const recurse = (node, path, freqMap, usedBlanks, depth) => {
+			// Memoization key: path + sorted freqMap + usedBlanks
+			const key = path + "|" + Object.entries(freqMap).sort().map(([k, v]) => k + v).join("") + "|" + usedBlanks;
+			if (memo.has(key)) return;
+			memo.set(key, true);
+
+			// Early pruning: if not enough tiles left to reach minLen, stop
+			const tilesLeft = Object.values(freqMap).reduce((a, b) => a + b, 0);
+			if (path.length + tilesLeft < minLen) return;
+
+			if (node.isWord && path.length >= minLen && path.length <= maxLen) {
+				results.add(path);
+			}
+			if (path.length >= maxLen) return;
+
+			for (const c in node.children) {
+				if (freqMap[c] > 0) {
+					freqMap[c]--;
+					recurse(node.children[c], path + c, freqMap, usedBlanks, depth + 1);
+					freqMap[c]++;
+				} else if (freqMap["*"] > 0) {
+					freqMap["*"]--;
+					recurse(node.children[c], path + c, freqMap, usedBlanks + 1, depth + 1);
+					freqMap["*"]++;
+				}
+			}
+		};
+		recurse(this.root, "", { ...freq }, 0, 0);
+		return Array.from(results);
+	}
 }
 
 class ScrabbleGame {
@@ -394,7 +391,7 @@ class ScrabbleGame {
 		let dotsInterval;
 		let running = true;
 		let startTime = Date.now();
-		let maxTime = 5 * 60 * 1000; // 5 minutes
+		let maxTime = 5000;
 		let bestPlay = null;
 		let bestScore = -Infinity;
 		let runCount = 0;
@@ -1145,84 +1142,83 @@ findAIPossiblePlays() {
     try {
         const possiblePlays = [];
         const availableLetters = this.aiRack.map(tile => tile.letter);
+
+        // Use anchor squares only (except first move)
         const anchors = this.isFirstMove
             ? [{ row: 7, col: 7 }]
             : this.findAnchors();
 
+        const minWordLength = this.isFirstMove ? 2 : 2; // Allow 2-letter words always
+
+        // Try all valid words from rack
+        const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
+
         for (const anchor of anchors) {
-            for (const isHorizontal of [true, false]) {
-                // 1. Build the pattern for this anchor (e.g. "..A..")
-                const pattern = this.buildAnchorPattern(anchor, isHorizontal);
+            for (const word of possibleWords) {
+                // Try both directions
+                for (const isHorizontal of [true, false]) {
+                    // Try to fit the word so it covers the anchor
+                    for (let offset = 0; offset < word.length; offset++) {
+                        const row = anchor.row - (isHorizontal ? 0 : offset);
+                        const col = anchor.col - (isHorizontal ? offset : 0);
+                        if (row < 0 || col < 0) continue;
+                        if (row > 14 || col > 14) continue;
+                        if (isHorizontal && col + word.length > 15) continue;
+                        if (!isHorizontal && row + word.length > 15) continue;
 
-                // 2. Use Trie to get only words that fit the pattern and rack
-                const words = this.trie.findWordsWithAnchors(pattern, availableLetters);
-
-                // 3. Try each word at this anchor
-                for (const word of words) {
-                    // Calculate starting position so word fits the pattern at anchor
-                    const offset = pattern.indexOf('.');
-                    const row = anchor.row - (isHorizontal ? 0 : offset);
-                    const col = anchor.col - (isHorizontal ? offset : 0);
-
-                    if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
-                        possiblePlays.push({
-                            word,
-                            startPos: { row, col },
-                            isHorizontal,
-                            score: this.calculatePotentialScore(word, row, col, isHorizontal)
-                        });
+                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal,
+                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
+                            });
+                        }
                     }
                 }
             }
         }
 
-        // Sort and return
+        // Always try high-value two-letter words as a fallback
+        const highValueShortWords = ["QI", "XI", "ZA", "JO", "QO", "EX", "OX", "AX"];
+        for (const word of highValueShortWords) {
+            for (const anchor of anchors) {
+                for (const isHorizontal of [true, false]) {
+                    for (let offset = 0; offset < word.length; offset++) {
+                        const row = anchor.row - (isHorizontal ? 0 : offset);
+                        const col = anchor.col - (isHorizontal ? offset : 0);
+                        if (row < 0 || col < 0) continue;
+                        if (row > 14 || col > 14) continue;
+                        if (isHorizontal && col + word.length > 15) continue;
+                        if (!isHorizontal && row + word.length > 15) continue;
+
+                        if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
+                            possiblePlays.push({
+                                word,
+                                startPos: { row, col },
+                                isHorizontal,
+                                score: this.calculatePotentialScore(word, row, col, isHorizontal)
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by score, then by word length, then by strategic value
         return possiblePlays
             .filter(play => play.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+                const stratA = this.evaluatePositionStrategy(a);
+                const stratB = this.evaluatePositionStrategy(b);
+                return stratB - stratA;
+            });
     } catch (error) {
         console.error("Error in findAIPossiblePlays:", error);
         return [];
     }
-}
-
-// Helper to build anchor pattern (returns string like "..A..")
-buildAnchorPattern(anchor, isHorizontal) {
-    let pattern = "";
-    let { row, col } = anchor;
-
-    // Look left/up for prefix
-    let prefix = "";
-    let i = 1;
-    while (true) {
-        const r = isHorizontal ? row : row - i;
-        const c = isHorizontal ? col - i : col;
-        if (r < 0 || c < 0 || !this.board[r][c]) break;
-        prefix = this.board[r][c].letter + prefix;
-        i++;
-    }
-
-    // Look right/down for suffix
-    let suffix = "";
-    i = 1;
-    while (true) {
-        const r = isHorizontal ? row : row + i;
-        const c = isHorizontal ? col + i : col;
-        if (r > 14 || c > 14 || !this.board[r][c]) break;
-        suffix += this.board[r][c].letter;
-        i++;
-    }
-
-    // Pattern is prefix + '.' + suffix, pad to max word length (7 + prefix + suffix)
-    const maxLen = Math.min(7 + prefix.length + suffix.length, 15);
-    pattern = prefix + "." + suffix;
-    while (pattern.length < maxLen) {
-        pattern = "." + pattern;
-    }
-    while (pattern.length < maxLen) {
-        pattern = pattern + ".";
-    }
-    return pattern;
 }
 
 	generatePotentialWords(availableLetters, [hPrefix, hSuffix, vPrefix, vSuffix]) {
