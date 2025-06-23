@@ -47,31 +47,43 @@ class Trie {
     }
 
     // Generate all words from rack (with blanks)
-    findWordsFromRack(rack, minLen = 2, maxLen = 7) {
-        const results = new Set();
-        const recurse = (node, path, letters, usedBlanks) => {
-            if (node.isWord && path.length >= minLen && path.length <= maxLen) {
-                results.add(path);
-            }
-            if (path.length >= maxLen) return;
-            const used = new Set();
-            for (let i = 0; i < letters.length; i++) {
-                const letter = letters[i];
-                if (used.has(letter)) continue; // Avoid duplicate branches
-                used.add(letter);
-                if (letter === "*") {
-                    // Try all possible letters for blank
-                    for (const c in node.children) {
-                        recurse(node.children[c], path + c, letters.slice(0, i).concat(letters.slice(i + 1)), usedBlanks + 1);
-                    }
-                } else if (node.children[letter]) {
-                    recurse(node.children[letter], path + letter, letters.slice(0, i).concat(letters.slice(i + 1)), usedBlanks);
-                }
-            }
-        };
-        recurse(this.root, "", rack, 0);
-        return Array.from(results);
-    }
+	findWordsFromRack(rack, minLen = 2, maxLen = 7) {
+		const results = new Set();
+		const freq = {};
+		for (const l of rack) freq[l] = (freq[l] || 0) + 1;
+
+		const memo = new Map();
+
+		const recurse = (node, path, freqMap, usedBlanks, depth) => {
+			// Memoization key: path + sorted freqMap + usedBlanks
+			const key = path + "|" + Object.entries(freqMap).sort().map(([k, v]) => k + v).join("") + "|" + usedBlanks;
+			if (memo.has(key)) return;
+			memo.set(key, true);
+
+			// Early pruning: if not enough tiles left to reach minLen, stop
+			const tilesLeft = Object.values(freqMap).reduce((a, b) => a + b, 0);
+			if (path.length + tilesLeft < minLen) return;
+
+			if (node.isWord && path.length >= minLen && path.length <= maxLen) {
+				results.add(path);
+			}
+			if (path.length >= maxLen) return;
+
+			for (const c in node.children) {
+				if (freqMap[c] > 0) {
+					freqMap[c]--;
+					recurse(node.children[c], path + c, freqMap, usedBlanks, depth + 1);
+					freqMap[c]++;
+				} else if (freqMap["*"] > 0) {
+					freqMap["*"]--;
+					recurse(node.children[c], path + c, freqMap, usedBlanks + 1, depth + 1);
+					freqMap["*"]++;
+				}
+			}
+		};
+		recurse(this.root, "", { ...freq }, 0, 0);
+		return Array.from(results);
+	}
 }
 
 class ScrabbleGame {
@@ -3109,30 +3121,30 @@ findAIPossiblePlays() {
 		});
 	}
 
-	calculateWordScore(word, startRow, startCol, isHorizontal) {
-		let wordScore = 0;
-		let wordMultiplier = 1;
+    calculateWordScore(word, startRow, startCol, isHorizontal) {
+        let wordScore = 0;
+        let wordMultiplier = 1;
 
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startRow : startRow + i;
-			const col = isHorizontal ? startCol + i : startCol;
-			const tile = this.board[row][col];
-			let letterScore = tile.value;
+        for (let i = 0; i < word.length; i++) {
+            const row = isHorizontal ? startRow : startRow + i;
+            const col = isHorizontal ? startCol + i : startCol;
+            const tile = this.board[row][col];
+            let letterScore = tile.value;
 
-			// Only apply premium squares if this tile was just placed
-			if (!this.previousBoard || !this.previousBoard[row][col]) {
-				const premium = this.getPremiumSquareType(row, col);
-				if (premium === "dl") letterScore *= 2;
-				if (premium === "tl") letterScore *= 3;
-				if (premium === "dw") wordMultiplier *= 2;
-				if (premium === "tw") wordMultiplier *= 3;
-			}
+            // Only apply premium squares if this tile was just placed
+            if (!this.previousBoard || !this.previousBoard[row][col]) {
+                const premium = this.getPremiumSquareType(row, col);
+                if (premium === "dl") letterScore *= 2;
+                if (premium === "tl") letterScore *= 3; // <--- was 2, now 3
+                if (premium === "dw") wordMultiplier *= 2;
+                if (premium === "tw") wordMultiplier *= 3;
+            }
 
-			wordScore += letterScore;
-		}
+            wordScore += letterScore;
+        }
 
-		return wordScore * wordMultiplier;
-	}
+        return wordScore * wordMultiplier;
+    }
 
 	findBestMove() {
 		const possibleMoves = this.findPossibleMoves();
@@ -4957,87 +4969,87 @@ findAIPossiblePlays() {
 		}
 	}
 
-	getPremiumSquares() {
-		const premium = {};
+    getPremiumSquares() {
+        const premium = {};
 
-		// Triple Word Scores (red squares)
-		[
-			[0, 0],
-			[0, 7],
-			[0, 14],
-			[7, 0],
-			[7, 14],
-			[14, 0],
-			[14, 7],
-			[14, 14],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+        // Triple Word Scores (red squares)
+        [
+            [0, 0],
+            [0, 7],
+            [0, 14],
+            [7, 0],
+            [7, 14],
+            [14, 0],
+            [14, 7],
+            [14, 14],
+        ].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
-		// Double Word Scores (pink squares)
-		[
-			[1, 1],
-			[1, 13],
-			[2, 2],
-			[2, 12],
-			[3, 3],
-			[3, 11],
-			[4, 4],
-			[4, 10],
-			[10, 4],
-			[10, 10],
-			[11, 3],
-			[11, 11],
-			[12, 2],
-			[12, 12],
-			[13, 1],
-			[13, 13],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "dw"));
+        // Double Word Scores (pink squares)
+        [
+            [1, 1],
+            [1, 13],
+            [2, 2],
+            [2, 12],
+            [3, 3],
+            [3, 11],
+            [4, 4],
+            [4, 10],
+            [10, 4],
+            [10, 10],
+            [11, 3],
+            [11, 11],
+            [12, 2],
+            [12, 12],
+            [13, 1],
+            [13, 13],
+        ].forEach(([row, col]) => (premium[`${row},${col}`] = "dw"));
 
-		// Triple Letter Scores (dark blue squares)
-		[
-			[1, 5],
-			[1, 9],
-			[5, 1],
-			[5, 5],
-			[5, 9],
-			[5, 13],
-			[9, 1],
-			[9, 5],
-			[9, 9],
-			[9, 13],
-			[13, 5],
-			[13, 9],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+        // Triple Letter Scores (dark blue squares)
+        [
+            [1, 5],
+            [1, 9],
+            [5, 1],
+            [5, 5],
+            [5, 9],
+            [5, 13],
+            [9, 1],
+            [9, 5],
+            [9, 9],
+            [9, 13],
+            [13, 5],
+            [13, 9],
+        ].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
-		// Double Letter Scores (light blue squares)
-		[
-			[0, 3],
-			[0, 11],
-			[2, 6],
-			[2, 8],
-			[3, 0],
-			[3, 7],
-			[3, 14],
-			[6, 2],
-			[6, 6],
-			[6, 8],
-			[6, 12],
-			[7, 3],
-			[7, 11],
-			[8, 2],
-			[8, 6],
-			[8, 8],
-			[8, 12],
-			[11, 0],
-			[11, 7],
-			[11, 14],
-			[12, 6],
-			[12, 8],
-			[14, 3],
-			[14, 11],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
+        // Double Letter Scores (light blue squares)
+        [
+            [0, 3],
+            [0, 11],
+            [2, 6],
+            [2, 8],
+            [3, 0],
+            [3, 7],
+            [3, 14],
+            [6, 2],
+            [6, 6],
+            [6, 8],
+            [6, 12],
+            [7, 3],
+            [7, 11],
+            [8, 2],
+            [8, 6],
+            [8, 8],
+            [8, 12],
+            [11, 0],
+            [11, 7],
+            [11, 14],
+            [12, 6],
+            [12, 8],
+            [14, 3],
+            [14, 11],
+        ].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
 
-		return premium;
-	}
+        return premium;
+    }
 
 	async loadDictionary() {
 		try {
@@ -5873,95 +5885,95 @@ findAIPossiblePlays() {
 		return word;
 	}
 
-	calculateScore() {
-		let totalScore = 0;
-		const words = new Set();
+    calculateScore() {
+        let totalScore = 0;
+        const words = new Set();
 
-		console.log("=== Starting Score Calculation ===");
+        console.log("=== Starting Score Calculation ===");
 
-		// Get all formed words (main word + perpendicular words + modified words)
-		const formedWords = this.getFormedWords();
-		console.log("Words formed:", formedWords);
+        // Get all formed words (main word + perpendicular words + modified words)
+        const formedWords = this.getFormedWords();
+        console.log("Words formed:", formedWords);
 
-		// Calculate score for each formed word
-		formedWords.forEach((wordInfo) => {
-			let wordScore = 0;
-			let wordMultiplier = 1;
-			const {
-				word,
-				startPos,
-				direction
-			} = wordInfo;
+        // Calculate score for each formed word
+        formedWords.forEach((wordInfo) => {
+            let wordScore = 0;
+            let wordMultiplier = 1;
+            const {
+                word,
+                startPos,
+                direction
+            } = wordInfo;
 
-			console.log(`\nCalculating score for word: ${word}`);
+            console.log(`\nCalculating score for word: ${word}`);
 
-			// Calculate score for each letter in the word
-			for (let i = 0; i < word.length; i++) {
-				const row =
-					direction === "horizontal" ? startPos.row : startPos.row + i;
-				const col =
-					direction === "horizontal" ? startPos.col + i : startPos.col;
-				const tile = this.board[row][col];
+            // Calculate score for each letter in the word
+            for (let i = 0; i < word.length; i++) {
+                const row =
+                    direction === "horizontal" ? startPos.row : startPos.row + i;
+                const col =
+                    direction === "horizontal" ? startPos.col + i : startPos.col;
+                const tile = this.board[row][col];
 
-				let letterScore = tile.value;
+                let letterScore = tile.value;
 
-				// Apply premium squares only for newly placed tiles
-				if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-					const premium = this.getPremiumSquareType(row, col);
-					if (premium === "dl") {
-						letterScore *= 2;
-						console.log(`Double letter score applied to ${tile.letter}`);
-					}
-					if (premium === "tl") {
-						letterScore *= 3;
-						console.log(`Triple letter score applied to ${tile.letter}`);
-					}
-					if (premium === "dw") {
-						wordMultiplier *= 2;
-						console.log("Double word score will be applied");
-					}
-					if (premium === "tw") {
-						wordMultiplier *= 3;
-						console.log("Triple word score will be applied");
-					}
-				}
+                // Apply premium squares only for newly placed tiles
+                if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+                    const premium = this.getPremiumSquareType(row, col);
+                    if (premium === "dl") {
+                        letterScore *= 2;
+                        console.log(`Double letter score applied to ${tile.letter}`);
+                    }
+                    if (premium === "tl") {
+                        letterScore *= 3; // <--- was 2, now 3
+                        console.log(`Triple letter score applied to ${tile.letter}`);
+                    }
+                    if (premium === "dw") {
+                        wordMultiplier *= 2;
+                        console.log("Double word score will be applied");
+                    }
+                    if (premium === "tw") {
+                        wordMultiplier *= 3;
+                        console.log("Triple word score will be applied");
+                    }
+                }
 
-				wordScore += letterScore;
-				console.log(`Letter ${tile.letter} adds ${letterScore} points`);
-			}
+                wordScore += letterScore;
+                console.log(`Letter ${tile.letter} adds ${letterScore} points`);
+            }
 
-			// Apply word multiplier
-			wordScore *= wordMultiplier;
-			console.log(`Final score for "${word}": ${wordScore} points`);
+            // Apply word multiplier
+            wordScore *= wordMultiplier;
+            console.log(`Final score for "${word}": ${wordScore} points`);
 
-			// Add to total score
-			totalScore += wordScore;
+            // Add to total score
+            totalScore += wordScore;
 
-			// Store word and its score for display
-			words.add(
-				JSON.stringify({
-					word: word,
-					score: wordScore,
-				}),
-			);
-		});
+            // Store word and its score for display
+            words.add(
+                JSON.stringify({
+                    word: word,
+                    score: wordScore,
+                }),
+            );
+        });
 
-		// Add bonus for using all 7 tiles
-		if (this.placedTiles.length === 7) {
-			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles");
-			totalScore += 50;
-		}
+        // Add bonus for using all 7 tiles
+        if (this.placedTiles.length === 7) {
+            console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles");
+            totalScore += 50;
+        }
 
-		console.log(`\n=== Final Score Calculation ===`);
-		console.log(
-			`Words formed: ${Array.from(words)
+        console.log(`\n=== Final Score Calculation ===`);
+        console.log(
+            `Words formed: ${Array.from(words)
           .map((w) => JSON.parse(w).word)
           .join(" & ")}`,
-		);
-		console.log(`Total score for this move: ${totalScore}`);
+        );
+        console.log(`Total score for this move: ${totalScore}`);
 
-		return totalScore;
-	}
+        return totalScore;
+    }
 
 	findWordPosition(word) {
 		// Search the board for the starting position of the word
@@ -6364,6 +6376,8 @@ findAIPossiblePlays() {
 	}
 
 	async playWord() {
+		await new Promise(r => setTimeout(r, 0));
+
 		if (this.placedTiles.length === 0) {
 			alert("Please place some tiles first!");
 			return;
@@ -7557,8 +7571,11 @@ setupEventListeners() {
     this.setupExchangeSystem();
 
     // --- Play word buttons (desktop and mobile) ---
-    const playWordBtn = document.getElementById("play-word");
-    if (playWordBtn) playWordBtn.addEventListener("click", () => this.playWord());
+	const playWordBtn = document.getElementById("play-word");
+	if (playWordBtn) playWordBtn.addEventListener("click", () => {
+		// Let the button press effect render first
+		setTimeout(() => this.playWord(), 10);
+	});
 
     const playWordDesktopBtn = document.getElementById("play-word-desktop");
     if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
