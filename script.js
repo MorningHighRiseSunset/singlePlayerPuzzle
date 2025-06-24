@@ -234,7 +234,15 @@ class ScrabbleGame {
 				const tile = this.placedTiles[placedIdx].tile;
 				// Remove from board
 				this.board[fromRow][fromCol] = null;
-				document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
+				const cell = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
+				cell.innerHTML = "";
+				// Restore center star if needed
+				if (fromRow === 7 && fromCol === 7) {
+					const centerStar = document.createElement("span");
+					centerStar.textContent = "⚜";
+					centerStar.className = "center-star";
+					cell.appendChild(centerStar);
+				}
 				// Remove from placedTiles
 				this.placedTiles.splice(placedIdx, 1);
 				// Add back to rack
