@@ -1125,14 +1125,66 @@ class ScrabbleGame {
 	findAIPossiblePlays() {
 		try {
 			const possiblePlays = [];
-			const availableLetters = this.aiRack.map(tile => tile.letter);
+			const rack = this.aiRack.map(tile => tile.letter);
+			const anchors = this.findAnchors();
 
-			// Use the Trie for all possible words AI can form (2+ letters for first move, 3+ otherwise)
-			const minWordLength = this.isFirstMove ? 2 : 3;
-			const possibleWords = this.trie.findWordsFromRack(availableLetters, minWordLength, availableLetters.length);
+			// Use a Set to avoid duplicate plays
+			const seen = new Set();
 
-			// For first move, must cover center
-			if (this.isFirstMove) {
+			// For each anchor, try both directions
+			for (const anchor of anchors) {
+				for (const isHorizontal of [true, false]) {
+					const prefix = this.getPrefix(anchor, isHorizontal);
+					const suffix = this.getSuffix(anchor, isHorizontal);
+
+					// Only consider word lengths that fit the available space
+					let maxLen = 1 + prefix.length + suffix.length + rack.length;
+					let minLen = Math.max(2, prefix.length + suffix.length + 1);
+					maxLen = Math.min(maxLen, 15);
+
+					// Use Trie to generate only words that fit prefix/suffix and rack
+					const candidateWords = this.trie.findWordsFromRack(
+						rack.concat(prefix.split("")).concat(suffix.split("")),
+						minLen,
+						maxLen
+					).filter(word =>
+						word.startsWith(prefix) && word.endsWith(suffix)
+					);
+
+					for (const word of candidateWords) {
+						// Calculate start position
+						const startRow = isHorizontal ? anchor.row : anchor.row - prefix.length;
+						const startCol = isHorizontal ? anchor.col - prefix.length : anchor.col;
+
+						// Only try if fits on board
+						if (
+							this.isValidPosition(startRow, startCol) &&
+							this.isValidAIPlacement(word, startRow, startCol, isHorizontal)
+						) {
+							const key = `${word}:${startRow}:${startCol}:${isHorizontal}`;
+							if (seen.has(key)) continue;
+							seen.add(key);
+
+							const score = this.calculatePotentialScore(word, startRow, startCol, isHorizontal);
+
+							// Only consider plays that touch at least one anchor
+							if (score > 0) {
+								possiblePlays.push({
+									word,
+									startPos: { row: startRow, col: startCol },
+									isHorizontal,
+									score,
+									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
+								});
+							}
+						}
+					}
+				}
+			}
+
+			// Fallback: if no anchor plays, try first move logic (center square)
+			if (possiblePlays.length === 0 && this.isFirstMove) {
+				const possibleWords = this.trie.findWordsFromRack(rack, 2, rack.length);
 				for (const word of possibleWords) {
 					for (let i = 0; i <= 15 - word.length; i++) {
 						// Horizontal through center
@@ -1142,7 +1194,8 @@ class ScrabbleGame {
 									word,
 									startPos: { row: 7, col: i },
 									isHorizontal: true,
-									score: this.calculatePotentialScore(word, 7, i, true)
+									score: this.calculatePotentialScore(word, 7, i, true),
+									quality: this.evaluateWordQuality(word, 7, i, true)
 								});
 							}
 						}
@@ -1153,55 +1206,21 @@ class ScrabbleGame {
 									word,
 									startPos: { row: i, col: 7 },
 									isHorizontal: false,
-									score: this.calculatePotentialScore(word, i, 7, false)
+									score: this.calculatePotentialScore(word, i, 7, false),
+									quality: this.evaluateWordQuality(word, i, 7, false)
 								});
-							}
-						}
-					}
-				}
-			} else {
-				// For every empty cell, try all possible placements
-				for (let row = 0; row < 15; row++) {
-					for (let col = 0; col < 15; col++) {
-						if (this.board[row][col]) continue; // Only empty cells
-
-						for (const word of possibleWords) {
-							// Horizontal
-							if (col + word.length <= 15) {
-								if (this.isValidAIPlacement(word, row, col, true)) {
-									possiblePlays.push({
-										word,
-										startPos: { row, col },
-										isHorizontal: true,
-										score: this.calculatePotentialScore(word, row, col, true)
-									});
-								}
-							}
-							// Vertical
-							if (row + word.length <= 15) {
-								if (this.isValidAIPlacement(word, row, col, false)) {
-									possiblePlays.push({
-										word,
-										startPos: { row, col },
-										isHorizontal: false,
-										score: this.calculatePotentialScore(word, row, col, false)
-									});
-								}
 							}
 						}
 					}
 				}
 			}
 
-			// Max difficulty: sort by score, then by word length, then by strategic value
+			// Sort by: score, then word quality, then word length (all descending)
 			return possiblePlays
-				.filter(play => play.score > 0)
 				.sort((a, b) => {
 					if (b.score !== a.score) return b.score - a.score;
-					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
-					const stratA = this.evaluatePositionStrategy(a);
-					const stratB = this.evaluatePositionStrategy(b);
-					return stratB - stratA;
+					if (b.quality !== a.quality) return b.quality - a.quality;
+					return b.word.length - a.word.length;
 				});
 		} catch (error) {
 			console.error("Error in findAIPossiblePlays:", error);
