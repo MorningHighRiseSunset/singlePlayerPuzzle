@@ -5060,18 +5060,18 @@ class ScrabbleGame {
 
 	async loadDictionary() {
 		try {
-			// Try to load SOWPODS (very large Scrabble dictionary)
+			// Load SOWPODS (very large Scrabble dictionary)
 			let response = await fetch("https://raw.githubusercontent.com/wordnik/sowpods/master/sowpods.txt");
 			let text = await response.text();
 			// SOWPODS is all uppercase, one word per line
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
-			// Fallback to original dictionary if SOWPODS fails
-			if (this.dictionary.size < 10000) {
-				response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-				text = await response.text();
-				this.dictionary = new Set(text.toLowerCase().split("\n"));
-			}
+			// Also load the Redbo dictionary and merge (for extra coverage)
+			response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+			text = await response.text();
+			text.toLowerCase().split("\n").forEach(word => {
+				if (word) this.dictionary.add(word.trim());
+			});
 
 			// Add words from Free Dictionary API (Datamuse)
 			try {
@@ -5085,10 +5085,7 @@ class ScrabbleGame {
 				console.error("Error loading additional words:", error);
 			}
 
-			// Optionally, add your own custom words here:
-			const customWords = ["tot", "zit", "caran", "tots", "zits"];
-			customWords.forEach(word => this.dictionary.add(word.toLowerCase()));
-
+			// No customWords section here!
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
