@@ -281,6 +281,7 @@ class ScrabbleGame {
 			// If a tile is selected and tap on empty cell, place it (from rack or board)
 			if (this.selectedTile && !tileElem) {
 				let tile, tileIndex, fromRow, fromCol;
+				let movedFromBoard = false;
 				if (this.selectedTileSource === "rack") {
 					tileIndex = this.selectedTile.dataset.index;
 					tile = this.playerRack[tileIndex];
@@ -298,9 +299,15 @@ class ScrabbleGame {
 					this.board[fromRow][fromCol] = null;
 					document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`).innerHTML = "";
 					this.placedTiles.splice(placedIdx, 1);
+					movedFromBoard = true;
 				}
 				if (this.isValidPlacement(row, col, tile)) {
 					this.placeTile(tile, row, col);
+				} else if (movedFromBoard) {
+					// If invalid placement, return tile to rack and update UI
+					this.playerRack.push(tile);
+					this.renderRack();
+					this.highlightValidPlacements();
 				}
 				// Always deselect after any placement attempt
 				deselect();
@@ -6404,111 +6411,107 @@ class ScrabbleGame {
 	}
 
 	async playWord() {
-		if (this.placedTiles.length === 0) {
-			alert("Please place some tiles first!");
-			return;
+		// Show a spinner or disable the submit button for better UX
+		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
+		if (playWordBtn) {
+			playWordBtn.disabled = true;
+			playWordBtn.textContent = "Checking...";
 		}
+		// Let UI update
+		await new Promise(res => setTimeout(res, 30));
 
-		if (!this.areTilesConnected()) {
-			alert("Tiles must be connected and in a straight line!");
-			this.resetPlacedTiles();
-			return;
-		}
+		try {
+			if (this.placedTiles.length === 0) {
+				alert("Please place some tiles first!");
+				return;
+			}
 
-		if (this.validateWord()) {
-			// Get all formed words and their individual scores
-			const formedWords = this.getFormedWords();
-			let totalScore = 0;
-			let wordDescriptions = [];
+			if (!this.areTilesConnected()) {
+				alert("Tiles must be connected and in a straight line!");
+				this.resetPlacedTiles();
+				return;
+			}
 
-			formedWords.forEach((wordInfo) => {
-				const {
-					word,
-					startPos,
-					direction
-				} = wordInfo;
-				// Calculate score for this specific word
-				let wordScore = 0;
-				let wordMultiplier = 1;
+			// Validate the word(s) asynchronously
+			const isValid = await (async () => this.validateWord())();
+			if (isValid) {
+				// Get all formed words and their individual scores
+				const formedWords = this.getFormedWords();
+				let totalScore = 0;
+				let wordDescriptions = [];
 
-				// Calculate each letter's contribution
-				for (let i = 0; i < word.length; i++) {
-					const row =
-						direction === "horizontal" ? startPos.row : startPos.row + i;
-					const col =
-						direction === "horizontal" ? startPos.col + i : startPos.col;
-					const tile = this.board[row][col];
+				for (const wordInfo of formedWords) {
+					const { word, startPos, direction } = wordInfo;
+					let wordScore = 0;
+					let wordMultiplier = 1;
 
-					let letterScore = tile.value;
+					for (let i = 0; i < word.length; i++) {
+						const row = direction === "horizontal" ? startPos.row : startPos.row + i;
+						const col = direction === "horizontal" ? startPos.col + i : startPos.col;
+						const tile = this.board[row][col];
 
-					// Apply premium squares only for newly placed tiles
-					if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-						const premium = this.getPremiumSquareType(row, col);
-						if (premium === "dl") letterScore *= 2;
-						if (premium === "tl") letterScore *= 3;
-						if (premium === "dw") wordMultiplier *= 2;
-						if (premium === "tw") wordMultiplier *= 3;
+						let letterScore = tile.value;
+
+						// Apply premium squares only for newly placed tiles
+						if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+							const premium = this.getPremiumSquareType(row, col);
+							if (premium === "dl") letterScore *= 2;
+							if (premium === "tl") letterScore *= 3;
+							if (premium === "dw") wordMultiplier *= 2;
+							if (premium === "tw") wordMultiplier *= 3;
+						}
+
+						wordScore += letterScore;
 					}
 
-					wordScore += letterScore;
+					wordScore *= wordMultiplier;
+					totalScore += wordScore;
+					wordDescriptions.push({ word: word, score: wordScore });
 				}
 
-				// Apply word multiplier
-				wordScore *= wordMultiplier;
-				totalScore += wordScore;
+				// Add bonus for using all 7 tiles
+				if (this.placedTiles.length === 7) {
+					totalScore += 50;
+					wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
+				}
 
-				// Store word and its individual score
-				wordDescriptions.push({
-					word: word,
-					score: wordScore,
-				});
-			});
+				// Format the move description
+				let moveDescription;
+				if (wordDescriptions.length > 1) {
+					moveDescription = wordDescriptions.map((w) => `${w.word} (${w.score})`).join(" & ");
+				} else {
+					moveDescription = wordDescriptions[0].word;
+				}
 
-			// Add bonus for using all 7 tiles
-			if (this.placedTiles.length === 7) {
-				totalScore += 50;
-				wordDescriptions.push({
-					word: "BINGO BONUS",
-					score: 50
-				});
-			}
+				// Speak each word formed
+				for (const wd of wordDescriptions) {
+					if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
+				}
 
-			// Format the move description
-			let moveDescription;
-			if (wordDescriptions.length > 1) {
-				// Multiple words formed
-				moveDescription = wordDescriptions
-					.map((w) => `${w.word} (${w.score})`)
-					.join(" & ");
+				// Update game state
+				this.playerScore += totalScore;
+				this.isFirstMove = false;
+				this.placedTiles = [];
+				this.fillRacks();
+				this.consecutiveSkips = 0;
+				this.currentTurn = "ai";
+
+				this.addToMoveHistory("Player", moveDescription, totalScore);
+				this.updateGameState();
+
+				if (!this.checkGameEnd()) {
+					await this.aiTurn();
+				}
 			} else {
-				// Single word
-				moveDescription = wordDescriptions[0].word;
+				alert("Invalid word! Please try again.");
+				this.resetPlacedTiles();
 			}
-
-			// --- Speak each word formed ---
-			wordDescriptions.forEach(wd => {
-				// Don't speak "BINGO BONUS"
-				if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
-			});
-
-			// Update game state
-			this.playerScore += totalScore;
-			this.isFirstMove = false;
-			this.placedTiles = [];
-			this.fillRacks();
-			this.consecutiveSkips = 0;
-			this.currentTurn = "ai";
-
-			// Add to move history with all formed words
-			this.addToMoveHistory("Player", moveDescription, totalScore);
-			this.updateGameState();
-
-			if (!this.checkGameEnd()) {
-				await this.aiTurn();
+		} finally {
+			// Restore button state
+			if (playWordBtn) {
+				playWordBtn.disabled = false;
+				playWordBtn.textContent = "Submit";
 			}
-		} else {
-			alert("Invalid word! Please try again.");
-			this.resetPlacedTiles();
 		}
 	}
 
@@ -7627,7 +7630,11 @@ class ScrabbleGame {
 		this.setupExchangeSystem();
 
 		// Play word button
-		document.getElementById("play-word").addEventListener("click", () => this.playWord());
+		const playWordBtn = document.getElementById("play-word");
+		if (playWordBtn) playWordBtn.addEventListener("click", () => this.playWord());
+
+		const playWordDesktopBtn = document.getElementById("play-word-desktop");
+		if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
 
 		// Shuffle rack button
 		document.getElementById("shuffle-rack").addEventListener("click", async () => {
