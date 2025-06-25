@@ -168,6 +168,59 @@ class ScrabbleGame {
 		this.init();
 	}
 
+	showAIGhostMove(play) {
+		// Remove any existing ghost tiles
+		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+
+		const { word, startPos, isHorizontal } = play;
+		for (let i = 0; i < word.length; i++) {
+			const row = isHorizontal ? startPos.row : startPos.row + i;
+			const col = isHorizontal ? startPos.col + i : startPos.col;
+			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+			if (cell && !cell.querySelector('.tile')) {
+				const ghost = document.createElement('div');
+				ghost.className = 'tile ghost-tile';
+				ghost.innerHTML = `
+					${word[i]}
+					<span class="points">${this.tileValues[word[i]] || 0}</span>
+				`;
+				ghost.style.opacity = '0.35';
+				ghost.style.pointerEvents = 'none';
+				ghost.style.background = '#b3e5fc';
+				ghost.style.color = '#222';
+				ghost.style.border = '2px dashed #0288d1';
+				cell.appendChild(ghost);
+			}
+		}
+		// Remove ghost after 2.5 seconds
+		setTimeout(() => {
+			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+		}, 2500);
+	}
+
+	async showAIGhostIfPlayerMoveValid() {
+		if (this.currentTurn !== "player" || this.placedTiles.length === 0) {
+			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+			return;
+		}
+		const isValid = await this.validateWord();
+		if (isValid) {
+			const aiPlays = this.findAIPossiblePlays();
+			if (aiPlays && aiPlays.length > 0) {
+				this.showAIGhostMove(aiPlays[0]);
+			}
+		} else {
+			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+		}
+	}
+
+	async validatePartialWord() {
+		if (this.placedTiles.length < 2) return false;
+		// Only check if the tiles form a valid dictionary word (ignore adjacency, first move, etc.)
+		const mainWord = this.getMainWord();
+		return this.dictionary.has(mainWord.toLowerCase());
+	}
+
 	// Helper to block/unblock the hint box
 	blockHintBox() {
 		this.hintBoxBlocked = true;
@@ -249,6 +302,7 @@ class ScrabbleGame {
 				this.playerRack.push(tile);
 				this.renderRack();
 				this.highlightValidPlacements();
+				this.showAIGhostIfPlayerMoveValid();
 				deselect();
 				return;
 			}
@@ -328,6 +382,8 @@ class ScrabbleGame {
 			// If clicking anywhere else on the board, deselect
 			deselect();
 		});
+
+		this.showAIGhostIfPlayerMoveValid();
 	}
 
 	selectTile(tileElement) {
@@ -1909,13 +1965,13 @@ class ScrabbleGame {
 			const row = horizontal ? startRow : startRow + i;
 			const col = horizontal ? startCol + i : startCol;
 
-			if (tempBoard[row][col]) {
-				if (tempBoard[row][col].letter !== word[i]) {
-					console.log(`Letter mismatch at position [${row},${col}]`);
-					return false;
-				}
-				hasValidIntersection = true;
-			} else {
+				if (tempBoard[row][col]) {
+					if (tempBoard[row][col].letter !== word[i]) {
+						console.log(`Letter mismatch at position [${row},${col}]`);
+						return false;
+					}
+					hasValidIntersection = true;
+				} else {
 				tempBoard[row][col] = {
 					letter: word[i]
 				};
@@ -5359,74 +5415,74 @@ class ScrabbleGame {
 			const letterSelectionDialog = document.createElement("div");
 			letterSelectionDialog.className = "letter-selection-dialog";
 			letterSelectionDialog.innerHTML = `
-            <div class="dialog-content">
-                <h3>Choose a letter for the blank tile</h3>
-                <div class="letter-grid">
-                    ${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-                        .map(
-                            (letter) => `
-                        <button class="letter-choice">${letter}</button>
-                    `,
-                        )
-                        .join("")}
-                </div>
-            </div>
-        `;
+				<div class="dialog-content">
+					<h3>Choose a letter for the blank tile</h3>
+					<div class="letter-grid">
+						${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+							.map(
+								(letter) => `
+							<button class="letter-choice">${letter}</button>
+						`,
+							)
+							.join("")}
+					</div>
+				</div>
+			`;
 
 			// Add styles for the dialog
 			const style = document.createElement("style");
 			style.textContent = `
-            .letter-selection-dialog {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-            }
-            .dialog-content {
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                max-width: 400px;
-                width: 90%;
-            }
-            .letter-grid {
-                display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                gap: 5px;
-                margin-top: 15px;
-            }
-            .letter-choice {
-                padding: 10px;
-                border: 1px solid #ccc;
-                background: #0047AB;
-                cursor: pointer;
-                border-radius: 5px;
-                transition: all 0.2s;
-            }
-            .letter-choice:hover {
-                background: #e0e0e0;
-                transform: scale(1.1);
-            }
-            h3 {
-                text-align: center;
-                margin-top: 0;
-                color: #333;
-            }
-        `;
+				.letter-selection-dialog {
+					position: fixed;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background: rgba(0, 0, 0, 0.7);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					z-index: 1000;
+				}
+				.dialog-content {
+					background: white;
+					padding: 20px;
+					border-radius: 10px;
+					box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+					max-width: 400px;
+					width: 90%;
+				}
+				.letter-grid {
+					display: grid;
+					grid-template-columns: repeat(6, 1fr);
+					gap: 5px;
+					margin-top: 15px;
+				}
+				.letter-choice {
+					padding: 10px;
+					border: 1px solid #ccc;
+					background: #0047AB;
+					cursor: pointer;
+					border-radius: 5px;
+					transition: all 0.2s;
+				}
+				.letter-choice:hover {
+					background: #e0e0e0;
+					transform: scale(1.1);
+				}
+				h3 {
+					text-align: center;
+					margin-top: 0;
+					color: #333;
+				}
+			`;
 			document.head.appendChild(style);
 			document.body.appendChild(letterSelectionDialog);
 
 			// Handle letter selection
 			const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
 			buttons.forEach((button) => {
-				button.addEventListener("click", () => {
+				button.addEventListener("click", async () => {
 					const selectedLetter = button.textContent;
 
 					// Create a new tile object with the selected letter but keep point value as 0
@@ -5453,10 +5509,10 @@ class ScrabbleGame {
 					tileElement.dataset.index = tileIndex;
 					tileElement.dataset.id = tile.id;
 					tileElement.innerHTML = `
-                    ${selectedLetter}
-                    <span class="points">0</span>
-                    <span class="blank-indicator">★</span>
-                `;
+						${selectedLetter}
+						<span class="points">0</span>
+						<span class="blank-indicator">★</span>
+					`;
 
 					// Remove only the tile, not the star
 					const existingTile = cell.querySelector('.tile');
@@ -5483,6 +5539,9 @@ class ScrabbleGame {
 
 					// Update valid placement highlights
 					this.highlightValidPlacements();
+
+					// --- Show live AI ghost move if valid ---
+					await this.showAIGhostIfPlayerMoveValid();
 				});
 			});
 		} else {
@@ -5501,9 +5560,9 @@ class ScrabbleGame {
 			tileElement.dataset.index = tileIndex;
 			tileElement.dataset.id = tile.id;
 			tileElement.innerHTML = `
-            ${tile.letter}
-            <span class="points">${placedTile.value}</span>
-        `;
+				${tile.letter}
+				<span class="points">${placedTile.value}</span>
+			`;
 
 			// Remove only the tile, not the star
 			const existingTile = cell.querySelector('.tile');
@@ -5525,8 +5584,8 @@ class ScrabbleGame {
 			// Update rack display
 			this.renderRack();
 
-			// Update valid placement highlights
-			this.highlightValidPlacements();
+			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
+			this.showAIGhostIfPlayerMoveValid();
 		}
 	}
 
@@ -5574,31 +5633,34 @@ class ScrabbleGame {
 	}
 
 	resetPlacedTiles() {
-		this.placedTiles.forEach(({ tile, row, col }) => {
-			this.board[row][col] = null;
-			const cell = document.querySelector(
-				`[data-row="${row}"][data-col="${col}"]`
-			);
-			cell.innerHTML = "";
+        this.placedTiles.forEach(({ tile, row, col }) => {
+            this.board[row][col] = null;
+            const cell = document.querySelector(
+                `[data-row="${row}"][data-col="${col}"]`
+            );
+            cell.innerHTML = "";
 
-			// Always restore the center star if this is the center cell and it's empty
-			if (row === 7 && col === 7) {
-				const existingStar = cell.querySelector('.center-star');
-				if (!existingStar && !cell.querySelector('.tile')) {
-					const centerStar = document.createElement("span");
-					centerStar.textContent = "⚜";
-					centerStar.className = "center-star";
-					cell.appendChild(centerStar);
-				}
-			}
+            // Always restore the center star if this is the center cell and it's empty
+            if (row === 7 && col === 7) {
+                const existingStar = cell.querySelector('.center-star');
+                if (!existingStar && !cell.querySelector('.tile')) {
+                    const centerStar = document.createElement("span");
+                    centerStar.textContent = "⚜";
+                    centerStar.className = "center-star";
+                    cell.appendChild(centerStar);
+                }
+            }
 
-			// Always return the tile to the player's rack
-			this.playerRack.push(tile);
-		});
+            // Always return the tile to the player's rack
+            this.playerRack.push(tile);
+        });
 
-		this.placedTiles = [];
-		this.renderRack();
-	}
+        this.placedTiles = [];
+        this.renderRack();
+
+        // Remove ghost tiles when resetting
+        this.showAIGhostIfPlayerMoveValid();
+    }
 
     validateWord() {
         if (this.placedTiles.length === 0) return false;
@@ -6466,6 +6528,7 @@ class ScrabbleGame {
 				this.addToMoveHistory("Player", moveDescription, totalScore);
 				this.updateGameState();
 
+				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
 				if (!this.checkGameEnd()) {
 					await this.aiTurn();
 				}

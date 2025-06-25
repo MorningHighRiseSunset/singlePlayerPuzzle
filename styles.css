@@ -643,3 +643,12 @@ button:active,
     scale: 0.95;
   }
 }
+
+.ghost-tile {
+    opacity: 0.35 !important;
+    background: #b3e5fc !important;
+    color: #222 !important;
+    border: 2px dashed #0288d1 !important;
+    pointer-events: none !important;
+    z-index: 10;
+}
