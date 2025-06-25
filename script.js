@@ -192,10 +192,7 @@ class ScrabbleGame {
 				cell.appendChild(ghost);
 			}
 		}
-		// Remove ghost after 2.5 seconds
-		setTimeout(() => {
-			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
-		}, 2500);
+		// <-- REMOVE the setTimeout block here!
 	}
 
 	async showAIGhostIfPlayerMoveValid() {
