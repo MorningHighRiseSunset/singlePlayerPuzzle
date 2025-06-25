@@ -5075,20 +5075,13 @@ class ScrabbleGame {
 
 	async loadDictionary() {
 		try {
-			// Load SOWPODS (very large Scrabble dictionary)
-			let response = await fetch("https://raw.githubusercontent.com/wordnik/sowpods/master/sowpods.txt");
+			// Use a working SOWPODS mirror
+			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
 			let text = await response.text();
 			// SOWPODS is all uppercase, one word per line
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
-			// Also load the Redbo dictionary and merge (for extra coverage)
-			response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-			text = await response.text();
-			text.toLowerCase().split("\n").forEach(word => {
-				if (word) this.dictionary.add(word.trim());
-			});
-
-			// Add words from Free Dictionary API (Datamuse)
+			// Optionally, load additional words as before
 			try {
 				const additionalWords = await this.loadAdditionalWords();
 				additionalWords.forEach(word => {
@@ -5100,7 +5093,6 @@ class ScrabbleGame {
 				console.error("Error loading additional words:", error);
 			}
 
-			// No customWords section here!
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
@@ -6435,50 +6427,25 @@ class ScrabbleGame {
 			// Validate the word(s) asynchronously
 			const isValid = await (async () => this.validateWord())();
 			if (isValid) {
-				// Get all formed words and their individual scores
+				// Use the robust scoring logic
+				const totalScore = this.calculateScore();
+
+				// Get all formed words for move description
 				const formedWords = this.getFormedWords();
-				let totalScore = 0;
 				let wordDescriptions = [];
-
 				for (const wordInfo of formedWords) {
-					const { word, startPos, direction } = wordInfo;
-					let wordScore = 0;
-					let wordMultiplier = 1;
-
-					for (let i = 0; i < word.length; i++) {
-						const row = direction === "horizontal" ? startPos.row : startPos.row + i;
-						const col = direction === "horizontal" ? startPos.col + i : startPos.col;
-						const tile = this.board[row][col];
-
-						let letterScore = tile.value;
-
-						// Apply premium squares only for newly placed tiles
-						if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-							const premium = this.getPremiumSquareType(row, col);
-							if (premium === "dl") letterScore *= 2;
-							if (premium === "tl") letterScore *= 3;
-							if (premium === "dw") wordMultiplier *= 2;
-							if (premium === "tw") wordMultiplier *= 3;
-						}
-
-						wordScore += letterScore;
-					}
-
-					wordScore *= wordMultiplier;
-					totalScore += wordScore;
-					wordDescriptions.push({ word: word, score: wordScore });
+					wordDescriptions.push({ word: wordInfo.word, score: null }); // Score is shown in move history
 				}
 
 				// Add bonus for using all 7 tiles
 				if (this.placedTiles.length === 7) {
-					totalScore += 50;
 					wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 				}
 
 				// Format the move description
 				let moveDescription;
 				if (wordDescriptions.length > 1) {
-					moveDescription = wordDescriptions.map((w) => `${w.word} (${w.score})`).join(" & ");
+					moveDescription = wordDescriptions.map((w) => w.word).join(" & ");
 				} else {
 					moveDescription = wordDescriptions[0].word;
 				}
