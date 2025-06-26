@@ -208,21 +208,43 @@ class ScrabbleGame {
 	}
 
 	async showAIGhostIfPlayerMoveValid() {
-		if (this.currentTurn !== "player" || this.placedTiles.length === 0) {
+		if (this.currentTurn !== "player") {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+			this.ghostAIMove = null;
 			return;
 		}
-		const isValid = await this.validateWord();
-		if (isValid) {
-			const aiPlays = this.findAIPossiblePlays();
-			if (aiPlays && aiPlays.length > 0) {
-				this.showAIGhostMove(aiPlays[0]);
-			} else {
-				document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
-				// Optionally show a message: "AI has no move"
+
+		// --- TEMPORARILY add placed tiles to board for ghost preview on first move ---
+		let tempPlaced = [];
+		if (this.isFirstMove && this.placedTiles.length > 0) {
+			for (const {tile, row, col} of this.placedTiles) {
+				if (!this.board[row][col]) {
+					this.board[row][col] = tile;
+					tempPlaced.push({row, col});
+				}
 			}
+		}
+
+		const aiPlays = this.findAIPossiblePlays();
+		console.log("AI ghost possible plays:", aiPlays);
+
+		// --- REMOVE temp placed tiles after preview ---
+		if (tempPlaced.length > 0) {
+			for (const {row, col} of tempPlaced) {
+				this.board[row][col] = null;
+			}
+		}
+
+		if (aiPlays && aiPlays.length > 0) {
+			this.showAIGhostMove(aiPlays[0]);
+			this.ghostAIMove = {
+				...aiPlays[0],
+				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
+				boardSnapshot: JSON.stringify(this.board)
+			};
 		} else {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+			this.ghostAIMove = null;
 		}
 	}
 
@@ -314,7 +336,6 @@ class ScrabbleGame {
 				this.playerRack.push(tile);
 				this.renderRack();
 				this.highlightValidPlacements();
-				this.showAIGhostIfPlayerMoveValid();
 				deselect();
 				return;
 			}
@@ -395,7 +416,6 @@ class ScrabbleGame {
 			deselect();
 		});
 
-		this.showAIGhostIfPlayerMoveValid();
 	}
 
 	selectTile(tileElement) {
@@ -483,6 +503,38 @@ class ScrabbleGame {
 		}
 
 		try {
+			// --- Use ghost move if available and valid ---
+			if (this.ghostAIMove) {
+				// Only use the ghost move if the AI's rack and board have not changed since the ghost was shown
+				const { word, startPos, isHorizontal, rackSnapshot, boardSnapshot } = this.ghostAIMove;
+				const currentRack = this.aiRack.map(t => t.letter).sort().join('');
+				const currentBoard = JSON.stringify(this.board);
+
+				if (rackSnapshot === currentRack && boardSnapshot === currentBoard) {
+					const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
+					const canForm = this.canFormWord(
+						word,
+						this.getPrefix(startPos, isHorizontal),
+						this.getSuffix(startPos, isHorizontal),
+						this.aiRack.map(t => t.letter)
+					);
+					if (validity.valid && canForm) {
+						console.log("AI using ghost move:", this.ghostAIMove);
+						updateThinkingText("AI is playing its previewed move!");
+						setTimeout(() => {
+							thinkingMessage.style.opacity = "0";
+							setTimeout(() => {
+								thinkingMessage.remove();
+								this.unblockHintBox();
+								this.executeAIPlay(this.ghostAIMove);
+								this.ghostAIMove = null; // Clear after use
+							}, 300);
+						}, 800);
+						return;
+					}
+				}
+			}
+
 			const shouldExchange = this.shouldExchangeTiles();
 			if (shouldExchange && this.tiles.length >= 5) {
 				setTimeout(() => {
@@ -3166,6 +3218,7 @@ class ScrabbleGame {
 
 				// Refill racks and update display
 				this.fillRacks();
+				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 				resolve();
 			}, 500);
@@ -5558,8 +5611,8 @@ class ScrabbleGame {
 			this.renderRack();
 
 			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
-			this.showAIGhostIfPlayerMoveValid();
 		}
+		this.showAIGhostIfPlayerMoveValid(); 
 	}
 
 	areTilesConnected() {
@@ -6497,6 +6550,7 @@ class ScrabbleGame {
 				this.fillRacks();
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
+				this.showAIGhostIfPlayerMoveValid();
 
 				this.addToMoveHistory("Player", moveDescription, totalScore);
 				this.updateGameState();
