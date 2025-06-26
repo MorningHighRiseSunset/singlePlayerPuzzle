@@ -162,10 +162,18 @@ class ScrabbleGame {
 		this.hintBoxBlocked = false;
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
+		this.aiValidationLogSet = new Set();
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
 		this.init();
+	}
+
+	logAIValidation(msg) {
+		if (!this.aiValidationLogSet.has(msg)) {
+			console.log(msg);
+			this.aiValidationLogSet.add(msg);
+		}
 	}
 
 	showAIGhostMove(play) {
@@ -177,7 +185,12 @@ class ScrabbleGame {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+			// Only add ghost if cell is empty or only contains the center star
 			if (cell && !cell.querySelector('.tile')) {
+				// Remove center star if present (ghost overlays it)
+				const star = cell.querySelector('.center-star');
+				if (star) star.style.opacity = '0.2';
+
 				const ghost = document.createElement('div');
 				ghost.className = 'tile ghost-tile';
 				ghost.innerHTML = `
@@ -192,7 +205,6 @@ class ScrabbleGame {
 				cell.appendChild(ghost);
 			}
 		}
-		// <-- REMOVE the setTimeout block here!
 	}
 
 	async showAIGhostIfPlayerMoveValid() {
@@ -205,6 +217,9 @@ class ScrabbleGame {
 			const aiPlays = this.findAIPossiblePlays();
 			if (aiPlays && aiPlays.length > 0) {
 				this.showAIGhostMove(aiPlays[0]);
+			} else {
+				document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+				// Optionally show a message: "AI has no move"
 			}
 		} else {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
@@ -405,12 +420,11 @@ class ScrabbleGame {
 	}
 
 	async aiTurn() {
+		this.aiValidationLogSet = new Set();
 		console.log("AI thinking...");
 
-		// --- Block hint popup while AI is thinking ---
 		this.blockHintBox();
 
-		// Show "AI is thinking..." message with animated dots
 		let thinkingMessage = document.createElement("div");
 		thinkingMessage.className = "ai-thinking-message";
 		thinkingMessage.innerHTML = `
@@ -422,7 +436,6 @@ class ScrabbleGame {
 			</span>
 		`;
 
-		// Responsive positioning: bottom right on mobile, centered on desktop
 		if (window.innerWidth <= 768) {
 			thinkingMessage.style.cssText = `
 				position: fixed;
@@ -462,29 +475,12 @@ class ScrabbleGame {
 		document.body.appendChild(thinkingMessage);
 		setTimeout(() => thinkingMessage.style.opacity = "1", 100);
 
-		let startTime = Date.now();
-		let maxTime = 5 * 60 * 1000; // 5 minutes
 		let bestPlay = null;
-		let bestScore = -Infinity;
-		let runCount = 0;
-		let blunderCount = 0;
-		let lastBlunderTime = 0;
-		let lastNotifTime = 0;
+		let startTime = Date.now();
 
 		function updateThinkingText(msg) {
 			thinkingMessage.querySelector('.ai-thinking-text').textContent = msg;
 		}
-
-		let strugglingTimeout = setTimeout(() => {
-			updateThinkingText("AI is struggling to find a move...");
-		}, 2 * 60 * 1000);
-
-		let dumbfoundedTimeout = setTimeout(() => {
-			updateThinkingText("AI is dumbfounded and is considering exchanging tiles...");
-		}, 4 * 60 * 1000);
-
-		// --- Track shown blunders to avoid repeats ---
-		const shownBlunders = new Set();
 
 		try {
 			const shouldExchange = this.shouldExchangeTiles();
@@ -500,72 +496,50 @@ class ScrabbleGame {
 				return;
 			}
 
-			while (Date.now() - startTime < maxTime) {
-				const possiblePlays = this.findAIPossiblePlays();
-				let foundValid = false;
+			// --- Prefer longer words, fallback to 2-letter if needed, timeout after 1 min ---
+			const possiblePlays = this.findAIPossiblePlays();
+			if (possiblePlays && possiblePlays.length > 0) {
+				// Sort by word length (desc), then score (desc)
+				possiblePlays.sort((a, b) => {
+					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+					return b.score - a.score;
+				});
 
-				if (possiblePlays && possiblePlays.length > 0) {
-					for (const candidate of possiblePlays) {
-						const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-						if (validity.valid) {
-							foundValid = true;
-							if (candidate.score > bestScore) {
-								bestPlay = candidate;
-								bestScore = candidate.score;
-								updateThinkingText("AI found a promising move!");
-							}
-						} else {
-							// Only show new blunders
-							const blunderKey = validity.invalidWords.join(",");
-							if (!shownBlunders.has(blunderKey) && Date.now() - lastBlunderTime > 1200) {
-								updateThinkingText(`🤦 AI made a blunder: ${validity.invalidWords.join(", ")}. Rethinking...`);
-								blunderCount++;
-								lastBlunderTime = Date.now();
-								shownBlunders.add(blunderKey);
-							}
-							await new Promise(res => setTimeout(res, 400));
-						}
+				for (const candidate of possiblePlays) {
+					// If over 1 minute, just play the first valid move
+					if (Date.now() - startTime > 60000) {
+						bestPlay = candidate;
+						updateThinkingText("AI is running out of time, playing nearest valid move!");
+						setTimeout(() => {
+							thinkingMessage.style.opacity = "0";
+							setTimeout(() => {
+								thinkingMessage.remove();
+								this.unblockHintBox();
+								this.executeAIPlay(bestPlay);
+							}, 300);
+						}, 800);
+						return;
+					}
+					const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+					if (validity.valid) {
+						bestPlay = candidate;
+						updateThinkingText("AI found a move!");
+						setTimeout(() => {
+							thinkingMessage.style.opacity = "0";
+							setTimeout(() => {
+								thinkingMessage.remove();
+								this.unblockHintBox();
+								this.executeAIPlay(bestPlay);
+							}, 300);
+						}, 800);
+						return;
 					}
 				}
-
-				runCount++;
-
-				if (!bestPlay && runCount % 10 === 0 && Date.now() - lastNotifTime > 2000) {
-					updateThinkingText("AI is thinking really hard right now... 🤔");
-					lastNotifTime = Date.now();
-					await new Promise(res => setTimeout(res, 800));
-				}
-
-				if (!bestPlay && runCount % 30 === 0 && Date.now() - lastNotifTime > 2000) {
-					updateThinkingText("AI takes a step back to rethink its strategy... 🔄");
-					lastNotifTime = Date.now();
-					await new Promise(res => setTimeout(res, 1200));
-					updateThinkingText("AI is thinking on a move again...");
-				}
-
-				await new Promise(res => setTimeout(res, 60));
-
-				if (bestPlay && bestPlay.score > 200) break;
 			}
 
-			clearTimeout(strugglingTimeout);
-			clearTimeout(dumbfoundedTimeout);
-
-			if (bestPlay) {
-				updateThinkingText("AI found a move!");
-				setTimeout(() => {
-					thinkingMessage.style.opacity = "0";
-					setTimeout(() => {
-						thinkingMessage.remove();
-						this.unblockHintBox();
-						this.executeAIPlay(bestPlay);
-					}, 300);
-				}, 1000);
-				return;
-			}
-
+			// If no valid play found, exchange tiles
 			updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
-			await new Promise(res => setTimeout(res, 3500));
+			await new Promise(res => setTimeout(res, 1500));
 			thinkingMessage.style.opacity = "0";
 			setTimeout(() => {
 				thinkingMessage.remove();
@@ -579,6 +553,8 @@ class ScrabbleGame {
 			this.unblockHintBox();
 			this.handleAIExchange();
 		}
+
+		this.aiValidationLogSet = new Set();
 	}
 
 	shouldExchangeTiles() {
@@ -3546,13 +3522,13 @@ class ScrabbleGame {
 	}
 
 	isValidAIPlacement(word, startRow, startCol, horizontal) {
-		if (word.length < 3) {
-			console.log(`Rejecting ${word} - words must be at least 3 letters long`);
+		if (word.length < 2) {
+			this.logAIValidation(`Rejecting ${word} - words must be at least 2 letters long`);
 			return false;
 		}
 
 		if (!this.dictionary.has(word.toLowerCase())) {
-			console.log(`${word} is not a valid word in the dictionary`);
+			this.logAIValidation(`${word} is not a valid word in the dictionary`);
 			return false;
 		}
 
@@ -3575,7 +3551,7 @@ class ScrabbleGame {
 
 			if (tempBoard[row][col]) {
 				if (tempBoard[row][col].letter !== word[i]) {
-					console.log(`Letter mismatch at position [${row},${col}]`);
+					this.logAIValidation(`Letter mismatch at position [${row},${col}]`);
 					return false;
 				}
 				hasValidIntersection = true;
@@ -3601,7 +3577,7 @@ class ScrabbleGame {
 
 					if (crossWord && crossWord.length > 1) {
 						if (!this.dictionary.has(crossWord.toLowerCase())) {
-							console.log(`Invalid cross word formed: ${crossWord}`);
+							this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
 							return false;
 						}
 						hasValidIntersection = true;
@@ -3616,14 +3592,14 @@ class ScrabbleGame {
 				startCol === 7 && startRow <= 7 && startRow + word.length > 7;
 
 			if (!usesCenterSquare) {
-				console.log("First move must use center square");
+				this.logAIValidation("First move must use center square");
 				return false;
 			}
 			return true;
 		}
 
 		if (!hasValidIntersection) {
-			console.log("Word must connect with existing tiles");
+			this.logAIValidation("Word must connect with existing tiles");
 			return false;
 		}
 
