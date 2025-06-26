@@ -540,7 +540,7 @@ button:active,
     width: 100vw;
     max-width: 100vw;
     border-radius: 0;
-    bottom: 170px;   /* <-- Moved the hint box lower by 2 notches */
+    bottom: 175px;   /* <-- Moved the hint box lower by 2 notches */
     top: auto;
     margin-top: 0;
     padding: 12px 8vw 12px 0;
