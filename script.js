@@ -362,11 +362,12 @@ class ScrabbleGame {
 			if (!cell || this.currentTurn !== "player") return;
 
 			const tileElem = cell.querySelector(".tile");
+			const isGhostTile = tileElem && tileElem.classList.contains("ghost-tile");
 			const row = parseInt(cell.dataset.row);
 			const col = parseInt(cell.dataset.col);
 
-			// If a tile is selected and tap on empty cell, place it (from rack or board)
-			if (this.selectedTile && !tileElem) {
+			// If a tile is selected and tap on empty cell or ghost cell, place it (from rack or board)
+			if (this.selectedTile && (!tileElem || isGhostTile)) {
 				let tile, tileIndex, fromRow, fromCol;
 				let movedFromBoard = false;
 				if (this.selectedTileSource === "rack") {
@@ -389,7 +390,14 @@ class ScrabbleGame {
 					movedFromBoard = true;
 				}
 				if (this.isValidPlacement(row, col, tile)) {
+					// Remove ghost tile if present
+					const ghost = cell.querySelector('.ghost-tile');
+					if (ghost) ghost.remove();
+
 					this.placeTile(tile, row, col);
+
+					// Redo ghost preview after placement
+					this.showAIGhostIfPlayerMoveValid();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					this.playerRack.push(tile);
