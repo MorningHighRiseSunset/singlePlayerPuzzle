@@ -169,32 +169,24 @@ body {
 
 /* Responsive: mobile tile rack closer to board */
 @media (max-width: 768px) {
+  .tile {
+    width: 30px !important;
+    height: 25px !important;   /* <-- Set to your desired short height */
+    font-size: 13px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
   .tile-rack {
     margin: 4px auto 4px auto;
     padding: 6px;
     gap: 8px;
     max-width: 98vw;
+    overflow: visible;
   }
   .board-container {
     margin-bottom: 0;
-  }
-
-  .tile {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    min-height: 28px;
-    font-size: 1em;
-  }
-  .tile .points {
-    font-size: 9px;
-    top: 1px;
-    right: 2px;
-  }
-  .blank-indicator {
-    font-size: 11px;
-    bottom: 1px;
-    left: 2px;
   }
 }
 
@@ -219,10 +211,8 @@ body {
 }
 
 .tile:active, .tile.selected {
-  transform: scale(1.1);
   box-shadow: 0 0 10px #1976d2;
   border: 2px solid #1976d2;
-  z-index: 2;
 }
 
 .tile.dragging { opacity: 0.6; z-index: 1000; }
