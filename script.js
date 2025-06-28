@@ -411,6 +411,11 @@ class ScrabbleGame {
 
 			// If tapping a tile on the board, pick it up (only if it's a placed tile this turn)
 			if (tileElem && this.placedTiles.some(t => t.row === row && t.col === col)) {
+				// Toggle selection if already selected
+				if (this.selectedTile === tileElem) {
+					deselect();
+					return;
+				}
 				deselect();
 				this.selectedTile = tileElem;
 				this.selectedTileSource = "board";

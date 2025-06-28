@@ -210,9 +210,10 @@ body {
   color: #222 !important; /* <-- Ensures tile letter is always visible */
 }
 
-.tile:active, .tile.selected {
-  box-shadow: 0 0 10px #1976d2;
-  border: 2px solid #1976d2;
+.tile.selected {
+  border: 1px solid #2196f3;
+  box-sizing: border-box; /* Add this if missing */
+  /* Avoid changing padding or width here */
 }
 
 .tile.dragging { opacity: 0.6; z-index: 1000; }
