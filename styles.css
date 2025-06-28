@@ -178,6 +178,24 @@ body {
   .board-container {
     margin-bottom: 0;
   }
+
+  .tile {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 1em;
+  }
+  .tile .points {
+    font-size: 9px;
+    top: 1px;
+    right: 2px;
+  }
+  .blank-indicator {
+    font-size: 11px;
+    bottom: 1px;
+    left: 2px;
+  }
 }
 
 /* --- Tiles --- */
