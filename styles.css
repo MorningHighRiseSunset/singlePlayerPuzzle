@@ -557,14 +557,6 @@ button:active,
     pointer-events: auto;
     transition: opacity 0.2s;
   }
-
-  .tile, .board-cell {
-    min-width: 16px;
-    min-height: 16px;
-    width: 16px;
-    height: 16px;
-    font-size: 11px;
-  }
 }
 
 @media (min-width: 769px) {
