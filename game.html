@@ -93,6 +93,26 @@
         @media (min-width: 769px) {
             #mobile-top-bar { display: none !important; }
         }
+        /* Win/Lose Overlay Close Button */
+        .overlay-close-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #e53935;
+            font-size: 2em;
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .overlay-close-btn:hover {
+            color: #b71c1c;
+            transform: scale(1.15) rotate(90deg);
+        }
+        .win-message {
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -232,6 +252,15 @@
     <!-- Hint Box -->
    <div id="hint-box"><span class="hint-icon">💡</span><span id="hint-text"></span></div>
 
+    <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
+    <div id="win-lose-overlay" class="win-overlay">
+        <div class="win-message">
+            <button class="overlay-close-btn" aria-label="Close">&times;</button>
+            <h2 id="win-lose-title"></h2>
+            <p id="win-lose-message"></p>
+        </div>
+    </div>
+
     <!-- Game Status Modal -->
     <div id="game-status-modal" class="modal">
         <div class="modal-content">
@@ -339,6 +368,13 @@
             });
             document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape') closeModal();
+            });
+
+            // --- Win/Lose Overlay Close Button Logic ---
+            const winLoseOverlay = document.getElementById('win-lose-overlay');
+            const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
+            overlayCloseBtn.addEventListener('click', function() {
+                winLoseOverlay.classList.remove('active');
             });
 
             // --- Mobile Submit Button Logic ---

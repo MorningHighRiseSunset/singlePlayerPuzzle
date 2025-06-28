@@ -557,6 +557,14 @@ button:active,
     pointer-events: auto;
     transition: opacity 0.2s;
   }
+
+  .tile, .board-cell {
+    min-width: 16px;
+    min-height: 16px;
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+  }
 }
 
 @media (min-width: 769px) {
@@ -652,4 +660,24 @@ button:active,
     pointer-events: none !important;
     z-index: 10;
     pointer-events: none !important;
+}
+
+.overlay-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #e53935;
+  font-size: 2em;
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.2s, transform 0.2s;
+}
+.overlay-close-btn:hover {
+  color: #b71c1c;
+  transform: scale(1.15) rotate(90deg);
+}
+.win-message {
+  position: relative; /* Ensure the close button is positioned correctly */
 }
