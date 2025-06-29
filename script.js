@@ -6609,41 +6609,36 @@ class ScrabbleGame {
 					move.word === "QUIT"
 				) {
 					return `<div class="move">
-                          ${move.player}: "${move.word}" for ${move.score} points
-                      </div>`;
+							${move.player}: "${move.word}" for ${move.score} points
+						</div>`;
 				}
 
 				// Handle multiple words (contains &)
 				if (move.word.includes("&")) {
 					const words = move.word.split("&").map((w) => w.trim());
-					const wordScores = words.map((word) => {
-						// Extract score from format "WORD (score)"
-						const match = word.match(/(.+)\s*\((\d+)\)/);
-						if (match) {
-							return {
-								word: match[1].trim(),
-								score: parseInt(match[2]),
-							};
-						}
-						return {
-							word: word.trim(),
-							score: 0
-						};
-					});
-
-					const formattedWords = wordScores
-						.map((w) => `${w.word} (${w.score})`)
-						.join(" & ");
-
+					// Check for BINGO BONUS
+					const bingoIndex = words.findIndex(w => w === "BINGO BONUS");
+					let bingoText = "";
+					if (bingoIndex !== -1) {
+						bingoText = ' & <span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>';
+						words.splice(bingoIndex, 1); // Remove from words list
+					}
+					const formattedWords = words.join(" & ") + bingoText;
 					return `<div class="move">
-                          ${move.player}: ${formattedWords} for total of ${move.score} points
-                      </div>`;
+							${move.player}: ${formattedWords} for total of ${move.score} points
+						</div>`;
 				}
 
-				// Single word
+				// Single word, check for BINGO BONUS
+				if (move.word === "BINGO BONUS") {
+					return `<div class="move">
+							${move.player}: <span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span> for ${move.score} points
+						</div>`;
+				}
+
 				return `<div class="move">
-                      ${move.player}: "${move.word}" for ${move.score} points
-                  </div>`;
+						${move.player}: "${move.word}" for ${move.score} points
+					</div>`;
 			})
 			.join("");
 	}
