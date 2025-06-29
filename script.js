@@ -6697,123 +6697,105 @@ class ScrabbleGame {
 		return false;
 	}
 
-	    announceWinner() {
-        // Calculate leftover tile points for both players
-        let playerLeftover = 0;
-        let aiLeftover = 0;
+	announceWinner() {
+		// Calculate leftover tile points for both players
+		let playerLeftover = 0;
+		let aiLeftover = 0;
 
-        // Sum up leftover points for player
-        this.playerRack.forEach(tile => {
-            playerLeftover += tile.value || 0;
-        });
+		// Sum up leftover points for player
+		this.playerRack.forEach(tile => {
+			playerLeftover += tile.value || 0;
+		});
 
-        // Sum up leftover points for AI
-        this.aiRack.forEach(tile => {
-            aiLeftover += tile.value || 0;
-        });
+		// Sum up leftover points for AI
+		this.aiRack.forEach(tile => {
+			aiLeftover += tile.value || 0;
+		});
 
-        // Adjust scores: subtract own leftover, add opponent's leftover
-        this.playerScore -= playerLeftover;
-        this.aiScore -= aiLeftover;
-        this.aiScore += playerLeftover;
-        this.playerScore += aiLeftover;
+		// Adjust scores: subtract own leftover, add opponent's leftover
+		this.playerScore -= playerLeftover;
+		this.aiScore -= aiLeftover;
+		this.aiScore += playerLeftover;
+		this.playerScore += aiLeftover;
 
-        // Prevent negative scores
-        this.playerScore = Math.max(0, this.playerScore);
-        this.aiScore = Math.max(0, this.aiScore);
+		// Prevent negative scores
+		this.playerScore = Math.max(0, this.playerScore);
+		this.aiScore = Math.max(0, this.aiScore);
 
-        // Update scores before animation
-        this.updateScores();
+		// Update scores before animation
+		this.updateScores();
 
-        const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
-        const finalScore = Math.max(this.playerScore, this.aiScore);
+		const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
+		const finalScore = Math.max(this.playerScore, this.aiScore);
 
-        let winOverlay = document.querySelector(".win-overlay");
-        if (!winOverlay) {
-            winOverlay = document.createElement("div");
-            winOverlay.className = "win-overlay";
+		// Use the existing overlay from HTML
+		let winOverlay = document.getElementById("win-lose-overlay");
+		if (!winOverlay) {
+			// Fallback: create overlay if not found (shouldn't happen)
+			winOverlay = document.createElement("div");
+			winOverlay.className = "win-overlay";
+			winOverlay.id = "win-lose-overlay";
+			const messageBox = document.createElement("div");
+			messageBox.className = "win-message";
+			winOverlay.appendChild(messageBox);
+			document.body.appendChild(winOverlay);
+		}
 
-            const messageBox = document.createElement("div");
-            messageBox.className = "win-message";
-            winOverlay.appendChild(messageBox);
+		// Get the message box
+		const messageBox = winOverlay.querySelector(".win-message");
+		// Insert the close button and content
+		messageBox.innerHTML = `
+			<button class="overlay-close-btn" aria-label="Close">&times;</button>
+			<h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
+			<p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
+			<p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
+			<p>Player: ${this.playerScore}</p>
+			<p>Computer: ${this.aiScore}</p>
+			<p style="margin-top:10px;font-size:1em;">
+				<strong>Leftover tiles:</strong><br>
+				Player lost ${playerLeftover} point${playerLeftover === 1 ? '' : 's'} for leftover tiles.<br>
+				Computer lost ${aiLeftover} point${aiLeftover === 1 ? '' : 's'} for leftover tiles.
+			</p>
+			<button onclick="location.reload()" 
+					style="padding: 10px 20px; 
+						margin-top: 20px; 
+						background-color: #4CAF50; 
+						color: white; 
+						border: none; 
+						border-radius: 5px; 
+						cursor: pointer;
+						font-size: 1.1em;">
+				Play Again
+			</button>
+		`;
 
-            document.body.appendChild(winOverlay);
-        }
+		// Remove any previous classes
+		winOverlay.classList.remove("active", "lose");
+		messageBox.classList.remove("celebrate");
 
-        // --- ADD "X" CLOSE BUTTON ---
-        let closeBtn = winOverlay.querySelector('.win-close-btn');
-        if (!closeBtn) {
-            closeBtn = document.createElement('button');
-            closeBtn.className = 'win-close-btn';
-            closeBtn.innerHTML = '&times;';
-            closeBtn.title = 'Close';
-            closeBtn.style.cssText = `
-                position: absolute;
-                top: 18px;
-                right: 24px;
-                font-size: 2em;
-                background: transparent;
-                border: none;
-                color: #888;
-                cursor: pointer;
-                z-index: 10;
-                transition: color 0.2s;
-            `;
-            closeBtn.onmouseenter = () => closeBtn.style.color = "#222";
-            closeBtn.onmouseleave = () => closeBtn.style.color = "#888";
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                winOverlay.classList.remove("active", "lose");
-                winOverlay.style.display = "none";
-            };
-            winOverlay.appendChild(closeBtn);
-        }
-        winOverlay.style.display = ""; // Ensure overlay is visible if re-used
+		// Add appropriate classes
+		if (winner === "Computer") {
+			winOverlay.classList.add("lose");
+		}
 
-        // Get the message box
-        const messageBox = winOverlay.querySelector(".win-message");
-        messageBox.innerHTML = `
-          <h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
-          <p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
-          <p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
-          <p>Player: ${this.playerScore}</p>
-          <p>Computer: ${this.aiScore}</p>
-          <p style="margin-top:10px;font-size:1em;">
-            <strong>Leftover tiles:</strong><br>
-            Player lost ${playerLeftover} point${playerLeftover === 1 ? '' : 's'} for leftover tiles.<br>
-            Computer lost ${aiLeftover} point${aiLeftover === 1 ? '' : 's'} for leftover tiles.
-          </p>
-          <button onclick="location.reload()" 
-                  style="padding: 10px 20px; 
-                         margin-top: 20px; 
-                         background-color: #4CAF50; 
-                         color: white; 
-                         border: none; 
-                         border-radius: 5px; 
-                         cursor: pointer;
-                         font-size: 1.1em;">
-              Play Again
-          </button>
-      `;
+		// Attach close event to the button (since innerHTML replaced it)
+		const overlayCloseBtn = winOverlay.querySelector('.overlay-close-btn');
+		if (overlayCloseBtn) {
+			overlayCloseBtn.onclick = (e) => {
+				e.stopPropagation();
+				winOverlay.classList.remove("active", "lose");
+				winOverlay.style.display = "none";
+			};
+		}
 
-        // Clear any existing classes
-        winOverlay.classList.remove("active", "lose");
-        messageBox.classList.remove("celebrate");
-
-        // Add appropriate classes
-        if (winner === "Computer") {
-            winOverlay.classList.add("lose");
-        }
-
-        // Small delay to ensure transitions work properly
-        requestAnimationFrame(() => {
-            winOverlay.classList.add("active");
-            messageBox.classList.add("celebrate");
-
-            // Create the confetti/emoji effect
-            this.createConfettiEffect();
-        });
-    }
+		// Show the overlay with animation
+		winOverlay.style.display = "";
+		requestAnimationFrame(() => {
+			winOverlay.classList.add("active");
+			messageBox.classList.add("celebrate");
+			this.createConfettiEffect();
+		});
+	}
 
 	createConfettiEffect() {
 		// Different effects for win vs lose

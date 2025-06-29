@@ -657,18 +657,31 @@ button:active,
   position: absolute;
   top: 18px;
   right: 18px;
-  background: none;
-  border: none;
+  background: #fff;
+  border: 2px solid #e53935;
   color: #e53935;
   font-size: 2em;
   cursor: pointer;
   z-index: 2;
-  transition: color 0.2s, transform 0.2s;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  transition: color 0.2s, border-color 0.2s, transform 0.2s, background 0.2s;
 }
 .overlay-close-btn:hover {
-  color: #b71c1c;
+  color: #fff;
+  background: #e53935;
+  border-color: #b71c1c;
   transform: scale(1.15) rotate(90deg);
 }
 .win-message {
   position: relative; /* Ensure the close button is positioned correctly */
+}
+
+@keyframes lose-particle-fall {
+  to { transform: translateY(100vh) rotate(-720deg); opacity: 0;}
 }
