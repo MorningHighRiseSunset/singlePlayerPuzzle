@@ -300,7 +300,7 @@ button:active,
 }
 
 .exchange-portal {
-  width: 100px; height: 100px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: radial-gradient(circle, #42a5f5 60%, #1976d2 100%);
   margin: 10px 0;

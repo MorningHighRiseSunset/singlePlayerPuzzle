@@ -130,7 +130,22 @@
                 <div id="move-history"></div>
             </aside>
             <aside class="info-panel">
-                <h2>Game Info</h2>
+                <div class="language-selector">
+                    <select id="language-selector" class="language-button">
+                        <option value="" disabled selected hidden>Click to change language</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                        <option value="fr">French</option>
+                    </select>
+                </div>
+                <nav class="controls">
+                    <button id="play-word">Submit</button>
+                    <button id="shuffle-rack">Shuffle Rack</button>
+                    <button id="skip-turn">Skip Turn</button>
+                    <button id="show-instructions">How to Play</button>
+                    <button id="quit-game" class="quit-button">Quit / End Game</button>
+                </nav>
                 <div class="score-box">
                     <h3>Scores</h3>
                     <p>Player: <span id="player-score">0</span></p>
@@ -142,33 +157,11 @@
                 <section class="exchange-area">
                     <h3>Exchange Tiles</h3>
                     <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
-                    <div id="exchange-portal" class="exchange-portal">
-                        <div class="portal-ring outer"></div>
-                        <div class="portal-ring middle"></div>
-                        <div class="portal-ring inner"></div>
-                        <div class="portal-core"></div>
-                        <div class="portal-particles"></div>
-                    </div>
+                    <div id="exchange-portal" class="exchange-portal"></div>
                     <div class="exchange-instructions">
                         Drag tiles here to exchange them
                     </div>
                 </section>
-                <nav class="controls">
-                    <button id="play-word">Submit</button>
-                    <button id="shuffle-rack">Shuffle Rack</button>
-                    <button id="skip-turn">Skip Turn</button>
-                    <button id="show-instructions">How to Play</button>
-                    <button id="quit-game" class="quit-button">Quit / End Game</button>
-                </nav>
-                <div class="language-selector">
-                    <select id="language-selector" class="language-button">
-                        <option value="" disabled selected hidden>Click to change language</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="zh">中文</option>
-                        <option value="fr">French</option>
-                    </select>
-                </div>
             </aside>
         </div>
     </div>
@@ -209,38 +202,8 @@
         </aside>
         <!-- Desktop Info Panel -->
         <aside class="info-panel">
-            <h2>Game Info</h2>
-            <div class="score-box">
-                <h3>Scores</h3>
-                <p>Player: <span id="player-score-desktop">0</span></p>
-                <p>Computer: <span id="computer-score-desktop">0</span></p>
-            </div>
-            <div class="tiles-left">
-                <h3>Tiles Remaining: <span id="tiles-count-desktop">98</span></h3>
-            </div>
-            <section class="exchange-area">
-                <h3>Exchange Tiles</h3>
-                <button id="activate-exchange-desktop" class="exchange-button">Activate Exchange Portal</button>
-                <div id="exchange-portal-desktop" class="exchange-portal">
-                    <div class="portal-ring outer"></div>
-                    <div class="portal-ring middle"></div>
-                    <div class="portal-ring inner"></div>
-                    <div class="portal-core"></div>
-                    <div class="portal-particles"></div>
-                </div>
-                <div class="exchange-instructions">
-                    Drag tiles here to exchange them
-                </div>
-            </section>
-            <nav class="controls">
-                <button id="play-word-desktop">Submit</button>
-                <button id="shuffle-rack-desktop">Shuffle Rack</button>
-                <button id="skip-turn-desktop">Skip Turn</button>
-                <button id="show-instructions-desktop">How to Play</button>
-                <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
-            </nav>
             <div class="language-selector">
-                <select id="language-selector-desktop" class="language-button">
+                <select id="language-selector" class="language-button">
                     <option value="" disabled selected hidden>Click to change language</option>
                     <option value="en">English</option>
                     <option value="es">Español</option>
@@ -248,6 +211,29 @@
                     <option value="fr">French</option>
                 </select>
             </div>
+            <nav class="controls">
+                <button id="play-word">Submit</button>
+                <button id="shuffle-rack">Shuffle Rack</button>
+                <button id="skip-turn">Skip Turn</button>
+                <button id="show-instructions">How to Play</button>
+                <button id="quit-game" class="quit-button">Quit / End Game</button>
+            </nav>
+            <div class="score-box">
+                <h3>Scores</h3>
+                <p>Player: <span id="player-score">0</span></p>
+                <p>Computer: <span id="computer-score">0</span></p>
+            </div>
+            <div class="tiles-left">
+                <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+            </div>
+            <section class="exchange-area">
+                <h3>Exchange Tiles</h3>
+                <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
+                <div id="exchange-portal" class="exchange-portal"></div>
+                <div class="exchange-instructions">
+                    Drag tiles here to exchange them
+                </div>
+            </section>
         </aside>
     </div>
 
