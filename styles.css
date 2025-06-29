@@ -556,6 +556,46 @@ button:active,
     pointer-events: auto;
     transition: opacity 0.2s;
   }
+
+  /* --- Compact info-panel controls and language selector in drawer --- */
+  .mobile-drawer .drawer-content {
+    padding-top: 16px !important;
+    padding-bottom: 12px !important;
+  }
+  .mobile-drawer .info-panel {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .info-panel .language-selector {
+    margin-bottom: 4px !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+  }
+  .info-panel .language-selector select {
+    padding: 5px 8px !important;
+    font-size: 1em !important;
+    min-height: 28px !important;
+    margin-bottom: 0 !important;
+  }
+  .info-panel .controls {
+    margin-bottom: 4px !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .info-panel .controls button {
+    padding: 7px 0 !important;
+    font-size: 1em !important;
+    min-height: 28px !important;
+    margin: 0 !important;
+  }
+  .info-panel .score-box,
+  .info-panel .tiles-left,
+  .info-panel .exchange-area {
+    margin-top: 8px !important;
+  }
 }
 
 @media (min-width: 769px) {
