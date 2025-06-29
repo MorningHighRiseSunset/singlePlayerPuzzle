@@ -198,6 +198,8 @@
             <div id="ai-rack" class="tile-rack ai-rack"></div>
             <div id="scrabble-board"></div>
             <div id="tile-rack" class="tile-rack"></div>
+            <!-- Hint Box: moved here, directly after the player rack -->
+            <div id="hint-box"><span class="hint-icon">💡</span><span id="hint-text"></span></div>
         </main>
         <!-- Desktop Definitions/History Panel -->
         <aside class="moves-panel">
@@ -248,9 +250,6 @@
             </div>
         </aside>
     </div>
-
-    <!-- Hint Box -->
-   <div id="hint-box"><span class="hint-icon">💡</span><span id="hint-text"></span></div>
 
     <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
     <div id="win-lose-overlay" class="win-overlay">

@@ -378,19 +378,14 @@ button:active,
 
 /* --- Hint Box --- */
 #hint-box {
-  position: fixed;
-  left: 0;
-  right: 0;
-  width: 100vw;
+  position: static; /* Not fixed */
+  width: 100%;
   max-width: 100vw;
   border-radius: 0;
-  bottom: 27px;   /* <-- Move the hint box much lower */
-  top: auto;
-  margin-top: 0;
+  margin: 12px auto 0 auto;
   padding: 12px 8vw 12px 0;
   font-size: 1em;
   z-index: 3100;
-  transform: none;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -543,19 +538,14 @@ button:active,
       line-height: 1;
   }
   #hint-box {
-    position: fixed;
-    left: 0;
-    right: 0;
-    width: 100vw;
+    position: static;
+    width: 100%;
     max-width: 100vw;
     border-radius: 0;
-    bottom: 27px;   /* <-- Move the hint box much lower on mobile too */
-    top: auto;
-    margin-top: 0;
+    margin: 12px auto 0 auto;
     padding: 12px 8vw 12px 0;
     font-size: 1em;
     z-index: 3100;
-    transform: none;
     display: flex;
     align-items: center;
     justify-content: flex-start;
