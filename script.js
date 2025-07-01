@@ -5785,139 +5785,139 @@ class ScrabbleGame {
 		return words;
 	}
 
-	getFormedWords() {
-		const words = new Set();
-		const existingWords = new Set(); // Track words that existed before this move
+getFormedWords() {
+    const words = new Set();
+    const existingWords = new Set(); // Track words that existed before this move
 
-		// First, get words that existed before this move
-		// Store the words from the previous board state
-		if (this.previousBoard) {
-			for (let row = 0; row < 15; row++) {
-				let word = "";
-				for (let col = 0; col < 15; col++) {
-					if (this.previousBoard[row][col]) {
-						word += this.previousBoard[row][col].letter;
-					} else if (word.length > 1) {
-						existingWords.add(word);
-						word = "";
-					} else {
-						word = "";
-					}
-				}
-				if (word.length > 1) {
-					existingWords.add(word);
-				}
-			}
+    // First, get words that existed before this move
+    // Store the words from the previous board state
+    if (this.previousBoard) {
+        for (let row = 0; row < 15; row++) {
+            let word = "";
+            for (let col = 0; col < 15; col++) {
+                if (this.previousBoard[row][col]) {
+                    word += this.previousBoard[row][col].letter;
+                } else if (word.length > 1) {
+                    existingWords.add(word);
+                    word = "";
+                } else {
+                    word = "";
+                }
+            }
+            if (word.length > 1) {
+                existingWords.add(word);
+            }
+        }
 
-			// Check vertical existing words
-			for (let col = 0; col < 15; col++) {
-				let word = "";
-				for (let row = 0; row < 15; row++) {
-					if (this.previousBoard[row][col]) {
-						word += this.previousBoard[row][col].letter;
-					} else if (word.length > 1) {
-						existingWords.add(word);
-						word = "";
-					} else {
-						word = "";
-					}
-				}
-				if (word.length > 1) {
-					existingWords.add(word);
-				}
-			}
-		}
+        // Check vertical existing words
+        for (let col = 0; col < 15; col++) {
+            let word = "";
+            for (let row = 0; row < 15; row++) {
+                if (this.previousBoard[row][col]) {
+                    word += this.previousBoard[row][col].letter;
+                } else if (word.length > 1) {
+                    existingWords.add(word);
+                    word = "";
+                } else {
+                    word = "";
+                }
+            }
+            if (word.length > 1) {
+                existingWords.add(word);
+            }
+        }
+    }
 
-		// Now find new words
-		// Check horizontal words
-		for (let row = 0; row < 15; row++) {
-			let word = "";
-			let startCol = 0;
-			let containsNewTile = false;
+    // Now find new words
+    // Check horizontal words
+    for (let row = 0; row < 15; row++) {
+        let word = "";
+        let startCol = 0;
+        let containsNewTile = false;
 
-			for (let col = 0; col < 15; col++) {
-				if (this.board[row][col]) {
-					word += this.board[row][col].letter;
-					// Check if this position contains a newly placed tile
-					if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-						containsNewTile = true;
-					}
-				} else {
-					if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
-						words.add({
-							word,
-							startPos: {
-								row,
-								col: startCol
-							},
-							direction: "horizontal",
-						});
-					}
-					word = "";
-					startCol = col + 1;
-					containsNewTile = false;
-				}
-			}
-			if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
-				words.add({
-					word,
-					startPos: {
-						row,
-						col: startCol
-					},
-					direction: "horizontal",
-				});
-			}
-		}
+        for (let col = 0; col < 15; col++) {
+            if (this.board[row][col]) {
+                word += this.board[row][col].letter;
+                // Check if this position contains a newly placed tile
+                if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+                    containsNewTile = true;
+                }
+            } else {
+                if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+                    words.add({
+                        word,
+                        startPos: {
+                            row,
+                            col: startCol
+                        },
+                        direction: "horizontal",
+                    });
+                }
+                word = "";
+                startCol = col + 1;
+                containsNewTile = false;
+            }
+        }
+        if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+            words.add({
+                word,
+                startPos: {
+                    row,
+                    col: startCol
+                },
+                direction: "horizontal",
+            });
+        }
+    }
 
-		// Check vertical words
-		for (let col = 0; col < 15; col++) {
-			let word = "";
-			let startRow = 0;
-			let containsNewTile = false;
+    // Check vertical words
+    for (let col = 0; col < 15; col++) {
+        let word = "";
+        let startRow = 0;
+        let containsNewTile = false;
 
-			for (let row = 0; row < 15; row++) {
-				if (this.board[row][col]) {
-					word += this.board[row][col].letter;
-					// Check if this position contains a newly placed tile
-					if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-						containsNewTile = true;
-					}
-				} else {
-					if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
-						words.add({
-							word,
-							startPos: {
-								row: startRow,
-								col
-							},
-							direction: "vertical",
-						});
-					}
-					word = "";
-					startRow = row + 1;
-					containsNewTile = false;
-				}
-			}
-			if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
-				words.add({
-					word,
-					startPos: {
-						row: startRow,
-						col
-					},
-					direction: "vertical",
-				});
-			}
-		}
+        for (let row = 0; row < 15; row++) {
+            if (this.board[row][col]) {
+                word += this.board[row][col].letter;
+                // Check if this position contains a newly placed tile
+                if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+                    containsNewTile = true;
+                }
+            } else {
+                if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+                    words.add({
+                        word,
+                        startPos: {
+                            row: startRow,
+                            col
+                        },
+                        direction: "vertical",
+                    });
+                }
+                word = "";
+                startRow = row + 1;
+                containsNewTile = false;
+            }
+        }
+        if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+            words.add({
+                word,
+                startPos: {
+                    row: startRow,
+                    col
+                },
+                direction: "vertical",
+            });
+        }
+    }
 
-		console.log("Existing words:", Array.from(existingWords));
-		console.log(
-			"New words formed:",
-			Array.from(words).map((w) => w.word),
-		);
-		return Array.from(words);
-	}
+    console.log("Existing words:", Array.from(existingWords));
+    console.log(
+        "New words formed:",
+        Array.from(words).map((w) => w.word),
+    );
+    return Array.from(words);
+}
 
 	getCrossWord(row, col) {
 		let verticalWord = "";
@@ -6013,95 +6013,95 @@ class ScrabbleGame {
 		return word;
 	}
 
-	calculateScore() {
-		let totalScore = 0;
-		const words = new Set();
+calculateScore() {
+    let totalScore = 0;
+    const words = new Set();
 
-		console.log("=== Starting Score Calculation ===");
+    console.log("=== Starting Score Calculation ===");
 
-		// Get all formed words (main word + perpendicular words + modified words)
-		const formedWords = this.getFormedWords();
-		console.log("Words formed:", formedWords);
+    // Get all formed words (main word + perpendicular words + modified words)
+    const formedWords = this.getFormedWords();
+    console.log("Words formed:", formedWords);
 
-		// Calculate score for each formed word
-		formedWords.forEach((wordInfo) => {
-			let wordScore = 0;
-			let wordMultiplier = 1;
-			const {
-				word,
-				startPos,
-				direction
-			} = wordInfo;
+    // Calculate score for each formed word
+    formedWords.forEach((wordInfo) => {
+        let wordScore = 0;
+        let wordMultiplier = 1;
+        const {
+            word,
+            startPos,
+            direction
+        } = wordInfo;
 
-			console.log(`\nCalculating score for word: ${word}`);
+        console.log(`\nCalculating score for word: ${word}`);
 
-			// Calculate score for each letter in the word
-			for (let i = 0; i < word.length; i++) {
-				const row =
-					direction === "horizontal" ? startPos.row : startPos.row + i;
-				const col =
-					direction === "horizontal" ? startPos.col + i : startPos.col;
-				const tile = this.board[row][col];
+        // Calculate score for each letter in the word
+        for (let i = 0; i < word.length; i++) {
+            const row =
+                direction === "horizontal" ? startPos.row : startPos.row + i;
+            const col =
+                direction === "horizontal" ? startPos.col + i : startPos.col;
+            const tile = this.board[row][col];
 
-				let letterScore = tile.value;
+            let letterScore = tile.value;
 
-				// Apply premium squares only for newly placed tiles
-				if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-					const premium = this.getPremiumSquareType(row, col);
-					if (premium === "dl") {
-						letterScore *= 2;
-						console.log(`Double letter score applied to ${tile.letter}`);
-					}
-					if (premium === "tl") {
-						letterScore *= 3;
-						console.log(`Triple letter score applied to ${tile.letter}`);
-					}
-					if (premium === "dw") {
-						wordMultiplier *= 2;
-						console.log("Double word score will be applied");
-					}
-					if (premium === "tw") {
-						wordMultiplier *= 3;
-						console.log("Triple word score will be applied");
-					}
-				}
+            // Apply premium squares only for newly placed tiles
+            if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+                const premium = this.getPremiumSquareType(row, col);
+                if (premium === "dl") {
+                    letterScore *= 2;
+                    console.log(`Double letter score applied to ${tile.letter}`);
+                }
+                if (premium === "tl") {
+                    letterScore *= 3;
+                    console.log(`Triple letter score applied to ${tile.letter}`);
+                }
+                if (premium === "dw") {
+                    wordMultiplier *= 2;
+                    console.log("Double word score will be applied");
+                }
+                if (premium === "tw") {
+                    wordMultiplier *= 3;
+                    console.log("Triple word score will be applied");
+                }
+            }
 
-				wordScore += letterScore;
-				console.log(`Letter ${tile.letter} adds ${letterScore} points`);
-			}
+            wordScore += letterScore;
+            console.log(`Letter ${tile.letter} adds ${letterScore} points`);
+        }
 
-			// Apply word multiplier
-			wordScore *= wordMultiplier;
-			console.log(`Final score for "${word}": ${wordScore} points`);
+        // Apply word multiplier
+        wordScore *= wordMultiplier;
+        console.log(`Final score for "${word}": ${wordScore} points`);
 
-			// Add to total score
-			totalScore += wordScore;
+        // Add to total score
+        totalScore += wordScore;
 
-			// Store word and its score for display
-			words.add(
-				JSON.stringify({
-					word: word,
-					score: wordScore,
-				}),
-			);
-		});
+        // Store word and its score for display
+        words.add(
+            JSON.stringify({
+                word: word,
+                score: wordScore,
+            }),
+        );
+    });
 
-		// Add bonus for using all 7 tiles
-		if (this.placedTiles.length === 7) {
-			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles");
-			totalScore += 50;
-		}
+    // Add bonus for forming any 7-letter word in this move
+    if (formedWords.some(w => w.word.length === 7)) {
+        console.log("\nBINGO! Adding 50 point bonus for forming a 7-letter word");
+        totalScore += 50;
+    }
 
-		console.log(`\n=== Final Score Calculation ===`);
-		console.log(
-			`Words formed: ${Array.from(words)
+    console.log(`\n=== Final Score Calculation ===`);
+    console.log(
+        `Words formed: ${Array.from(words)
           .map((w) => JSON.parse(w).word)
           .join(" & ")}`,
-		);
-		console.log(`Total score for this move: ${totalScore}`);
+    );
+    console.log(`Total score for this move: ${totalScore}`);
 
-		return totalScore;
-	}
+    return totalScore;
+}
 
 	findWordPosition(word) {
 		// Search the board for the starting position of the word
