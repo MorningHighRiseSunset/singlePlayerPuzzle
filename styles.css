@@ -167,7 +167,7 @@ body {
   box-shadow: 0 5px 15px rgba(0,0,0,0.12);
 }
 
-/* Responsive: mobile tile rack closer to board */
+/* Responsive: mobile tile rack closer to board - desktop tile rack wider */
 /* --- Compact Mobile Layout: All mobile rules in one block --- */
 @media (max-width: 768px) {
   body {
