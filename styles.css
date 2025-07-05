@@ -280,9 +280,10 @@ body {
 }
 
 .tile.selected {
-  border: 1px solid #2196f3;
-  box-sizing: border-box; /* Add this if missing */
-  /* Avoid changing padding or width here */
+  border: 2.5px solid #2979ff !important; /* Blue, slightly thicker than normal */
+  box-shadow: 0 0 0 2px #bbdefb, 0 0 8px 1px #2979ff44 !important; /* Soft blue glow */
+  background: linear-gradient(135deg, #e3f2fd 70%, #bbdefb 100%) !important;
+  z-index: 2;
 }
 
 .tile.dragging { opacity: 0.6; z-index: 1000; }
