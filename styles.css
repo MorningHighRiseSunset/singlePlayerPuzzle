@@ -247,7 +247,7 @@ body {
     right: 2px !important;
   }
   .tile .blank-indicator {
-    font-size: 1vw !important;   /* Smaller for mobile */
+    font-size: 0.7vw !important;   /* Smaller for mobile */
     bottom: 0.5px !important;
     left: 1px !important;
   }
