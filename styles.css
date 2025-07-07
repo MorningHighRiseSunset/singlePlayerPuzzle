@@ -247,9 +247,9 @@ body {
     right: 2px !important;
   }
   .tile .blank-indicator {
-    font-size: 1.3vw !important;   /* Match points size for best fit */
-    bottom: 1px !important;
-    left: 2px !important;
+    font-size: 1vw !important;   /* Smaller for mobile */
+    bottom: 0.5px !important;
+    left: 1px !important;
   }
   .center-star {
     font-size: 2vw !important;
