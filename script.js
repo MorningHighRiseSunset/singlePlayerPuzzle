@@ -176,6 +176,74 @@ class ScrabbleGame {
 		}
 	}
 
+	getAITauntOrPraise(wordsList, totalScore) {
+		const taunts = [
+			"Is that the best you can do?",
+			"Try to keep up!",
+			"Feeling the pressure yet?",
+			"Maybe you should use the hint system!",
+			"Don't worry, you'll get me next time... maybe.",
+			"That was a bold move. Let's see how you handle this.",
+			"Oops, did I do that?",
+			"You're making this too easy for me.",
+			"Let me show you how it's done.",
+			"Are you sure you know the rules?",
+			"Careful, I’m just getting started.",
+			"That move was... interesting.",
+			"Let’s spice things up a bit.",
+			"Hope you’re paying attention!",
+			"Don’t blink, you might miss my next play.",
+		];
+		const praises = [
+			"Impressive play! But can you keep it up?",
+			"Nice word! I see you're learning.",
+			"That was a clever move!",
+			"You're making me work for this win!",
+			"Well played! But I'm not done yet.",
+			"You're getting better at this.",
+			"Not bad! But can you do it again?",
+			"That was a strong move!",
+			"Wow, you surprised me with that one.",
+			"Respect. That was a solid play.",
+		];
+		const smug = [
+			"Try this on for size!",
+			"Bet you didn't see that coming.",
+			"Seven letters, fifty bonus points—easy.",
+			"That's how a pro does it.",
+			"Did you bring your dictionary?",
+			"Big words, big points.",
+			"Hope you were watching closely.",
+			"That's what I call a power play.",
+			"Feeling lucky? You'll need it.",
+			"Let me show you how it's really done.",
+			"Boom! Top that.",
+			"That’s a bingo! Can you match it?",
+		];
+
+		// Analyze AI's move
+		const aiLongWord = wordsList.some(w => w.word && w.word.length >= 7);
+		const aiHighScore = totalScore >= 50;
+		const aiDifficultWord = wordsList.some(w => w.word && /[JQXZ]/.test(w.word));
+		const aiMultiWord = wordsList.length > 1;
+
+		// Analyze player's last move
+		const lastPlayerMove = [...this.moveHistory].reverse().find(m => m.player === "Player" && typeof m.score === "number");
+		const playerHighScore = lastPlayerMove && lastPlayerMove.score >= 40;
+		const playerLongWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 7;
+
+		// Smug if AI just played a 7-letter, high-scoring, or difficult word, or made multiple words
+		if (aiLongWord || aiHighScore || aiDifficultWord || aiMultiWord) {
+			return smug[Math.floor(Math.random() * smug.length)];
+		}
+		// Praise if player just made a high score or long word
+		if (playerHighScore || playerLongWord) {
+			return praises[Math.floor(Math.random() * praises.length)];
+		}
+		// Otherwise, random taunt
+		return taunts[Math.floor(Math.random() * taunts.length)];
+	}
+
 	showAIGhostMove(play) {
 		// Remove any existing ghost tiles
 		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
@@ -3226,6 +3294,10 @@ class ScrabbleGame {
 				this.aiScore += totalScore;
 				this.isFirstMove = false;
 				this.consecutiveSkips = 0;
+				// --- AI TAUNT/SMUG/PRAISE ---
+				const aiMessage = this.getAITauntOrPraise(wordsList, totalScore);
+				this.showAINotification(aiMessage);
+
 				this.currentTurn = "player";
 				this.addToMoveHistory("Computer", moveDescription, totalScore);
 
@@ -6089,21 +6161,17 @@ class ScrabbleGame {
 			);
 		});
 
-		// Add bonus for using all 7 tiles in a single word
-		if (
-			this.placedTiles.length === 7 &&
-			formedWords.length === 1 &&
-			formedWords[0].word.length >= 7
-		) {
-			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles in a single word");
+		// --- BINGO BONUS: Award 50 points if all 7 tiles from rack were used in this move ---
+		if (this.placedTiles.length === 7) {
+			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles in a single move");
 			totalScore += 50;
 		}
 
 		console.log(`\n=== Final Score Calculation ===`);
 		console.log(
 			`Words formed: ${Array.from(words)
-			.map((w) => JSON.parse(w).word)
-			.join(" & ")}`,
+				.map((w) => JSON.parse(w).word)
+				.join(" & ")}`,
 		);
 		console.log(`Total score for this move: ${totalScore}`);
 
