@@ -163,10 +163,22 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
+		this.lastAIMessages = { taunt: null, praise: null, smug: null };
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
 		this.init();
+	}
+
+	pickNonRepeating(arr, type) {
+		let msg;
+		let tries = 0;
+		do {
+			msg = arr[Math.floor(Math.random() * arr.length)];
+			tries++;
+		} while (arr.length > 1 && msg === this.lastAIMessages[type] && tries < 10);
+		this.lastAIMessages[type] = msg;
+		return msg;
 	}
 
 	logAIValidation(msg) {
@@ -181,7 +193,6 @@ class ScrabbleGame {
 			"Is that the best you can do?",
 			"Try to keep up!",
 			"Feeling the pressure yet?",
-			"Maybe you should use the hint system!",
 			"Don't worry, you'll get me next time... maybe.",
 			"That was a bold move. Let's see how you handle this.",
 			"Oops, did I do that?",
@@ -193,6 +204,26 @@ class ScrabbleGame {
 			"Let’s spice things up a bit.",
 			"Hope you’re paying attention!",
 			"Don’t blink, you might miss my next play.",
+			"You might want to stretch before your next move.",
+			"I almost had time for a coffee during that turn.",
+			"I’ve seen more daring plays in a game of checkers.",
+			"If you keep this up, I’ll have to start playing blindfolded.",
+			"That move was so gentle, the board barely noticed.",
+			"I was expecting fireworks, but got a sparkler.",
+			"You’re making my circuits yawn.",
+			"I hope you’re not saving your best for last.",
+			"That play was so safe, it should come with a seatbelt.",
+			"I’ve seen bolder moves from a snail.",
+			"If you need a pep talk, just let me know.",
+			"You’re playing it cool… maybe a little too cool.",
+			"I’m starting to think you’re letting me win.",
+			"That word was so quiet, I almost missed it.",
+			"You’re not just playing it safe—you’re playing it invisible.",
+			"If you want, I can give you a head start next round.",
+			"I hope you’re not allergic to risk.",
+			"That move was softer than a marshmallow.",
+			"I’ve seen more action in a library.",
+			"You’re making this look like a practice round.",
 		];
 		const praises = [
 			"Impressive play! But can you keep it up?",
@@ -205,6 +236,26 @@ class ScrabbleGame {
 			"That was a strong move!",
 			"Wow, you surprised me with that one.",
 			"Respect. That was a solid play.",
+			"That word was a beauty—nicely done!",
+			"You’re really stepping up your game.",
+			"I didn’t expect that! Well played.",
+			"You’re making this a real challenge.",
+			"That’s the kind of play I admire.",
+			"You’re giving me a run for my money!",
+			"That move took some skill.",
+			"You’re not making this easy for me.",
+			"You’re on a roll—keep it going!",
+			"That’s a word worthy of a champion.",
+			"You’ve got some serious Scrabble skills.",
+			"You’re raising the bar this round.",
+			"I might have to rethink my strategy.",
+			"You’re making me double-check my dictionary.",
+			"That’s a move I wish I’d thought of.",
+			"You’re playing like a pro!",
+			"That was a textbook play.",
+			"You’re making the board look good.",
+			"You’re keeping me on my toes.",
+			"That’s a move to be proud of.",
 		];
 		const smug = [
 			"Try this on for size!",
@@ -219,6 +270,25 @@ class ScrabbleGame {
 			"Let me show you how it's really done.",
 			"Boom! Top that.",
 			"That’s a bingo! Can you match it?",
+			"Effortless. Maybe you should take notes.",
+			"I make this look easy.",
+			"You just witnessed a masterclass.",
+			"That’s how you dominate the board.",
+			"You might want to screenshot that move.",
+			"I hope you’re learning something.",
+			"I could do this all day.",
+			"That’s just the beginning.",
+			"I’m just getting warmed up.",
+			"You’re witnessing greatness.",
+			"This is what peak performance looks like.",
+			"Did you see that? That’s skill.",
+			"I almost feel bad… almost.",
+			"You’ll need more than luck to beat that.",
+			"That move belongs in the record books.",
+			"You can applaud now.",
+			"That’s how legends play.",
+			"I hope you were taking notes.",
+			"You might want to frame that board.",
 		];
 
 		// Analyze AI's move
@@ -231,17 +301,36 @@ class ScrabbleGame {
 		const lastPlayerMove = [...this.moveHistory].reverse().find(m => m.player === "Player" && typeof m.score === "number");
 		const playerHighScore = lastPlayerMove && lastPlayerMove.score >= 40;
 		const playerLongWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 7;
+		const playerMediumWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 5;
+		const playerShortWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length <= 3;
+		const playerLowScore = lastPlayerMove && lastPlayerMove.score <= 8;
 
 		// Smug if AI just played a 7-letter, high-scoring, or difficult word, or made multiple words
 		if (aiLongWord || aiHighScore || aiDifficultWord || aiMultiWord) {
-			return smug[Math.floor(Math.random() * smug.length)];
+			return this.pickNonRepeating(smug, "smug");
 		}
-		// Praise if player just made a high score or long word
-		if (playerHighScore || playerLongWord) {
-			return praises[Math.floor(Math.random() * praises.length)];
+		// Praise if player just made a high score, long word, or medium word (5+ letters)
+		if (playerHighScore || playerLongWord || playerMediumWord) {
+			return this.pickNonRepeating(praises, "praise");
+		}
+		// Special taunt for short/weak player moves
+		if (playerShortWord || playerLowScore) {
+			const shortTaunts = [
+				"Only a few letters? I think you can do better.",
+				"Short and sweet... but not enough to win!",
+				"That word was barely a warm-up.",
+				"Small words, small points.",
+				"Maybe try something a bit longer next time?",
+				"Blink and I almost missed that move.",
+				"Are you saving your big words for later?",
+				"That was quick, but not very clever.",
+				"Feeling stuck? The hint box is right there.",
+				"Come on, give me a challenge!",
+			];
+			return this.pickNonRepeating(shortTaunts, "taunt");
 		}
 		// Otherwise, random taunt
-		return taunts[Math.floor(Math.random() * taunts.length)];
+		return this.pickNonRepeating(taunts, "taunt");
 	}
 
 	showAIGhostMove(play) {
@@ -333,38 +422,44 @@ class ScrabbleGame {
 		this.hintBoxBlocked = false;
 	}
 
-	showAINotification(message) {
+	showAINotification(message, type = "taunt") {
 		// Remove any existing notification
 		let existing = document.querySelector('.ai-blunder-notification');
 		if (existing) existing.remove();
 
+		// More expressive faces for each type
+		const tauntEmojis = ["😈", "😏", "😜", "🙃", "😝", "🤭", "😆"];
+		const praiseEmojis = ["👏", "🤩", "😮", "😃", "🙌", "👍", "😊"];
+		const smugEmojis = ["😏", "😎", "🧐", "😌", "😼", "😇", "🤓"];
+
+		let emoji = tauntEmojis[Math.floor(Math.random() * tauntEmojis.length)];
+		if (type === "praise") emoji = praiseEmojis[Math.floor(Math.random() * praiseEmojis.length)];
+		if (type === "smug") emoji = smugEmojis[Math.floor(Math.random() * smugEmojis.length)];
+
 		const note = document.createElement('div');
-		note.className = 'ai-blunder-notification';
-		note.textContent = message;
-		note.style.cssText = `
-            position: fixed;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ffeb3b;
-            color: #222;
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-size: 1.2em;
-            font-family: inherit;
-            z-index: 2000;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            opacity: 0.97;
-            pointer-events: none;
-            transition: opacity 0.5s;
-        `;
+		note.className = `ai-blunder-notification ai-popup-animate ai-${type}`;
+		note.innerHTML = `
+			<span class="ai-notif-emoji">${emoji}</span>
+			<span class="ai-notif-text">${message}</span>
+		`;
+
 		document.body.appendChild(note);
+
+		// Animate in
 		setTimeout(() => {
-			note.style.opacity = '0';
-		}, 2500);
+			note.classList.add('show');
+		}, 10);
+
+		// Start fade out after 3.2s (longer display)
+		setTimeout(() => {
+			note.classList.remove('show');
+			note.classList.add('hide');
+		}, 3200);
+
+		// Remove after fade out (3.2s + 0.5s)
 		setTimeout(() => {
 			note.remove();
-		}, 3000);
+		}, 3700);
 	}
 
 	setupTapPlacement() {
