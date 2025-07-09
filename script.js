@@ -417,6 +417,9 @@ getAITauntOrPraise(wordsList, totalScore) {
 	}
 
 	showAINotification(message, type = "taunt") {
+		// Don't show anything if there's no message
+		if (!message) return;
+
 		// Remove any existing notification
 		let existing = document.querySelector('.ai-blunder-notification');
 		if (existing) existing.remove();
@@ -444,13 +447,13 @@ getAITauntOrPraise(wordsList, totalScore) {
 			note.classList.add('show');
 		}, 10);
 
-		// Start fade out after 3.2s (longer display)
+		// Start fade out after 3.2s
 		setTimeout(() => {
 			note.classList.remove('show');
 			note.classList.add('hide');
 		}, 3200);
 
-		// Remove after fade out (3.2s + 0.5s)
+		// Remove after fade out
 		setTimeout(() => {
 			note.remove();
 		}, 3700);
