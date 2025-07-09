@@ -188,8 +188,8 @@ class ScrabbleGame {
 		}
 	}
 
-	getAITauntOrPraise(wordsList, totalScore) {
-        // Taunt, praise, and smug message pools
+getAITauntOrPraise(wordsList, totalScore) {
+    // Taunt, praise, and smug message pools
         const taunts = [
             "Is that the best you can do?",
             "Try to keep up!",
@@ -291,55 +291,41 @@ class ScrabbleGame {
             "I hope you were taking notes.",
             "You might want to frame that board.",
         ];
+		
+    // Analyze AI's move
+    const aiLongWord = wordsList.some(w => w.word && w.word.length >= 7);
+    const aiHighScore = totalScore >= 50;
+    const aiDifficultWord = wordsList.some(w => w.word && /[JQXZ]/.test(w.word));
+    const aiMultiWord = wordsList.length > 1;
 
-        // Analyze AI's move
-        const aiLongWord = wordsList.some(w => w.word && w.word.length >= 7);
-        const aiHighScore = totalScore >= 50;
-        const aiDifficultWord = wordsList.some(w => w.word && /[JQXZ]/.test(w.word));
-        const aiMultiWord = wordsList.length > 1;
+    // Analyze player's last move
+    const lastPlayerMove = [...this.moveHistory].reverse().find(m => m.player === "Player" && typeof m.score === "number");
+    const playerHighScore = lastPlayerMove && lastPlayerMove.score >= 40;
+    const playerLongWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 7;
+    const playerMediumWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 5;
+    const playerShortWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length <= 3;
+    const playerLowScore = lastPlayerMove && lastPlayerMove.score <= 8;
 
-        // Analyze player's last move
-        const lastPlayerMove = [...this.moveHistory].reverse().find(m => m.player === "Player" && typeof m.score === "number");
-        const playerHighScore = lastPlayerMove && lastPlayerMove.score >= 40;
-        const playerLongWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 7;
-        const playerMediumWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length >= 5;
-        const playerShortWord = lastPlayerMove && lastPlayerMove.word && lastPlayerMove.word.length <= 3;
-        const playerLowScore = lastPlayerMove && lastPlayerMove.score <= 8;
-
-        // Smug if AI just played a 7-letter, high-scoring, or difficult word, or made multiple words
-        if (aiLongWord || aiHighScore || aiDifficultWord || aiMultiWord) {
-            if (Math.random() < 0.2) { // 20% chance to show smug
-                return this.pickNonRepeating(smug, "smug");
-            }
-            return null;
-        }
-        // Praise if player just made a high score, long word, or medium word (5+ letters)
-        if (playerHighScore || playerLongWord || playerMediumWord) {
-            return this.pickNonRepeating(praises, "praise");
-        }
-        // Special taunt for short/weak player moves, but only occasionally
-        if ((playerShortWord || playerLowScore) && Math.random() < 0.25) {
-            const shortTaunts = [
-                "Only a few letters? I think you can do better.",
-                "Short and sweet... but not enough to win!",
-                "That word was barely a warm-up.",
-                "Small words, small points.",
-                "Maybe try something a bit longer next time?",
-                "Blink and I almost missed that move.",
-                "Are you saving your big words for later?",
-                "That was quick, but not very clever.",
-                "Feeling stuck? The hint box is right there.",
-                "Come on, give me a challenge!",
-            ];
-            return this.pickNonRepeating(shortTaunts, "taunt");
-        }
-        // Otherwise, only taunt occasionally (e.g. 1 in 5 moves)
-        if (Math.random() < 0.2) {
-            return this.pickNonRepeating(taunts, "taunt");
-        }
-        // Most of the time, say nothing
-        return null;
+    // 1. Praise if player just made a high score, long word, or medium word (5+ letters)
+    if (playerHighScore || playerLongWord || playerMediumWord) {
+        return this.pickNonRepeating(praises, "praise");
     }
+    // 2. Smug if AI just played a 7-letter, high-scoring, or difficult word, or made multiple words (5% chance)
+    if ((aiLongWord || aiHighScore || aiDifficultWord || aiMultiWord) && Math.random() < 0.05) {
+        return this.pickNonRepeating(smug, "smug");
+    }
+    // 3. Special taunt for short/weak player moves (5% chance)
+    if ((playerShortWord || playerLowScore) && Math.random() < 0.05) {
+        const shortTaunts = [ /* ... unchanged ... */ ];
+        return this.pickNonRepeating(shortTaunts, "taunt");
+    }
+    // 4. Otherwise, only taunt occasionally (5% chance)
+    if (Math.random() < 0.05) {
+        return this.pickNonRepeating(taunts, "taunt");
+    }
+    // 5. Most of the time, say nothing
+    return null;
+}
 
 	showAIGhostMove(play) {
 		// Remove any existing ghost tiles
