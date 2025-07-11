@@ -163,7 +163,6 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
-		this.lastAIMessages = { taunt: null, praise: null, smug: null };
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
@@ -277,7 +276,7 @@ class ScrabbleGame {
 		this.hintBoxBlocked = false;
 	}
 
-	showAINotification(message, type = "taunt") {
+	showAINotification(message) {
 		// Don't show anything if there's no message
 		if (!message) return;
 
@@ -287,7 +286,6 @@ class ScrabbleGame {
 
 		// More expressive faces for each type
 
-		let emoji = tauntEmojis[Math.floor(Math.random() * tauntEmojis.length)];
 		if (type === "praise") emoji = praiseEmojis[Math.floor(Math.random() * praiseEmojis.length)];
 		if (type === "smug") emoji = smugEmojis[Math.floor(Math.random() * smugEmojis.length)];
 
@@ -3244,8 +3242,6 @@ class ScrabbleGame {
 				this.aiScore += totalScore;
 				this.isFirstMove = false;
 				this.consecutiveSkips = 0;
-				// --- AI TAUNT/SMUG/PRAISE ---
-				const aiMessage = this.getAITauntOrPraise(wordsList, totalScore);
 				this.showAINotification(aiMessage);
 
 				this.currentTurn = "player";
@@ -6846,15 +6842,15 @@ class ScrabbleGame {
 				}
 
 				particle.style.cssText = `
-      position: fixed;
-      pointer-events: none;
-      left: ${Math.random() * 100}vw;
-      top: -20px;
-      opacity: 1;
-      transform: rotate(${Math.random() * 360}deg);
-      animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
-      z-index: 1500;
-  `;
+				position: fixed;
+				pointer-events: none;
+				left: ${Math.random() * 100}vw;
+				top: -20px;
+				opacity: 1;
+				transform: rotate(${Math.random() * 360}deg);
+				animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
+				z-index: 1500;
+			`;
 				document.body.appendChild(particle);
 
 				particle.addEventListener("animationend", () => {
