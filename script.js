@@ -3242,7 +3242,6 @@ class ScrabbleGame {
 				this.aiScore += totalScore;
 				this.isFirstMove = false;
 				this.consecutiveSkips = 0;
-				this.showAINotification(aiMessage);
 
 				this.currentTurn = "player";
 				this.addToMoveHistory("Computer", moveDescription, totalScore);
