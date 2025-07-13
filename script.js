@@ -2909,6 +2909,12 @@ class ScrabbleGame {
 	// Place this inside your ScrabbleGame class
 
 	checkAIMoveValidity(word, startPos, isHorizontal) {
+		// List of variant spellings or non-English words to exclude
+		const excludedVariants = new Set([
+			"atropin", // German spelling, not valid in English Scrabble
+			// Add more known variants as needed
+		]);
+
 		// Simulate the move on a temporary board
 		let tempBoard = JSON.parse(JSON.stringify(this.board));
 		for (let i = 0; i < word.length; i++) {
@@ -2934,7 +2940,12 @@ class ScrabbleGame {
 				const mainWord = isHorizontal ?
 					this.getHorizontalWordAt(row, col, tempBoard) :
 					this.getVerticalWordAt(row, col, tempBoard);
-				if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
+				if (
+					mainWord &&
+					mainWord.length > 1 &&
+					(!this.dictionary.has(mainWord.toLowerCase()) ||
+					excludedVariants.has(mainWord.toLowerCase()))
+				) {
 					invalidWords.push(mainWord);
 				} else if (mainWord && mainWord.length > 1) {
 					checkedWords.add(mainWord);
@@ -2945,8 +2956,15 @@ class ScrabbleGame {
 			const crossWord = isHorizontal ?
 				this.getVerticalWordAt(row, col, tempBoard) :
 				this.getHorizontalWordAt(row, col, tempBoard);
-			if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
-				if (!this.dictionary.has(crossWord.toLowerCase())) {
+			if (
+				crossWord &&
+				crossWord.length > 1 &&
+				!checkedWords.has(crossWord)
+			) {
+				if (
+					!this.dictionary.has(crossWord.toLowerCase()) ||
+					excludedVariants.has(crossWord.toLowerCase())
+				) {
 					invalidWords.push(crossWord);
 				} else {
 					checkedWords.add(crossWord);
@@ -2954,12 +2972,9 @@ class ScrabbleGame {
 			}
 		}
 
-		return invalidWords.length === 0 ? {
-			valid: true
-		} : {
-			valid: false,
-			invalidWords
-		};
+		return invalidWords.length === 0
+			? { valid: true }
+			: { valid: false, invalidWords };
 	}
 
 	async executeAIPlay(play) {
@@ -3213,13 +3228,10 @@ class ScrabbleGame {
 					console.log(`Word formed: ${word} for ${wordScore} points`);
 				});
 
-				// Add bonus for using all 7 tiles
-				if (
-					word.length === 7 &&
-					wordsList.length === 1
-				) {
+				// Add bonus for playing a 7-letter main word
+				if (word.length === 7) {
 					totalScore += 50;
-					console.log("Added 50 point bonus for using all 7 tiles in a single word");
+					console.log("Added 50 point bonus for playing a 7-letter main word");
 				}
 
 				// Format move description for multiple words
@@ -6106,9 +6118,10 @@ class ScrabbleGame {
 			);
 		});
 
-		// --- BINGO BONUS: Award 50 points if all 7 tiles from rack were used in this move ---
-		if (this.placedTiles.length === 7) {
-			console.log("\nBINGO! Adding 50 point bonus for using all 7 tiles in a single move");
+		// --- BINGO BONUS: Award 50 points if main word played is 7 letters long ---
+		const mainWord = formedWords.find(w => w.direction === "horizontal" || w.direction === "vertical");
+		if (mainWord && mainWord.word.length === 7) {
+			console.log("\nBINGO! Adding 50 point bonus for playing a 7-letter main word");
 			totalScore += 50;
 		}
 
