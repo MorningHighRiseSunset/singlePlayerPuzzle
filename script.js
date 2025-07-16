@@ -334,8 +334,7 @@ class ScrabbleGame {
 				const fromCol = parseInt(this.selectedTile.dataset.col);
 				const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
 				if (placedIdx === -1) return;
-				let tile = this.placedTiles[placedIdx].tile;
-
+				const tile = this.placedTiles[placedIdx].tile;
 				// Remove from board
 				this.board[fromRow][fromCol] = null;
 				const cell = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
@@ -349,18 +348,6 @@ class ScrabbleGame {
 				}
 				// Remove from placedTiles
 				this.placedTiles.splice(placedIdx, 1);
-
-				// --- FIX: If tile is blank, revert to wild tile ---
-				if (tile.isBlank && tile.originalLetter === "*") {
-					tile = {
-						letter: "*",
-						value: 0,
-						id: tile.id,
-						isBlank: false,
-						originalLetter: null,
-					};
-				}
-
 				// Add back to rack
 				this.playerRack.push(tile);
 				this.renderRack();
@@ -5215,18 +5202,11 @@ class ScrabbleGame {
 
 	async loadDictionary() {
 		try {
-			// Fetch SOWPODS
-			let sowpodsResponse = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-			let sowpodsText = await sowpodsResponse.text();
-			let sowpodsWords = sowpodsText.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean);
-
-			// Fetch FreeScrabbleDictionary
-			let fsdResponse = await fetch("http://www.freescrabbledictionary.com/english-word-list/download/english.txt");
-			let fsdText = await fsdResponse.text();
-			let fsdWords = fsdText.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean);
-
-			// Merge both sources
-			this.dictionary = new Set([...sowpodsWords, ...fsdWords]);
+			// Use a working SOWPODS mirror
+			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+			let text = await response.text();
+			// SOWPODS is all uppercase, one word per line
+			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
 			// Optionally, load additional words as before
 			try {
@@ -5487,182 +5467,198 @@ class ScrabbleGame {
 		});
 	}
 
-placeTile(tile, row, col) {
-    if (this.board[row][col]) {
-        alert("This cell is already occupied!");
-        return;
-    }
+	placeTile(tile, row, col) {
+		if (this.board[row][col]) {
+			alert("This cell is already occupied!");
+			return;
+		}
 
-    const cell = document.querySelector(
-        `[data-row="${row}"][data-col="${col}"]`,
-    );
-    const tileIndex = this.playerRack.indexOf(tile);
+		const cell = document.querySelector(
+			`[data-row="${row}"][data-col="${col}"]`,
+		);
+		const tileIndex = this.playerRack.indexOf(tile);
 
-    // Remove only existing tile element, not the center star or other decorations
-    const existingTile = cell.querySelector('.tile');
-    if (existingTile) existingTile.remove();
+		// Remove only existing tile element, not the center star or other decorations
+		const existingTile = cell.querySelector('.tile');
+		if (existingTile) existingTile.remove();
 
-    if (tile.letter === "*") {
-        const letterSelectionDialog = document.createElement("div");
-        letterSelectionDialog.className = "letter-selection-dialog";
-        letterSelectionDialog.innerHTML = `
-            <div class="dialog-content">
-                <h3>Choose a letter for the blank tile</h3>
-                <div class="letter-grid">
-                    ${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-                        .map(
-                            (letter) => `
-                        <button class="letter-choice">${letter}</button>
-                    `,
-                        )
-                        .join("")}
-                </div>
-            </div>
-        `;
+		if (tile.letter === "*") {
+			const letterSelectionDialog = document.createElement("div");
+			letterSelectionDialog.className = "letter-selection-dialog";
+			letterSelectionDialog.innerHTML = `
+				<div class="dialog-content">
+					<h3>Choose a letter for the blank tile</h3>
+					<div class="letter-grid">
+						${Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+							.map(
+								(letter) => `
+							<button class="letter-choice">${letter}</button>
+						`,
+							)
+							.join("")}
+					</div>
+				</div>
+			`;
 
-        // Add styles for the dialog
-        const style = document.createElement("style");
-        style.textContent = `
-            .letter-selection-dialog {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-            }
-            .dialog-content {
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-                max-width: 400px;
-                width: 90%;
-            }
-            .letter-grid {
-                display: grid;
-                grid-template-columns: repeat(6, 1fr);
-                gap: 5px;
-                margin-top: 15px;
-            }
-            .letter-choice {
-                padding: 10px;
-                border: 1px solid #ccc;
-                background: #0047AB;
-                cursor: pointer;
-                border-radius: 5px;
-                transition: all 0.2s;
-            }
-            .letter-choice:hover {
-                background: #e0e0e0;
-                transform: scale(1.1);
-            }
-            h3 {
-                text-align: center;
-                margin-top: 0;
-                color: #333;
-            }
-        `;
-        document.head.appendChild(style);
-        document.body.appendChild(letterSelectionDialog);
+			// Add styles for the dialog
+			const style = document.createElement("style");
+			style.textContent = `
+				.letter-selection-dialog {
+					position: fixed;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background: rgba(0, 0, 0, 0.7);
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					z-index: 1000;
+				}
+				.dialog-content {
+					background: white;
+					padding: 20px;
+					border-radius: 10px;
+					box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+					max-width: 400px;
+					width: 90%;
+				}
+				.letter-grid {
+					display: grid;
+					grid-template-columns: repeat(6, 1fr);
+					gap: 5px;
+					margin-top: 15px;
+				}
+				.letter-choice {
+					padding: 10px;
+					border: 1px solid #ccc;
+					background: #0047AB;
+					cursor: pointer;
+					border-radius: 5px;
+					transition: all 0.2s;
+				}
+				.letter-choice:hover {
+					background: #e0e0e0;
+					transform: scale(1.1);
+				}
+				h3 {
+					text-align: center;
+					margin-top: 0;
+					color: #333;
+				}
+			`;
+			document.head.appendChild(style);
+			document.body.appendChild(letterSelectionDialog);
 
-        // Handle letter selection
-        const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
-        buttons.forEach((button) => {
-            button.addEventListener("click", async () => {
-                const selectedLetter = button.textContent;
+			// Handle letter selection
+			const buttons = letterSelectionDialog.querySelectorAll(".letter-choice");
+			buttons.forEach((button) => {
+				button.addEventListener("click", async () => {
+					const selectedLetter = button.textContent;
 
-                // Create a new tile object for the board, but keep info for reverting
-                const placedTile = {
-                    letter: selectedLetter,
-                    value: 0,
-                    id: tile.id,
-                    isBlank: true,
-                    originalLetter: "*", // Track original blank status
-                };
+					// Create a new tile object with the selected letter but keep point value as 0
+					const blankTile = {
+						...tile,
+						letter: selectedLetter,
+						originalLetter: "*",
+						value: 0,
+					};
 
-                this.board[row][col] = placedTile;
+					// Create proper tile object for the board
+					const placedTile = {
+						letter: selectedLetter,
+						value: 0,
+						id: tile.id,
+						isBlank: true,
+					};
 
-                // Create and add the tile element (NO draggable, NO drag events)
-                const tileElement = document.createElement("div");
-                tileElement.className = "tile";
-                tileElement.dataset.index = tileIndex;
-                tileElement.dataset.id = tile.id;
-                tileElement.innerHTML = `
-                    ${selectedLetter}
-                    <span class="points">0</span>
-                    <span class="blank-indicator">★</span>
-                `;
+					this.board[row][col] = placedTile;
 
-                const existingTile = cell.querySelector('.tile');
-                if (existingTile) existingTile.remove();
-                cell.appendChild(tileElement);
+					// Create and add the tile element (NO draggable, NO drag events)
+					const tileElement = document.createElement("div");
+					tileElement.className = "tile";
+					tileElement.dataset.index = tileIndex;
+					tileElement.dataset.id = tile.id;
+					tileElement.innerHTML = `
+						${selectedLetter}
+						<span class="points">0</span>
+						<span class="blank-indicator">★</span>
+					`;
 
-                // Remove tile from rack
-                if (tileIndex > -1) {
-                    this.playerRack.splice(tileIndex, 1);
-                }
+					// Remove only the tile, not the star
+					const existingTile = cell.querySelector('.tile');
+					if (existingTile) existingTile.remove();
+					cell.appendChild(tileElement);
 
-                // Add to placed tiles
-                this.placedTiles.push({
-                    tile: placedTile,
-                    row: row,
-                    col: col,
-                });
+					// Remove tile from rack
+					if (tileIndex > -1) {
+						this.playerRack.splice(tileIndex, 1);
+					}
 
-                this.renderRack();
+					// Add to placed tiles
+					this.placedTiles.push({
+						tile: placedTile,
+						row: row,
+						col: col,
+					});
 
-                letterSelectionDialog.remove();
+					// Update rack display
+					this.renderRack();
 
-                this.highlightValidPlacements();
+					// Remove the dialog
+					letterSelectionDialog.remove();
 
-                await this.showAIGhostIfPlayerMoveValid();
-            });
-        });
-    } else {
-        // Normal tile placement (non-blank tile)
-        const placedTile = {
-            letter: tile.letter,
-            value: tile.value || this.tileValues[tile.letter],
-            id: tile.id,
-            isBlank: tile.isBlank || false,
-            originalLetter: tile.originalLetter || null,
-        };
+					// Update valid placement highlights
+					this.highlightValidPlacements();
 
-        this.board[row][col] = placedTile;
+					// --- Show live AI ghost move if valid ---
+					await this.showAIGhostIfPlayerMoveValid();
+				});
+			});
+		} else {
+			// Normal tile placement (non-blank tile)
+			// Create proper tile object for the board
+			const placedTile = {
+				letter: tile.letter,
+				value: tile.value || this.tileValues[tile.letter],
+				id: tile.id,
+			};
 
-        const tileElement = document.createElement("div");
-        tileElement.className = "tile";
-        tileElement.dataset.index = tileIndex;
-        tileElement.dataset.id = tile.id;
-        tileElement.innerHTML = `
-            ${tile.letter}
-            <span class="points">${placedTile.value}</span>
-            ${placedTile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-        `;
+			this.board[row][col] = placedTile;
 
-        const existingTile = cell.querySelector('.tile');
-        if (existingTile) existingTile.remove();
-        cell.appendChild(tileElement);
+			const tileElement = document.createElement("div");
+			tileElement.className = "tile";
+			tileElement.dataset.index = tileIndex;
+			tileElement.dataset.id = tile.id;
+			tileElement.innerHTML = `
+				${tile.letter}
+				<span class="points">${placedTile.value}</span>
+			`;
 
-        if (tileIndex > -1) {
-            this.playerRack.splice(tileIndex, 1);
-        }
+			// Remove only the tile, not the star
+			const existingTile = cell.querySelector('.tile');
+			if (existingTile) existingTile.remove();
+			cell.appendChild(tileElement);
 
-        this.placedTiles.push({
-            tile: placedTile,
-            row: row,
-            col: col,
-        });
+			// Remove tile from rack
+			if (tileIndex > -1) {
+				this.playerRack.splice(tileIndex, 1);
+			}
 
-        this.renderRack();
-    }
-    this.showAIGhostIfPlayerMoveValid();
-}
+			// Add to placed tiles
+			this.placedTiles.push({
+				tile: placedTile,
+				row: row,
+				col: col,
+			});
+
+			// Update rack display
+			this.renderRack();
+
+			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
+		}
+		this.showAIGhostIfPlayerMoveValid(); 
+	}
 
 	areTilesConnected() {
 		if (this.placedTiles.length <= 1) return true;
