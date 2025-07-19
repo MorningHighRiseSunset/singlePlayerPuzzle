@@ -6800,11 +6800,21 @@ calculateScore() {
 			aiLeftover += tile.value || 0;
 		});
 
-		// Adjust scores: subtract own leftover, add opponent's leftover
-		this.playerScore -= playerLeftover;
-		this.aiScore -= aiLeftover;
-		this.aiScore += playerLeftover;
-		this.playerScore += aiLeftover;
+		// --- FIXED ENDGAME LOGIC ---
+		// Only apply endgame bonus/penalty if one player is out of tiles
+		if (this.playerRack.length === 0 && this.aiRack.length > 0) {
+			// Player used all tiles: player gets AI's leftover, AI loses their leftover
+			this.playerScore += aiLeftover;
+			this.aiScore -= aiLeftover;
+		} else if (this.aiRack.length === 0 && this.playerRack.length > 0) {
+			// AI used all tiles: AI gets player's leftover, player loses their leftover
+			this.aiScore += playerLeftover;
+			this.playerScore -= playerLeftover;
+		} else {
+			// Both have tiles left: just subtract their own leftovers
+			this.playerScore -= playerLeftover;
+			this.aiScore -= aiLeftover;
+		}
 
 		// Prevent negative scores
 		this.playerScore = Math.max(0, this.playerScore);
