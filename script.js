@@ -163,6 +163,7 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
+		this.wordsPlayed = new Set();
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
@@ -6049,96 +6050,105 @@ class ScrabbleGame {
 		return word;
 	}
 
-	calculateScore() {
-		let totalScore = 0;
-		const words = new Set();
+calculateScore() {
+    let totalScore = 0;
+    const words = new Set();
 
-		console.log("=== Starting Score Calculation ===");
+    console.log("=== Starting Score Calculation ===");
 
-		// Get all formed words (main word + perpendicular words + modified words)
-		const formedWords = this.getFormedWords();
-		console.log("Words formed:", formedWords);
+    // Get all formed words (main word + perpendicular words + modified words)
+    const formedWords = this.getFormedWords();
+    console.log("Words formed:", formedWords);
 
-		// Calculate score for each formed word
-		formedWords.forEach((wordInfo) => {
-			let wordScore = 0;
-			let wordMultiplier = 1;
-			const {
-				word,
-				startPos,
-				direction
-			} = wordInfo;
+    // Only score words that have NOT been played before
+    formedWords.forEach((wordInfo) => {
+        let wordScore = 0;
+        let wordMultiplier = 1;
+        const { word, startPos, direction } = wordInfo;
 
-			console.log(`\nCalculating score for word: ${word}`);
+        // Prevent scoring for words already played
+        const wordUpper = word.toUpperCase();
+        if (this.wordsPlayed && this.wordsPlayed.has(wordUpper)) {
+            console.log(`Skipping score for already played word: ${word}`);
+            return;
+        }
 
-			// Calculate score for each letter in the word
-			for (let i = 0; i < word.length; i++) {
-				const row =
-					direction === "horizontal" ? startPos.row : startPos.row + i;
-				const col =
-					direction === "horizontal" ? startPos.col + i : startPos.col;
-				const tile = this.board[row][col];
+        console.log(`\nCalculating score for word: ${word}`);
 
-				let letterScore = tile.value;
+        // Calculate score for each letter in the word
+        for (let i = 0; i < word.length; i++) {
+            const row = direction === "horizontal" ? startPos.row : startPos.row + i;
+            const col = direction === "horizontal" ? startPos.col + i : startPos.col;
+            const tile = this.board[row][col];
 
-				// Apply premium squares only for newly placed tiles
-				if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-					const premium = this.getPremiumSquareType(row, col);
-					if (premium === "dl") {
-						letterScore *= 2;
-						console.log(`Double letter score applied to ${tile.letter}`);
-					}
-					if (premium === "tl") {
-						letterScore *= 3;
-						console.log(`Triple letter score applied to ${tile.letter}`);
-					}
-					if (premium === "dw") {
-						wordMultiplier *= 2;
-						console.log("Double word score will be applied");
-					}
-					if (premium === "tw") {
-						wordMultiplier *= 3;
-						console.log("Triple word score will be applied");
-					}
-				}
+            let letterScore = tile.value;
 
-				wordScore += letterScore;
-				console.log(`Letter ${tile.letter} adds ${letterScore} points`);
-			}
+            // Apply premium squares only for newly placed tiles
+            if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
+                const premium = this.getPremiumSquareType(row, col);
+                if (premium === "dl") {
+                    letterScore *= 2;
+                    console.log(`Double letter score applied to ${tile.letter}`);
+                }
+                if (premium === "tl") {
+                    letterScore *= 3;
+                    console.log(`Triple letter score applied to ${tile.letter}`);
+                }
+                if (premium === "dw") {
+                    wordMultiplier *= 2;
+                    console.log("Double word score will be applied");
+                }
+                if (premium === "tw") {
+                    wordMultiplier *= 3;
+                    console.log("Triple word score will be applied");
+                }
+            }
 
-			// Apply word multiplier
-			wordScore *= wordMultiplier;
-			console.log(`Final score for "${word}": ${wordScore} points`);
+            wordScore += letterScore;
+            console.log(`Letter ${tile.letter} adds ${letterScore} points`);
+        }
 
-			// Add to total score
-			totalScore += wordScore;
+        // Apply word multiplier
+        wordScore *= wordMultiplier;
+        console.log(`Final score for "${word}": ${wordScore} points`);
 
-			// Store word and its score for display
-			words.add(
-				JSON.stringify({
-					word: word,
-					score: wordScore,
-				}),
-			);
-		});
+        // Add to total score
+        totalScore += wordScore;
 
-		// --- BINGO BONUS: Award 50 points if main word played is 7 letters long ---
-		const mainWord = formedWords.find(w => w.direction === "horizontal" || w.direction === "vertical");
-		if (mainWord && mainWord.word.length === 7) {
-			console.log("\nBINGO! Adding 50 point bonus for playing a 7-letter main word");
-			totalScore += 50;
-		}
+        // Store word and its score for display
+        words.add(
+            JSON.stringify({
+                word: word,
+                score: wordScore,
+            }),
+        );
+    });
 
-		console.log(`\n=== Final Score Calculation ===`);
-		console.log(
-			`Words formed: ${Array.from(words)
-				.map((w) => JSON.parse(w).word)
-				.join(" & ")}`,
-		);
-		console.log(`Total score for this move: ${totalScore}`);
+    // --- BINGO BONUS: Award 50 points if main word played is 7 letters long and not already played ---
+    const mainWord = formedWords.find(w => 
+        (w.direction === "horizontal" || w.direction === "vertical") &&
+        !(this.wordsPlayed && this.wordsPlayed.has(w.word.toUpperCase()))
+    );
+    if (mainWord && mainWord.word.length === 7) {
+        console.log("\nBINGO! Adding 50 point bonus for playing a 7-letter main word");
+        totalScore += 50;
+    }
 
-		return totalScore;
-	}
+    // After scoring, add all formed words to wordsPlayed set
+    if (this.wordsPlayed) {
+        formedWords.forEach(w => this.wordsPlayed.add(w.word.toUpperCase()));
+    }
+
+    console.log(`\n=== Final Score Calculation ===`);
+    console.log(
+        `Words formed: ${Array.from(words)
+            .map((w) => JSON.parse(w).word)
+            .join(" & ")}`,
+    );
+    console.log(`Total score for this move: ${totalScore}`);
+
+    return totalScore;
+}
 
 	findWordPosition(word) {
 		// Search the board for the starting position of the word
