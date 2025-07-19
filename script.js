@@ -334,7 +334,7 @@ class ScrabbleGame {
 				const fromCol = parseInt(this.selectedTile.dataset.col);
 				const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
 				if (placedIdx === -1) return;
-				const tile = this.placedTiles[placedIdx].tile;
+				let tile = this.placedTiles[placedIdx].tile;
 				// Remove from board
 				this.board[fromRow][fromCol] = null;
 				const cell = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
@@ -348,6 +348,17 @@ class ScrabbleGame {
 				}
 				// Remove from placedTiles
 				this.placedTiles.splice(placedIdx, 1);
+
+				// --- Restore wild tile status if it was a blank tile ---
+				if (tile.isBlank && tile.originalLetter === "*") {
+					tile = {
+						letter: "*",
+						value: 0,
+						id: tile.id
+						// Do not include isBlank or originalLetter
+					};
+				}
+
 				// Add back to rack
 				this.playerRack.push(tile);
 				this.renderRack();
@@ -5875,13 +5886,10 @@ class ScrabbleGame {
 						containsNewTile = true;
 					}
 				} else {
-					if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+					if (word.length > 1 && containsNewTile) {
 						words.add({
 							word,
-							startPos: {
-								row,
-								col: startCol
-							},
+							startPos: { row, col: startCol },
 							direction: "horizontal",
 						});
 					}
@@ -5890,13 +5898,10 @@ class ScrabbleGame {
 					containsNewTile = false;
 				}
 			}
-			if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+			if (word.length > 1 && containsNewTile) {
 				words.add({
 					word,
-					startPos: {
-						row,
-						col: startCol
-					},
+					startPos: { row, col: startCol },
 					direction: "horizontal",
 				});
 			}
@@ -5916,7 +5921,7 @@ class ScrabbleGame {
 						containsNewTile = true;
 					}
 				} else {
-					if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+					if (word.length > 1 && containsNewTile) {
 						words.add({
 							word,
 							startPos: {
@@ -5931,7 +5936,7 @@ class ScrabbleGame {
 					containsNewTile = false;
 				}
 			}
-			if (word.length > 1 && containsNewTile && !existingWords.has(word)) {
+			if (word.length > 1 && containsNewTile) {
 				words.add({
 					word,
 					startPos: {
