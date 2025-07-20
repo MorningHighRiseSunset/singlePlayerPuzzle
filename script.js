@@ -6786,39 +6786,49 @@ calculateScore() {
 	}
 
 	announceWinner() {
-		// Calculate leftover tile points for both players
+		// --- 1. Sum up points from move history for each player ---
+		let playerScore = 0;
+		let aiScore = 0;
+
+		this.moveHistory.forEach(move => {
+			if (move.player === "Player") playerScore += move.score;
+			if (move.player === "Computer") aiScore += move.score;
+		});
+
+		// --- 2. Calculate leftover tile points for both players ---
 		let playerLeftover = 0;
 		let aiLeftover = 0;
 
-		// Sum up leftover points for player
 		this.playerRack.forEach(tile => {
 			playerLeftover += tile.value || 0;
 		});
-
-		// Sum up leftover points for AI
 		this.aiRack.forEach(tile => {
 			aiLeftover += tile.value || 0;
 		});
 
-		// --- FIXED ENDGAME LOGIC ---
+		// --- 3. Apply official Scrabble endgame adjustment ---
 		// Only apply endgame bonus/penalty if one player is out of tiles
 		if (this.playerRack.length === 0 && this.aiRack.length > 0) {
 			// Player used all tiles: player gets AI's leftover, AI loses their leftover
-			this.playerScore += aiLeftover;
-			this.aiScore -= aiLeftover;
+			playerScore += aiLeftover;
+			aiScore -= aiLeftover;
 		} else if (this.aiRack.length === 0 && this.playerRack.length > 0) {
 			// AI used all tiles: AI gets player's leftover, player loses their leftover
-			this.aiScore += playerLeftover;
-			this.playerScore -= playerLeftover;
+			aiScore += playerLeftover;
+			playerScore -= playerLeftover;
 		} else {
 			// Both have tiles left: just subtract their own leftovers
-			this.playerScore -= playerLeftover;
-			this.aiScore -= aiLeftover;
+			playerScore -= playerLeftover;
+			aiScore -= aiLeftover;
 		}
 
 		// Prevent negative scores
-		this.playerScore = Math.max(0, this.playerScore);
-		this.aiScore = Math.max(0, this.aiScore);
+		playerScore = Math.max(0, playerScore);
+		aiScore = Math.max(0, aiScore);
+
+		// Set the scores for display
+		this.playerScore = playerScore;
+		this.aiScore = aiScore;
 
 		// Update scores before animation
 		this.updateScores();
