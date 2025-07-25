@@ -5236,51 +5236,23 @@ async executeAIPlay(play) {
 			// SOWPODS is all uppercase, one word per line
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
-			// Optionally, load additional words as before
-			try {
-				const additionalWords = await this.loadAdditionalWords();
-				additionalWords.forEach(word => {
-					if (word.length >= 2) {
-						this.dictionary.add(word.toLowerCase());
-					}
-				});
-			} catch (error) {
-				console.error("Error loading additional words:", error);
-			}
+			// Datamuse fetch removed to prevent CORS errors and speed up loading
+			// try {
+			//     const additionalWords = await this.loadAdditionalWords();
+			//     additionalWords.forEach(word => {
+			//         if (word.length >= 2) {
+			//             this.dictionary.add(word.toLowerCase());
+			//         }
+			//     });
+			// } catch (error) {
+			//     console.error("Error loading additional words:", error);
+			// }
 
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			this.dictionary = new Set(["scrabble", "game", "play", "word"]);
 		}
-	}
-
-	async loadAdditionalWords() {
-		const additionalWords = new Set();
-
-		// List of common word lengths to query
-		const lengths = [4, 5, 6, 7, 8];
-
-		for (const length of lengths) {
-			try {
-				const response = await fetch(`https://api.datamuse.com/words?ml=common&max=1000&md=d&len=${length}`);
-				const words = await response.json();
-
-				words.forEach(word => {
-					if (word.word && /^[a-zA-Z]+$/.test(word.word)) {
-						additionalWords.add(word.word.toUpperCase());
-					}
-				});
-
-				// Add a small delay to avoid rate limiting
-				await new Promise(resolve => setTimeout(resolve, 100));
-
-			} catch (error) {
-				console.error(`Error fetching words of length ${length}:`, error);
-			}
-		}
-
-		return Array.from(additionalWords);
 	}
 
 	balanceAIRack() {
