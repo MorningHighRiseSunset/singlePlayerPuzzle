@@ -3250,15 +3250,21 @@ async executeAIPlay(play) {
                     score: wordScore
                 });
                 console.log(`[AI] Word formed: ${word} for ${wordScore} points`);
-                // Add to wordsPlayed set
-                this.wordsPlayed.add(wordUpper);
             });
 
-            // Add bonus for playing a 7-letter main word
-            if (word.length === 7 && !this.wordsPlayed.has(word.toUpperCase())) {
-                totalScore += 50;
-                console.log("[AI] Added 50 point bonus for playing a 7-letter main word");
-            }
+            			// Add bonus for playing 7-letter words BEFORE adding to wordsPlayed set
+			wordsList.forEach(w => {
+				console.log(`[AI] Checking word: ${w.word}, length: ${w.word.length}, already played: ${this.wordsPlayed.has(w.word.toUpperCase())}`);
+				if (w.word.length === 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
+					totalScore += 50;
+					console.log(`[AI] Added 50 point bonus for 7-letter word: ${w.word}`);
+				}
+			});
+
+            // Now add all words to wordsPlayed set
+            wordsList.forEach(w => {
+                this.wordsPlayed.add(w.word.toUpperCase());
+            });
 
             // Format move description for multiple words
             let moveDescription;
@@ -3308,8 +3314,9 @@ async executeAIPlay(play) {
 			const tile = this.board[row][col];
 			let letterScore = tile.value;
 
-			// Only apply premium squares if this tile was just placed
-			if (!this.previousBoard || !this.previousBoard[row][col]) {
+			// Apply premium squares for newly placed tiles
+			const isNewlyPlaced = this.placedTiles && this.placedTiles.some(t => t.row === row && t.col === col);
+			if (isNewlyPlaced) {
 				const premium = this.getPremiumSquareType(row, col);
 				if (premium === "dl") letterScore *= 2;
 				if (premium === "tl") letterScore *= 3;
@@ -5249,9 +5256,18 @@ async executeAIPlay(play) {
 			// }
 
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
+					// Test if some common words are in the dictionary
+		const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
+		testWords.forEach(word => {
+			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
+		});
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			this.dictionary = new Set(["scrabble", "game", "play", "word"]);
+			// More comprehensive fallback dictionary
+			this.dictionary = new Set([
+				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
+			]);
+			console.warn("Using fallback dictionary with limited words");
 		}
 	}
 
@@ -6142,15 +6158,13 @@ calculateScore() {
         );
     });
 
-    // --- BINGO BONUS: Award 50 points if main word played is 7 letters long and not already played ---
-    const mainWord = formedWords.find(w => 
-        (w.direction === "horizontal" || w.direction === "vertical") &&
-        !(this.wordsPlayed && this.wordsPlayed.has(w.word.toUpperCase()))
-    );
-    if (mainWord && mainWord.word.length === 7) {
-        console.log("\nBINGO! Adding 50 point bonus for playing a 7-letter main word");
-        totalScore += 50;
-    }
+    // --- BINGO BONUS: Award 50 points for each 7-letter word played ---
+    formedWords.forEach(wordInfo => {
+        if (wordInfo.word.length === 7 && !(this.wordsPlayed && this.wordsPlayed.has(wordInfo.word.toUpperCase()))) {
+            console.log(`\nBINGO! Adding 50 point bonus for 7-letter word: ${wordInfo.word}`);
+            totalScore += 50;
+        }
+    });
 
     // After scoring, add all formed words to wordsPlayed set
     if (this.wordsPlayed) {
@@ -6603,10 +6617,13 @@ calculateScore() {
 					wordDescriptions.push({ word: wordInfo.word, score: null }); // Score is shown in move history
 				}
 
-				// Add bonus for using all 7 tiles
-				if (this.placedTiles.length === 7) {
-					wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-				}
+				// Add bonus for 7-letter words
+				formedWords.forEach(wordInfo => {
+					if (wordInfo.word.length === 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
+						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
+						console.log(`[Player] Added 50 point bonus for 7-letter word: ${wordInfo.word}`);
+					}
+				});
 
 				// Format the move description
 				let moveDescription;
