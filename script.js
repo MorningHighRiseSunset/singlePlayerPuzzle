@@ -6682,9 +6682,10 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		// Update both mobile and desktop move history containers
+		// Update mobile, desktop, and desktop drawer move history containers
 		const mobileHistoryDisplay = document.getElementById("move-history");
 		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
+		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
 		
 		const historyContent = "<h3>Move History</h3>" +
 			this.moveHistory
@@ -6740,6 +6741,11 @@ calculateScore() {
 		if (desktopHistoryDisplay) {
 			desktopHistoryDisplay.innerHTML = historyContent;
 		}
+
+		// Update desktop drawer history
+		if (desktopDrawerHistoryDisplay) {
+			desktopDrawerHistoryDisplay.innerHTML = historyContent;
+		}
 	}
 
 	updateGameState() {
@@ -6749,25 +6755,31 @@ calculateScore() {
 	}
 
 	updateScores() {
-		// Update both mobile and desktop score displays
+		// Update mobile, desktop, and desktop drawer score displays
 		const playerScoreMobile = document.getElementById("player-score");
 		const computerScoreMobile = document.getElementById("computer-score");
 		const playerScoreDesktop = document.getElementById("player-score-desktop");
 		const computerScoreDesktop = document.getElementById("computer-score-desktop");
+		const playerScoreDesktopDrawer = document.getElementById("player-score-desktop-drawer");
+		const computerScoreDesktopDrawer = document.getElementById("computer-score-desktop-drawer");
 		
 		if (playerScoreMobile) playerScoreMobile.textContent = this.playerScore;
 		if (computerScoreMobile) computerScoreMobile.textContent = this.aiScore;
 		if (playerScoreDesktop) playerScoreDesktop.textContent = this.playerScore;
 		if (computerScoreDesktop) computerScoreDesktop.textContent = this.aiScore;
+		if (playerScoreDesktopDrawer) playerScoreDesktopDrawer.textContent = this.playerScore;
+		if (computerScoreDesktopDrawer) computerScoreDesktopDrawer.textContent = this.aiScore;
 	}
 
 	updateTilesCount() {
-		// Update both mobile and desktop tile count displays
+		// Update mobile, desktop, and desktop drawer tile count displays
 		const tilesCountMobile = document.getElementById("tiles-count");
 		const tilesCountDesktop = document.getElementById("tiles-count-desktop");
+		const tilesCountDesktopDrawer = document.getElementById("tiles-count-desktop-drawer");
 		
 		if (tilesCountMobile) tilesCountMobile.textContent = this.tiles.length;
 		if (tilesCountDesktop) tilesCountDesktop.textContent = this.tiles.length;
+		if (tilesCountDesktopDrawer) tilesCountDesktopDrawer.textContent = this.tiles.length;
 	}
 
 	updateTurnIndicator() {
@@ -8254,6 +8266,173 @@ calculateScore() {
 						notice.classList.add('removing');
 						setTimeout(() => notice.remove(), 300);
 					});
+				}
+			});
+		}
+
+		// Desktop Drawer Button Connections
+		// Play word button (desktop drawer)
+		const playWordDesktopDrawerBtn = document.getElementById("play-word-desktop-drawer");
+		if (playWordDesktopDrawerBtn) playWordDesktopDrawerBtn.addEventListener("click", () => this.playWord());
+
+		// Shuffle rack button (desktop drawer)
+		const shuffleRackDesktopDrawerBtn = document.getElementById("shuffle-rack-desktop-drawer");
+		if (shuffleRackDesktopDrawerBtn) shuffleRackDesktopDrawerBtn.addEventListener("click", async () => {
+			const rack = document.getElementById("tile-rack");
+			const tiles = [...rack.children];
+
+			// Disable tile dragging during animation
+			tiles.forEach((tile) => (tile.draggable = false));
+
+			// Visual shuffle animation
+			for (let i = 0; i < 5; i++) { // 5 visual shuffles
+				await new Promise((resolve) => {
+					tiles.forEach((tile) => {
+						tile.style.transition = "transform 0.2s ease";
+						tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
+					});
+					setTimeout(resolve, 200);
+				});
+			}
+
+			// Reset positions with transition
+			tiles.forEach((tile) => {
+				tile.style.transform = "none";
+			});
+
+			// Actual shuffle logic
+			for (let i = this.playerRack.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+			}
+
+			// Wait for position reset animation to complete
+			setTimeout(() => {
+				this.renderRack();
+			}, 200);
+
+			// Re-enable dragging
+			setTimeout(() => {
+				const newTiles = document.querySelectorAll("#tile-rack .tile");
+				newTiles.forEach((tile) => (tile.draggable = true));
+			}, 400);
+		});
+
+		// Skip turn button (desktop drawer)
+		const skipTurnDesktopDrawerBtn = document.getElementById("skip-turn-desktop-drawer");
+		if (skipTurnDesktopDrawerBtn) skipTurnDesktopDrawerBtn.addEventListener("click", () => {
+			if (this.currentTurn === "player") {
+				this.consecutiveSkips++;
+				this.currentTurn = "ai";
+				this.addToMoveHistory("Player", "SKIP", 0);
+				this.updateGameState();
+				this.highlightValidPlacements();
+				if (!this.checkGameEnd()) {
+					this.aiTurn();
+				}
+			}
+		});
+
+		// Quit game button (desktop drawer)
+		const quitDesktopDrawerButton = document.getElementById("quit-game-desktop-drawer");
+		if (quitDesktopDrawerButton) {
+			quitDesktopDrawerButton.addEventListener("click", () => {
+				if (this.gameEnded) return; // Prevent multiple triggers
+
+				// Set the computer as winner since player quit
+				this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+				this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+				this.gameEnded = true;
+
+				// Update scores before animation
+				this.updateScores();
+
+				// Add the quit move to history
+				if (this.moveHistory) {
+					this.moveHistory.push({
+						player: "Player",
+						word: "QUIT",
+						score: 0,
+						timestamp: new Date(),
+					});
+					this.updateMoveHistory();
+				}
+
+				// Trigger game over animation
+				this.announceWinner();
+			});
+		}
+
+		// Print history button (desktop drawer)
+		const printHistoryDesktopDrawerBtn = document.getElementById("print-history-desktop-drawer");
+		if (printHistoryDesktopDrawerBtn) printHistoryDesktopDrawerBtn.addEventListener("click", async () => {
+			const printWindow = window.open("", "_blank");
+			const gameDate = new Date().toLocaleString();
+
+			// Show loading message
+			printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Scrabble Game History - ${gameDate}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            .loading { text-align: center; padding: 50px; }
+                            .move { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+                            .bingo { color: #4CAF50; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loading">Loading game history...</div>
+                    </body>
+                </html>
+            `);
+
+			// Get word definitions for all moves
+			const wordDefinitions = {};
+			for (const move of this.moveHistory) {
+				if (move.word && move.word !== "SKIP" && move.word !== "EXCHANGE" && move.word !== "QUIT" && !move.word.includes("BINGO BONUS")) {
+					const words = move.word.split("&").map(w => w.trim());
+					for (const word of words) {
+						if (!wordDefinitions[word]) {
+							try {
+								const definition = await this.getWordDefinition(word);
+								wordDefinitions[word] = definition;
+							} catch (error) {
+								wordDefinitions[word] = "Definition not available";
+							}
+						}
+					}
+				}
+			}
+
+			// Generate and display the print content
+			const printContent = this.generatePrintContent(gameDate, wordDefinitions);
+			printWindow.document.write(printContent);
+			printWindow.document.close();
+		});
+
+		// Exchange button (desktop drawer)
+		const activateExchangeDesktopDrawerBtn = document.getElementById("activate-exchange-desktop-drawer");
+		if (activateExchangeDesktopDrawerBtn) activateExchangeDesktopDrawerBtn.addEventListener("click", () => {
+			this.toggleExchangeMode("desktop-drawer");
+		});
+
+		// Language selector (desktop drawer)
+		const languageSelectorDesktopDrawer = document.getElementById("language-selector-desktop-drawer");
+		if (languageSelectorDesktopDrawer) {
+			languageSelectorDesktopDrawer.addEventListener("change", (e) => {
+				const selectedLanguage = e.target.value;
+				if (selectedLanguage) {
+					// Update all language selectors to maintain consistency
+					const allLanguageSelectors = document.querySelectorAll('.language-selector select');
+					allLanguageSelectors.forEach(selector => {
+						if (selector !== e.target) {
+							selector.value = selectedLanguage;
+						}
+					});
+					
+					// Handle language change logic here
+					console.log(`Language changed to: ${selectedLanguage}`);
 				}
 			});
 		}

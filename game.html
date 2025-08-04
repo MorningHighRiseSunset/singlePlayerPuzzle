@@ -61,11 +61,130 @@
                 display: none !important;
             }
         }
+        
+        /* Desktop Bottom Bar Styles */
+        @media (min-width: 769px) {
+            #desktop-bottom-bar {
+                position: fixed;
+                left: 0;
+                bottom: 0;
+                width: 100vw;
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 15px;
+                background: none;
+                box-shadow: none;
+                padding: 0 0 20px 20px;
+                z-index: 4000;
+                border: none;
+            }
+            #desktop-menu-toggle, #play-word-desktop-bottom {
+                width: 56px;
+                height: 56px;
+                min-width: 56px;
+                min-height: 56px;
+                max-width: 56px;
+                max-height: 56px;
+                font-size: 2.2em;
+                border-radius: 50%;
+                margin: 0;
+                border: none;
+                background: linear-gradient(145deg, #1a237e, #151d69);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.2s, transform 0.2s;
+                cursor: pointer;
+            }
+            #desktop-menu-toggle:hover, #play-word-desktop-bottom:hover {
+                background: linear-gradient(145deg, #151d69, #0d1428);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            }
+            #play-word-desktop-bottom {
+                width: 120px;
+                min-width: 120px;
+                max-width: 150px;
+                height: 56px;
+                min-height: 56px;
+                max-height: 56px;
+                font-size: 1.3em;
+                border-radius: 28px;
+                padding: 0 16px;
+                justify-content: center;
+                align-items: center;
+                display: flex;
+                white-space: nowrap;
+            }
+            .desktop-drawer {
+                position: fixed;
+                top: 0; left: 0;
+                width: 400px;
+                max-width: 400px;
+                height: 100vh;
+                background: #fff;
+                box-shadow: 2px 0 24px rgba(0,0,0,0.18);
+                z-index: 3002;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+                overflow-y: auto;
+            }
+            .desktop-drawer.open {
+                transform: translateX(0);
+            }
+            .desktop-drawer .drawer-close {
+                position: absolute;
+                top: 15px; right: 15px;
+                background: none;
+                border: none;
+                font-size: 2.2em;
+                color: #e53935;
+                cursor: pointer;
+                z-index: 1;
+            }
+            .desktop-drawer .drawer-content {
+                padding: 80px 24px 32px 24px;
+            }
+            .desktop-drawer .moves-panel,
+            .desktop-drawer .info-panel {
+                width: 100%;
+                min-width: 0;
+                margin-bottom: 32px;
+                box-shadow: none;
+                border-radius: 12px;
+                display: block !important;
+                padding: 20px;
+            }
+            .desktop-drawer .drawer-instructions {
+                margin-top: 32px;
+                padding: 20px 16px;
+                background: #f7faff;
+                border-radius: 12px;
+                font-size: 1.1em;
+                color: #222;
+            }
+            .desktop-drawer .drawer-instructions h3 {
+                margin-top: 0;
+                font-size: 1.2em;
+                color: #1a237e;
+            }
+            .desktop-drawer .drawer-instructions ul {
+                margin: 0 0 12px 20px;
+                padding: 0;
+            }
+        }
+        
         @media (min-width: 769px) {
             #mobile-bottom-bar, .mobile-drawer { display: none !important; }
+            .moves-panel, .info-panel { display: none !important; }
         }
         @media (max-width: 768px) {
             .mobile-drawer { display: block !important; }
+            #desktop-bottom-bar, .desktop-drawer { display: none !important; }
         }
         .mobile-drawer {
             position: fixed;
@@ -214,6 +333,95 @@
         </div>
     </div>
 
+    <!-- Desktop Drawer (Burger menu content for desktop) -->
+    <div id="desktop-drawer" class="desktop-drawer">
+        <button class="drawer-close" aria-label="Close menu">&times;</button>
+        <div class="drawer-content">
+            <aside class="moves-panel">
+                <h2>Definitions History</h2>
+                <button id="print-history-desktop-drawer" class="print-button">Print Definition History (Shows Word Definitions)</button>
+                <div id="move-history-desktop-drawer"></div>
+            </aside>
+            <aside class="info-panel">
+                <h2>Game Info</h2>
+                <div class="score-box">
+                    <h3>Scores</h3>
+                    <p>Player: <span id="player-score-desktop-drawer">0</span></p>
+                    <p>Computer: <span id="computer-score-desktop-drawer">0</span></p>
+                </div>
+                <div class="tiles-left">
+                    <h3>Tiles Remaining: <span id="tiles-count-desktop-drawer">98</span></h3>
+                </div>
+                <section class="exchange-area">
+                    <h3>Exchange Tiles</h3>
+                    <button id="activate-exchange-desktop-drawer" class="exchange-button">Activate Exchange Portal</button>
+                    <div id="exchange-portal-desktop-drawer" class="exchange-portal">
+                        <div class="portal-ring outer"></div>
+                        <div class="portal-ring middle"></div>
+                        <div class="portal-ring inner"></div>
+                        <div class="portal-core"></div>
+                        <div class="portal-particles"></div>
+                    </div>
+                    <div class="exchange-instructions">
+                        Drag tiles here to exchange them
+                    </div>
+                </section>
+                <nav class="controls">
+                    <button id="play-word-desktop-drawer">Submit</button>
+                    <button id="shuffle-rack-desktop-drawer">Shuffle Rack</button>
+                    <button id="skip-turn-desktop-drawer">Skip Turn</button>
+                    <button id="show-instructions-desktop-drawer">How to Play</button>
+                    <button id="quit-game-desktop-drawer" class="quit-button">Quit / End Game</button>
+                </nav>
+                <div class="language-selector">
+                    <select id="language-selector-desktop-drawer" class="language-button">
+                        <option value="" disabled selected hidden>Click to change language</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                        <option value="fr">French</option>
+                    </select>
+                </div>
+                <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
+                <div class="drawer-instructions" id="drawer-instructions-desktop">
+                    <h3>How to Play</h3>
+                    <p>1. Playing Tiles:</p>
+                    <ul>
+                        <li>On desktop: Click and drag tiles from your rack to the board</li>
+                        <li>On mobile: Touch and hold a tile for 1 second, then drag to place it</li>
+                        <li>To remove a tile, drag it back to your rack</li>
+                    </ul>
+                    <p>2. Creating Words:</p>
+                    <ul>
+                        <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
+                        <li>First word must cross the center star</li>
+                        <li>New words must connect to existing tiles on the board</li>
+                        <li>All words formed must be valid dictionary words</li>
+                    </ul>
+                    <p>3. Submitting Your Move:</p>
+                    <ul>
+                        <li>After placing your tiles, click the "Submit" button</li>
+                        <li>Invalid words will be rejected and tiles returned to your rack</li>
+                        <li>Points will be automatically calculated and added to your score</li>
+                    </ul>
+                    <p>4. Exchanging Tiles:</p>
+                    <ul>
+                        <li>Click "Activate Exchange Portal" to start an exchange</li>
+                        <li>Drag unwanted tiles into the portal</li>
+                        <li>You'll receive the same number of new tiles</li>
+                        <li>This counts as your turn</li>
+                    </ul>
+                    <p>5. Skipping and Game End:</p>
+                    <ul>
+                        <li>Use "Skip Turn" if you can't make a valid move</li>
+                        <li>The game ends when all tiles are used or both players skip twice in a row</li>
+                        <li>Your score is based on the letter values and bonus squares</li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+
     <!-- Mobile Notifications (always at top, outside .game-container) -->
     <div class="mobile-notifications">
         <div class="mobile-notice landscape-notice">
@@ -314,28 +522,61 @@
         <button id="play-word-mobile" class="play-word-mobile" title="Submit Move">Submit</button>
     </div>
 
+    <!-- Desktop Bottom Bar: Hamburger + Submit (Desktop Only, fixed at bottom, left-aligned, side by side, no white bg) -->
+    <div id="desktop-bottom-bar">
+        <button id="desktop-menu-toggle" class="desktop-menu-toggle" aria-label="Open menu">&#9776;</button>
+        <button id="play-word-desktop-bottom" class="play-word-desktop-bottom" title="Submit Move">Submit</button>
+    </div>
+
     <script>
         // Hamburger drawer logic
         document.addEventListener('DOMContentLoaded', function() {
-            const drawer = document.getElementById('mobile-drawer');
-            const toggle = document.getElementById('mobile-menu-toggle');
-            const closeBtn = drawer.querySelector('.drawer-close');
-            toggle.addEventListener('click', () => {
-                if (drawer.classList.contains('open')) {
-                    drawer.classList.remove('open');
+            // Mobile drawer logic
+            const mobileDrawer = document.getElementById('mobile-drawer');
+            const mobileToggle = document.getElementById('mobile-menu-toggle');
+            const mobileCloseBtn = mobileDrawer.querySelector('.drawer-close');
+            
+            mobileToggle.addEventListener('click', () => {
+                if (mobileDrawer.classList.contains('open')) {
+                    mobileDrawer.classList.remove('open');
                     document.body.style.overflow = '';
                 } else {
-                    drawer.classList.add('open');
+                    mobileDrawer.classList.add('open');
                     document.body.style.overflow = 'hidden';
                 }
             });
-            closeBtn.addEventListener('click', () => {
-                drawer.classList.remove('open');
+            mobileCloseBtn.addEventListener('click', () => {
+                mobileDrawer.classList.remove('open');
                 document.body.style.overflow = '';
             });
-            drawer.addEventListener('click', (e) => {
-                if (e.target === drawer) {
-                    drawer.classList.remove('open');
+            mobileDrawer.addEventListener('click', (e) => {
+                if (e.target === mobileDrawer) {
+                    mobileDrawer.classList.remove('open');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Desktop drawer logic
+            const desktopDrawer = document.getElementById('desktop-drawer');
+            const desktopToggle = document.getElementById('desktop-menu-toggle');
+            const desktopCloseBtn = desktopDrawer.querySelector('.drawer-close');
+            
+            desktopToggle.addEventListener('click', () => {
+                if (desktopDrawer.classList.contains('open')) {
+                    desktopDrawer.classList.remove('open');
+                    document.body.style.overflow = '';
+                } else {
+                    desktopDrawer.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+            desktopCloseBtn.addEventListener('click', () => {
+                desktopDrawer.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+            desktopDrawer.addEventListener('click', (e) => {
+                if (e.target === desktopDrawer) {
+                    desktopDrawer.classList.remove('open');
                     document.body.style.overflow = '';
                 }
             });
@@ -381,6 +622,14 @@
             // Connect mobile submit to main playWord logic
             const playWordMobile = document.getElementById('play-word-mobile');
             playWordMobile.addEventListener('click', function() {
+                // Try both IDs for desktop/mobile
+                let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
+                if (playBtn) playBtn.click();
+            });
+
+            // --- Desktop Submit Button Logic ---
+            const playWordDesktopBottom = document.getElementById('play-word-desktop-bottom');
+            playWordDesktopBottom.addEventListener('click', function() {
                 // Try both IDs for desktop/mobile
                 let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
                 if (playBtn) playBtn.click();
