@@ -244,31 +244,42 @@
         
         /* AI Animation Improvements */
         .animated-tile {
-            background: linear-gradient(145deg, #ffffff, #f0f0f0);
-            border: 2px solid #ccc;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            background: linear-gradient(145deg, #f4d03f, #f39c12);
+            border: 2px solid #d68910;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-weight: bold;
             color: #000;
-            text-shadow: none;
+            text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
             border-radius: 4px;
             transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            font-size: inherit;
         }
         
         .animated-tile .points {
-            font-size: 0.7em;
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 0.6em;
             color: #000;
-            font-weight: normal;
-            margin-top: 2px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.8);
+            border-radius: 2px;
+            padding: 1px 2px;
+            line-height: 1;
         }
         
         .animated-tile .blank-indicator {
-            font-size: 0.6em;
+            position: absolute;
+            bottom: 1px;
+            left: 2px;
+            font-size: 0.5em;
             color: #666;
-            margin-top: 1px;
+            font-weight: normal;
         }
         
         .tile-placed {

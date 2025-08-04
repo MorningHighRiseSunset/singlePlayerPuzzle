@@ -76,6 +76,20 @@ body {
   height: 100% !important;
   font-size: inherit !important;
   box-sizing: border-box !important;
+  background: var(--tile-bg) !important;
+  border: 1px solid #ccc !important;
+  box-shadow: var(--tile-shadow), 0 2px 8px rgba(0,0,0,0.08) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: bold !important;
+  color: #222 !important;
+  border-radius: 4px !important;
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  position: relative !important;
+  aspect-ratio: 1 !important;
+  object-fit: contain !important;
 }
 
 #move-history {
@@ -184,16 +198,37 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12); /* Reduced shadow */
 }
 
+/* AI Rack - Use same styling as regular tile rack */
+.ai-rack {
+  display: none; /* Hide AI rack by default */
+}
+
+/* Show AI rack only on desktop */
+@media (min-width: 769px) {
+  .ai-rack {
+    display: flex !important;
+    background: linear-gradient(145deg, var(--primary), #151d69);
+    padding: 8px;
+    border-radius: 8px;
+    gap: 8px;
+    justify-content: center;
+    min-height: 40px;
+    max-width: 550px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    margin: 6px auto 6px auto;
+  }
+}
+
 /* Responsive: mobile tile rack closer to board - desktop tile rack wider */
 /* --- Compact Mobile Layout: All mobile rules in one block --- */
 @media (max-width: 768px) {
   #scrabble-board {
     grid-template-columns: repeat(15, 1fr) !important;
     grid-template-rows: repeat(15, 1fr) !important;
-    width: 92vw !important; /* Further reduced to prevent edge cutting */
-    height: 92vw !important; /* Further reduced to prevent edge cutting */
-    max-width: 92vw !important; /* Further reduced */
-    max-height: 92vw !important; /* Further reduced */
+    width: 100vw !important;
+    height: 100vw !important;
+    max-width: 100vw !important;
+    max-height: 100vw !important;
     gap: 1px !important;
     background: var(--board-border);
     border: 2px solid var(--primary);
@@ -224,17 +259,17 @@ body {
     min-height: 0 !important;
     max-width: none !important;
     max-height: none !important;
-    font-size: 2.5vw !important; /* Slightly smaller for better readability */
+    font-size: 2.7vw !important;
   }
   /* Rack tiles match board tile size */
   .tile-rack .tile {
-    width: calc(92vw / 15 - 1.5px) !important;  /* Match board width */
-    height: calc(92vw / 15 - 1.5px) !important;
+    width: calc(100vw / 15 - 1.5px) !important;  /* 15 tiles per row, minus gap */
+    height: calc(100vw / 15 - 1.5px) !important;
     min-width: 0 !important;
     min-height: 0 !important;
     max-width: none !important;
     max-height: none !important;
-    font-size: 2.5vw !important; /* Match board font size */
+    font-size: 2.7vw !important;
   }
   .tile {
     margin: 0 !important;
@@ -253,28 +288,30 @@ body {
   .tile-rack {
     margin: 2px auto 2px auto !important;
     padding: 4px !important;
-    gap: 4px !important; /* Reduced gap for mobile */
-    max-width: 92vw !important; /* Match board width */
+    gap: 6px !important;
+    max-width: 98vw !important;
     border-radius: 8px !important;
     min-height: 0 !important;
   }
   .tile .points {
-    font-size: 1.2vw !important; /* Slightly smaller */
+    font-size: 1.3vw !important;
     top: 1px !important;
     right: 2px !important;
   }
   .tile .blank-indicator {
-    font-size: 0.6vw !important;   /* Smaller for mobile */
+    font-size: 0.7vw !important;   /* Smaller for mobile */
     bottom: 0.5px !important;
     left: 1px !important;
   }
   .center-star {
-    font-size: 1.8vw !important; /* Slightly smaller */
+    font-size: 2vw !important;
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
   }
 }
+
+
 
 /* --- Tiles --- */
 .tile {
@@ -532,36 +569,7 @@ button:active,
   .moves-panel, .info-panel, .definitions-panel { width: 100%; max-width: 550px; margin-top: 15px; } /* Reduced from 600px and 20px */
 }
 
-/* Additional compact styling for smaller screens */
-@media (max-width: 900px) {
-  body {
-    padding: 8px; /* Further reduced padding */
-  }
-  .game-container {
-    max-width: 1000px; /* Reduced from 1200px */
-    gap: 12px; /* Reduced from 15px */
-  }
-  .board-container {
-    flex: 1 1 500px; /* Reduced from 550px */
-    min-width: 280px; /* Reduced from 300px */
-  }
-  #scrabble-board {
-    grid-template-columns: repeat(15, 32px) !important; /* Reduced from 36px */
-    grid-template-rows: repeat(15, 32px) !important; /* Reduced from 36px */
-    margin-bottom: 12px; /* Reduced from 15px */
-  }
-  .board-cell {
-    min-width: 32px !important; /* Reduced from 36px */
-    min-height: 32px !important; /* Reduced from 36px */
-    font-size: 0.85em !important; /* Reduced from 0.9em */
-  }
-  .tile-rack {
-    max-width: 500px; /* Reduced from 550px */
-    padding: 6px; /* Reduced from 8px */
-    gap: 6px; /* Reduced from 8px */
-    min-height: 36px; /* Reduced from 40px */
-  }
-}
+
 
 /* Laptop-specific optimizations */
 @media (min-width: 769px) and (max-width: 1366px) {

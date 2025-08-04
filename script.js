@@ -3114,58 +3114,42 @@ async executeAIPlay(play) {
 
                     // Create animated tile element
                     const animatedTile = document.createElement("div");
-                    animatedTile.className = "tile animated-tile";
+                    animatedTile.className = "tile";
                     animatedTile.innerHTML = `
                       ${tile.letter}
                       <span class="points">${tile.value}</span>
                       ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                   `;
 
-                    // Get target cell position with better responsive handling
+                    // Get target cell position
                     const targetCell = document.querySelector(
                         `[data-row="${row}"][data-col="${col}"]`,
                     );
                     const targetRect = targetCell.getBoundingClientRect();
-                    const boardContainer = document.querySelector('.board-container');
-                    const boardRect = boardContainer.getBoundingClientRect();
 
-                    // Animation setup - use relative positioning and better sizing
-                    const cellSize = Math.min(targetRect.width, targetRect.height);
-                    const startX = targetRect.left + (targetRect.width - cellSize) / 2;
-                    const startY = boardRect.top - cellSize - 20; // Start above the board
-                    
+                    // Animation setup
                     animatedTile.style.cssText = `
                       position: fixed;
-                      top: ${startY}px;
-                      left: ${startX}px;
-                      width: ${cellSize}px;
-                      height: ${cellSize}px;
-                      transform: rotate(-180deg) scale(0.8);
+                      top: -50px;
+                      left: ${targetRect.left}px;
+                      transform: rotate(-180deg);
                       transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                       z-index: 1000;
-                      box-sizing: border-box;
-                      font-size: ${Math.max(12, cellSize * 0.4)}px;
-                      border-radius: ${Math.max(2, cellSize * 0.05)}px;
                   `;
 
                     document.body.appendChild(animatedTile);
 
-                    // Animate tile placement with improved timing and visual feedback
+                    // Animate tile placement
                     await new Promise((resolve) => {
                         setTimeout(() => {
-                            // Calculate final position with proper centering
-                            const finalX = targetRect.left + (targetRect.width - cellSize) / 2;
-                            const finalY = targetRect.top + (targetRect.height - cellSize) / 2;
-                            
-                            animatedTile.style.top = `${finalY}px`;
-                            animatedTile.style.left = `${finalX}px`;
-                            animatedTile.style.transform = "rotate(0deg) scale(1)";
+                            animatedTile.style.top = `${targetRect.top}px`;
+                            animatedTile.style.transform = "rotate(0deg)";
 
                             setTimeout(() => {
-                                animatedTile.style.transform = "rotate(0deg) scale(1.1)";
+                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
                                 setTimeout(() => {
                                     animatedTile.style.transform = "rotate(0deg) scale(1)";
-                                }, 150);
+                                }, 100);
                             }, 800);
 
                             setTimeout(() => {
@@ -3184,19 +3168,11 @@ async executeAIPlay(play) {
                                 permanentTile.style.cssText = `
                                   background: linear-gradient(145deg, #ffffff, #f0f0f0);
                                   color: #000;
-                                  width: 100%;
-                                  height: 100%;
-                                  display: flex;
-                                  flex-direction: column;
-                                  align-items: center;
-                                  justify-content: center;
-                                  font-size: inherit;
-                                  border-radius: inherit;
                               `;
                                 permanentTile.innerHTML = `
-                                  <div style="font-weight: bold; font-size: 1.2em;">${tile.letter}</div>
-                                  <span class="points" style="color: #000; font-size: 0.8em;">${tile.value}</span>
-                                  ${tile.isBlank ? '<span class="blank-indicator" style="font-size: 0.7em;">★</span>' : ""}
+                                  ${tile.letter}
+                                  <span class="points" style="color: #000;">${tile.value}</span>
+                                  ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                               `;
 
                                 targetCell.innerHTML = "";
@@ -3208,7 +3184,7 @@ async executeAIPlay(play) {
 
                                 resolve();
                             }, 1000);
-                        }, 300);
+                        }, 200);
                     });
 
                     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -7070,9 +7046,9 @@ calculateScore() {
 			const tileElement = document.createElement("div");
 			tileElement.className = "tile";
 			tileElement.innerHTML = `
-                        ${tile.letter}
-                        <span class="points">${tile.value}</span>
-                    `;
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+            `;
 			rack.appendChild(tileElement);
 		});
 	}
@@ -8456,6 +8432,9 @@ calculateScore() {
 				}
 			});
 		}
+
+		// Handle window resize to update AI rack visibility
+
 	}
 
 	simulateEndgameScenario() {
