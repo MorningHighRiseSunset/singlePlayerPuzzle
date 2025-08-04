@@ -3121,39 +3121,51 @@ async executeAIPlay(play) {
                       ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                   `;
 
-                    // Get target cell position
+                    // Get target cell position with better responsive handling
                     const targetCell = document.querySelector(
                         `[data-row="${row}"][data-col="${col}"]`,
                     );
                     const targetRect = targetCell.getBoundingClientRect();
+                    const boardContainer = document.querySelector('.board-container');
+                    const boardRect = boardContainer.getBoundingClientRect();
 
-                    // Animation setup - match board cell size
-                    const cellSize = targetRect.width;
+                    // Animation setup - use relative positioning and better sizing
+                    const cellSize = Math.min(targetRect.width, targetRect.height);
+                    const startX = targetRect.left + (targetRect.width - cellSize) / 2;
+                    const startY = boardRect.top - cellSize - 20; // Start above the board
+                    
                     animatedTile.style.cssText = `
                       position: fixed;
-                      top: -50px;
-                      left: ${targetRect.left}px;
+                      top: ${startY}px;
+                      left: ${startX}px;
                       width: ${cellSize}px;
                       height: ${cellSize}px;
-                      transform: rotate(-180deg);
+                      transform: rotate(-180deg) scale(0.8);
                       transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                       z-index: 1000;
                       box-sizing: border-box;
+                      font-size: ${Math.max(12, cellSize * 0.4)}px;
+                      border-radius: ${Math.max(2, cellSize * 0.05)}px;
                   `;
 
                     document.body.appendChild(animatedTile);
 
-                    // Animate tile placement
+                    // Animate tile placement with improved timing and visual feedback
                     await new Promise((resolve) => {
                         setTimeout(() => {
-                            animatedTile.style.top = `${targetRect.top}px`;
-                            animatedTile.style.transform = "rotate(0deg)";
+                            // Calculate final position with proper centering
+                            const finalX = targetRect.left + (targetRect.width - cellSize) / 2;
+                            const finalY = targetRect.top + (targetRect.height - cellSize) / 2;
+                            
+                            animatedTile.style.top = `${finalY}px`;
+                            animatedTile.style.left = `${finalX}px`;
+                            animatedTile.style.transform = "rotate(0deg) scale(1)";
 
                             setTimeout(() => {
-                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
+                                animatedTile.style.transform = "rotate(0deg) scale(1.1)";
                                 setTimeout(() => {
                                     animatedTile.style.transform = "rotate(0deg) scale(1)";
-                                }, 100);
+                                }, 150);
                             }, 800);
 
                             setTimeout(() => {
@@ -3172,11 +3184,19 @@ async executeAIPlay(play) {
                                 permanentTile.style.cssText = `
                                   background: linear-gradient(145deg, #ffffff, #f0f0f0);
                                   color: #000;
+                                  width: 100%;
+                                  height: 100%;
+                                  display: flex;
+                                  flex-direction: column;
+                                  align-items: center;
+                                  justify-content: center;
+                                  font-size: inherit;
+                                  border-radius: inherit;
                               `;
                                 permanentTile.innerHTML = `
-                                  ${tile.letter}
-                                  <span class="points" style="color: #000;">${tile.value}</span>
-                                  ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                                  <div style="font-weight: bold; font-size: 1.2em;">${tile.letter}</div>
+                                  <span class="points" style="color: #000; font-size: 0.8em;">${tile.value}</span>
+                                  ${tile.isBlank ? '<span class="blank-indicator" style="font-size: 0.7em;">★</span>' : ""}
                               `;
 
                                 targetCell.innerHTML = "";
@@ -3188,7 +3208,7 @@ async executeAIPlay(play) {
 
                                 resolve();
                             }, 1000);
-                        }, 200);
+                        }, 300);
                     });
 
                     await new Promise((resolve) => setTimeout(resolve, 500));
