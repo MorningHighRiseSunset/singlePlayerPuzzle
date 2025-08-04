@@ -6678,11 +6678,11 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		const historyDisplay =
-			document.getElementById("move-history") ||
-			this.createMoveHistoryDisplay();
-		historyDisplay.innerHTML =
-			"<h3>Move History</h3>" +
+		// Update both mobile and desktop move history containers
+		const mobileHistoryDisplay = document.getElementById("move-history");
+		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
+		
+		const historyContent = "<h3>Move History</h3>" +
 			this.moveHistory
 			.map((move) => {
 				if (
@@ -6723,6 +6723,19 @@ calculateScore() {
 					</div>`;
 			})
 			.join("");
+
+		// Update mobile history (create if doesn't exist)
+		if (mobileHistoryDisplay) {
+			mobileHistoryDisplay.innerHTML = historyContent;
+		} else {
+			const createdMobile = this.createMoveHistoryDisplay();
+			createdMobile.innerHTML = historyContent;
+		}
+
+		// Update desktop history
+		if (desktopHistoryDisplay) {
+			desktopHistoryDisplay.innerHTML = historyContent;
+		}
 	}
 
 	updateGameState() {
@@ -6732,12 +6745,25 @@ calculateScore() {
 	}
 
 	updateScores() {
-		document.getElementById("player-score").textContent = this.playerScore;
-		document.getElementById("computer-score").textContent = this.aiScore;
+		// Update both mobile and desktop score displays
+		const playerScoreMobile = document.getElementById("player-score");
+		const computerScoreMobile = document.getElementById("computer-score");
+		const playerScoreDesktop = document.getElementById("player-score-desktop");
+		const computerScoreDesktop = document.getElementById("computer-score-desktop");
+		
+		if (playerScoreMobile) playerScoreMobile.textContent = this.playerScore;
+		if (computerScoreMobile) computerScoreMobile.textContent = this.aiScore;
+		if (playerScoreDesktop) playerScoreDesktop.textContent = this.playerScore;
+		if (computerScoreDesktop) computerScoreDesktop.textContent = this.aiScore;
 	}
 
 	updateTilesCount() {
-		document.getElementById("tiles-count").textContent = this.tiles.length;
+		// Update both mobile and desktop tile count displays
+		const tilesCountMobile = document.getElementById("tiles-count");
+		const tilesCountDesktop = document.getElementById("tiles-count-desktop");
+		
+		if (tilesCountMobile) tilesCountMobile.textContent = this.tiles.length;
+		if (tilesCountDesktop) tilesCountDesktop.textContent = this.tiles.length;
 	}
 
 	updateTurnIndicator() {
@@ -6990,7 +7016,14 @@ calculateScore() {
 	createMoveHistoryDisplay() {
 		const historyDisplay = document.createElement("div");
 		historyDisplay.id = "move-history";
-		document.querySelector(".info-panel").appendChild(historyDisplay);
+		// Try to append to mobile drawer first, then fallback to info-panel
+		const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
+		const infoPanel = document.querySelector(".info-panel");
+		if (mobileDrawer) {
+			mobileDrawer.appendChild(historyDisplay);
+		} else if (infoPanel) {
+			infoPanel.appendChild(historyDisplay);
+		}
 		return historyDisplay;
 	}
 
@@ -7193,75 +7226,154 @@ calculateScore() {
 	}
 
 	setupExchangeSystem() {
+		// Setup mobile exchange portal
 		this.exchangePortal = document.getElementById("exchange-portal");
 		const activateButton = document.getElementById("activate-exchange");
 
-		activateButton.addEventListener("click", () => {
-			if (this.currentTurn !== "player") {
-				alert("Wait for your turn!");
-				return;
-			}
-			this.toggleExchangeMode();
-		});
+		if (activateButton) {
+			activateButton.addEventListener("click", () => {
+				if (this.currentTurn !== "player") {
+					alert("Wait for your turn!");
+					return;
+				}
+				this.toggleExchangeMode("mobile");
+			});
+		}
 
-		// Modify portal drop zone event listeners
-		this.exchangePortal.addEventListener("dragover", (e) => {
-			if (!this.exchangeMode) return;
-			e.preventDefault();
-			e.dataTransfer.dropEffect = "move"; // Add this line
-			this.exchangePortal.classList.add("portal-dragover");
-		});
+		if (this.exchangePortal) {
+			// Modify portal drop zone event listeners
+			this.exchangePortal.addEventListener("dragover", (e) => {
+				if (!this.exchangeMode) return;
+				e.preventDefault();
+				e.dataTransfer.dropEffect = "move";
+				this.exchangePortal.classList.add("portal-dragover");
+			});
 
-		this.exchangePortal.addEventListener("drop", async (e) => {
-			e.preventDefault();
-			e.stopPropagation(); // Add this line
-			if (!this.exchangeMode) return;
+			this.exchangePortal.addEventListener("drop", async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!this.exchangeMode) return;
 
-			const tileIndex = e.dataTransfer.getData("text/plain");
-			if (tileIndex !== "") {
-				await this.handleTileExchange(parseInt(tileIndex));
-			}
+				const tileIndex = e.dataTransfer.getData("text/plain");
+				if (tileIndex !== "") {
+					await this.handleTileExchange(parseInt(tileIndex));
+				}
 
-			this.exchangePortal.classList.remove("portal-dragover");
-		});
+				this.exchangePortal.classList.remove("portal-dragover");
+			});
+		}
+
+		// Setup desktop exchange portal
+		this.exchangePortalDesktop = document.getElementById("exchange-portal-desktop");
+		const activateDesktopButton = document.getElementById("activate-exchange-desktop");
+
+		if (activateDesktopButton) {
+			activateDesktopButton.addEventListener("click", () => {
+				if (this.currentTurn !== "player") {
+					alert("Wait for your turn!");
+					return;
+				}
+				this.toggleExchangeMode("desktop");
+			});
+		}
+
+		if (this.exchangePortalDesktop) {
+			// Modify portal drop zone event listeners
+			this.exchangePortalDesktop.addEventListener("dragover", (e) => {
+				if (!this.exchangeMode) return;
+				e.preventDefault();
+				e.dataTransfer.dropEffect = "move";
+				this.exchangePortalDesktop.classList.add("portal-dragover");
+			});
+
+			this.exchangePortalDesktop.addEventListener("drop", async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (!this.exchangeMode) return;
+
+				const tileIndex = e.dataTransfer.getData("text/plain");
+				if (tileIndex !== "") {
+					await this.handleTileExchange(parseInt(tileIndex));
+				}
+
+				this.exchangePortalDesktop.classList.remove("portal-dragover");
+			});
+		}
 	}
 
-	toggleExchangeMode() {
+	toggleExchangeMode(mode = "mobile") {
 		if (this.currentTurn !== "player") {
 			alert("Wait for your turn!");
 			return;
 		}
 
 		this.exchangeMode = !this.exchangeMode;
-		const activateButton = document.getElementById("activate-exchange");
+		
+		if (mode === "mobile") {
+			const activateButton = document.getElementById("activate-exchange");
+			if (activateButton) {
+				if (this.exchangeMode) {
+					this.exchangePortal.classList.add("active");
+					activateButton.textContent = "Deactivate Exchange Portal";
+					activateButton.style.background =
+						"linear-gradient(145deg, #ff4081, #f50057)";
 
-		if (this.exchangeMode) {
-			this.exchangePortal.classList.add("active");
-			activateButton.textContent = "Deactivate Exchange Portal";
-			activateButton.style.background =
-				"linear-gradient(145deg, #ff4081, #f50057)";
+					// Show exchange instructions
+					const instructions = document.createElement("div");
+					instructions.className = "exchange-instructions animated";
+					this.exchangePortal.parentElement.appendChild(instructions);
+				} else {
+					this.exchangePortal.classList.remove("active");
+					activateButton.textContent = "Activate Exchange Portal";
+					activateButton.style.background =
+						"linear-gradient(145deg, #42a5f5, #1976d2)";
 
-			// Show exchange instructions
-			const instructions = document.createElement("div");
-			instructions.className = "exchange-instructions animated";
-			this.exchangePortal.parentElement.appendChild(instructions);
-		} else {
-			this.exchangePortal.classList.remove("active");
-			activateButton.textContent = "Activate Exchange Portal";
-			activateButton.style.background =
-				"linear-gradient(145deg, #42a5f5, #1976d2)";
+					// Remove instructions
+					const instructions = document.querySelector(
+						".exchange-instructions.animated",
+					);
+					if (instructions) {
+						instructions.remove();
+					}
 
-			// Remove instructions
-			const instructions = document.querySelector(
-				".exchange-instructions.animated",
-			);
-			if (instructions) {
-				instructions.remove();
+					// Process any remaining exchanges
+					if (this.exchangingTiles.length > 0) {
+						this.completeExchange();
+					}
+				}
 			}
+		} else if (mode === "desktop") {
+			const activateDesktopButton = document.getElementById("activate-exchange-desktop");
+			if (activateDesktopButton) {
+				if (this.exchangeMode) {
+					this.exchangePortalDesktop.classList.add("active");
+					activateDesktopButton.textContent = "Deactivate Exchange Portal";
+					activateDesktopButton.style.background =
+						"linear-gradient(145deg, #ff4081, #f50057)";
 
-			// Process any remaining exchanges
-			if (this.exchangingTiles.length > 0) {
-				this.completeExchange();
+					// Show exchange instructions
+					const instructions = document.createElement("div");
+					instructions.className = "exchange-instructions animated";
+					this.exchangePortalDesktop.parentElement.appendChild(instructions);
+				} else {
+					this.exchangePortalDesktop.classList.remove("active");
+					activateDesktopButton.textContent = "Activate Exchange Portal";
+					activateDesktopButton.style.background =
+						"linear-gradient(145deg, #42a5f5, #1976d2)";
+
+					// Remove instructions
+					const instructions = document.querySelector(
+						".exchange-instructions.animated",
+					);
+					if (instructions) {
+						instructions.remove();
+					}
+
+					// Process any remaining exchanges
+					if (this.exchangingTiles.length > 0) {
+						this.completeExchange();
+					}
+				}
 			}
 		}
 	}
@@ -7785,8 +7897,9 @@ calculateScore() {
 		const playWordDesktopBtn = document.getElementById("play-word-desktop");
 		if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
 
-		// Shuffle rack button
-		document.getElementById("shuffle-rack").addEventListener("click", async () => {
+		// Shuffle rack button (mobile)
+		const shuffleRackBtn = document.getElementById("shuffle-rack");
+		if (shuffleRackBtn) shuffleRackBtn.addEventListener("click", async () => {
 			const rack = document.getElementById("tile-rack");
 			const tiles = [...rack.children];
 
@@ -7827,8 +7940,52 @@ calculateScore() {
 			}, 400);
 		});
 
-		// Skip turn button
-		document.getElementById("skip-turn").addEventListener("click", () => {
+		// Shuffle rack button (desktop)
+		const shuffleRackDesktopBtn = document.getElementById("shuffle-rack-desktop");
+		if (shuffleRackDesktopBtn) shuffleRackDesktopBtn.addEventListener("click", async () => {
+			const rack = document.getElementById("tile-rack");
+			const tiles = [...rack.children];
+
+			// Disable tile dragging during animation
+			tiles.forEach((tile) => (tile.draggable = false));
+
+			// Visual shuffle animation
+			for (let i = 0; i < 5; i++) { // 5 visual shuffles
+				await new Promise((resolve) => {
+					tiles.forEach((tile) => {
+						tile.style.transition = "transform 0.2s ease";
+						tile.style.transform = `translateX(${Math.random() * 20 - 10}px) rotate(${Math.random() * 10 - 5}deg)`;
+					});
+					setTimeout(resolve, 200);
+				});
+			}
+
+			// Reset positions with transition
+			tiles.forEach((tile) => {
+				tile.style.transform = "none";
+			});
+
+			// Actual shuffle logic
+			for (let i = this.playerRack.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[this.playerRack[i], this.playerRack[j]] = [this.playerRack[j], this.playerRack[i]];
+			}
+
+			// Wait for position reset animation to complete
+			setTimeout(() => {
+				this.renderRack();
+			}, 200);
+
+			// Re-enable dragging
+			setTimeout(() => {
+				const newTiles = document.querySelectorAll("#tile-rack .tile");
+				newTiles.forEach((tile) => (tile.draggable = true));
+			}, 400);
+		});
+
+		// Skip turn button (mobile)
+		const skipTurnBtn = document.getElementById("skip-turn");
+		if (skipTurnBtn) skipTurnBtn.addEventListener("click", () => {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
@@ -7841,7 +7998,22 @@ calculateScore() {
 			}
 		});
 
-		// Quit game button
+		// Skip turn button (desktop)
+		const skipTurnDesktopBtn = document.getElementById("skip-turn-desktop");
+		if (skipTurnDesktopBtn) skipTurnDesktopBtn.addEventListener("click", () => {
+			if (this.currentTurn === "player") {
+				this.consecutiveSkips++;
+				this.currentTurn = "ai";
+				this.addToMoveHistory("Player", "SKIP", 0);
+				this.updateGameState();
+				this.highlightValidPlacements();
+				if (!this.checkGameEnd()) {
+					this.aiTurn();
+				}
+			}
+		});
+
+		// Quit game button (mobile)
 		const quitButton = document.getElementById("quit-game");
 		if (quitButton) {
 			quitButton.addEventListener("click", () => {
@@ -7871,8 +8043,91 @@ calculateScore() {
 			});
 		}
 
-		// Print history button
-		document.getElementById("print-history").addEventListener("click", async () => {
+		// Quit game button (desktop)
+		const quitDesktopButton = document.getElementById("quit-game-desktop");
+		if (quitDesktopButton) {
+			quitDesktopButton.addEventListener("click", () => {
+				if (this.gameEnded) return; // Prevent multiple triggers
+
+				// Set the computer as winner since player quit
+				this.aiScore = Math.max(this.aiScore, this.playerScore + 1);
+				this.playerScore = Math.min(this.playerScore, this.aiScore - 1);
+				this.gameEnded = true;
+
+				// Update scores before animation
+				this.updateScores();
+
+				// Add the quit move to history
+				if (this.moveHistory) {
+					this.moveHistory.push({
+						player: "Player",
+						word: "QUIT",
+						score: 0,
+						timestamp: new Date(),
+					});
+					this.updateMoveHistory();
+				}
+
+				// Trigger game over animation
+				this.announceWinner();
+			});
+		}
+
+		// Print history button (mobile)
+		const printHistoryBtn = document.getElementById("print-history");
+		if (printHistoryBtn) printHistoryBtn.addEventListener("click", async () => {
+			const printWindow = window.open("", "_blank");
+			const gameDate = new Date().toLocaleString();
+
+			// Show loading message
+			printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Puzzle Game History - ${gameDate}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+                            .move { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+                            .word-header { font-size: 1.2em; color: #2c3e50; margin-bottom: 10px; }
+                            .definitions { margin-left: 20px; padding: 10px; border-left: 3px solid #3498db; }
+                            .part-of-speech { color: #e67e22; font-style: italic; }
+                            .scores { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+                            .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loading">Loading definitions...</div>
+                    </body>
+                </html>
+            `);
+
+			// Gather all unique words from move history
+			const uniqueWords = [...new Set(
+				this.moveHistory
+				.map((move) => move.word)
+				.filter((word) => word !== "SKIP" && word !== "EXCHANGE" && word !== "QUIT")
+			)];
+
+			// Fetch definitions for all words
+			const wordDefinitions = new Map();
+			for (const word of uniqueWords) {
+				const definitions = await this.getWordDefinition(word);
+				if (definitions) {
+					wordDefinitions.set(word, definitions);
+				}
+			}
+
+			// Generate and set the content
+			const content = this.generatePrintContent(gameDate, wordDefinitions);
+			printWindow.document.body.innerHTML = content;
+			printWindow.document.close();
+			printWindow.focus();
+			printWindow.print();
+		});
+
+		// Print history button (desktop)
+		const printHistoryDesktopBtn = document.getElementById("print-history-desktop");
+		if (printHistoryDesktopBtn) printHistoryDesktopBtn.addEventListener("click", async () => {
 			const printWindow = window.open("", "_blank");
 			const gameDate = new Date().toLocaleString();
 
