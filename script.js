@@ -3127,14 +3127,18 @@ async executeAIPlay(play) {
                     );
                     const targetRect = targetCell.getBoundingClientRect();
 
-                    // Animation setup
+                    // Animation setup - match board cell size
+                    const cellSize = targetRect.width;
                     animatedTile.style.cssText = `
                       position: fixed;
                       top: -50px;
                       left: ${targetRect.left}px;
+                      width: ${cellSize}px;
+                      height: ${cellSize}px;
                       transform: rotate(-180deg);
                       transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                       z-index: 1000;
+                      box-sizing: border-box;
                   `;
 
                     document.body.appendChild(animatedTile);

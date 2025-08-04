@@ -57,8 +57,8 @@ body {
   padding: 15px; /* Reduced from 20px */
   border-radius: 8px; /* Reduced from 10px */
   box-shadow: 0 6px 18px rgba(0,0,0,0.12); /* Reduced shadow */
-  width: 220px; /* Reduced from 250px */
-  min-width: 180px; /* Reduced from 200px */
+  width: 200px; /* Reduced from 220px to prevent clipping */
+  min-width: 160px; /* Reduced from 180px */
   min-height: 180px; /* Reduced from 200px */
   margin-bottom: 15px; /* Reduced from 20px */
   box-sizing: border-box;
@@ -68,6 +68,14 @@ body {
   width: 100%;
   max-width: 550px; /* Reduced from 600px */
   margin: 0 auto 15px auto; /* Reduced margin */
+}
+
+/* Animated tiles should match board tile size */
+.animated-tile {
+  width: 100% !important;
+  height: 100% !important;
+  font-size: inherit !important;
+  box-sizing: border-box !important;
 }
 
 #move-history {
@@ -586,6 +594,15 @@ button:active,
   .moves-panel, .info-panel, .definitions-panel {
     width: 200px; /* Slightly smaller for laptop screens */
     padding: 12px;
+  }
+}
+
+/* Very small laptop screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .moves-panel, .info-panel, .definitions-panel {
+    width: 180px; /* Even smaller for very small screens */
+    padding: 10px;
+    min-width: 140px;
   }
 }
 
