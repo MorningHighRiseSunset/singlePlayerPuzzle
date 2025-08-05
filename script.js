@@ -427,7 +427,16 @@ class ScrabbleGame {
 					this.showAIGhostIfPlayerMoveValid();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
-					this.playerRack.push(tile);
+					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
+					if (tile.isBlank || tile.letter === "*") {
+						this.playerRack.push({
+							letter: "*",
+							value: 0,
+							id: tile.id
+						});
+					} else {
+						this.playerRack.push(tile);
+					}
 					this.renderRack();
 					this.highlightValidPlacements();
 				}
@@ -5331,6 +5340,7 @@ async executeAIPlay(play) {
 		tileElement.innerHTML = `
                     ${tile.letter}
                     <span class="points">${tile.value}</span>
+                    ${tile.letter === "*" ? '<span class="blank-indicator">★</span>' : ""}
                 `;
 		return tileElement;
 	}
@@ -5738,8 +5748,16 @@ async executeAIPlay(play) {
                 }
             }
 
-            // Always return the tile to the player's rack
-            this.playerRack.push(tile);
+            // --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
+            if (tile.isBlank || tile.letter === "*") {
+                this.playerRack.push({
+                    letter: "*",
+                    value: 0,
+                    id: tile.id
+                });
+            } else {
+                this.playerRack.push(tile);
+            }
         });
 
         this.placedTiles = [];

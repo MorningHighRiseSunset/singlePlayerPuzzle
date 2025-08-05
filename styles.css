@@ -200,10 +200,19 @@ body {
 
 /* AI Rack - Use same styling as regular tile rack */
 .ai-rack {
-  display: none; /* Hide AI rack by default */
+  display: flex;
+  background: linear-gradient(145deg, var(--primary), #151d69);
+  padding: 8px;
+  border-radius: 8px;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  max-width: 550px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  margin: 6px auto 6px auto;
 }
 
-/* Show AI rack only on desktop */
+/* Desktop AI rack styles */
 @media (min-width: 769px) {
   .ai-rack {
     display: flex !important;
@@ -292,6 +301,27 @@ body {
     max-width: 98vw !important;
     border-radius: 8px !important;
     min-height: 0 !important;
+  }
+  
+  /* Mobile AI rack styles */
+  .ai-rack {
+    margin: 2px auto 2px auto !important;
+    padding: 4px !important;
+    gap: 6px !important;
+    max-width: 98vw !important;
+    border-radius: 8px !important;
+    min-height: 0 !important;
+  }
+  
+  /* AI rack tiles match board tile size on mobile */
+  .ai-rack .tile {
+    width: calc(100vw / 15 - 1.5px) !important;  /* 15 tiles per row, minus gap */
+    height: calc(100vw / 15 - 1.5px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    font-size: 2.7vw !important;
   }
   .tile .points {
     font-size: 1.3vw !important;
