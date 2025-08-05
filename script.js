@@ -137,7 +137,7 @@ class ScrabbleGame {
 			X: 1,
 			Y: 2,
 			Z: 1,
-			"*": 2,
+			"*": 4, // Increased from 2 to 4 wild tiles
 		};
 		this.setupHintSystem();
 		this.previousBoard = null;
@@ -7111,10 +7111,22 @@ calculateScore() {
 			if (tile) this.aiRack.push(tile);
 		}
 
-		// --- MODIFIED PLAYER RACK LOGIC: Limit vowels to max 3, prefer consonants ---
+		// --- ENHANCED PLAYER RACK LOGIC: Better chances for wild tiles ---
 		while (this.playerRack.length < 7 && this.tiles.length > 0) {
 			const currentVowels = this.playerRack.filter(tile =>
 				optimalDistribution.vowels.includes(tile.letter)).length;
+			const currentWildTiles = this.playerRack.filter(tile => tile.letter === "*").length;
+
+			// 15% chance to specifically get a wild tile (increased priority)
+			// 25% chance if player has no wild tiles yet (bonus for empty rack)
+			const wildTileChance = currentWildTiles === 0 ? 0.25 : 0.15;
+			if (Math.random() < wildTileChance && currentWildTiles < 2) {
+				let wildTile = this.findTileInBag(['*']);
+				if (wildTile) {
+					this.playerRack.push(wildTile);
+					continue;
+				}
+			}
 
 			// If already 3 vowels, force consonant
 			if (currentVowels >= 3) {
@@ -7163,16 +7175,16 @@ calculateScore() {
 	drawWeightedTile(isAI, playerMode = false) {
 		if (this.tiles.length === 0) return null;
 
-		// Dramatically increase blank tile weight for AI
+		// Dramatically increase blank tile weight for AI and players
 		const weights = playerMode ? {
-			'*': 10,
+			'*': 50, // Increased from 10 to 50 for players
 			'AEIOU': 10,
 			'RSTLN': 30,
 			'DGBCMP': 20,
 			'FHVWY': 15,
 			'JKQXZ': 10
 		} : {
-			'*': isAI ? 200 : 10, // <<--- Give AI a 20x higher chance for blanks!
+			'*': isAI ? 200 : 50, // Increased player chance from 10 to 50
 			'AEIOU': isAI ? 35 : 30,
 			'RSTLN': isAI ? 30 : 25,
 			'DGBCMP': 20,
@@ -7218,7 +7230,7 @@ calculateScore() {
 		if (this.tiles.length === 0) return null;
 
 		const weights = {
-			'*': isAI ? 50 : 10, // AI gets 5x chance for blank tiles
+			'*': isAI ? 50 : 50, // Increased player chance from 10 to 50
 			'AEIOU': isAI ? 35 : 30,
 			'RSTLN': isAI ? 30 : 25,
 			'DGBCMP': 20,
