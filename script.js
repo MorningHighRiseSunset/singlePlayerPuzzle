@@ -3263,7 +3263,7 @@ async executeAIPlay(play) {
 
 			// --- BINGO BONUS for AI ---
 			wordsList.forEach(w => {
-				if ((w.word.length === 7 || w.word.length === 8) && !this.wordsPlayed.has(w.word.toUpperCase())) {
+				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
 				}
 			});
@@ -6172,12 +6172,13 @@ calculateScore() {
     });
 
     // --- BINGO BONUS: Award 50 points for each 7- or 8-letter word played ---
-    formedWords.forEach(wordInfo => {
-        const len = wordInfo.word.length;
-        if ((len === 7 || len === 8) && !(this.wordsPlayed && this.wordsPlayed.has(wordInfo.word.toUpperCase()))) {
-            totalScore += 50;
-        }
-    });
+	// --- BINGO BONUS: Award 50 points for any word of 7 or more letters ---
+	formedWords.forEach(wordInfo => {
+		const len = wordInfo.word.length;
+		if (len >= 7 && !(this.wordsPlayed && this.wordsPlayed.has(wordInfo.word.toUpperCase()))) {
+			totalScore += 50;
+		}
+	});
 
     // After scoring, add all formed words to wordsPlayed set
     if (this.wordsPlayed) {
@@ -6622,11 +6623,11 @@ calculateScore() {
 					wordDescriptions.push({ word: wordInfo.word, score: null }); // Score is shown in move history
 				}
 
-				// Add bonus for 7-letter words
+				// Add bonus for 7 or more letter words
 				formedWords.forEach(wordInfo => {
-					if (wordInfo.word.length === 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
+					if (wordInfo.word.length >= 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
 						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-						console.log(`[Player] Added 50 point bonus for 7-letter word: ${wordInfo.word}`);
+						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
 					}
 				});
 
