@@ -6602,10 +6602,35 @@ calculateScore() {
 	speakBingo() {
 		try {
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+				console.log('[Speech] prepare to say BINGO BONUS');
 				// small delay to let UI updates settle (prevents speech being interrupted)
 				setTimeout(() => {
-					this.speakWord('BINGO BONUS');
-				}, 180);
+					try {
+						// Cancel any existing queued speech to ensure our utterance plays
+						window.speechSynthesis.cancel();
+						// Two-part enthusiastic announcement: short exclamation then the phrase
+						const exclaim = new SpeechSynthesisUtterance('Bingo!');
+						exclaim.lang = 'en-US';
+						exclaim.rate = 1.15;
+						exclaim.pitch = 1.4;
+						// Slight pause between utterances
+						exclaim.onend = () => {
+							try {
+								const u = new SpeechSynthesisUtterance('Fifty point bonus');
+								u.lang = 'en-US';
+								u.rate = 1.05;
+								u.pitch = 1.2;
+								window.speechSynthesis.speak(u);
+								console.log('[Speech] spoke enthusiastic bingo');
+							} catch (innerErr) {
+								console.error('Bingo speech inner failed', innerErr);
+							}
+						};
+						window.speechSynthesis.speak(exclaim);
+					} catch (innerErr) {
+						console.error('Bingo speech inner failed', innerErr);
+					}
+				}, 150);
 			}
 		} catch (e) {
 			console.error('Bingo speech failed', e);
@@ -6648,12 +6673,12 @@ calculateScore() {
 				}
 
 				// Add bonus for 7 or more letter words
+				let bingoBonusAwarded = false;
 				formedWords.forEach(wordInfo => {
 					if (wordInfo.word.length >= 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
 						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
-						// Also speak the bingo bonus explicitly for the player
-						this.speakBingo();
+						bingoBonusAwarded = true;
 					}
 				});
 
@@ -6681,6 +6706,14 @@ calculateScore() {
 
 				this.addToMoveHistory("Player", moveDescription, totalScore);
 				this.updateGameState();
+
+				// If player earned a bingo bonus, announce it after the UI updates
+				if (typeof bingoBonusAwarded !== 'undefined' && bingoBonusAwarded) {
+					console.log('[Player] Announcing BINGO BONUS');
+					setTimeout(() => {
+						this.speakBingo();
+					}, 120);
+				}
 
 				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
 				if (!this.checkGameEnd()) {
