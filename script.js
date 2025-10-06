@@ -3270,7 +3270,7 @@ async executeAIPlay(play) {
 						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
 					}
 					// Speak the bingo bonus explicitly
-					try { this.speakWord("BINGO BONUS"); } catch (e) { console.error('Bingo speech failed', e); }
+					this.speakBingo();
 				}
 			});
 
@@ -6598,6 +6598,20 @@ calculateScore() {
 		}
 	}
 
+	// Speak the bingo bonus in a consistent, slightly delayed way so it's not cut off
+	speakBingo() {
+		try {
+			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+				// small delay to let UI updates settle (prevents speech being interrupted)
+				setTimeout(() => {
+					this.speakWord('BINGO BONUS');
+				}, 180);
+			}
+		} catch (e) {
+			console.error('Bingo speech failed', e);
+		}
+	}
+
 	async playWord() {
 		// Show a spinner or disable the submit button for better UX
 		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
@@ -6639,7 +6653,7 @@ calculateScore() {
 						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
 						// Also speak the bingo bonus explicitly for the player
-						try { this.speakWord("BINGO BONUS"); } catch (e) { console.error('Bingo speech failed', e); }
+						this.speakBingo();
 					}
 				});
 
