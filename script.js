@@ -3265,6 +3265,10 @@ async executeAIPlay(play) {
 			wordsList.forEach(w => {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
+					// visual + speech celebration for bingo bonus
+					if (typeof this.showBingoBonusEffect === 'function') {
+						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
+					}
 				}
 			});
 
@@ -6177,6 +6181,10 @@ calculateScore() {
 		const len = wordInfo.word.length;
 		if (len >= 7 && !(this.wordsPlayed && this.wordsPlayed.has(wordInfo.word.toUpperCase()))) {
 			totalScore += 50;
+			// celebrate bingo for player too
+			if (typeof this.showBingoBonusEffect === 'function') {
+				try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
+			}
 		}
 	});
 
