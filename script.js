@@ -3269,6 +3269,8 @@ async executeAIPlay(play) {
 					if (typeof this.showBingoBonusEffect === 'function') {
 						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
 					}
+					// Speak the bingo bonus explicitly
+					try { this.speakWord("BINGO BONUS"); } catch (e) { console.error('Bingo speech failed', e); }
 				}
 			});
 
@@ -6636,6 +6638,8 @@ calculateScore() {
 					if (wordInfo.word.length >= 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
 						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
+						// Also speak the bingo bonus explicitly for the player
+						try { this.speakWord("BINGO BONUS"); } catch (e) { console.error('Bingo speech failed', e); }
 					}
 				});
 
