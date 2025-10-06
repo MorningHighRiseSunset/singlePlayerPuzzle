@@ -8762,6 +8762,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const game = new ScrabbleGame();
     window.game = game; // <-- Add this line
 
+	// --- DEV: Add a temporary 'Test Bingo' button so you can verify speech without playing ---
+	try {
+		const testBtn = document.createElement('button');
+		testBtn.id = 'test-bingo-btn';
+		testBtn.textContent = 'Test Bingo Announcement';
+		testBtn.style.position = 'fixed';
+		testBtn.style.bottom = '16px';
+		testBtn.style.right = '16px';
+		testBtn.style.zIndex = '9999';
+		testBtn.style.padding = '10px 12px';
+		testBtn.style.background = '#4CAF50';
+		testBtn.style.color = '#fff';
+		testBtn.style.border = 'none';
+		testBtn.style.borderRadius = '6px';
+		testBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+		testBtn.onclick = () => {
+			console.log('Test button clicked: speaking bingo');
+			try { game.speakBingo(); } catch (e) { console.error(e); }
+		};
+		document.body.appendChild(testBtn);
+	} catch (e) {
+		console.warn('Could not add test bingo button', e);
+	}
+
     // Wire up the simulate endgame button
     const endgameBtn = document.getElementById("simulate-endgame-btn");
     if (endgameBtn) {
