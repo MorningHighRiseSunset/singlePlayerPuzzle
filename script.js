@@ -6608,25 +6608,12 @@ calculateScore() {
 					try {
 						// Cancel any existing queued speech to ensure our utterance plays
 						window.speechSynthesis.cancel();
-						// Two-part enthusiastic announcement: short exclamation then the phrase
-						const exclaim = new SpeechSynthesisUtterance('Bingo!');
-						exclaim.lang = 'en-US';
-						exclaim.rate = 1.15;
-						exclaim.pitch = 1.4;
-						// Slight pause between utterances
-						exclaim.onend = () => {
-							try {
-								const u = new SpeechSynthesisUtterance('Fifty point bonus');
-								u.lang = 'en-US';
-								u.rate = 1.05;
-								u.pitch = 1.2;
-								window.speechSynthesis.speak(u);
-								console.log('[Speech] spoke enthusiastic bingo');
-							} catch (innerErr) {
-								console.error('Bingo speech inner failed', innerErr);
-							}
-						};
-						window.speechSynthesis.speak(exclaim);
+						const u = new SpeechSynthesisUtterance('Bingo bonus');
+						u.lang = 'en-US';
+						u.rate = 1.15;
+						u.pitch = 1.25;
+						window.speechSynthesis.speak(u);
+						console.log('[Speech] spoke Bingo bonus');
 					} catch (innerErr) {
 						console.error('Bingo speech inner failed', innerErr);
 					}
