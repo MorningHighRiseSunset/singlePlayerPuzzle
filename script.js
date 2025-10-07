@@ -3269,8 +3269,8 @@ async executeAIPlay(play) {
 					if (typeof this.showBingoBonusEffect === 'function') {
 						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
 					}
-					// Speak the bingo bonus explicitly
-					this.speakBingo();
+					// Speak the bingo bonus explicitly (slightly delayed to avoid collision)
+					setTimeout(() => { try { this.speakBingo(); } catch (e) { console.error(e); } }, 220);
 				}
 			});
 
@@ -6666,6 +6666,8 @@ calculateScore() {
 						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
 						bingoBonusAwarded = true;
+						// Immediate console ping so we can confirm player bingo detection
+						console.log('[Player] BINGO DETECTED');
 					}
 				});
 
@@ -6699,7 +6701,7 @@ calculateScore() {
 					console.log('[Player] Announcing BINGO BONUS');
 					setTimeout(() => {
 						this.speakBingo();
-					}, 120);
+					}, 400);
 				}
 
 				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
@@ -8748,6 +8750,23 @@ function preventScrolling(e) {
 document.addEventListener("DOMContentLoaded", () => {
     const game = new ScrabbleGame();
     window.game = game; // <-- Add this line
+
+	// Prime speech synthesis on first user interaction so later async announcements are allowed
+	const primeSpeech = () => {
+		try {
+			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+				// speak a very short silent utterance to satisfy user-gesture requirements
+				const silent = new SpeechSynthesisUtterance('');
+				silent.volume = 0;
+				window.speechSynthesis.speak(silent);
+				console.log('[Speech] primed by user interaction');
+			}
+		} catch (e) {
+			console.warn('Speech priming failed', e);
+		}
+		document.removeEventListener('pointerdown', primeSpeech, true);
+	};
+	document.addEventListener('pointerdown', primeSpeech, true);
 
 	// dev helper removed
 
