@@ -3262,15 +3262,15 @@ async executeAIPlay(play) {
             });
 
 			// --- BINGO BONUS for AI ---
+			let aiBingo = false;
 			wordsList.forEach(w => {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
-					// visual + speech celebration for bingo bonus
+					aiBingo = true;
+					// visual celebration
 					if (typeof this.showBingoBonusEffect === 'function') {
 						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
 					}
-					// Speak the bingo bonus explicitly (slightly delayed to avoid collision)
-					setTimeout(() => { try { this.speakBingo(); } catch (e) { console.error(e); } }, 220);
 				}
 			});
 
@@ -3291,28 +3291,29 @@ async executeAIPlay(play) {
                 moveDescription = "(No new words scored)";
             }
 
-            // --- Speak each word formed by AI ---
-            wordsList.forEach(wd => {
-                if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
-            });
+			// --- Speak each word formed by AI sequentially, then bingo if applicable ---
+			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
+			this.speakSequence(aiWordsToSpeak, aiBingo).catch((e) => {
+				console.error('AI speakSequence failed', e);
+			}).then(() => {
+				console.log(`Total score for move: ${totalScore}`);
 
-            console.log(`Total score for move: ${totalScore}`);
+				this.aiScore += totalScore;
+				this.isFirstMove = false;
+				this.consecutiveSkips = 0;
 
-            this.aiScore += totalScore;
-            this.isFirstMove = false;
-            this.consecutiveSkips = 0;
+				this.currentTurn = "player";
+				this.addToMoveHistory("Computer", moveDescription, totalScore);
 
-            this.currentTurn = "player";
-            this.addToMoveHistory("Computer", moveDescription, totalScore);
+				// Clear the placed tiles array after scoring
+				this.placedTiles = [];
 
-            // Clear the placed tiles array after scoring
-            this.placedTiles = [];
-
-            // Refill racks and update display
-            this.fillRacks();
-            this.showAIGhostIfPlayerMoveValid();
-            this.updateGameState();
-            resolve();
+				// Refill racks and update display
+				this.fillRacks();
+				this.showAIGhostIfPlayerMoveValid();
+				this.updateGameState();
+				resolve();
+			});
         }, 500);
     });
 }
@@ -6608,6 +6609,28 @@ calculateScore() {
 					try {
 						// Cancel any existing queued speech to ensure our utterance plays
 						window.speechSynthesis.cancel();
+						// Play a short beep as a fallback/attention cue
+						try {
+							const AudioCtx = window.AudioContext || window.webkitAudioContext;
+							if (AudioCtx) {
+								const ctx = new AudioCtx();
+								const o = ctx.createOscillator();
+								const g = ctx.createGain();
+								o.type = 'sine';
+								o.frequency.value = 900;
+								g.gain.value = 0.04;
+								o.connect(g);
+								g.connect(ctx.destination);
+								o.start();
+								setTimeout(() => {
+									o.stop();
+									try { ctx.close(); } catch (e) {}
+								}, 120);
+								console.log('[Speech] played bingo beep');
+							}
+						} catch (beepErr) {
+							console.warn('Bingo beep failed', beepErr);
+						}
 						const u = new SpeechSynthesisUtterance('Bingo bonus');
 						u.lang = 'en-US';
 						u.rate = 1.15;
@@ -6624,6 +6647,64 @@ calculateScore() {
 		}
 	}
 
+	// Speak an array of words sequentially, then optionally announce bingo
+	speakSequence(words = [], speakBingoAfter = false) {
+		return new Promise((resolve) => {
+			try {
+				if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+					if (speakBingoAfter) this.speakBingo();
+					return resolve();
+				}
+				if (!words || words.length === 0) {
+					if (speakBingoAfter) {
+						this.speakBingo();
+						// give speakBingo its internal timeout then resolve after a short delay
+						setTimeout(resolve, 500);
+					} else {
+						return resolve();
+					}
+				}
+				let i = 0;
+				const speakNext = () => {
+					const text = words[i];
+					try {
+						const u = new SpeechSynthesisUtterance(text);
+						u.lang = 'en-US';
+						u.rate = 0.95;
+						u.pitch = 1.0;
+						u.onend = () => {
+							i++;
+							if (i < words.length) {
+								speakNext();
+							} else {
+								if (speakBingoAfter) {
+									// small gap before bingo
+									setTimeout(() => {
+										this.speakBingo();
+										setTimeout(resolve, 500);
+									}, 180);
+								} else {
+									resolve();
+								}
+							}
+						};
+						window.speechSynthesis.speak(u);
+					} catch (err) {
+						console.error('speakSequence inner error', err);
+						// try to continue
+						i++;
+						if (i < words.length) speakNext(); else { if (speakBingoAfter) { this.speakBingo(); setTimeout(resolve,500); } else resolve(); }
+					}
+				};
+				speakNext();
+			} catch (e) {
+				console.error('speakSequence failed', e);
+				if (speakBingoAfter) this.speakBingo();
+				resolve();
+			}
+		});
+	}
+
 	async playWord() {
 		// Show a spinner or disable the submit button for better UX
 		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
@@ -6633,6 +6714,19 @@ calculateScore() {
 		}
 		// Let UI update
 		await new Promise(res => setTimeout(res, 30));
+
+		// Ensure speech is primed on mobile right after a direct user action (playWord)
+		try {
+			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+				// some mobile browsers require the speech to be triggered by a user gesture; play a tiny silent utterance
+				const _prime = new SpeechSynthesisUtterance('');
+				_prime.volume = 0;
+				window.speechSynthesis.speak(_prime);
+				console.log('[Speech] primed inside playWord()');
+			}
+		} catch (e) {
+			console.warn('playWord priming failed', e);
+		}
 
 		try {
 			if (this.placedTiles.length === 0) {
@@ -6679,9 +6773,12 @@ calculateScore() {
 					moveDescription = wordDescriptions[0].word;
 				}
 
-				// Speak each word formed
-				for (const wd of wordDescriptions) {
-					if (wd.word && wd.word !== "BINGO BONUS") this.speakWord(wd.word);
+				// Speak each word formed sequentially, then bingo if awarded
+				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
+				try {
+					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded);
+				} catch (e) {
+					console.error('Player speakSequence failed', e);
 				}
 
 				// Update game state
@@ -6696,13 +6793,7 @@ calculateScore() {
 				this.addToMoveHistory("Player", moveDescription, totalScore);
 				this.updateGameState();
 
-				// If player earned a bingo bonus, announce it after the UI updates
-				if (typeof bingoBonusAwarded !== 'undefined' && bingoBonusAwarded) {
-					console.log('[Player] Announcing BINGO BONUS');
-					setTimeout(() => {
-						this.speakBingo();
-					}, 400);
-				}
+				// bingo (if any) already spoken by speakSequence; no further action needed
 
 				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
 				if (!this.checkGameEnd()) {
