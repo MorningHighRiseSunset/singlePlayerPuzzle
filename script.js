@@ -6808,6 +6808,17 @@ calculateScore() {
 				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 				try {
 					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+					// Fallback: ensure player bingo announcement runs even if some path missed forwarding the source
+					if (bingoBonusAwarded) {
+						try {
+							// prevent immediate duplicate if speakSequence already called it by checking a short timestamp
+							const now = Date.now();
+							if (!this._lastSpokenBingoAt || (now - this._lastSpokenBingoAt) > 1200) {
+								this._lastSpokenBingoAt = now;
+								this.speakBingo('player');
+							}
+						} catch (fbErr) { console.warn('player bingo speak fallback failed', fbErr); }
+					}
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
 				}
