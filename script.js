@@ -6793,6 +6793,15 @@ calculateScore() {
 						bingoBonusAwarded = true;
 						// Immediate console ping so we can confirm player bingo detection
 						console.log('[Player] BINGO DETECTED');
+
+						// Force a player bingo announcement immediately (simple, deterministic)
+						try {
+							setTimeout(() => {
+								try { this.speakBingo('player'); console.log('[Speech] forced player bingo speak called'); } catch (e) { console.warn('forced bingo speak failed', e); }
+							}, 200);
+						} catch (err) {
+							console.warn('failed to schedule forced bingo speak', err);
+						}
 					}
 				});
 
