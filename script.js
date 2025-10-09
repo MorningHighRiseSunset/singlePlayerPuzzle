@@ -8960,7 +8960,7 @@ window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
 			for (let c = 0; c <= cols - L; c++) {
 				let ok = true;
 				for (let k = 0; k < L; k++) {
-					if (g.board[r][c + k].tile) { ok = false; break; }
+					if (g.board[r][c + k]) { ok = false; break; }
 				}
 				if (ok) { found = true; foundRow = r; foundCol = c; vertical = false; break; }
 			}
@@ -8972,7 +8972,7 @@ window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
 				for (let r = 0; r <= rows - L; r++) {
 					let ok = true;
 					for (let k = 0; k < L; k++) {
-						if (g.board[r + k][c].tile) { ok = false; break; }
+						if (g.board[r + k][c]) { ok = false; break; }
 					}
 					if (ok) { found = true; foundRow = r; foundCol = c; vertical = true; break; }
 				}
