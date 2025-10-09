@@ -3293,7 +3293,7 @@ async executeAIPlay(play) {
 
 			// --- Speak each word formed by AI sequentially, then bingo if applicable ---
 			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
-			this.speakSequence(aiWordsToSpeak, aiBingo).catch((e) => {
+			this.speakSequence(aiWordsToSpeak, aiBingo, 'ai').catch((e) => {
 				console.error('AI speakSequence failed', e);
 			}).then(() => {
 				console.log(`Total score for move: ${totalScore}`);
@@ -6600,7 +6600,8 @@ calculateScore() {
 	}
 
 	// Speak the bingo bonus in a consistent, slightly delayed way so it's not cut off
-	speakBingo() {
+	// source: optional string 'player' or 'ai' so we can do player-only effects (confetti)
+	speakBingo(source = 'ai') {
 		try {
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 				console.log('[Speech] prepare to say BINGO BONUS');
@@ -6636,6 +6637,8 @@ calculateScore() {
 						u.rate = 1.15;
 						u.pitch = 1.25;
 						window.speechSynthesis.speak(u);
+						// If this was the player who earned the bingo, play confetti
+						try { if (source === 'player') this.confettiSplash(); } catch(e) { console.warn('confetti failed', e); }
 						console.log('[Speech] spoke Bingo bonus');
 					} catch (innerErr) {
 						console.error('Bingo speech inner failed', innerErr);
@@ -6648,7 +6651,8 @@ calculateScore() {
 	}
 
 	// Speak an array of words sequentially, then optionally announce bingo
-	speakSequence(words = [], speakBingoAfter = false) {
+	// source: optional string 'player'|'ai' forwarded to speakBingo when called
+	speakSequence(words = [], speakBingoAfter = false, source = 'ai') {
 		return new Promise((resolve) => {
 			try {
 				if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -6680,7 +6684,7 @@ calculateScore() {
 								if (speakBingoAfter) {
 									// small gap before bingo
 									setTimeout(() => {
-										this.speakBingo();
+										this.speakBingo(source);
 										setTimeout(resolve, 500);
 									}, 180);
 								} else {
@@ -6693,16 +6697,43 @@ calculateScore() {
 						console.error('speakSequence inner error', err);
 						// try to continue
 						i++;
-						if (i < words.length) speakNext(); else { if (speakBingoAfter) { this.speakBingo(); setTimeout(resolve,500); } else resolve(); }
+							if (i < words.length) speakNext(); else { if (speakBingoAfter) { this.speakBingo(source); setTimeout(resolve,500); } else resolve(); }
 					}
 				};
 				speakNext();
 			} catch (e) {
 				console.error('speakSequence failed', e);
-				if (speakBingoAfter) this.speakBingo();
+				if (speakBingoAfter) this.speakBingo(source);
 				resolve();
 			}
 		});
+	}
+
+	// Simple confetti splash — small DOM-based implementation to avoid new libs
+	confettiSplash() {
+		try {
+			const count = 32;
+			const container = document.createElement('div');
+			container.className = 'confetti-container';
+			document.body.appendChild(container);
+			for (let i = 0; i < count; i++) {
+				const piece = document.createElement('div');
+				piece.className = 'confetti-piece';
+				// Randomize size, color, and position
+				piece.style.left = Math.random() * 100 + '%';
+				piece.style.background = `hsl(${Math.floor(Math.random()*360)},80%,60%)`;
+				piece.style.width = (6 + Math.random() * 8) + 'px';
+				piece.style.height = (10 + Math.random() * 10) + 'px';
+				piece.style.transform = `rotate(${Math.random()*360}deg)`;
+				container.appendChild(piece);
+				// Stagger animation
+				setTimeout(() => piece.classList.add('fall'), Math.random()*200);
+			}
+			// Remove after animation
+			setTimeout(() => { try { container.remove(); } catch(e) {} }, 2200);
+		} catch (e) {
+			console.warn('confettiSplash error', e);
+		}
 	}
 
 	async playWord() {
@@ -6776,7 +6807,7 @@ calculateScore() {
 				// Speak each word formed sequentially, then bingo if awarded
 				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 				try {
-					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded);
+					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
 				}
