@@ -6813,21 +6813,22 @@ calculateScore() {
 					moveDescription = wordDescriptions[0].word;
 				}
 
-				// Speak each word formed sequentially, then bingo if awarded
+				// Speak each word formed sequentially. To guarantee the player hears the bingo
+				// announcement, speak the bingo immediately if awarded, then speak the words
+				// (we pass speakBingoAfter = false to avoid duplicate announcements).
 				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 				try {
-					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
-					// Fallback: ensure player bingo announcement runs even if some path missed forwarding the source
 					if (bingoBonusAwarded) {
 						try {
-							// prevent immediate duplicate if speakSequence already called it by checking a short timestamp
-							const now = Date.now();
-							if (!this._lastSpokenBingoAt || (now - this._lastSpokenBingoAt) > 1200) {
-								this._lastSpokenBingoAt = now;
-								this.speakBingo('player');
-							}
-						} catch (fbErr) { console.warn('player bingo speak fallback failed', fbErr); }
+							// Immediate speak for player bingo (synchronous call)
+							this.speakBingo('player');
+							console.log('[Speech] immediate player bingo speak invoked before words');
+						} catch (errSpeak) {
+							console.warn('immediate player bingo speak failed', errSpeak);
+						}
 					}
+					// Now speak the spelled words without re-announcing bingo
+					await this.speakSequence(playerWordsToSpeak, false, 'player');
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
 				}
