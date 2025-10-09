@@ -6776,19 +6776,7 @@ calculateScore() {
 				// (we pass speakBingoAfter = false to avoid duplicate announcements).
 				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 				try {
-					if (bingoBonusAwarded) {
-						try {
-							// Immediate speak for player bingo (synchronous call) — skipped because speakBingo was removed
-							if (typeof this.speakBingo === 'function') {
-								this.speakBingo('player');
-								console.log('[Speech] immediate player bingo speak invoked before words');
-							} else {
-								console.log('[Speech] speakBingo removed — skipping immediate audio');
-							}
-						} catch (errSpeak) {
-							console.warn('immediate player bingo speak failed', errSpeak);
-						}
-					}
+					// NOTE: bingo will be announced after the spelled words by speakSequence.
 					// Now speak the spelled words and, if a bingo bonus was awarded,
 					// have speakSequence announce the bingo after the words finish.
 					console.log('[Speech] About to call speakSequence for player', {playerWordsToSpeak, bingoBonusAwarded});
