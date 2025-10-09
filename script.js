@@ -6599,6 +6599,32 @@ calculateScore() {
 		}
 	}
 
+	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
+	speakBingo(source = 'player') {
+		try {
+			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+			const text = 'Bingo bonus!';
+			const u = new SpeechSynthesisUtterance(text);
+			u.lang = 'en-US';
+			u.rate = 1.15;
+			u.pitch = 1.4;
+			u.volume = 1.0;
+			// resolve via onend isn't necessary here because callers use speakSequence's flow,
+			// but we still attach handlers to avoid uncaught errors.
+			u.onend = () => { /* noop */ };
+			u.onerror = () => { /* noop */ };
+			window.speechSynthesis.speak(u);
+				// Visual celebration for bingo
+				try {
+					if (typeof this.createBingoSplash === 'function') this.createBingoSplash();
+				} catch (e) {
+					/* ignore */
+				}
+		} catch (e) {
+			console.warn('speakBingo failed', e);
+		}
+	}
+
 	// speakBingo removed by request: audio announcements for bingo are deleted.
 	// If code elsewhere still calls `this.speakBingo(...)`, these calls should be
 	// no-ops. The function was intentionally removed to eliminate bingo audio.
@@ -6763,8 +6789,9 @@ calculateScore() {
 							console.warn('immediate player bingo speak failed', errSpeak);
 						}
 					}
-					// Now speak the spelled words without re-announcing bingo
-					await this.speakSequence(playerWordsToSpeak, false, 'player');
+					// Now speak the spelled words and, if a bingo bonus was awarded,
+					// have speakSequence announce the bingo after the words finish.
+					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
 				}
