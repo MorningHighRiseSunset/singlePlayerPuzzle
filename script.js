@@ -6743,20 +6743,25 @@ calculateScore() {
 					wordDescriptions.push({ word: wordInfo.word, score: null }); // Score is shown in move history
 				}
 
-				// Add bonus for 7 or more letter words
-				let bingoBonusAwarded = false;
-				formedWords.forEach(wordInfo => {
-					if (wordInfo.word.length >= 7 && !this.wordsPlayed.has(wordInfo.word.toUpperCase())) {
-						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-						console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
-						bingoBonusAwarded = true;
-						// Immediate console ping so we can confirm player bingo detection
-						console.log('[Player] BINGO DETECTED');
-	                        console.log('[Debug] wordDescriptions now:', wordDescriptions);
+		// Add bonus when the player actually used 7 or more newly placed tiles for a word
+		let bingoBonusAwarded = false;
+		formedWords.forEach(wordInfo => {
+			const len = wordInfo.word.length;
+			let newlyPlacedCount = 0;
+			for (let k = 0; k < len; k++) {
+				const row = wordInfo.direction === 'horizontal' ? wordInfo.startPos.row : wordInfo.startPos.row + k;
+				const col = wordInfo.direction === 'horizontal' ? wordInfo.startPos.col + k : wordInfo.startPos.col;
+				if (this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
+			}
 
-						// Bingo announcement will be handled after the spelled words via speakSequence.
-					}
-				});
+			if (newlyPlacedCount >= 7) {
+				wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
+				console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word (used ${newlyPlacedCount} new tiles): ${wordInfo.word}`);
+				bingoBonusAwarded = true;
+				console.log('[Player] BINGO DETECTED');
+				console.log('[Debug] wordDescriptions now:', wordDescriptions);
+			}
+		});
 
 				// Format the move description
 				let moveDescription;
