@@ -163,6 +163,8 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
+		// Set to true to enable verbose AI validation logging (off by default)
+		this.showAIDebug = false;
 		this.wordsPlayed = new Set();
 
 		document.body.style.overscrollBehavior = 'none';
@@ -182,8 +184,9 @@ class ScrabbleGame {
 	}
 
 	logAIValidation(msg) {
+		// Deduplicate messages so we don't flood the console repeatedly
 		if (!this.aiValidationLogSet.has(msg)) {
-			console.log(msg);
+			if (this.showAIDebug) console.log(msg);
 			this.aiValidationLogSet.add(msg);
 		}
 	}
@@ -238,7 +241,7 @@ class ScrabbleGame {
 		}
 
 		const aiPlays = this.findAIPossiblePlays();
-		console.log("AI ghost possible plays:", aiPlays);
+	if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
 
 		// --- REMOVE temp placed tiles after preview ---
 		if (tempPlaced.length > 0) {
@@ -490,7 +493,7 @@ class ScrabbleGame {
 
 	async aiTurn() {
 		this.aiValidationLogSet = new Set();
-		console.log("AI thinking...");
+	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
 
@@ -568,7 +571,7 @@ class ScrabbleGame {
 						this.aiRack.map(t => t.letter)
 					);
 					if (validity.valid && canForm) {
-						console.log("AI using ghost move:", this.ghostAIMove);
+						if (this.showAIDebug) console.log("AI using ghost move:", this.ghostAIMove);
 						updateThinkingText("AI is playing its previewed move!");
 						setTimeout(() => {
 							thinkingMessage.style.opacity = "0";
@@ -2538,7 +2541,7 @@ class ScrabbleGame {
 
 			// Handle API errors
 			if (!response.ok) {
-				console.log(`No definition found for: ${cleanWord}`);
+						if (this.showAIDebug) console.log(`No definition found for: ${cleanWord}`);
 				return null;
 			}
 
@@ -2581,7 +2584,7 @@ class ScrabbleGame {
 		const moves = this.moveHistory
 			.map((move, index) => {
 				if (!move || !move.word) {
-					console.log('Invalid move found:', move);
+					if (this.showAIDebug) console.log('Invalid move found:', move);
 					return ''; // Skip invalid moves
 				}
 
@@ -2785,7 +2788,7 @@ class ScrabbleGame {
 		// Try finding simple 2-3 letter words first
 		const simpleWords = this.findSimpleWords(availableLetters);
 		if (simpleWords.length > 0) {
-			console.log("Found simple words:", simpleWords);
+			if (this.showAIDebug) console.log("Found simple words:", simpleWords);
 			return true;
 		}
 
@@ -2796,7 +2799,7 @@ class ScrabbleGame {
 			vowelCount > 5 ||
 			consonantCount > 5
 		) {
-			console.log("Rack is unbalanced - exchanging tiles");
+			if (this.showAIDebug) console.log("Rack is unbalanced - exchanging tiles");
 			return false;
 		}
 
@@ -2807,7 +2810,7 @@ class ScrabbleGame {
 				word.length >= 2 &&
 				this.canFormWord(word, "", "", availableLetters)
 			) {
-				console.log("Found possible word:", word);
+				if (this.showAIDebug) console.log("Found possible word:", word);
 				return true;
 			}
 		}
@@ -2999,7 +3002,7 @@ class ScrabbleGame {
 
 async executeAIPlay(play) {
     const { word, startPos, isHorizontal, score } = play;
-    console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
+	if (this.showAIDebug) console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
 
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
     const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
@@ -3039,10 +3042,10 @@ async executeAIPlay(play) {
             if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(mainWord);
-                console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
+				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
             } else if (mainWord && mainWord.length > 1) {
                 checkedWords.add(mainWord);
-                console.log(`[AI Ghost Check] Main word valid: ${mainWord}`);
+				if (this.showAIDebug) console.log(`[AI Ghost Check] Main word valid: ${mainWord}`);
             }
         }
 
@@ -3054,10 +3057,10 @@ async executeAIPlay(play) {
             if (!this.dictionary.has(crossWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(crossWord);
-                console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
+				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
             } else {
                 checkedWords.add(crossWord);
-                console.log(`[AI Ghost Check] Cross word valid: ${crossWord}`);
+				if (this.showAIDebug) console.log(`[AI Ghost Check] Cross word valid: ${crossWord}`);
             }
         }
     }
@@ -3066,13 +3069,13 @@ async executeAIPlay(play) {
         this.showAINotification(
             `🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
         );
-        console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
+	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
         setTimeout(() => this.aiTurn(), 1000);
         return;
     }
 
     // --- If all words valid, proceed as normal ---
-    console.log("[AI Ghost Check] All words valid. Proceeding with move.");
+	if (this.showAIDebug) console.log("[AI Ghost Check] All words valid. Proceeding with move.");
 
     // Store the previous board state
     this.previousBoard = JSON.parse(JSON.stringify(this.board));
@@ -3243,7 +3246,7 @@ async executeAIPlay(play) {
                     }
                 }
                 if (this.wordsPlayed && this.wordsPlayed.has(wordUpper) || existedBefore) {
-                    console.log(`[AI] Skipping score for already played or existing word: ${word}`);
+					if (this.showAIDebug) console.log(`[AI] Skipping score for already played or existing word: ${word}`);
                     return;
                 }
 
@@ -3258,7 +3261,7 @@ async executeAIPlay(play) {
                     word,
                     score: wordScore
                 });
-                console.log(`[AI] Word formed: ${word} for ${wordScore} points`);
+				if (this.showAIDebug) console.log(`[AI] Word formed: ${word} for ${wordScore} points`);
             });
 
 			// --- BINGO BONUS for AI ---
@@ -3294,7 +3297,7 @@ async executeAIPlay(play) {
 			this.speakSequence(aiWordsToSpeak, false, 'ai').catch((e) => {
 				console.error('AI speakSequence failed', e);
 			}).then(() => {
-				console.log(`Total score for move: ${totalScore}`);
+				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
 				this.aiScore += totalScore;
 				this.isFirstMove = false;
@@ -4511,9 +4514,9 @@ async executeAIPlay(play) {
 			}
 		}
 
-		const existingWords = Array.from(words);
-		console.log("Existing words on board:", existingWords);
-		return existingWords;
+	const existingWords = Array.from(words);
+	console.debug("Existing words on board:", existingWords);
+	return existingWords;
 	}
 
 	calculatePotentialScore(word, startRow, startCol, horizontal) {
@@ -5992,8 +5995,8 @@ formedWords.forEach((wordInfo) => {
 			}
 		}
 
-		console.log("Existing words:", Array.from(existingWords));
-		console.log(
+		console.debug("Existing words:", Array.from(existingWords));
+		console.debug(
 			"New words formed:",
 			Array.from(words).map((w) => w.word),
 		);
@@ -6608,12 +6611,16 @@ calculateScore() {
 			u.onend = () => { /* noop */ };
 			u.onerror = () => { /* noop */ };
 			window.speechSynthesis.speak(u);
-				// Visual celebration for bingo
-				try {
-					if (typeof this.createBingoSplash === 'function') this.createBingoSplash();
-				} catch (e) {
-					/* ignore */
+			console.log('[Speech] speakBingo invoked for', source);
+			// Visual celebration for bingo
+			try {
+				if (typeof this.createBingoSplash === 'function') {
+					console.log('[Visual] createBingoSplash() will be called');
+					this.createBingoSplash();
 				}
+			} catch (e) {
+				/* ignore */
+			}
 		} catch (e) {
 			console.warn('speakBingo failed', e);
 		}
@@ -6745,6 +6752,7 @@ calculateScore() {
 						bingoBonusAwarded = true;
 						// Immediate console ping so we can confirm player bingo detection
 						console.log('[Player] BINGO DETECTED');
+	                        console.log('[Debug] wordDescriptions now:', wordDescriptions);
 
 						// Bingo announcement will be handled after the spelled words via speakSequence.
 					}
@@ -6778,11 +6786,14 @@ calculateScore() {
 					}
 					// Now speak the spelled words and, if a bingo bonus was awarded,
 					// have speakSequence announce the bingo after the words finish.
+					console.log('[Speech] About to call speakSequence for player', {playerWordsToSpeak, bingoBonusAwarded});
 					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
 					// Player-only visual celebration (confetti/emoji)
 					if (bingoBonusAwarded) {
 						if (typeof this.showBingoBonusEffect === 'function') {
 							try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
+						} else if (typeof this.createBingoSplash === 'function') {
+							try { this.createBingoSplash(); } catch (e) { console.error('Bingo splash failed', e); }
 						}
 					}
 				} catch (e) {
@@ -7165,6 +7176,35 @@ calculateScore() {
 					emoji.remove();
 				});
 			}
+		}
+	}
+
+	// Lightweight bingo splash used for player-only celebrations
+	createBingoSplash() {
+		console.log('[Visual] createBingoSplash called');
+		const emojis = ["🎉","🎊","✨","🌟"];
+		const count = 40;
+		for (let i = 0; i < count; i++) {
+			const el = document.createElement('div');
+			el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+			const size = 18 + Math.random() * 28;
+			el.style.cssText = `
+				position: fixed;
+				left: ${10 + Math.random() * 80}vw;
+				top: ${-10 + Math.random() * 20}vh;
+				font-size: ${size}px;
+				pointer-events: none;
+				opacity: 1;
+				transform: translateY(0) rotate(${Math.random() * 360}deg);
+				transition: transform ${1 + Math.random() * 1.6}s cubic-bezier(.2,.8,.2,1), opacity 1.2s ease-out;
+				z-index: 2000;
+			`;
+			document.body.appendChild(el);
+			requestAnimationFrame(() => {
+				el.style.transform = `translateY(${60 + Math.random() * 40}vh) rotate(${Math.random() * 720}deg)`;
+				el.style.opacity = '0';
+			});
+			setTimeout(() => el.remove(), 1400 + Math.random() * 900);
 		}
 	}
 
