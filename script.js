@@ -9011,3 +9011,26 @@ window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
 // convenience aliases (case-insensitive-ish)
 window.setupbingtest = window.setupBingoTest;
 window.bingoTest = window.setupBingoTest;
+
+// Simple console helper: replace player's rack with a 7-letter test word.
+// Usage: window.setupBingoRack(); or setupBingoRack('EXAMPLE')
+window.setupBingoRack = function setupBingoRack(word = 'PUZZLES') {
+	try {
+		const g = window.game;
+		if (!g) return console.warn('game not ready');
+		word = ('' + word).toUpperCase();
+		const letters = word.split('');
+		g.playerRack = letters.map((Ltr, idx) => ({
+			letter: Ltr,
+			value: (g.tileValues && g.tileValues[Ltr]) ? g.tileValues[Ltr] : 1,
+			id: `RACK-TEST-${Date.now()}-${idx}`,
+			isBlank: false
+		}));
+		try { if (typeof g.renderRack === 'function') g.renderRack(); else if (typeof g.renderRacks === 'function') g.renderRacks(); } catch(e) { console.warn('renderRack failed', e); }
+		console.log('setupBingoRack: set rack to', word);
+	} catch (err) {
+		console.error('setupBingoRack failed', err);
+	}
+};
+
+window.setupbingrack = window.setupBingoRack;
