@@ -6604,7 +6604,7 @@ calculateScore() {
 	speakBingo(source = 'ai') {
 		try {
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-				console.log('[Speech] prepare to say BINGO BONUS');
+				console.log('[Speech] prepare to say BINGO BONUS (source=' + source + ')');
 				// small delay to let UI updates settle (prevents speech being interrupted)
 				setTimeout(() => {
 					try {
@@ -6656,12 +6656,12 @@ calculateScore() {
 		return new Promise((resolve) => {
 			try {
 				if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-					if (speakBingoAfter) this.speakBingo();
+					if (speakBingoAfter) this.speakBingo(source);
 					return resolve();
 				}
 				if (!words || words.length === 0) {
 					if (speakBingoAfter) {
-						this.speakBingo();
+						this.speakBingo(source);
 						// give speakBingo its internal timeout then resolve after a short delay
 						setTimeout(resolve, 500);
 					} else {
