@@ -7174,30 +7174,73 @@ calculateScore() {
 
 	// Lightweight bingo splash used for player-only celebrations
 	createBingoSplash() {
-		console.log('[Visual] createBingoSplash called');
-		const emojis = ["🎉","🎊","✨","🌟"];
-		const count = 40;
-		for (let i = 0; i < count; i++) {
-			const el = document.createElement('div');
-			el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-			const size = 18 + Math.random() * 28;
-			el.style.cssText = `
+		// Subtle guard if called excessively
+		if (this._bingoSplashActive) return;
+		this._bingoSplashActive = true;
+		try {
+			const emojis = ["🎉","🎊","✨","🌟","💫","🎈","🥳"];
+			const colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
+
+			// Overlay flash
+			const overlay = document.createElement('div');
+			overlay.style.cssText = `
 				position: fixed;
-				left: ${10 + Math.random() * 80}vw;
-				top: ${-10 + Math.random() * 20}vh;
-				font-size: ${size}px;
-				pointer-events: none;
-				opacity: 1;
-				transform: translateY(0) rotate(${Math.random() * 360}deg);
-				transition: transform ${1 + Math.random() * 1.6}s cubic-bezier(.2,.8,.2,1), opacity 1.2s ease-out;
-				z-index: 2000;
+				left: 0; top: 0; width: 100vw; height: 100vh;
+				background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.85), rgba(255,255,255,0.6));
+				opacity: 0; pointer-events: none; z-index: 1998; transition: opacity .35s ease-out;
 			`;
-			document.body.appendChild(el);
-			requestAnimationFrame(() => {
-				el.style.transform = `translateY(${60 + Math.random() * 40}vh) rotate(${Math.random() * 720}deg)`;
-				el.style.opacity = '0';
-			});
-			setTimeout(() => el.remove(), 1400 + Math.random() * 900);
+			document.body.appendChild(overlay);
+			requestAnimationFrame(() => overlay.style.opacity = '1');
+			setTimeout(() => overlay.style.opacity = '0', 240);
+			setTimeout(() => overlay.remove(), 800);
+
+			const count = 120; // more particles for visibility
+			const cx = window.innerWidth / 2;
+			const cy = window.innerHeight * 0.35; // burst from upper-center
+
+			for (let i = 0; i < count; i++) {
+				const isEmoji = Math.random() > 0.45;
+				const el = document.createElement('div');
+				if (isEmoji) {
+					el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+				} else {
+					el.textContent = '';
+					el.style.background = colors[Math.floor(Math.random() * colors.length)];
+				}
+				const size = 20 + Math.random() * 36;
+				el.style.cssText = `
+					position: fixed;
+					left: ${cx}px;
+					top: ${cy}px;
+					width: ${isEmoji ? 'auto' : size + 'px'};
+					height: ${isEmoji ? 'auto' : size + 'px'};
+					font-size: ${isEmoji ? size + 'px' : '0'};
+					line-height: 1;
+					text-align: center;
+					transform: translate(-50%,-50%) scale(1) rotate(${Math.random() * 360}deg);
+					border-radius: ${isEmoji ? '0' : '4px'};
+					pointer-events: none;
+					opacity: 1;
+					z-index: 2000;
+					transition: transform ${1.4 + Math.random() * 1.2}s cubic-bezier(.2,.8,.2,1), opacity ${1.2 + Math.random() * 0.8}s ease-out;
+				`;
+				document.body.appendChild(el);
+
+				// Random direction and distance
+				const angle = Math.random() * Math.PI * 2;
+				const distance = 120 + Math.random() * (window.innerWidth * 0.5);
+				const dx = Math.cos(angle) * distance;
+				const dy = Math.sin(angle) * distance + (Math.random() * 80 - 40);
+
+				requestAnimationFrame(() => {
+					el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.random() * 720}deg) scale(${1 + Math.random() * 0.6})`;
+					el.style.opacity = '0';
+				});
+
+				setTimeout(() => el.remove(), 1800 + Math.random() * 1000);
+			}
+		} finally {
+			setTimeout(() => { this._bingoSplashActive = false; }, 2200);
 		}
 	}
 
