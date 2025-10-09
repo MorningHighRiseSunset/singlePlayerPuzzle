@@ -6599,27 +6599,37 @@ calculateScore() {
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
 		try {
-			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-			const text = 'Bingo bonus!';
-			const u = new SpeechSynthesisUtterance(text);
-			u.lang = 'en-US';
-			u.rate = 1.15;
-			u.pitch = 1.4;
-			u.volume = 1.0;
-			// resolve via onend isn't necessary here because callers use speakSequence's flow,
-			// but we still attach handlers to avoid uncaught errors.
-			u.onend = () => { /* noop */ };
-			u.onerror = () => { /* noop */ };
-			window.speechSynthesis.speak(u);
-			console.log('[Speech] speakBingo invoked for', source);
-			// Visual celebration for bingo
+			if (typeof window === 'undefined') return;
+			const canTTS = ('speechSynthesis' in window) && typeof window.speechSynthesis.speak === 'function';
+			if (canTTS) {
+				try {
+					const text = 'Bingo bonus!';
+					const u = new SpeechSynthesisUtterance(text);
+					u.lang = 'en-US';
+					u.rate = 1.15;
+					u.pitch = 1.4;
+					u.volume = 1.0;
+					u.onend = () => { /* noop */ };
+					u.onerror = () => { /* noop */ };
+					window.speechSynthesis.speak(u);
+					console.log('[Speech] speakBingo invoked for', source);
+				} catch (e) {
+					// if TTS fails, continue to show visuals
+					console.warn('speakBingo TTS failed', e);
+				}
+			} else {
+				// No TTS available or blocked — still show visuals
+				console.debug('[Speech] TTS unavailable; skipping audio and showing visuals only');
+			}
+
+			// Always trigger visual celebration for bingo (player only)
 			try {
 				if (typeof this.createBingoSplash === 'function') {
 					console.log('[Visual] createBingoSplash() will be called');
 					this.createBingoSplash();
 				}
 			} catch (e) {
-				/* ignore */
+				console.warn('createBingoSplash failed', e);
 			}
 		} catch (e) {
 			console.warn('speakBingo failed', e);
@@ -7186,17 +7196,17 @@ calculateScore() {
 			overlay.style.cssText = `
 				position: fixed;
 				left: 0; top: 0; width: 100vw; height: 100vh;
-				background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.85), rgba(255,255,255,0.6));
-				opacity: 0; pointer-events: none; z-index: 1998; transition: opacity .35s ease-out;
+				background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.92), rgba(255,255,255,0.7));
+				opacity: 0; pointer-events: none; z-index: 99999; transition: opacity .35s ease-out;
 			`;
 			document.body.appendChild(overlay);
 			requestAnimationFrame(() => overlay.style.opacity = '1');
-			setTimeout(() => overlay.style.opacity = '0', 240);
-			setTimeout(() => overlay.remove(), 800);
+			setTimeout(() => overlay.style.opacity = '0', 320);
+			setTimeout(() => overlay.remove(), 1200);
 
-			const count = 120; // more particles for visibility
+			const count = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
 			const cx = window.innerWidth / 2;
-			const cy = window.innerHeight * 0.35; // burst from upper-center
+			const cy = Math.max(80, window.innerHeight * 0.28); // burst from upper-center, slightly higher on mobile
 
 			for (let i = 0; i < count; i++) {
 				const isEmoji = Math.random() > 0.45;
@@ -7207,7 +7217,9 @@ calculateScore() {
 					el.textContent = '';
 					el.style.background = colors[Math.floor(Math.random() * colors.length)];
 				}
-				const size = 20 + Math.random() * 36;
+				let size = 20 + Math.random() * 36;
+				// make larger on mobile / small screens
+				if (window.innerWidth <= 480) size *= 1.4;
 				el.style.cssText = `
 					position: fixed;
 					left: ${cx}px;
@@ -7221,14 +7233,14 @@ calculateScore() {
 					border-radius: ${isEmoji ? '0' : '4px'};
 					pointer-events: none;
 					opacity: 1;
-					z-index: 2000;
-					transition: transform ${1.4 + Math.random() * 1.2}s cubic-bezier(.2,.8,.2,1), opacity ${1.2 + Math.random() * 0.8}s ease-out;
+					z-index: 100000;
+					transition: transform ${1.6 + Math.random() * 1.4}s cubic-bezier(.2,.8,.2,1), opacity ${1.4 + Math.random() * 0.8}s ease-out;
 				`;
 				document.body.appendChild(el);
 
 				// Random direction and distance
 				const angle = Math.random() * Math.PI * 2;
-				const distance = 120 + Math.random() * (window.innerWidth * 0.5);
+				const distance = (120 + Math.random() * (window.innerWidth * 0.5)) * (window.innerWidth <= 480 ? 0.9 : 1);
 				const dx = Math.cos(angle) * distance;
 				const dy = Math.sin(angle) * distance + (Math.random() * 80 - 40);
 
@@ -7237,7 +7249,7 @@ calculateScore() {
 					el.style.opacity = '0';
 				});
 
-				setTimeout(() => el.remove(), 1800 + Math.random() * 1000);
+				setTimeout(() => el.remove(), 2000 + Math.random() * 1200);
 			}
 		} finally {
 			setTimeout(() => { this._bingoSplashActive = false; }, 2200);
