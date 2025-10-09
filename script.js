@@ -6599,56 +6599,10 @@ calculateScore() {
 		}
 	}
 
-	// Speak the bingo bonus in a consistent, slightly delayed way so it's not cut off
-	// source: optional string 'player' or 'ai' so we can do player-only effects (confetti)
-	speakBingo(source = 'ai') {
-		try {
-			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-				console.log('[Speech] prepare to say BINGO BONUS (source=' + source + ')');
-				// small delay to let UI updates settle (prevents speech being interrupted)
-				setTimeout(() => {
-					try {
-						// Cancel any existing queued speech to ensure our utterance plays
-						window.speechSynthesis.cancel();
-						// Play a short beep as a fallback/attention cue
-						try {
-							const AudioCtx = window.AudioContext || window.webkitAudioContext;
-							if (AudioCtx) {
-								const ctx = new AudioCtx();
-								const o = ctx.createOscillator();
-								const g = ctx.createGain();
-								o.type = 'sine';
-								o.frequency.value = 900;
-								g.gain.value = 0.04;
-								o.connect(g);
-								g.connect(ctx.destination);
-								o.start();
-								setTimeout(() => {
-									o.stop();
-									try { ctx.close(); } catch (e) {}
-								}, 120);
-								console.log('[Speech] played bingo beep');
-							}
-						} catch (beepErr) {
-							console.warn('Bingo beep failed', beepErr);
-						}
-						const u = new SpeechSynthesisUtterance('Bingo bonus');
-						u.lang = 'en-US';
-						u.rate = 1.15;
-						u.pitch = 1.25;
-						window.speechSynthesis.speak(u);
-						// If this was the player who earned the bingo, play confetti
-						try { if (source === 'player') this.confettiSplash(); } catch(e) { console.warn('confetti failed', e); }
-						console.log('[Speech] spoke Bingo bonus');
-					} catch (innerErr) {
-						console.error('Bingo speech inner failed', innerErr);
-					}
-				}, 150);
-			}
-		} catch (e) {
-			console.error('Bingo speech failed', e);
-		}
-	}
+	// speakBingo removed by request: audio announcements for bingo are deleted.
+	// If code elsewhere still calls `this.speakBingo(...)`, these calls should be
+	// no-ops. The function was intentionally removed to eliminate bingo audio.
+	// (Left as a marker comment to indicate the deletion.)
 
 	// Speak an array of words sequentially, then optionally announce bingo
 	// source: optional string 'player'|'ai' forwarded to speakBingo when called
@@ -6656,12 +6610,12 @@ calculateScore() {
 		return new Promise((resolve) => {
 			try {
 				if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-					if (speakBingoAfter) this.speakBingo(source);
+					if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
 					return resolve();
 				}
 				if (!words || words.length === 0) {
 					if (speakBingoAfter) {
-						this.speakBingo(source);
+						if (typeof this.speakBingo === 'function') this.speakBingo(source);
 						// give speakBingo its internal timeout then resolve after a short delay
 						setTimeout(resolve, 500);
 					} else {
@@ -6684,7 +6638,7 @@ calculateScore() {
 								if (speakBingoAfter) {
 									// small gap before bingo
 									setTimeout(() => {
-										this.speakBingo(source);
+										if (typeof this.speakBingo === 'function') this.speakBingo(source);
 										setTimeout(resolve, 500);
 									}, 180);
 								} else {
@@ -6697,44 +6651,22 @@ calculateScore() {
 						console.error('speakSequence inner error', err);
 						// try to continue
 						i++;
-							if (i < words.length) speakNext(); else { if (speakBingoAfter) { this.speakBingo(source); setTimeout(resolve,500); } else resolve(); }
+									if (i < words.length) speakNext(); else { if (speakBingoAfter) { if (typeof this.speakBingo === 'function') this.speakBingo(source); setTimeout(resolve,500); } else resolve(); }
 					}
 				};
 				speakNext();
 			} catch (e) {
 				console.error('speakSequence failed', e);
-				if (speakBingoAfter) this.speakBingo(source);
+				if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
 				resolve();
 			}
 		});
 	}
 
-	// Simple confetti splash — small DOM-based implementation to avoid new libs
-	confettiSplash() {
-		try {
-			const count = 32;
-			const container = document.createElement('div');
-			container.className = 'confetti-container';
-			document.body.appendChild(container);
-			for (let i = 0; i < count; i++) {
-				const piece = document.createElement('div');
-				piece.className = 'confetti-piece';
-				// Randomize size, color, and position
-				piece.style.left = Math.random() * 100 + '%';
-				piece.style.background = `hsl(${Math.floor(Math.random()*360)},80%,60%)`;
-				piece.style.width = (6 + Math.random() * 8) + 'px';
-				piece.style.height = (10 + Math.random() * 10) + 'px';
-				piece.style.transform = `rotate(${Math.random()*360}deg)`;
-				container.appendChild(piece);
-				// Stagger animation
-				setTimeout(() => piece.classList.add('fall'), Math.random()*200);
-			}
-			// Remove after animation
-			setTimeout(() => { try { container.remove(); } catch(e) {} }, 2200);
-		} catch (e) {
-			console.warn('confettiSplash error', e);
-		}
-	}
+	// confettiSplash removed by request: visual confetti has been deleted.
+	// If code elsewhere still calls `this.confettiSplash()`, these calls will
+	// now throw unless the references are removed; consider removing or
+	// guarding calls to avoid runtime errors.
 
 	async playWord() {
 		// Show a spinner or disable the submit button for better UX
@@ -6797,7 +6729,7 @@ calculateScore() {
 						// Force a player bingo announcement immediately (simple, deterministic)
 						try {
 							setTimeout(() => {
-								try { this.speakBingo('player'); console.log('[Speech] forced player bingo speak called'); } catch (e) { console.warn('forced bingo speak failed', e); }
+								try { if (typeof this.speakBingo === 'function') { this.speakBingo('player'); console.log('[Speech] forced player bingo speak called'); } else { console.log('[Speech] speakBingo removed — skipping audio'); } } catch (e) { console.warn('forced bingo speak failed', e); }
 							}, 200);
 						} catch (err) {
 							console.warn('failed to schedule forced bingo speak', err);
@@ -6820,9 +6752,13 @@ calculateScore() {
 				try {
 					if (bingoBonusAwarded) {
 						try {
-							// Immediate speak for player bingo (synchronous call)
-							this.speakBingo('player');
-							console.log('[Speech] immediate player bingo speak invoked before words');
+							// Immediate speak for player bingo (synchronous call) — skipped because speakBingo was removed
+							if (typeof this.speakBingo === 'function') {
+								this.speakBingo('player');
+								console.log('[Speech] immediate player bingo speak invoked before words');
+							} else {
+								console.log('[Speech] speakBingo removed — skipping immediate audio');
+							}
 						} catch (errSpeak) {
 							console.warn('immediate player bingo speak failed', errSpeak);
 						}

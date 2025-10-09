@@ -399,30 +399,7 @@ button, .language-button,
   border: none;
   padding: 12px 18px;
 
-/* Confetti styles */
-.confetti-container {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-  z-index: 9999;
-}
-.confetti-piece {
-  position: absolute;
-  top: -10px;
-  opacity: 0.95;
-  transform-origin: center;
-  border-radius: 2px;
-  will-change: transform, opacity;
-  transition: transform 2s cubic-bezier(.2,.8,.2,1), opacity 2s ease;
-}
-.confetti-piece.fall {
-  transform: translateY(120vh) rotate(720deg) translateX(-10px);
-  opacity: 0.9;
-}
+/* Confetti styles removed by request */
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
