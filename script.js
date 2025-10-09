@@ -8937,13 +8937,16 @@ window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
 		word = ('' + word).toUpperCase();
 		const rack = word.split('');
 
-		// Reset placed tiles and held tiles for a clean placement
+		// Reset placed tiles and optionally held tiles for a clean placement
 		g.placedTiles = [];
-		g.heldTiles = [];
+		if (g.heldTiles !== undefined) g.heldTiles = [];
 
 		// Set player's rack
 		g.playerRack = rack.slice();
-		try { g.renderRacks(); } catch (e) { console.warn('renderRacks failed', e); }
+		try {
+			if (typeof g.renderRack === 'function') g.renderRack();
+			else if (typeof g.renderRacks === 'function') g.renderRacks();
+		} catch (e) { console.warn('renderRack(s) failed', e); }
 
 		const rows = g.board.length;
 		const cols = g.board[0].length;
@@ -8981,18 +8984,22 @@ window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
 			return;
 		}
 
-		// Place tiles into board and placedTiles
+		// Place tiles into board and placedTiles as real tile objects expected by the game
 		for (let i = 0; i < L; i++) {
 			const letter = rack[i];
-			const tileObj = { letter, isBlank: false };
 			const r = vertical ? (foundRow + i) : foundRow;
 			const c = vertical ? foundCol : (foundCol + i);
-			g.board[r][c].tile = { letter, points: g.tilePoints ? g.tilePoints[letter] || 1 : 1 };
-			g.placedTiles.push({ tile: tileObj, row: r, col: c });
+			const placedTile = {
+				letter,
+				value: g.tileValues ? (g.tileValues[letter] || 1) : 1,
+				id: `TEST-${Date.now()}-${i}`,
+			};
+			g.board[r][c] = placedTile;
+			g.placedTiles.push({ tile: placedTile, row: r, col: c });
 		}
 
-		try { g.renderBoard(); } catch (e) { console.warn('renderBoard failed', e); }
-		g.updateGameState();
+	try { if (typeof g.renderBoard === 'function') g.renderBoard(); } catch (e) { console.warn('renderBoard failed', e); }
+	try { if (typeof g.updateGameState === 'function') g.updateGameState(); } catch (e) { console.warn('updateGameState failed', e); }
 
 		console.log('setupBingoTest: placed', word, (vertical ? 'vertically' : 'horizontally'), 'at row', foundRow, 'col', foundCol);
 		console.log('Now call game.playWord() in the console to submit the bingo.');
