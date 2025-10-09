@@ -165,6 +165,10 @@ class ScrabbleGame {
 		this.aiValidationLogSet = new Set();
 		// Set to true to enable verbose AI validation logging (off by default)
 		this.showAIDebug = false;
+
+		// When the player clicks Submit/Play, we may start speech inside that gesture
+		this._submitStartedSpeak = false;
+		this._inlineSpeakPromise = null;
 		this.wordsPlayed = new Set();
 
 		document.body.style.overscrollBehavior = 'none';
@@ -6742,6 +6746,12 @@ calculateScore() {
 
 			// Validate the word(s) asynchronously
 			const isValid = await (async () => this.validateWord())();
+			// If validation failed and we had started inline speech, stop it to avoid orphaned audio
+			if (!isValid && this._submitStartedSpeak) {
+				try { window.speechSynthesis && window.speechSynthesis.cancel && window.speechSynthesis.cancel(); } catch(e) {}
+				this._submitStartedSpeak = false;
+				this._inlineSpeakPromise = null;
+			}
 			if (isValid) {
 				// Use the robust scoring logic
 				const totalScore = this.calculateScore();
@@ -6786,11 +6796,16 @@ calculateScore() {
 				// (we pass speakBingoAfter = false to avoid duplicate announcements).
 				const playerWordsToSpeak = wordDescriptions.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 				try {
-					// NOTE: bingo will be announced after the spelled words by speakSequence.
-					// Now speak the spelled words and, if a bingo bonus was awarded,
-					// have speakSequence announce the bingo after the words finish.
-					console.log('[Speech] About to call speakSequence for player', {playerWordsToSpeak, bingoBonusAwarded});
-					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+					console.log('[Speech] About to handle speakSequence for player', {playerWordsToSpeak, bingoBonusAwarded, submitStarted: this._submitStartedSpeak});
+					if (this._submitStartedSpeak) {
+						// inline speak started during the click gesture — wait for it to finish
+						if (this._inlineSpeakPromise) await this._inlineSpeakPromise;
+						// ensure flags cleared
+						this._submitStartedSpeak = false;
+						this._inlineSpeakPromise = null;
+					} else {
+						await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+					}
 					// Player-only visual celebration (confetti/emoji)
 					if (bingoBonusAwarded) {
 						if (typeof this.showBingoBonusEffect === 'function') {
@@ -8157,10 +8172,44 @@ calculateScore() {
 
 		// Play word button
 		const playWordBtn = document.getElementById("play-word");
-		if (playWordBtn) playWordBtn.addEventListener("click", () => this.playWord());
-
 		const playWordDesktopBtn = document.getElementById("play-word-desktop");
-		if (playWordDesktopBtn) playWordDesktopBtn.addEventListener("click", () => this.playWord());
+
+		// Handler that runs inside the user's click gesture to start speech reliably
+		const handlePlayGesture = async (e) => {
+			try {
+				// Reset mark
+				this._submitStartedSpeak = false;
+				// Prepare formed words synchronously from current placedTiles
+				const formedWords = (typeof this.getFormedWords === 'function') ? this.getFormedWords() : [];
+				let bingo = false;
+				for (const wi of formedWords) {
+					let newlyPlacedCount = 0;
+					for (let k = 0; k < wi.word.length; k++) {
+						const row = wi.direction === 'horizontal' ? wi.startPos.row : wi.startPos.row + k;
+						const col = wi.direction === 'horizontal' ? wi.startPos.col + k : wi.startPos.col;
+						if (this.placedTiles && this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
+					}
+					if (newlyPlacedCount >= 7) bingo = true;
+				}
+				if (bingo) {
+					// Start speakSequence within the gesture; mark that we've started speech so playWord won't duplicate
+					this._submitStartedSpeak = true;
+					this._inlineSpeakPromise = this.speakSequence(formedWords.map(w=>w.word).filter(w=>w && w !== 'BINGO BONUS'), true, 'player').catch(e => { console.warn('inline speakSequence failed', e); });
+				}
+			} catch (err) {
+				console.warn('handlePlayGesture failed', err);
+			}
+			// Continue to original click action (playWord will run next from its listener)
+		};
+
+		if (playWordBtn) {
+			playWordBtn.addEventListener("click", handlePlayGesture, true);
+			playWordBtn.addEventListener("click", () => this.playWord());
+		}
+		if (playWordDesktopBtn) {
+			playWordDesktopBtn.addEventListener("click", handlePlayGesture, true);
+			playWordDesktopBtn.addEventListener("click", () => this.playWord());
+		}
 
 		// Shuffle rack button (mobile)
 		const shuffleRackBtn = document.getElementById("shuffle-rack");
