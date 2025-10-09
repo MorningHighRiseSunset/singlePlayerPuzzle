@@ -8923,3 +8923,84 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 });
+
+// Console helper: populate the board and player's rack for a quick 7-letter bingo test.
+// Usage in browser console:
+//   window.setupBingoTest();
+// Then place tiles if needed and call game.playWord(); or the helper will pre-place them and call game.playWord() if possible.
+window.setupBingoTest = function setupBingoTest(word = 'PUZZLES') {
+	try {
+		const g = window.game;
+		if (!g) { console.warn('Game instance not ready. Wait for DOMContentLoaded.'); return; }
+
+		// Normalize word and ensure letters array
+		word = ('' + word).toUpperCase();
+		const rack = word.split('');
+
+		// Reset placed tiles and held tiles for a clean placement
+		g.placedTiles = [];
+		g.heldTiles = [];
+
+		// Set player's rack
+		g.playerRack = rack.slice();
+		try { g.renderRacks(); } catch (e) { console.warn('renderRacks failed', e); }
+
+		const rows = g.board.length;
+		const cols = g.board[0].length;
+		const L = rack.length;
+
+		let found = false;
+		let foundRow = -1, foundCol = -1, vertical = false;
+
+		// Search horizontal runs first
+		for (let r = 0; r < rows && !found; r++) {
+			for (let c = 0; c <= cols - L; c++) {
+				let ok = true;
+				for (let k = 0; k < L; k++) {
+					if (g.board[r][c + k].tile) { ok = false; break; }
+				}
+				if (ok) { found = true; foundRow = r; foundCol = c; vertical = false; break; }
+			}
+		}
+
+		// If not found, try vertical runs
+		if (!found) {
+			for (let c = 0; c < cols && !found; c++) {
+				for (let r = 0; r <= rows - L; r++) {
+					let ok = true;
+					for (let k = 0; k < L; k++) {
+						if (g.board[r + k][c].tile) { ok = false; break; }
+					}
+					if (ok) { found = true; foundRow = r; foundCol = c; vertical = true; break; }
+				}
+			}
+		}
+
+		if (!found) {
+			console.warn('No contiguous', L, 'empty cells were found on the board. Clear some tiles and try again.');
+			return;
+		}
+
+		// Place tiles into board and placedTiles
+		for (let i = 0; i < L; i++) {
+			const letter = rack[i];
+			const tileObj = { letter, isBlank: false };
+			const r = vertical ? (foundRow + i) : foundRow;
+			const c = vertical ? foundCol : (foundCol + i);
+			g.board[r][c].tile = { letter, points: g.tilePoints ? g.tilePoints[letter] || 1 : 1 };
+			g.placedTiles.push({ tile: tileObj, row: r, col: c });
+		}
+
+		try { g.renderBoard(); } catch (e) { console.warn('renderBoard failed', e); }
+		g.updateGameState();
+
+		console.log('setupBingoTest: placed', word, (vertical ? 'vertically' : 'horizontally'), 'at row', foundRow, 'col', foundCol);
+		console.log('Now call game.playWord() in the console to submit the bingo.');
+	} catch (err) {
+		console.error('setupBingoTest failed', err);
+	}
+};
+
+// convenience aliases (case-insensitive-ish)
+window.setupbingtest = window.setupBingoTest;
+window.bingoTest = window.setupBingoTest;
