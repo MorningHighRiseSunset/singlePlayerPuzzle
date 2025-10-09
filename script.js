@@ -3267,10 +3267,7 @@ async executeAIPlay(play) {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
 					aiBingo = true;
-					// visual celebration
-					if (typeof this.showBingoBonusEffect === 'function') {
-						try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
-					}
+					// AI should not display any celebration (no audio, no confetti) per user request.
 				}
 			});
 
@@ -3291,9 +3288,10 @@ async executeAIPlay(play) {
                 moveDescription = "(No new words scored)";
             }
 
-			// --- Speak each word formed by AI sequentially, then bingo if applicable ---
+			// --- Speak each word formed by AI sequentially. Do NOT audibly announce bingo for AI;
+			// keep any visual effects but avoid TTS 'Bingo bonus!' for the computer.
 			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
-			this.speakSequence(aiWordsToSpeak, aiBingo, 'ai').catch((e) => {
+			this.speakSequence(aiWordsToSpeak, false, 'ai').catch((e) => {
 				console.error('AI speakSequence failed', e);
 			}).then(() => {
 				console.log(`Total score for move: ${totalScore}`);
@@ -6184,10 +6182,6 @@ calculateScore() {
 		const len = wordInfo.word.length;
 		if (len >= 7 && !(this.wordsPlayed && this.wordsPlayed.has(wordInfo.word.toUpperCase()))) {
 			totalScore += 50;
-			// celebrate bingo for player too
-			if (typeof this.showBingoBonusEffect === 'function') {
-				try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
-			}
 		}
 	});
 
@@ -6752,14 +6746,7 @@ calculateScore() {
 						// Immediate console ping so we can confirm player bingo detection
 						console.log('[Player] BINGO DETECTED');
 
-						// Force a player bingo announcement immediately (simple, deterministic)
-						try {
-							setTimeout(() => {
-								try { if (typeof this.speakBingo === 'function') { this.speakBingo('player'); console.log('[Speech] forced player bingo speak called'); } else { console.log('[Speech] speakBingo removed — skipping audio'); } } catch (e) { console.warn('forced bingo speak failed', e); }
-							}, 200);
-						} catch (err) {
-							console.warn('failed to schedule forced bingo speak', err);
-						}
+						// Bingo announcement will be handled after the spelled words via speakSequence.
 					}
 				});
 
@@ -6792,6 +6779,12 @@ calculateScore() {
 					// Now speak the spelled words and, if a bingo bonus was awarded,
 					// have speakSequence announce the bingo after the words finish.
 					await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+					// Player-only visual celebration (confetti/emoji)
+					if (bingoBonusAwarded) {
+						if (typeof this.showBingoBonusEffect === 'function') {
+							try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
+						}
+					}
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
 				}
