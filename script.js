@@ -6640,6 +6640,67 @@ calculateScore() {
 		}
 	}
 
+	// Ensure audio / TTS is unlocked and voices are loaded. Call this inside a user gesture.
+	async ensureAudioUnlocked() {
+		try {
+			if (this._audioUnlocked) return;
+			if (typeof window === 'undefined') return;
+
+			// Try to load voices (may be empty until a gesture on some Android browsers)
+			if ('speechSynthesis' in window) {
+				try {
+					const voices = window.speechSynthesis.getVoices() || [];
+					console.debug('[Speech] getVoices() returned', voices.length, 'voices');
+					// If no voices yet, attach a one-time onvoiceschanged to log when they arrive
+					if (voices.length === 0) {
+						const onv = () => {
+							try { console.debug('[Speech] onvoiceschanged:', window.speechSynthesis.getVoices().map(v=>v.name)); } catch(e){}
+							window.speechSynthesis.removeEventListener('voiceschanged', onv);
+						};
+						window.speechSynthesis.addEventListener('voiceschanged', onv);
+						// Trigger a tiny utterance as a fallback to coax voices to load (volume very low)
+						try {
+							const t = new SpeechSynthesisUtterance('');
+							t.volume = 0.01;
+							window.speechSynthesis.speak(t);
+						} catch (e) {
+							// ignore
+						}
+					}
+				} catch (e) {
+					console.warn('ensureAudioUnlocked: getVoices failed', e);
+				}
+			}
+
+			// Also resume/create an AudioContext and play a silent oscillator to unlock audio on Android
+			try {
+				const AC = window.AudioContext || window.webkitAudioContext;
+				if (AC) {
+					this._audioCtx = this._audioCtx || new AC();
+					if (this._audioCtx.state === 'suspended' && typeof this._audioCtx.resume === 'function') {
+						await this._audioCtx.resume();
+					}
+					// Play an inaudible oscillator for a few ms to unlock the audio output path
+					const g = this._audioCtx.createGain();
+					g.gain.value = 0; // fully silent
+					const o = this._audioCtx.createOscillator();
+					o.connect(g);
+					g.connect(this._audioCtx.destination);
+					o.start();
+					o.stop(this._audioCtx.currentTime + 0.03);
+				}
+			} catch (e) {
+				// non-fatal
+				console.debug('ensureAudioUnlocked: AudioContext trick failed', e);
+			}
+
+			this._audioUnlocked = true;
+			console.debug('[Speech] ensureAudioUnlocked complete');
+		} catch (e) {
+			console.warn('ensureAudioUnlocked fatal error', e);
+		}
+	}
+
 	// speakBingo removed by request: audio announcements for bingo are deleted.
 	// If code elsewhere still calls `this.speakBingo(...)`, these calls should be
 	// no-ops. The function was intentionally removed to eliminate bingo audio.
@@ -6722,11 +6783,8 @@ calculateScore() {
 		// Ensure speech is primed on mobile right after a direct user action (playWord)
 		try {
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-				// some mobile browsers require the speech to be triggered by a user gesture; play a tiny silent utterance
-				const _prime = new SpeechSynthesisUtterance('');
-				_prime.volume = 0;
-				window.speechSynthesis.speak(_prime);
-				console.log('[Speech] primed inside playWord()');
+				// Try a robust unlock helper that resumes AudioContext and loads voices where possible
+				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('playWord priming: ensureAudioUnlocked failed', e); }
 			}
 		} catch (e) {
 			console.warn('playWord priming failed', e);
@@ -8177,6 +8235,8 @@ calculateScore() {
 		// Handler that runs inside the user's click gesture to start speech reliably
 		const handlePlayGesture = async (e) => {
 			try {
+				// Try to unlock audio / TTS pipelines early inside the gesture
+				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('handlePlayGesture: ensureAudioUnlocked failed', e); }
 				// Reset mark
 				this._submitStartedSpeak = false;
 				// Prepare formed words synchronously from current placedTiles
