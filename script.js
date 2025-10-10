@@ -8254,7 +8254,40 @@ calculateScore() {
 				if (bingo) {
 					// Start speakSequence within the gesture; mark that we've started speech so playWord won't duplicate
 					this._submitStartedSpeak = true;
-					this._inlineSpeakPromise = this.speakSequence(formedWords.map(w=>w.word).filter(w=>w && w !== 'BINGO BONUS'), true, 'player').catch(e => { console.warn('inline speakSequence failed', e); });
+					// Some Android browsers block utterances created asynchronously; to be reliable we
+					// pre-create and queue all utterances (words followed by 'Bingo bonus!') here
+					// inside the user's click gesture. We return a promise that resolves when the
+					// last utterance ends so playWord() can await it.
+					try {
+						if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+							const texts = formedWords.map(w => w.word).filter(w => w && w !== 'BINGO BONUS');
+							// Ensure bingo phrase is queued last so it's heard after the spelled words
+							texts.push('Bingo bonus!');
+							let resolveInline;
+							this._inlineSpeakPromise = new Promise((res) => { resolveInline = res; });
+							texts.forEach((txt, idx) => {
+								try {
+									const u = new SpeechSynthesisUtterance(txt);
+									u.lang = 'en-US';
+									u.rate = 0.95;
+									u.pitch = 1.0;
+									if (idx === texts.length - 1) {
+										u.onend = () => { try { resolveInline(); } catch(e){} };
+										u.onerror = () => { try { resolveInline(); } catch(e){} };
+									}
+									window.speechSynthesis.speak(u);
+								} catch (err) {
+									console.warn('prequeue utterance failed', err);
+									if (idx === texts.length - 1) resolveInline();
+								}
+							});
+						} else {
+							this._inlineSpeakPromise = Promise.resolve();
+						}
+					} catch (err) {
+						console.warn('inline prequeue failed', err);
+						this._inlineSpeakPromise = Promise.resolve();
+					}
 				}
 			} catch (err) {
 				console.warn('handlePlayGesture failed', err);
