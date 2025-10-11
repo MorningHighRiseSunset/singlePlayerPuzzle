@@ -3326,23 +3326,25 @@ async executeAIPlay(play) {
 }
 
 	calculateWordScore(word, startRow, startCol, isHorizontal) {
+		// Modernized: accept an optional set of newly placed positions for deterministic scoring
+		const newlyPlacedSet = this._scoringNewlyPlacedSet || new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
 		let wordScore = 0;
 		let wordMultiplier = 1;
 
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startRow : startRow + i;
 			const col = isHorizontal ? startCol + i : startCol;
-			const tile = this.board[row][col];
-			let letterScore = tile.value;
+			const boardTile = this.board[row][col];
+			const letterScoreBase = boardTile ? (boardTile.value || 0) : 0;
 
-			// Apply premium squares for newly placed tiles
-			const isNewlyPlaced = this.placedTiles && this.placedTiles.some(t => t.row === row && t.col === col);
-			if (isNewlyPlaced) {
+			let letterScore = letterScoreBase;
+			const key = `${row},${col}`;
+			if (newlyPlacedSet.has(key)) {
 				const premium = this.getPremiumSquareType(row, col);
-				if (premium === "dl") letterScore *= 2;
-				if (premium === "tl") letterScore *= 3;
-				if (premium === "dw") wordMultiplier *= 2;
-				if (premium === "tw") wordMultiplier *= 3;
+				if (premium === 'dl') letterScore *= 2;
+				if (premium === 'tl') letterScore *= 3;
+				if (premium === 'dw') wordMultiplier *= 2;
+				if (premium === 'tw') wordMultiplier *= 3;
 			}
 
 			wordScore += letterScore;
@@ -6150,31 +6152,18 @@ calculateScore() {
             return;
         }
 
-        // Calculate score for each letter in the word
-        for (let i = 0; i < word.length; i++) {
-            const row = direction === "horizontal" ? startPos.row : startPos.row + i;
-            const col = direction === "horizontal" ? startPos.col + i : startPos.col;
-            const tile = this.board[row][col];
 
-            let letterScore = tile.value;
-
-            // Apply premium squares only for newly placed tiles
-            if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
-                const premium = this.getPremiumSquareType(row, col);
-                if (premium === "dl") letterScore *= 2;
-                if (premium === "tl") letterScore *= 3;
-                if (premium === "dw") wordMultiplier *= 2;
-                if (premium === "tw") wordMultiplier *= 3;
-            }
-
-            wordScore += letterScore;
-        }
-
-        // Apply word multiplier
-        wordScore *= wordMultiplier;
-
-        // Add to total score
-        totalScore += wordScore;
+		// Build set of newly placed tiles for scoring rules
+		this._scoringNewlyPlacedSet = new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+		try {
+			const computed = this.calculateWordScore(word, startPos.row, startPos.col, direction === 'horizontal');
+			wordScore = computed;
+			// Add to total score
+			totalScore += wordScore;
+		} finally {
+			// clear temporary set
+			this._scoringNewlyPlacedSet = null;
+		}
 
         // Store word and its score for display
         words.add(
@@ -6767,6 +6756,19 @@ calculateScore() {
 						else resolve();
 					}
 				} catch (e) {
+						// Fallback: if nothing is queued or speaking shortly after, try robust retry speaker
+						setTimeout(async () => {
+							try {
+								if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+								if (!window.speechSynthesis.pending && !window.speechSynthesis.speaking) {
+									// nothing queued/playing — perform robust speak outside gesture
+									for (let t of texts) {
+										try { await this._speakWithRetry(t, { lang: 'en-US' }); } catch (e) { /* ignore */ }
+									}
+									try { resolveInline(); } catch(e){}
+								}
+							} catch (e) { /* ignore */ }
+						}, 480);
 					console.warn('speakWithRetry inner error', e);
 					resolve();
 				}
@@ -6845,6 +6847,23 @@ calculateScore() {
 
 		// Ensure speech is primed on mobile right after a direct user action (playWord)
 		try {
+			// If player placed 7 or more tiles this move, pre-announce Bingo inside this user gesture
+			try {
+				if (this.currentTurn === 'player' && this.placedTiles && this.placedTiles.length >= 7) {
+					// prevent duplicates within the same move
+					if (!this._playerBingoAnnounced) {
+						this._playerBingoAnnounced = true;
+						try {
+							// call robust speaker directly inside gesture
+							this._speakWithRetry && this._speakWithRetry('Bingo bonus!', { lang: 'en-US' }).catch(e => {
+								console.warn('inline bingo speak failed', e);
+								try { this.appendConsoleMessage('inline bingo speak failed: '+(e && e.message)); } catch(_){}
+							});
+						} catch (e) { console.warn('failed to start inline bingo speak', e); }
+					}
+				}
+			} catch (e) { console.warn('bingo preannounce guard failed', e); }
+
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 				// Try a robust unlock helper that resumes AudioContext and loads voices where possible
 				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('playWord priming: ensureAudioUnlocked failed', e); }
@@ -6967,6 +6986,9 @@ calculateScore() {
 				playWordBtn.disabled = false;
 				playWordBtn.textContent = "Submit";
 			}
+
+			// reset transient announce flag so future moves can announce again
+			try { this._playerBingoAnnounced = false; } catch (e) {}
 		}
 	}
 
@@ -8379,6 +8401,14 @@ calculateScore() {
 									u.lang = 'en-US';
 									u.rate = 0.95;
 									u.pitch = 1.0;
+									// Try to set a preferred voice synchronously inside the gesture
+									try {
+										const pref = this._getPreferredVoice && this._getPreferredVoice();
+										if (pref) {
+											u.voice = pref;
+											try { this.appendConsoleMessage('inline prequeue used voice: '+pref.name); } catch(e){}
+										}
+									} catch (e) { /* ignore */ }
 									if (idx === texts.length - 1) {
 										u.onend = () => { try { resolveInline(); } catch(e){} };
 										u.onerror = () => { try { resolveInline(); } catch(e){} };
@@ -9215,6 +9245,117 @@ document.addEventListener("DOMContentLoaded", () => {
             game.showAINotification("Endgame scenario loaded! It's time to test the AI.");
         };
     }
+
+	// Ensure the in-drawer console output container exists for mobile drawer diagnostics
+	try {
+		const mobileDrawer = document.getElementById('mobile-drawer');
+		if (mobileDrawer) {
+			let consoleContainer = mobileDrawer.querySelector('.drawer-console-output');
+			if (!consoleContainer) {
+				consoleContainer = document.createElement('div');
+				consoleContainer.className = 'drawer-console-output';
+				consoleContainer.style.whiteSpace = 'pre-wrap';
+				consoleContainer.style.maxHeight = '220px';
+				consoleContainer.style.overflow = 'auto';
+				consoleContainer.style.padding = '8px';
+				consoleContainer.style.background = '#f6f8fb';
+				consoleContainer.style.borderRadius = '6px';
+				consoleContainer.style.border = '1px solid rgba(0,0,0,0.06)';
+
+				const header = document.createElement('div');
+				header.style.display = 'flex';
+				header.style.justifyContent = 'space-between';
+				header.style.alignItems = 'center';
+				header.style.marginBottom = '6px';
+
+				const title = document.createElement('div');
+				title.textContent = 'Console';
+				title.style.fontWeight = '600';
+				title.style.color = '#123';
+
+				const copyBtn = document.createElement('button');
+				copyBtn.textContent = 'Copy All';
+				copyBtn.style.fontSize = '0.9em';
+				copyBtn.style.padding = '4px 8px';
+				copyBtn.style.borderRadius = '4px';
+				copyBtn.style.border = 'none';
+				copyBtn.style.background = '#1a237e';
+				copyBtn.style.color = '#fff';
+				copyBtn.addEventListener('click', () => {
+					try {
+						const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
+							.map(n => n.textContent).join('\n');
+						navigator.clipboard.writeText(text);
+						game.appendConsoleMessage('Console copied to clipboard');
+					} catch (err) {
+						game.appendConsoleMessage('Copy failed: ' + (err && err.message));
+					}
+				});
+
+				header.appendChild(title);
+				header.appendChild(copyBtn);
+				consoleContainer.appendChild(header);
+
+				// Add an inner list for messages
+				const list = document.createElement('div');
+				list.className = 'drawer-console-list';
+				consoleContainer.appendChild(list);
+
+				// insert near the top of drawer content if possible
+				const drawerContent = mobileDrawer.querySelector('.drawer-content');
+				if (drawerContent) drawerContent.insertBefore(consoleContainer, drawerContent.firstChild);
+			}
+
+			// Hook the game's appendConsoleMessage to also write into the drawer list
+			try {
+				const consoleList = mobileDrawer.querySelector('.drawer-console-list');
+				if (consoleList && game && typeof game.appendConsoleMessage === 'function') {
+					const original = game.appendConsoleMessage.bind(game);
+					game.appendConsoleMessage = function (msg) {
+						try {
+							const line = document.createElement('div');
+							line.className = 'console-line';
+							line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+							consoleList.appendChild(line);
+							while (consoleList.childNodes.length > 200) consoleList.removeChild(consoleList.firstChild);
+							consoleList.scrollTop = consoleList.scrollHeight;
+						} catch (_) {}
+						original(msg);
+					};
+				}
+			} catch (err) {
+				console.warn('Failed to attach drawer console hook', err);
+			}
+		}
+	} catch (err) {
+		console.warn('Failed to ensure drawer console:', err);
+	}
+	// Also ensure desktop drawer has the same console UI for users on larger screens
+	try {
+		const desktopDrawer = document.getElementById('desktop-drawer');
+		if (desktopDrawer && !desktopDrawer.querySelector('.drawer-console-output')) {
+			// Clone the mobile console if present to keep parity
+			const mobileConsole = document.querySelector('#mobile-drawer .drawer-console-output');
+			if (mobileConsole) {
+				const clone = mobileConsole.cloneNode(true);
+				// Reattach the copy handler on the cloned header button
+				const copyBtn = clone.querySelector('button');
+				if (copyBtn) {
+					copyBtn.addEventListener('click', () => {
+						try {
+							const text = Array.from(clone.querySelectorAll('.console-line')).map(n => n.textContent).join('\n');
+							navigator.clipboard.writeText(text);
+							game.appendConsoleMessage('Console copied to clipboard');
+						} catch (err) {
+							game.appendConsoleMessage('Copy failed: ' + (err && err.message));
+						}
+					});
+				}
+				const drawerContent = desktopDrawer.querySelector('.drawer-content');
+				if (drawerContent) drawerContent.insertBefore(clone, drawerContent.firstChild);
+			}
+		}
+	} catch (err) { console.warn('Failed to ensure desktop drawer console', err); }
 });
 
 document.addEventListener('DOMContentLoaded', function() {
