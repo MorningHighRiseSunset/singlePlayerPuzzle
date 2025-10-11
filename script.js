@@ -3295,10 +3295,12 @@ async executeAIPlay(play) {
                 moveDescription = "(No new words scored)";
             }
 
-			// --- Speak each word formed by AI sequentially. Do NOT audibly announce bingo for AI;
-			// keep any visual effects but avoid TTS 'Bingo bonus!' for the computer.
+			// --- Speak each word formed by AI sequentially. If AI scored a bingo, allow it to
+			// audibly announce it as well (some users want parity). If you want AI silent,
+			// set aiSpeakBingo = false.
 			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
-			this.speakSequence(aiWordsToSpeak, false, 'ai').catch((e) => {
+			const aiSpeakBingo = true; // change to false to silence AI bingo again
+			this.speakSequence(aiWordsToSpeak, aiBingo && aiSpeakBingo, 'ai').catch((e) => {
 				console.error('AI speakSequence failed', e);
 			}).then(() => {
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
@@ -6604,26 +6606,17 @@ calculateScore() {
 	speakBingo(source = 'player') {
 		try {
 			if (typeof window === 'undefined') return;
-			const canTTS = ('speechSynthesis' in window) && typeof window.speechSynthesis.speak === 'function';
-			if (canTTS) {
-				try {
-					const text = 'Bingo bonus!';
-					const u = new SpeechSynthesisUtterance(text);
-					u.lang = 'en-US';
-					u.rate = 1.15;
-					u.pitch = 1.4;
-					u.volume = 1.0;
-					u.onend = () => { /* noop */ };
-					u.onerror = () => { /* noop */ };
-					window.speechSynthesis.speak(u);
-					console.log('[Speech] speakBingo invoked for', source);
-				} catch (e) {
-					// if TTS fails, continue to show visuals
-					console.warn('speakBingo TTS failed', e);
-				}
-			} else {
-				// No TTS available or blocked — still show visuals
-				console.debug('[Speech] TTS unavailable; skipping audio and showing visuals only');
+			// Attempt to speak via the robust helper that retries and sets a preferred voice
+			try {
+				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
+					console.warn('speakBingo TTS path failed', e);
+					try { this.appendConsoleMessage('speakBingo TTS failed'); } catch(e){}
+				});
+				console.log('[Speech] speakBingo invoked for', source);
+				try { this.appendConsoleMessage('speakBingo invoked for '+source); } catch(e){}
+			} catch (e) {
+				console.warn('speakBingo TTS attempt failed', e);
+				try { this.appendConsoleMessage('speakBingo TTS attempt failed'); } catch(e){}
 			}
 
 			// Always trigger visual celebration for bingo (player only)
@@ -6651,10 +6644,11 @@ calculateScore() {
 				try {
 					const voices = window.speechSynthesis.getVoices() || [];
 					console.debug('[Speech] getVoices() returned', voices.length, 'voices');
+					try { this.appendConsoleMessage(`getVoices() -> ${voices.length} voices`); } catch(e){}
 					// If no voices yet, attach a one-time onvoiceschanged to log when they arrive
 					if (voices.length === 0) {
 						const onv = () => {
-							try { console.debug('[Speech] onvoiceschanged:', window.speechSynthesis.getVoices().map(v=>v.name)); } catch(e){}
+							try { console.debug('[Speech] onvoiceschanged:', window.speechSynthesis.getVoices().map(v=>v.name)); this.appendConsoleMessage('voiceschanged: '+ (window.speechSynthesis.getVoices()||[]).map(v=>v.name).join(', ')); } catch(e){}
 							window.speechSynthesis.removeEventListener('voiceschanged', onv);
 						};
 						window.speechSynthesis.addEventListener('voiceschanged', onv);
@@ -6692,13 +6686,93 @@ calculateScore() {
 			} catch (e) {
 				// non-fatal
 				console.debug('ensureAudioUnlocked: AudioContext trick failed', e);
+				try { this.appendConsoleMessage('ensureAudioUnlocked audio trick failed'); } catch(e){}
 			}
 
 			this._audioUnlocked = true;
 			console.debug('[Speech] ensureAudioUnlocked complete');
+			try { this.appendConsoleMessage('ensureAudioUnlocked complete'); } catch(e){}
 		} catch (e) {
 			console.warn('ensureAudioUnlocked fatal error', e);
 		}
+	}
+
+	// Pick a preferred English voice if available. Returns a SpeechSynthesisVoice or null.
+	_getPreferredVoice() {
+		try {
+			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+			const voices = window.speechSynthesis.getVoices() || [];
+			if (!voices || voices.length === 0) return null;
+			// Prefer explicit English voices (en-US/en-GB) and prefer female-like names if present
+			let pick = null;
+			for (const v of voices) {
+				if (!v.lang) continue;
+				const lang = v.lang.toLowerCase();
+				if (lang.startsWith('en') && (!pick || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'))) {
+					pick = v;
+				}
+			}
+			if (!pick) pick = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || voices[0];
+			return pick || null;
+		} catch (e) {
+			console.debug('getPreferredVoice failed', e);
+			return null;
+		}
+	}
+
+	// Speak a single utterance, with a single retry attempt after trying to unlock audio.
+	// Returns a Promise that resolves on end or rejects on persistent failure.
+	_speakWithRetry(text, opts = {}) {
+		return new Promise(async (resolve, reject) => {
+			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return resolve();
+			let tried = 0;
+			const attempt = async () => {
+				try {
+					if (!text) return resolve();
+					const u = new SpeechSynthesisUtterance(text);
+					u.lang = opts.lang || 'en-US';
+					u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
+					u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
+					// assign preferred voice if available
+					try {
+						const v = this._getPreferredVoice();
+						if (v) u.voice = v;
+					} catch (e) { /* ignore */ }
+					u.onend = () => resolve();
+					u.onerror = async (ev) => {
+						if (tried === 0) {
+							tried++;
+							console.warn('utterance error, attempting unlock+retry', ev);
+							try { await this.ensureAudioUnlocked(); } catch (e) { /* ignore */ }
+							// try a tiny silent audio play as a fallback on Android
+							try {
+								const AC = window.AudioContext || window.webkitAudioContext;
+								if (AC) {
+									const ac = new AC();
+									if (ac.state === 'suspended' && ac.resume) await ac.resume();
+									const g = ac.createGain(); g.gain.value = 0; const o = ac.createOscillator(); o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.03);
+								}
+							} catch (e) { /* ignore */ }
+							// attempt to speak again
+							try { window.speechSynthesis.speak(u); } catch (e) { resolve(); }
+						} else {
+							console.error('utterance failed after retry', ev);
+							resolve();
+						}
+					};
+					try {
+						window.speechSynthesis.speak(u);
+					} catch (e) {
+						if (tried === 0) { tried++; try { await this.ensureAudioUnlocked(); } catch(e){}; try { window.speechSynthesis.speak(u); } catch(e2){ resolve(); } }
+						else resolve();
+					}
+				} catch (e) {
+					console.warn('speakWithRetry inner error', e);
+					resolve();
+				}
+			};
+			attempt();
+		});
 	}
 
 	// speakBingo removed by request: audio announcements for bingo are deleted.
@@ -6709,7 +6783,7 @@ calculateScore() {
 	// Speak an array of words sequentially, then optionally announce bingo
 	// source: optional string 'player'|'ai' forwarded to speakBingo when called
 	speakSequence(words = [], speakBingoAfter = false, source = 'ai') {
-		return new Promise((resolve) => {
+		return new Promise(async (resolve) => {
 			try {
 				if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
 					if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
@@ -6718,47 +6792,36 @@ calculateScore() {
 				if (!words || words.length === 0) {
 					if (speakBingoAfter) {
 						if (typeof this.speakBingo === 'function') this.speakBingo(source);
-						// give speakBingo its internal timeout then resolve after a short delay
 						setTimeout(resolve, 500);
 					} else {
 						return resolve();
 					}
 				}
-				let i = 0;
-				const speakNext = () => {
-					const text = words[i];
+				// speak each word serially using speakWithRetry
+				for (let idx = 0; idx < words.length; idx++) {
+					const text = words[idx];
 					try {
-						const u = new SpeechSynthesisUtterance(text);
-						u.lang = 'en-US';
-						u.rate = 0.95;
-						u.pitch = 1.0;
-						u.onend = () => {
-							i++;
-							if (i < words.length) {
-								speakNext();
-							} else {
-								if (speakBingoAfter) {
-									// small gap before bingo
-									setTimeout(() => {
-										if (typeof this.speakBingo === 'function') this.speakBingo(source);
-										setTimeout(resolve, 500);
-									}, 180);
-								} else {
-									resolve();
-								}
-							}
-						};
-						window.speechSynthesis.speak(u);
-					} catch (err) {
-						console.error('speakSequence inner error', err);
-						// try to continue
-						i++;
-									if (i < words.length) speakNext(); else { if (speakBingoAfter) { if (typeof this.speakBingo === 'function') this.speakBingo(source); setTimeout(resolve,500); } else resolve(); }
+						await this._speakWithRetry(text, { lang: 'en-US' });
+					} catch (e) {
+						console.warn('speakSequence word failed', text, e);
+						try { this.appendConsoleMessage('speakSequence word failed: '+text); } catch(e){}
 					}
-				};
-				speakNext();
+				}
+				if (speakBingoAfter) {
+					// small gap then bingo
+					setTimeout(async () => {
+						if (typeof this.speakBingo === 'function') {
+							// speakBingo will still attempt TTS and visuals
+							try { this.speakBingo(source); } catch (e) { console.warn('speakBingo call failed', e); }
+						}
+						setTimeout(resolve, 500);
+					}, 180);
+				} else {
+					resolve();
+				}
 			} catch (e) {
 				console.error('speakSequence failed', e);
+				try { this.appendConsoleMessage('speakSequence failed'); } catch(e){}
 				if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
 				resolve();
 			}
@@ -7347,10 +7410,45 @@ calculateScore() {
 		const infoPanel = document.querySelector(".info-panel");
 		if (mobileDrawer) {
 			mobileDrawer.appendChild(historyDisplay);
+			// Also add a console output container at the bottom of the drawer for debug messages
+			let consoleBox = mobileDrawer.querySelector('.drawer-console-output');
+			if (!consoleBox) {
+				consoleBox = document.createElement('div');
+				consoleBox.className = 'drawer-console-output';
+				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
+				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
+				const copyBtn = consoleBox.querySelector('.copy-console-btn');
+				if (copyBtn) {
+					copyBtn.addEventListener('click', () => {
+						try {
+							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
+							navigator.clipboard && navigator.clipboard.writeText(entries).then(() => { alert('Console copied'); }, () => { alert('Copy failed'); });
+						} catch (e) { alert('Copy failed'); }
+					});
+				}
+				mobileDrawer.appendChild(consoleBox);
+			}
 		} else if (infoPanel) {
 			infoPanel.appendChild(historyDisplay);
 		}
 		return historyDisplay;
+	}
+
+	// Append a message to the drawer console (and to browser console). Safe to call anywhere.
+	appendConsoleMessage(msg) {
+		try {
+			console.log('[IN-GAME-CONSOLE]', msg);
+			const mobileDrawer = document.querySelector('.mobile-drawer .moves-panel');
+			if (!mobileDrawer) return;
+			const consoleBox = mobileDrawer.querySelector('.drawer-console-output .console-entries');
+			if (!consoleBox) return;
+			const el = document.createElement('div');
+			el.textContent = `[${new Date().toLocaleTimeString()}] ${String(msg)}`;
+			el.style.padding = '4px 2px';
+			consoleBox.appendChild(el);
+			// keep scroll at bottom
+			consoleBox.scrollTop = consoleBox.scrollHeight;
+		} catch (e) { console.warn('appendConsoleMessage failed', e); }
 	}
 
 	renderAIRack() {
@@ -8239,6 +8337,16 @@ calculateScore() {
 				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('handlePlayGesture: ensureAudioUnlocked failed', e); }
 				// Reset mark
 				this._submitStartedSpeak = false;
+				// Play a tiny embedded audio to coax Android audio systems (silent/near-silent)
+				try {
+					if (!this._playGestureAudio) {
+						this._playGestureAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');
+						this._playGestureAudio.preload = 'auto';
+					}
+					this._playGestureAudio.currentTime = 0;
+					this._playGestureAudio.volume = 0.01;
+					this._playGestureAudio.play().catch(()=>{});
+				} catch(e) { /* ignore */ }
 				// Prepare formed words synchronously from current placedTiles
 				const formedWords = (typeof this.getFormedWords === 'function') ? this.getFormedWords() : [];
 				let bingo = false;
