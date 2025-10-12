@@ -7449,7 +7449,13 @@ calculateScore() {
 	// Lightweight bingo splash used for player-only celebrations
 	createBingoSplash() {
 		// Subtle guard if called excessively
-		if (this._bingoSplashActive) return;
+		try {
+			this.appendConsoleMessage && this.appendConsoleMessage('createBingoSplash() called');
+		} catch (e) {}
+		if (this._bingoSplashActive) {
+			try { this.appendConsoleMessage('createBingoSplash() skipped: _bingoSplashActive true'); } catch(e){}
+			return;
+		}
 		this._bingoSplashActive = true;
 		try {
 			const emojis = ["🎉","🎊","✨","🌟","💫","🎈","🥳"];
