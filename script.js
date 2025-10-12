@@ -3335,7 +3335,24 @@ async executeAIPlay(play) {
 			const row = isHorizontal ? startRow : startRow + i;
 			const col = isHorizontal ? startCol + i : startCol;
 			const boardTile = this.board[row][col];
-			const letterScoreBase = boardTile ? (boardTile.value || 0) : 0;
+			// If the tile is already on the permanent board use its value; otherwise check newly placed tiles
+			let letterScoreBase = 0;
+			let letterChar = null;
+			if (boardTile) {
+				letterScoreBase = boardTile.value || 0;
+				letterChar = boardTile.letter;
+			} else {
+				// find placed tile info (temporary placedTiles array)
+				const placed = (this.placedTiles || []).find(t => t.row === row && t.col === col);
+				if (placed) {
+					letterScoreBase = placed.value || this.tileValues[(placed.letter || '').toUpperCase()] || 0;
+					letterChar = placed.letter || null;
+				} else {
+					// fallback: try previousBoard or tileValues by reading board letter if available
+					letterChar = (boardTile && boardTile.letter) || null;
+					letterScoreBase = (letterChar && this.tileValues[letterChar.toUpperCase()]) || 0;
+				}
+			}
 
 			let letterScore = letterScoreBase;
 			const key = `${row},${col}`;
