@@ -6801,7 +6801,11 @@ calculateScore() {
 				}
 				// speak each word serially using speakWithRetry
 				for (let idx = 0; idx < words.length; idx++) {
-					const text = words[idx];
+					let text = words[idx];
+					// If bingo should be announced, append it to the first spoken word so it's not a separate utterance
+					if (speakBingoAfter && idx === 0 && text && text.length > 0) {
+						text = text + ' Bingo bonus!';
+					}
 					try {
 						await this._speakWithRetry(text, { lang: 'en-US' });
 					} catch (e) {
@@ -6849,16 +6853,101 @@ calculateScore() {
 		try {
 			// If player placed 7 or more tiles this move, pre-announce Bingo inside this user gesture
 			try {
-				if (this.currentTurn === 'player' && this.placedTiles && this.placedTiles.length >= 7) {
+				// Detect bingo either by placing 7+ tiles or by forming any word of length >= 7
+				let bingoCandidate = false;
+				try {
+					if (this.currentTurn === 'player') {
+						if (this.placedTiles && this.placedTiles.length >= 7) bingoCandidate = true;
+						// Also check formed words (covers extensions that create bingo using existing tiles)
+						try {
+							const formed = this.getFormedWords && this.getFormedWords();
+							if (Array.isArray(formed)) {
+								for (const wi of formed) {
+									if (wi && wi.word && wi.word.length >= 7) { bingoCandidate = true; break; }
+								}
+							}
+						} catch(e) { /* ignore formedWords check */ }
+					}
+				} catch (e) { /* ignore detection errors */ }
+				if (bingoCandidate) {
 					// prevent duplicates within the same move
 					if (!this._playerBingoAnnounced) {
 						this._playerBingoAnnounced = true;
 						try {
-							// call robust speaker directly inside gesture
-							this._speakWithRetry && this._speakWithRetry('Bingo bonus!', { lang: 'en-US' }).catch(e => {
-								console.warn('inline bingo speak failed', e);
-								try { this.appendConsoleMessage('inline bingo speak failed: '+(e && e.message)); } catch(_){}
-							});
+							// call robust speaker directly inside gesture with retries
+							// Try to create and speak an utterance synchronously inside the user gesture first.
+							try {
+								if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+									try {
+										const pref = this._getPreferredVoice && this._getPreferredVoice();
+										// Play a short audible beep to unlock audio on stubborn Android builds
+										try {
+											const actx = new (window.AudioContext || window.webkitAudioContext)();
+											const osc = actx.createOscillator();
+											const gain = actx.createGain();
+											osc.type = 'sine';
+											osc.frequency.setValueAtTime(880, actx.currentTime);
+											gain.gain.setValueAtTime(0.02, actx.currentTime); // low volume
+											osc.connect(gain);
+											gain.connect(actx.destination);
+											osc.start();
+											setTimeout(() => { try { osc.stop(); actx.close(); } catch(_){} }, 70);
+										} catch (e) {
+											// ignore audio unlock failure
+										}
+										// Speak 'Bingo' and 'bonus!' as two synchronous utterances inside gesture
+										try {
+											const b1 = new SpeechSynthesisUtterance('Bingo');
+											b1.lang = 'en-US';
+											if (pref) try { b1.voice = pref; } catch(_){}
+											const b2 = new SpeechSynthesisUtterance('bonus!');
+											b2.lang = 'en-US';
+											if (pref) try { b2.voice = pref; } catch(_){}
+											window.speechSynthesis.speak(b1);
+											// small gap before second utterance
+											setTimeout(() => { try { window.speechSynthesis.speak(b2); } catch(_){}; }, 130);
+											this.appendConsoleMessage('In-gesture utterances spoken: Bingo | bonus!');
+											this._submitStartedSpeak = true;
+										} catch (e) {
+											console.warn('sync in-gesture speak failed', e);
+										}
+									} catch (e) { /* ignore */ }
+								}
+							} catch(e) { /* silence */ }
+
+							(async () => {
+								const maxRetries = 2; // additional attempts after the in-gesture call
+								let attempt = 0;
+								let success = false;
+								while (attempt <= maxRetries && !success) {
+									attempt++;
+									try {
+										this.appendConsoleMessage(`Bingo speak attempt ${attempt}`);
+										// Only try speaking if nothing is currently queued/playing
+										if (!(typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
+											await this._speakWithRetry('Bingo bonus!', { lang: 'en-US' });
+										}
+										// small delay to let speech start
+										await new Promise(r => setTimeout(r, 220));
+										if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+											if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+												success = true; break;
+											}
+										}
+										// if not speaking, loop to retry
+									} catch (e) {
+										console.warn('inline bingo speak failed attempt', attempt, e);
+										try { this.appendConsoleMessage('inline bingo speak failed: '+(e && e.message)); } catch(_){ }
+									}
+									// small backoff before next try
+									await new Promise(r => setTimeout(r, 360));
+								}
+								if (!success) {
+									// Offer a manual replay control in the drawer console so the user can tap to hear bingo.
+									try { this.appendConsoleMessage('Bingo speech did not start after retries — tap "Hear Bingo" in the console to replay.'); } catch(_){}
+									try { this.offerBingoReplayInConsole(); } catch(_){}
+								}
+							})();
 						} catch (e) { console.warn('failed to start inline bingo speak', e); }
 					}
 				}
