@@ -6904,7 +6904,9 @@ calculateScore() {
 											const gain = actx.createGain();
 											osc.type = 'sine';
 											osc.frequency.setValueAtTime(880, actx.currentTime);
-											gain.gain.setValueAtTime(0.02, actx.currentTime); // low volume
+											// Make priming effectively silent to avoid audible beep on submit
+											// Keep a tiny nonzero gain so some browsers still consider audio unlocked
+											gain.gain.setValueAtTime(0.00001, actx.currentTime);
 											osc.connect(gain);
 											gain.connect(actx.destination);
 											osc.start();
@@ -7083,7 +7085,8 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				alert("Invalid word! Please try again.");
+				// Show a non-modal, in-page toast instead of native alert to avoid system beep
+				try { this.showToast && this.showToast('Invalid word! Please try again.'); } catch(e) { /* ignore */ }
 				this.resetPlacedTiles();
 			}
 		} finally {
@@ -7583,6 +7586,24 @@ calculateScore() {
 			// keep scroll at bottom
 			consoleBox.scrollTop = consoleBox.scrollHeight;
 		} catch (e) { console.warn('appendConsoleMessage failed', e); }
+	}
+
+	// Show a transient in-page toast (non-modal) to replace native alerts
+	showToast(message, duration = 2600) {
+		try {
+			let toast = document.querySelector('.inpage-toast');
+			if (!toast) {
+				toast = document.createElement('div');
+				toast.className = 'inpage-toast';
+				document.body.appendChild(toast);
+			}
+			toast.textContent = message;
+			toast.classList.add('show');
+			clearTimeout(toast._hideTimer);
+			toast._hideTimer = setTimeout(() => {
+				toast.classList.remove('show');
+			}, duration);
+		} catch (e) { try { console.warn('showToast failed', e); } catch(_){} }
 	}
 
 	renderAIRack() {
