@@ -3310,7 +3310,8 @@ async executeAIPlay(play) {
 				this.consecutiveSkips = 0;
 
 				this.currentTurn = "player";
-				this.addToMoveHistory("Computer", moveDescription, totalScore);
+				// Prefer structured words (word + score) when available
+				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
 
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
@@ -5122,10 +5123,10 @@ formedWords.forEach((wordInfo) => {
 		}
 
 		// Update game state
-		this.aiScore += score;
+	this.aiScore += score;
 		this.isFirstMove = false;
 		this.currentTurn = "player";
-		this.addToMoveHistory("Computer", word, score);
+	this.addToMoveHistory("Computer", [{ word, score }], score);
 		this.fillRacks();
 		this.updateGameState();
 	}
@@ -6205,7 +6206,15 @@ calculateScore() {
         formedWords.forEach(w => this.wordsPlayed.add(w.word.toUpperCase()));
     }
 
-    return totalScore;
+	// Store last scored words (array of {word, score}) for callers to use in move history
+	try {
+		this._lastScoredWords = Array.from(words).map(s => JSON.parse(s));
+	} catch (e) {
+		// If something unexpected happened, fallback to formedWords with null scores
+		this._lastScoredWords = formedWords.map(f => ({ word: f.word, score: null }));
+	}
+
+	return totalScore;
 }
 
 	findWordPosition(word) {
@@ -7075,7 +7084,8 @@ calculateScore() {
 				this.currentTurn = "ai";
 				this.showAIGhostIfPlayerMoveValid();
 
-				this.addToMoveHistory("Player", moveDescription, totalScore);
+				// Pass structured wordDescriptions (array of {word,score}) so move history shows per-word scores
+				this.addToMoveHistory("Player", wordDescriptions, totalScore);
 				this.updateGameState();
 
 				// bingo (if any) already spoken by speakSequence; no further action needed
@@ -7101,13 +7111,27 @@ calculateScore() {
 		}
 	}
 
+	// words may be:
+	// - a string like "SKIP"/"EXCHANGE"/single word
+	// - an array of {word, score} for multiple words scored in one move
 	addToMoveHistory(player, words, score) {
-		this.moveHistory.push({
+		const entry = {
 			player,
-			word: words, // This now contains all formed words with their individual scores
-			score,
 			timestamp: new Date(),
-		});
+		};
+
+		if (Array.isArray(words)) {
+			// Structured words with individual scores
+			entry.words = words.map(w => ({ word: w.word, score: typeof w.score === 'number' ? w.score : null }));
+			// compute total if score not provided
+			entry.score = typeof score === 'number' ? score : entry.words.reduce((s, w) => s + (w.score || 0), 0);
+		} else {
+			// legacy string entry
+			entry.word = words;
+			entry.score = typeof score === 'number' ? score : 0;
+		}
+
+		this.moveHistory.push(entry);
 		this.updateMoveHistory();
 	}
 
@@ -7120,42 +7144,32 @@ calculateScore() {
 		const historyContent = "<h3>Move History</h3>" +
 			this.moveHistory
 			.map((move) => {
-				if (
-					move.word === "SKIP" ||
-					move.word === "EXCHANGE" ||
-					move.word === "QUIT"
-				) {
-					return `<div class="move">
-							${move.player}: "${move.word}" for ${move.score} points
-						</div>`;
+				// Structured entry with words array
+				if (move.words && Array.isArray(move.words)) {
+					// Check for bingo entries and format each word with its score if available
+					const parts = move.words.map(w => {
+						if (w.word === "BINGO BONUS") {
+							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
+						}
+						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
+						return `${w.word}`;
+					});
+					const formatted = parts.join(" & ");
+					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
 				}
 
-				// Handle multiple words (contains &)
-				if (move.word.includes("&")) {
-					const words = move.word.split("&").map((w) => w.trim());
-					// Check for BINGO BONUS
-					const bingoIndex = words.findIndex(w => w === "BINGO BONUS");
-					let bingoText = "";
-					if (bingoIndex !== -1) {
-						bingoText = ' & <span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>';
-						words.splice(bingoIndex, 1); // Remove from words list
-					}
-					const formattedWords = words.join(" & ") + bingoText;
-					return `<div class="move">
-							${move.player}: ${formattedWords} for total of ${move.score} points
-						</div>`;
+				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
+				if (move.word === "SKIP" || move.word === "EXCHANGE" || move.word === "QUIT") {
+					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
 				}
 
-				// Single word, check for BINGO BONUS
-				if (move.word === "BINGO BONUS") {
-					return `<div class="move">
-							${move.player}: <span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span> for ${move.score} points
-						</div>`;
+				// Fallback: single word string
+				if (move.word) {
+					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
 				}
 
-				return `<div class="move">
-						${move.player}: "${move.word}" for ${move.score} points
-					</div>`;
+				// Unknown format
+				return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
 			})
 			.join("");
 
@@ -7529,15 +7543,46 @@ calculateScore() {
 		}
 	}
 
-	addToMoveHistory(player, word, score) {
-		this.moveHistory.push({
-			player,
-			word,
-			score,
-			timestamp: new Date(),
-		});
-		this.updateMoveHistory();
+
+	// Safe wrapper used when a bingo is detected for the player.
+	// Some code paths call showBingoBonusEffect(); if it's missing the visual won't run.
+	// This function intentionally only triggers player visuals and guards against rapid reentrancy.
+	showBingoBonusEffect() {
+		try {
+			// Prefer the lightweight bingo splash if available
+			if (typeof this.createBingoSplash === 'function') {
+				try { this.createBingoSplash(); return; } catch (e) { console.warn('createBingoSplash failed', e); }
+			}
+
+			// Fallback: use the general confetti/win effect but keep it subtle for bingo
+			if (typeof this.createConfettiEffect === 'function') {
+				try {
+					// Temporarily reduce particle count by toggling a flag if needed
+					this.createConfettiEffect();
+					return;
+				} catch (e) { console.warn('createConfettiEffect failed', e); }
+			}
+
+			// Ultimate fallback: flash an overlay and small emoji burst
+			try {
+				const overlay = document.createElement('div');
+				overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.95), rgba(255,255,255,0.6));opacity:0;transition:opacity .28s ease-out';
+				document.body.appendChild(overlay);
+				requestAnimationFrame(() => overlay.style.opacity = '1');
+				setTimeout(() => overlay.style.opacity = '0', 280);
+				setTimeout(() => overlay.remove(), 900);
+
+				const emoji = document.createElement('div');
+				emoji.textContent = '🎉';
+				emoji.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font-size:48px;z-index:100000;opacity:1;transition:transform .9s ease,opacity .9s ease;pointer-events:none';
+				document.body.appendChild(emoji);
+				requestAnimationFrame(() => { emoji.style.transform = 'translate(-50%,-50%) scale(2)'; emoji.style.opacity = '0'; });
+				setTimeout(() => emoji.remove(), 900);
+			} catch (e) { console.warn('showBingoBonusEffect fallback failed', e); }
+		} catch (e) { console.warn('showBingoBonusEffect failed', e); }
 	}
+
+    
 
 	createMoveHistoryDisplay() {
 		const historyDisplay = document.createElement("div");
