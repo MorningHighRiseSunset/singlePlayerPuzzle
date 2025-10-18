@@ -7088,7 +7088,21 @@ calculateScore() {
 						this._submitStartedSpeak = false;
 						this._inlineSpeakPromise = null;
 					} else {
-						await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+						// Attempt to ensure audio is unlocked for mobile platforms
+						try { await this.ensureAudioUnlocked(); } catch (e) { /* continue */ }
+						let spoke = false;
+						try {
+							await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+							spoke = true;
+						} catch (e) {
+							console.warn('player speakSequence failed', e);
+						}
+						// If TTS didn't run (common on some Androids), fallback to a WebAudio beep for bingo
+						if (bingoBonusAwarded && !spoke) {
+							try {
+								this.playBeep(420, 880);
+							} catch (e) { console.warn('playBeep fallback failed', e); }
+						}
 					}
 					// Player-only visual celebration (confetti/emoji)
 					if (bingoBonusAwarded) {
@@ -7578,19 +7592,25 @@ calculateScore() {
 	// Safe wrapper used when a bingo is detected for the player.
 	// Some code paths call showBingoBonusEffect(); if it's missing the visual won't run.
 	// This function intentionally only triggers player visuals and guards against rapid reentrancy.
-	showBingoBonusEffect() {
+	showBingoBonusEffect(force = false) {
 		try {
 			// Prefer the lightweight bingo splash if available
 			if (typeof this.createBingoSplash === 'function') {
-				try { this.createBingoSplash(); return; } catch (e) { console.warn('createBingoSplash failed', e); }
+				try {
+					// allow forcing the splash even if a previous one was active
+					if (force && this._bingoSplashActive) {
+						// briefly reset flag to allow a new splash
+						this._bingoSplashActive = false;
+					}
+					this.createBingoSplash();
+					// continue to also attempt confetti for robust UX
+				} catch (e) { console.warn('createBingoSplash failed', e); }
 			}
 
 			// Fallback: use the general confetti/win effect but keep it subtle for bingo
 			if (typeof this.createConfettiEffect === 'function') {
 				try {
-					// Temporarily reduce particle count by toggling a flag if needed
 					this.createConfettiEffect();
-					return;
 				} catch (e) { console.warn('createConfettiEffect failed', e); }
 			}
 
@@ -7611,6 +7631,31 @@ calculateScore() {
 				setTimeout(() => emoji.remove(), 900);
 			} catch (e) { console.warn('showBingoBonusEffect fallback failed', e); }
 		} catch (e) { console.warn('showBingoBonusEffect failed', e); }
+	}
+
+	// WebAudio fallback beep for platforms where speechSynthesis is unreliable
+	playBeep(duration = 300, frequency = 880) {
+		try {
+			if (typeof window === 'undefined' || !window.AudioContext && !window.webkitAudioContext) return;
+			const AudioCtx = window.AudioContext || window.webkitAudioContext;
+			const ctx = new AudioCtx();
+			const o = ctx.createOscillator();
+			const g = ctx.createGain();
+			o.type = 'sine';
+			o.frequency.value = frequency;
+			g.gain.value = 0.0001;
+			o.connect(g);
+			g.connect(ctx.destination);
+			const now = ctx.currentTime;
+			g.gain.setValueAtTime(0.0001, now);
+			g.gain.exponentialRampToValueAtTime(0.2, now + 0.01);
+			o.start(now);
+			// ramp down
+			g.gain.exponentialRampToValueAtTime(0.0001, now + duration / 1000);
+			setTimeout(() => {
+				try { o.stop(); ctx.close && ctx.close(); } catch (e) {}
+			}, duration + 50);
+		} catch (e) { console.warn('playBeep failed', e); }
 	}
 
     
