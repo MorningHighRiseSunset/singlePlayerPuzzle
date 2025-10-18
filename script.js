@@ -7013,11 +7013,38 @@ calculateScore() {
 				// Use the robust scoring logic
 				const totalScore = this.calculateScore();
 
-				// Get all formed words for move description
+				// Get all formed words for move description and attach per-word scores
 				const formedWords = this.getFormedWords();
 				let wordDescriptions = [];
+
+				// Prefer structured scores from the most recent calculateScore() call
+				const lastScored = Array.isArray(this._lastScoredWords) ? [...this._lastScoredWords] : [];
+
 				for (const wordInfo of formedWords) {
-					wordDescriptions.push({ word: wordInfo.word, score: null }); // Score is shown in move history
+					let scoreForWord = null;
+					// Try to find matching entry in lastScored (match by word, case-insensitive)
+					if (lastScored.length > 0) {
+						const idx = lastScored.findIndex(w => w.word && w.word.toUpperCase() === wordInfo.word.toUpperCase());
+						if (idx !== -1) {
+							scoreForWord = lastScored[idx].score;
+							lastScored.splice(idx, 1);
+						}
+					}
+
+					// Fallback: compute score directly (ensure newly placed set is available)
+					if (scoreForWord === null) {
+						try {
+							this._scoringNewlyPlacedSet = new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+							scoreForWord = this.calculateWordScore(wordInfo.word, wordInfo.startPos.row, wordInfo.startPos.col, wordInfo.direction === 'horizontal');
+						} catch (e) {
+							console.warn('Failed to compute per-word score fallback', e);
+							scoreForWord = null;
+						} finally {
+							this._scoringNewlyPlacedSet = null;
+						}
+					}
+
+					wordDescriptions.push({ word: wordInfo.word, score: scoreForWord });
 				}
 
 		// Add bonus when the player actually used 7 or more newly placed tiles for a word
@@ -7381,34 +7408,76 @@ calculateScore() {
 	}
 
 	createConfettiEffect() {
-		// Different effects for win vs lose
+		// Different effects for win vs lose with platform-specific styles
 		const isWinner = this.playerScore > this.aiScore;
-		console.log("Creating effect for:", isWinner ? "winner" : "loser");
+		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+		const isIOS = /iPhone|iPad|iPod/i.test(ua);
+		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
+		const isAndroid = /Android/i.test(ua) || isSamsung;
+		const platform = isIOS ? 'ios' : (isSamsung ? 'samsung' : (isAndroid ? 'android' : 'desktop'));
 
-		if (isWinner) {
-			// Happy emojis and colorful confetti for winning
-			const emojis = ["🎉", "🎊", "🏆", "⭐", "🌟", "💫", "✨"];
-			const colors = ["#FFD700", "#FFA500", "#FF69B4", "#00FF00", "#87CEEB"];
-			const particleCount = 150;
+		// Platform-tailored parameters
+		let particleCount = isWinner ? 150 : 50;
+		if (platform === 'ios') particleCount = Math.round(particleCount * 0.8); // fewer larger pieces on iOS
+		if (platform === 'samsung') particleCount = Math.round(particleCount * 1.1); // slightly more for Samsung
 
-			for (let i = 0; i < particleCount; i++) {
-				const particle = document.createElement("div");
+		const baseColors = {
+			ios: ['#F7B2D9', '#BDE0FE', '#C8FACD', '#FFF1B6'],
+			android: ['#4CAF50', '#009688', '#8BC34A', '#FFC107', '#FF5722'],
+			samsung: ['#0D47A1', '#2962FF', '#00B0FF', '#00E5FF', '#448AFF'],
+			desktop: ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#87CEEB']
+		};
 
-				// Randomly choose between emoji or confetti
-				const isEmoji = Math.random() > 0.7; // 30% chance of emoji
+		const emojisByPlatform = {
+			ios: ['🎉','✨','🌟'],
+			android: ['🎉','🎊','💥'],
+			samsung: ['🎉','🏆','🌠'],
+			desktop: ['🎉','🎊','🏆']
+		};
 
-				if (isEmoji) {
-					particle.textContent =
-						emojis[Math.floor(Math.random() * emojis.length)];
-					particle.style.fontSize = `${20 + Math.random() * 20}px`;
+		const colors = baseColors[platform] || baseColors.desktop;
+		const emojis = emojisByPlatform[platform] || emojisByPlatform.desktop;
+
+		// Create particles with slight platform-specific differences
+		for (let i = 0; i < particleCount; i++) {
+			const particle = document.createElement('div');
+
+			// Decide type based on platform — iOS favors emoji, Android/Samsung favors rectangular confetti
+			let useEmoji = false;
+			if (platform === 'ios') useEmoji = Math.random() > 0.45; // ~55% confetti, 45% emoji
+			else if (platform === 'android') useEmoji = Math.random() > 0.7; // fewer emoji
+			else if (platform === 'samsung') useEmoji = Math.random() > 0.75;
+			else useEmoji = Math.random() > 0.6;
+
+			if (useEmoji) {
+				particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+				particle.style.fontSize = `${14 + Math.random() * 28}px`;
+				particle.className = 'confetti-emoji';
+			} else {
+				// Shape and size vary by platform
+				const color = colors[Math.floor(Math.random() * colors.length)];
+				if (platform === 'ios') {
+					particle.style.background = `radial-gradient(circle at 30% 30%, ${color}, #fff)`;
+					particle.style.width = `${8 + Math.random() * 18}px`;
+					particle.style.height = `${8 + Math.random() * 18}px`;
+					particle.style.borderRadius = '50%';
+				} else if (platform === 'samsung') {
+					// metallic rectangles
+					particle.style.background = `linear-gradient(135deg, ${color}, #111)`;
+					particle.style.width = `${6 + Math.random() * 22}px`;
+					particle.style.height = `${10 + Math.random() * 28}px`;
+					particle.style.borderRadius = `${2 + Math.random() * 4}px`;
 				} else {
-					particle.style.backgroundColor =
-						colors[Math.floor(Math.random() * colors.length)];
-					particle.style.width = "10px";
-					particle.style.height = "10px";
+					particle.style.backgroundColor = color;
+					particle.style.width = `${6 + Math.random() * 16}px`;
+					particle.style.height = `${6 + Math.random() * 16}px`;
+					particle.style.borderRadius = `${Math.random() > 0.5 ? '2px' : '4px'}`;
 				}
+				particle.className = 'confetti-dot';
+			}
 
-				particle.style.cssText = `
+			// Common particle styles
+			particle.style.cssText += `
 				position: fixed;
 				pointer-events: none;
 				left: ${Math.random() * 100}vw;
@@ -7418,48 +7487,10 @@ calculateScore() {
 				animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
 				z-index: 1500;
 			`;
-				document.body.appendChild(particle);
 
-				particle.addEventListener("animationend", () => {
-					particle.remove();
-				});
-			}
-		} else {
-			// Taunting emojis for losing
-			const emojis = [
-				"😂",
-				"🤣",
-				"😝",
-				"😜",
-				"😋",
-				"😏",
-				"🤪",
-				"😎",
-				"🤭",
-				"😈",
-			];
-			const emojiCount = 50;
+			document.body.appendChild(particle);
 
-			for (let i = 0; i < emojiCount; i++) {
-				const emoji = document.createElement("div");
-				emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-				emoji.style.cssText = `
-      position: fixed;
-      font-size: ${20 + Math.random() * 20}px;
-      pointer-events: none;
-      left: ${Math.random() * 100}vw;
-      top: -40px;
-      opacity: 1;
-      transform: rotate(${Math.random() * 360}deg);
-      animation: lose-particle-fall ${3 + Math.random() * 2}s linear forwards;
-      z-index: 1500;
-  `;
-				document.body.appendChild(emoji);
-
-				emoji.addEventListener("animationend", () => {
-					emoji.remove();
-				});
-			}
+			particle.addEventListener('animationend', () => particle.remove());
 		}
 	}
 
@@ -9423,6 +9454,18 @@ document.addEventListener("DOMContentLoaded", () => {
             game.showAINotification("Endgame scenario loaded! It's time to test the AI.");
         };
     }
+
+	// Dev helper: dumps last scored words and recent move history to console for debugging
+	if (window.game) {
+		window.game.debugDumpLastScore = function(limit = 10) {
+			try {
+				console.groupCollapsed('DEBUG: Last Scored Words & Recent Moves');
+				console.log('Last scored words (this._lastScoredWords):', this._lastScoredWords || []);
+				console.log('Recent moveHistory (last ' + limit + '):', (this.moveHistory || []).slice(-limit));
+				console.groupEnd();
+			} catch (e) { console.warn('debugDumpLastScore failed', e); }
+		};
+	}
 
 	// Ensure the in-drawer console output container exists for mobile drawer diagnostics
 	try {
