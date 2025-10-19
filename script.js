@@ -7422,90 +7422,160 @@ calculateScore() {
 	}
 
 	createConfettiEffect() {
-		// Different effects for win vs lose with platform-specific styles
-		const isWinner = this.playerScore > this.aiScore;
+		// Staggered orchestrator: run canvas -> DOM -> emoji consecutively to increase
+		// the chance at least one effect shows on flaky browsers.
 		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-		const isIOS = /iPhone|iPad|iPod/i.test(ua);
 		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
-		const isAndroid = /Android/i.test(ua) || isSamsung;
-		const platform = isIOS ? 'ios' : (isSamsung ? 'samsung' : (isAndroid ? 'android' : 'desktop'));
+		const preferEmoji = isSamsung;
 
-		// Platform-tailored parameters
-		let particleCount = isWinner ? 150 : 50;
-		if (platform === 'ios') particleCount = Math.round(particleCount * 0.8); // fewer larger pieces on iOS
-		if (platform === 'samsung') particleCount = Math.round(particleCount * 1.1); // slightly more for Samsung
+		// Tunable timings (ms)
+		const canvasDuration = 2500; // how long canvas confetti runs
+		const domDuration = 2400; // how long DOM confetti runs
+		const gapAfterCanvas = 200; // small gap before starting next
+		const gapAfterDOM = 180;
 
-		const baseColors = {
-			ios: ['#F7B2D9', '#BDE0FE', '#C8FACD', '#FFF1B6'],
-			android: ['#4CAF50', '#009688', '#8BC34A', '#FFC107', '#FF5722'],
-			samsung: ['#0D47A1', '#2962FF', '#00B0FF', '#00E5FF', '#448AFF'],
-			desktop: ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#87CEEB']
-		};
+		let triedSomething = false;
 
-		const emojisByPlatform = {
-			ios: ['🎉','✨','🌟'],
-			android: ['🎉','🎊','💥'],
-			samsung: ['🎉','🏆','🌠'],
-			desktop: ['🎉','🎊','🏆']
-		};
-
-		const colors = baseColors[platform] || baseColors.desktop;
-		const emojis = emojisByPlatform[platform] || emojisByPlatform.desktop;
-
-		// Create particles with slight platform-specific differences
-		for (let i = 0; i < particleCount; i++) {
-			const particle = document.createElement('div');
-
-			// Decide type based on platform — iOS favors emoji, Android/Samsung favors rectangular confetti
-			let useEmoji = false;
-			if (platform === 'ios') useEmoji = Math.random() > 0.45; // ~55% confetti, 45% emoji
-			else if (platform === 'android') useEmoji = Math.random() > 0.7; // fewer emoji
-			else if (platform === 'samsung') useEmoji = Math.random() > 0.75;
-			else useEmoji = Math.random() > 0.6;
-
-			if (useEmoji) {
-				particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-				particle.style.fontSize = `${14 + Math.random() * 28}px`;
-				particle.className = 'confetti-emoji';
-			} else {
-				// Shape and size vary by platform
-				const color = colors[Math.floor(Math.random() * colors.length)];
-				if (platform === 'ios') {
-					particle.style.background = `radial-gradient(circle at 30% 30%, ${color}, #fff)`;
-					particle.style.width = `${8 + Math.random() * 18}px`;
-					particle.style.height = `${8 + Math.random() * 18}px`;
-					particle.style.borderRadius = '50%';
-				} else if (platform === 'samsung') {
-					// metallic rectangles
-					particle.style.background = `linear-gradient(135deg, ${color}, #111)`;
-					particle.style.width = `${6 + Math.random() * 22}px`;
-					particle.style.height = `${10 + Math.random() * 28}px`;
-					particle.style.borderRadius = `${2 + Math.random() * 4}px`;
-				} else {
-					particle.style.backgroundColor = color;
-					particle.style.width = `${6 + Math.random() * 16}px`;
-					particle.style.height = `${6 + Math.random() * 16}px`;
-					particle.style.borderRadius = `${Math.random() > 0.5 ? '2px' : '4px'}`;
-				}
-				particle.className = 'confetti-dot';
+		try {
+			// Start canvas first when available and not explicitly preferring emoji
+			if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
+				try { this.createCanvasConfetti({duration: canvasDuration}); triedSomething = true; }
+				catch (e) { console.warn('createCanvasConfetti failed', e); }
 			}
 
-			// Common particle styles
-			particle.style.cssText += `
-				position: fixed;
-				pointer-events: none;
-				left: ${Math.random() * 100}vw;
-				top: -20px;
-				opacity: 1;
-				transform: rotate(${Math.random() * 360}deg);
-				animation: win-particle-fall ${3 + Math.random() * 2}s linear forwards;
-				z-index: 1500;
-			`;
+			// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
+			const startDOM = () => {
+				if (typeof this.createDOMConfetti === 'function') {
+					try { this.createDOMConfetti({count: Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)))}); triedSomething = true; }
+					catch (e) { console.warn('createDOMConfetti failed', e); }
+				}
+			};
 
-			document.body.appendChild(particle);
+			if (this._canvasConfettiActive) {
+				setTimeout(startDOM, canvasDuration + gapAfterCanvas);
+			} else {
+				setTimeout(startDOM, 420); // short fallback if canvas didn't start
+			}
 
-			particle.addEventListener('animationend', () => particle.remove());
-		}
+			// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
+			const startEmoji = () => {
+				if (typeof this.createEmojiConfetti === 'function') {
+					try { this.createEmojiConfetti({emojis: ['🎉','🎊','✨','🥳','🎈','😊','😄','😁','🙂','😃']}); triedSomething = true; }
+					catch (e) { console.warn('createEmojiConfetti failed', e); }
+				}
+			};
+
+			// Determine when to run emoji: if DOM will be active, schedule after DOM; otherwise after canvas or short delay
+			if (this._canvasConfettiActive) {
+				setTimeout(() => {
+					if (this._domConfettiActive) setTimeout(startEmoji, domDuration + gapAfterDOM);
+					else startEmoji();
+				}, canvasDuration + gapAfterCanvas + 30);
+			} else {
+				// neither started or canvas didn't start; run emoji after a slightly longer fallback
+				setTimeout(startEmoji, 900);
+			}
+
+		} catch (e) { console.warn('createConfettiEffect orchestrator failed', e); }
+
+		// If nothing started at all, do a tiny overlay flash as ultimate fallback
+		setTimeout(() => {
+			if (!triedSomething) {
+				try {
+					const overlay = document.createElement('div');
+					overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
+					document.body.appendChild(overlay);
+					requestAnimationFrame(() => overlay.style.opacity = '1');
+					setTimeout(() => overlay.style.opacity = '0', 140);
+					setTimeout(() => overlay.remove(), 520);
+				} catch (e) { /* best-effort only */ }
+			}
+		}, 1200);
+	}
+
+	// Canvas-based confetti: lightweight particle simulation drawn into a single canvas.
+	createCanvasConfetti(options = {}) {
+		try {
+			if (this._canvasConfettiActive) return;
+			this._canvasConfettiActive = true;
+			const count = options.count || (window.innerWidth > 720 ? 160 : 80);
+			const duration = options.duration || 2500;
+			const canvas = document.createElement('canvas');
+			canvas.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:100000';
+			canvas.width = window.innerWidth * devicePixelRatio;
+			canvas.height = window.innerHeight * devicePixelRatio;
+			canvas.style.width = window.innerWidth + 'px';
+			canvas.style.height = window.innerHeight + 'px';
+			document.body.appendChild(canvas);
+			const ctx = canvas.getContext('2d');
+
+			const colors = options.colors || ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD'];
+			const particles = [];
+			for (let i=0;i<count;i++) {
+				particles.push({
+					x: Math.random() * canvas.width,
+					y: -Math.random() * canvas.height * 0.2,
+					size: (4 + Math.random() * 10) * devicePixelRatio,
+					vx: (Math.random() - 0.5) * 2 * devicePixelRatio,
+					vy: (2 + Math.random() * 4) * devicePixelRatio,
+					angle: Math.random() * Math.PI * 2,
+					spin: (Math.random() - 0.5) * 0.2,
+					color: colors[Math.floor(Math.random()*colors.length)]
+				});
+			}
+
+			let start = performance.now();
+			const raf = (now) => {
+				const t = now - start;
+				ctx.clearRect(0,0,canvas.width,canvas.height);
+				for (let p of particles) {
+					p.x += p.vx;
+					p.y += p.vy + 0.05 * devicePixelRatio; // gentle gravity
+					p.vy *= 0.998;
+					p.angle += p.spin;
+					ctx.save();
+					ctx.translate(p.x, p.y);
+					ctx.rotate(p.angle);
+					ctx.fillStyle = p.color;
+					ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+					ctx.restore();
+				}
+				if (t < duration) requestAnimationFrame(raf);
+				else {
+					try { canvas.remove(); } catch(e){}
+					this._canvasConfettiActive = false;
+				}
+			};
+			requestAnimationFrame(raf);
+		} catch (e) { console.warn('createCanvasConfetti failed', e); this._canvasConfettiActive = false; }
+	}
+
+	// DOM-based confetti: many small elements with simple CSS transforms/transitions.
+	createDOMConfetti(options = {}) {
+		try {
+			if (this._domConfettiActive) return;
+			this._domConfettiActive = true;
+			const count = options.count || Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+			const colors = options.colors || ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD'];
+			const container = document.createElement('div');
+			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
+			document.body.appendChild(container);
+			for (let i=0;i<count;i++) {
+				const el = document.createElement('div');
+				const size = 6 + Math.random() * 18;
+				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-30px;width:${size}px;height:${size*0.6}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:2px;transform:rotate(${Math.random()*360}deg);opacity:1;transition:transform ${1.8 + Math.random()*1.2}s cubic-bezier(.2,.8,.2,1), top ${1.8 + Math.random()*1.2}s ease-out, opacity ${1.6 + Math.random()*1.2}s ease-out;`;
+				container.appendChild(el);
+				setTimeout(() => {
+					const dx = (Math.random()*1 - 0.5) * window.innerWidth * 0.6;
+					const dy = window.innerHeight * (0.45 + Math.random()*0.4);
+					el.style.top = dy + 'px';
+					el.style.transform = `translateX(${dx}px) rotate(${Math.random()*1080}deg) translateY(0)`;
+					el.style.opacity = '0';
+				}, 20 + Math.random()*160);
+				setTimeout(() => el.remove(), 2200 + Math.random()*1000);
+			}
+			setTimeout(() => { try { container.remove(); } catch(e){} this._domConfettiActive = false; }, 2600 + Math.random()*1200);
+		} catch (e) { console.warn('createDOMConfetti failed', e); this._domConfettiActive = false; }
 	}
 
 	// Lightweight bingo splash used for player-only celebrations
