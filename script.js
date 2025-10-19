@@ -7108,7 +7108,9 @@ calculateScore() {
 					if (bingoBonusAwarded) {
 						// Use the same reliable confetti path as computer bingo
 						try {
-							if (typeof this.createConfettiEffect === 'function') {
+							if (typeof this.showBingoBonusEffect === 'function') {
+								this.showBingoBonusEffect();
+							} else if (typeof this.createConfettiEffect === 'function') {
 								this.createConfettiEffect();
 							}
 							// Add celebratory splash after a tiny delay
@@ -7424,7 +7426,11 @@ calculateScore() {
 		requestAnimationFrame(() => {
 			winOverlay.classList.add("active");
 			messageBox.classList.add("celebrate");
-			this.createConfettiEffect();
+			if (typeof this.showBingoBonusEffect === 'function') {
+				try { this.showBingoBonusEffect(); } catch (e) { console.warn('showBingoBonusEffect failed', e); }
+			} else {
+				try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+			}
 		});
 	}
 
@@ -7670,18 +7676,20 @@ calculateScore() {
 		try {
 			if (this._emojiConfettiActive) return;
 			this._emojiConfettiActive = true;
-			const count = options.count || Math.max(40, Math.min(160, Math.floor(window.innerWidth / 8)));
-			const emojis = options.emojis || ['🎉','🎊','✨','🥳','🎈'];
+			const count = options.count || Math.max(40, Math.min(200, Math.floor(window.innerWidth / 6)));
+			const emojis = options.emojis || ['🎉','🎊','✨','🥳','🎈','😊','😄','😁','🙂','😃','😺','😸'];
 			const container = document.createElement('div');
 			container.className = 'emoji-confetti-container';
-			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
+			// higher z-index and visible overflow to improve visibility on top of overlays
+			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:visible;z-index:100005';
+			container.setAttribute('data-confetti-count', count);
 			document.body.appendChild(container);
 
 			for (let i = 0; i < count; i++) {
 				const el = document.createElement('div');
 				el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
 				const size = 18 + Math.random() * 26;
-				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-40px;font-size:${size}px;opacity:1;transform:rotate(${Math.random()*360}deg);transition:transform 2.2s ease-out, top 2.2s cubic-bezier(.2,.9,.3,1), opacity 2.2s ease-out;`;
+				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-40px;font-size:${size}px;opacity:1;transform:rotate(${Math.random()*360}deg);transition:transform 2.4s ease-out, top 2.4s cubic-bezier(.2,.9,.3,1), opacity 2.4s ease-out;will-change:transform,opacity;`;
 				container.appendChild(el);
 
 				// Force layout then animate
@@ -7694,12 +7702,74 @@ calculateScore() {
 				setTimeout(() => el.remove(), 2400 + Math.random()*800);
 			}
 
-			setTimeout(() => { this._emojiConfettiActive = false; container.remove(); }, 3000 + Math.random()*800);
+			// Keep container slightly longer on screen to help flaky renderers
+			setTimeout(() => { this._emojiConfettiActive = false; try { container.remove(); } catch(e){} }, 3800 + Math.random()*1200);
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}
 
 
 	// Function removed - player bingo now uses createConfettiEffect directly like computer bingo
+
+	// Safe wrapper used when a bingo is detected for the player or AI.
+	// This function triggers player visuals and guards against rapid reentrancy.
+	showBingoBonusEffect(force = false) {
+		try {
+			// Prefer the lightweight bingo splash if available
+			if (typeof this.createBingoSplash === 'function') {
+				try {
+					// allow forcing the splash even if a previous one was active
+					if (force && this._bingoSplashActive) {
+						this._bingoSplashActive = false;
+					}
+					this.createBingoSplash();
+				} catch (e) { console.warn('createBingoSplash failed', e); }
+			}
+
+			// Fallback: use the general confetti/win effect but keep it subtle for bingo
+			try {
+				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
+				const isAndroid = /Android/i.test(ua) || isSamsung;
+				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
+					try {
+						console.info('[BingoEffect] Attempting emoji confetti for Android/Samsung');
+						this.createEmojiConfetti();
+						// After a short delay, verify whether emoji elements exist; retry once if nothing rendered
+						setTimeout(() => {
+							try {
+								const container = document.querySelector('.emoji-confetti-container');
+								const found = container && container.children && container.children.length > 0;
+								console.info('[BingoEffect] Emoji confetti presence check:', { found, children: container ? container.children.length : 0 });
+								if (!found) {
+									console.warn('[BingoEffect] No emoji confetti rendered; retrying with larger count');
+									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)) }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
+								}
+							} catch (e) { console.warn('Emoji confetti verification failed', e); }
+						}, 400);
+					} catch (e) { console.warn('createEmojiConfetti failed', e); }
+				} else if (typeof this.createConfettiEffect === 'function') {
+					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				}
+			} catch (e) { console.warn('bingo confetti selection failed', e); }
+
+			// Ultimate fallback: flash an overlay and small emoji burst
+			try {
+				const overlay = document.createElement('div');
+				overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.95), rgba(255,255,255,0.6));opacity:0;transition:opacity .28s ease-out';
+				document.body.appendChild(overlay);
+				requestAnimationFrame(() => overlay.style.opacity = '1');
+				setTimeout(() => overlay.style.opacity = '0', 280);
+				setTimeout(() => overlay.remove(), 900);
+
+				const emoji = document.createElement('div');
+				emoji.textContent = '🎉';
+				emoji.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font-size:48px;z-index:100000;opacity:1;transition:transform .9s ease,opacity .9s ease;pointer-events:none';
+				document.body.appendChild(emoji);
+				requestAnimationFrame(() => { emoji.style.transform = 'translate(-50%,-50%) scale(2)'; emoji.style.opacity = '0'; });
+				setTimeout(() => emoji.remove(), 900);
+			} catch (e) { console.warn('showBingoBonusEffect fallback failed', e); }
+		} catch (e) { console.warn('showBingoBonusEffect failed', e); }
+	}
 
 	// WebAudio fallback beep for platforms where speechSynthesis is unreliable
 	playBeep(duration = 300, frequency = 880) {
