@@ -7106,11 +7106,18 @@ calculateScore() {
 					}
 					// Player-only visual celebration (confetti/emoji)
 					if (bingoBonusAwarded) {
-						if (typeof this.showBingoBonusEffect === 'function') {
-							try { this.showBingoBonusEffect(); } catch (e) { console.error('Bingo effect failed', e); }
-						} else if (typeof this.createBingoSplash === 'function') {
-							try { this.createBingoSplash(); } catch (e) { console.error('Bingo splash failed', e); }
-						}
+						// Use the same reliable confetti path as computer bingo
+						try {
+							if (typeof this.createConfettiEffect === 'function') {
+								this.createConfettiEffect();
+							}
+							// Add celebratory splash after a tiny delay
+							setTimeout(() => {
+								if (typeof this.createBingoSplash === 'function') {
+									try { this.createBingoSplash(); } catch(e) { console.warn('Bingo splash skipped', e); }
+								}
+							}, 180);
+						} catch (e) { console.error('Player bingo effect failed', e); }
 					}
 				} catch (e) {
 					console.error('Player speakSequence failed', e);
@@ -7692,55 +7699,7 @@ calculateScore() {
 	}
 
 
-	// Safe wrapper used when a bingo is detected for the player.
-	// Some code paths call showBingoBonusEffect(); if it's missing the visual won't run.
-	// This function intentionally only triggers player visuals and guards against rapid reentrancy.
-	showBingoBonusEffect(force = false) {
-		try {
-			// Prefer the lightweight bingo splash if available
-			if (typeof this.createBingoSplash === 'function') {
-				try {
-					// allow forcing the splash even if a previous one was active
-					if (force && this._bingoSplashActive) {
-						// briefly reset flag to allow a new splash
-						this._bingoSplashActive = false;
-					}
-					this.createBingoSplash();
-					// continue to also attempt confetti for robust UX
-				} catch (e) { console.warn('createBingoSplash failed', e); }
-			}
-
-			// Fallback: use the general confetti/win effect but keep it subtle for bingo
-			// On some Samsung/Android builds the main confetti can be unreliable; prefer emoji confetti there
-			try {
-				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
-				const isAndroid = /Android/i.test(ua) || isSamsung;
-				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
-					try { this.createEmojiConfetti(); } catch (e) { console.warn('createEmojiConfetti failed', e); }
-				} else if (typeof this.createConfettiEffect === 'function') {
-					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
-				}
-			} catch (e) { console.warn('bingo confetti selection failed', e); }
-
-			// Ultimate fallback: flash an overlay and small emoji burst
-			try {
-				const overlay = document.createElement('div');
-				overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.95), rgba(255,255,255,0.6));opacity:0;transition:opacity .28s ease-out';
-				document.body.appendChild(overlay);
-				requestAnimationFrame(() => overlay.style.opacity = '1');
-				setTimeout(() => overlay.style.opacity = '0', 280);
-				setTimeout(() => overlay.remove(), 900);
-
-				const emoji = document.createElement('div');
-				emoji.textContent = '🎉';
-				emoji.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font-size:48px;z-index:100000;opacity:1;transition:transform .9s ease,opacity .9s ease;pointer-events:none';
-				document.body.appendChild(emoji);
-				requestAnimationFrame(() => { emoji.style.transform = 'translate(-50%,-50%) scale(2)'; emoji.style.opacity = '0'; });
-				setTimeout(() => emoji.remove(), 900);
-			} catch (e) { console.warn('showBingoBonusEffect fallback failed', e); }
-		} catch (e) { console.warn('showBingoBonusEffect failed', e); }
-	}
+	// Function removed - player bingo now uses createConfettiEffect directly like computer bingo
 
 	// WebAudio fallback beep for platforms where speechSynthesis is unreliable
 	playBeep(duration = 300, frequency = 880) {
