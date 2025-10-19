@@ -7588,6 +7588,39 @@ calculateScore() {
 		}
 	}
 
+	// Simple emoji-only confetti designed to be reliable on Android/Samsung browsers
+	createEmojiConfetti(options = {}) {
+		try {
+			if (this._emojiConfettiActive) return;
+			this._emojiConfettiActive = true;
+			const count = options.count || Math.max(40, Math.min(160, Math.floor(window.innerWidth / 8)));
+			const emojis = options.emojis || ['🎉','🎊','✨','🥳','🎈'];
+			const container = document.createElement('div');
+			container.className = 'emoji-confetti-container';
+			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
+			document.body.appendChild(container);
+
+			for (let i = 0; i < count; i++) {
+				const el = document.createElement('div');
+				el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+				const size = 18 + Math.random() * 26;
+				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-40px;font-size:${size}px;opacity:1;transform:rotate(${Math.random()*360}deg);transition:transform 2.2s ease-out, top 2.2s cubic-bezier(.2,.9,.3,1), opacity 2.2s ease-out;`;
+				container.appendChild(el);
+
+				// Force layout then animate
+				setTimeout(() => {
+					el.style.top = (60 + Math.random()*70) + 'vh';
+					el.style.transform = `translateY(0) rotate(${Math.random()*720}deg) scale(${0.8 + Math.random()*0.6})`;
+					el.style.opacity = '0';
+				}, 20 + Math.random()*120);
+
+				setTimeout(() => el.remove(), 2400 + Math.random()*800);
+			}
+
+			setTimeout(() => { this._emojiConfettiActive = false; container.remove(); }, 3000 + Math.random()*800);
+		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
+	}
+
 
 	// Safe wrapper used when a bingo is detected for the player.
 	// Some code paths call showBingoBonusEffect(); if it's missing the visual won't run.
@@ -7608,11 +7641,17 @@ calculateScore() {
 			}
 
 			// Fallback: use the general confetti/win effect but keep it subtle for bingo
-			if (typeof this.createConfettiEffect === 'function') {
-				try {
-					this.createConfettiEffect();
-				} catch (e) { console.warn('createConfettiEffect failed', e); }
-			}
+			// On some Samsung/Android builds the main confetti can be unreliable; prefer emoji confetti there
+			try {
+				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
+				const isAndroid = /Android/i.test(ua) || isSamsung;
+				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
+					try { this.createEmojiConfetti(); } catch (e) { console.warn('createEmojiConfetti failed', e); }
+				} else if (typeof this.createConfettiEffect === 'function') {
+					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				}
+			} catch (e) { console.warn('bingo confetti selection failed', e); }
 
 			// Ultimate fallback: flash an overlay and small emoji burst
 			try {
