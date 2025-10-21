@@ -3320,6 +3320,17 @@ async executeAIPlay(play) {
 				this.fillRacks();
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
+
+				// If AI scored a bingo, trigger the same bingo visuals as the player
+				if (aiBingo) {
+					try {
+						if (typeof this.showBingoBonusEffect === 'function') {
+							this.showBingoBonusEffect();
+						} else if (typeof this.createConfettiEffect === 'function') {
+							this.createConfettiEffect();
+						}
+					} catch (e) { console.warn('AI bingo visual failed', e); }
+				}
 				resolve();
 			});
         }, 500);
@@ -7684,6 +7695,7 @@ calculateScore() {
 			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:visible;z-index:100005';
 			container.setAttribute('data-confetti-count', count);
 			document.body.appendChild(container);
+			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container appended, count=' + count); } catch(e){}
 
 			for (let i = 0; i < count; i++) {
 				const el = document.createElement('div');
@@ -7691,6 +7703,7 @@ calculateScore() {
 				const size = 18 + Math.random() * 26;
 				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-40px;font-size:${size}px;opacity:1;transform:rotate(${Math.random()*360}deg);transition:transform 2.4s ease-out, top 2.4s cubic-bezier(.2,.9,.3,1), opacity 2.4s ease-out;will-change:transform,opacity;`;
 				container.appendChild(el);
+				if (i % 12 === 0) try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji element created idx=' + i); } catch(e){}
 
 				// Force layout then animate
 				setTimeout(() => {
@@ -7704,6 +7717,7 @@ calculateScore() {
 
 			// Keep container slightly longer on screen to help flaky renderers
 			setTimeout(() => { this._emojiConfettiActive = false; try { container.remove(); } catch(e){} }, 3800 + Math.random()*1200);
+			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji scheduled removal'); } catch(e){}
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}
 
@@ -7727,12 +7741,14 @@ calculateScore() {
 
 			// Fallback: use the general confetti/win effect but keep it subtle for bingo
 			try {
+				try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] selecting confetti variant'); } catch(e){}
 				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
 				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 				const isAndroid = /Android/i.test(ua) || isSamsung;
 				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
 					try {
 						console.info('[BingoEffect] Attempting emoji confetti for Android/Samsung');
+						try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Attempting emoji confetti for Android/Samsung'); } catch(e){}
 						this.createEmojiConfetti();
 						// After a short delay, verify whether emoji elements exist; retry once if nothing rendered
 						setTimeout(() => {
@@ -7740,8 +7756,10 @@ calculateScore() {
 								const container = document.querySelector('.emoji-confetti-container');
 								const found = container && container.children && container.children.length > 0;
 								console.info('[BingoEffect] Emoji confetti presence check:', { found, children: container ? container.children.length : 0 });
+								try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Emoji confetti presence check: found=' + !!found + ' children=' + (container ? container.children.length : 0)); } catch(e){}
 								if (!found) {
 									console.warn('[BingoEffect] No emoji confetti rendered; retrying with larger count');
+									try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] retrying emoji confetti with larger count'); } catch(e){}
 									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)) }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
 								}
 							} catch (e) { console.warn('Emoji confetti verification failed', e); }
