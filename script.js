@@ -7163,8 +7163,16 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				// Show a non-modal, in-page toast instead of native alert to avoid system beep
-				try { this.showToast && this.showToast('Invalid word! Please try again.'); } catch(e) { /* ignore */ }
+				// Show an animated toast for invalid words
+				try { 
+					if (typeof this.showAnimatedToast === 'function') {
+						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+					} else if (this.showToast) {
+						this.showToast('Invalid word! Please try again.');
+					}
+				} catch(e) { 
+					console.warn('Toast display failed:', e);
+				}
 				this.resetPlacedTiles();
 			}
 		} finally {
