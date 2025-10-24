@@ -5798,6 +5798,12 @@ formedWords.forEach((wordInfo) => {
             );
             cell.innerHTML = "";
 
+            // If this was a wild tile, reset its letter back to *
+            if (tile && tile.originalLetter === "*") {
+                tile.letter = "*";
+                tile.score = 0;
+            }
+
             // Always restore the center star if this is the center cell and it's empty
             if (row === 7 && col === 7) {
                 const existingStar = cell.querySelector('.center-star');
@@ -7069,9 +7075,10 @@ calculateScore() {
 				if (this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
 			}
 
-			if (wordInfo.word.length >= 7) {
+			// Check for bingo bonus conditions: 7+ letter word OR score > 50
+			if (wordInfo.word.length >= 7 || wordInfo.score > 50) {
 				wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-				console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
+				console.log(`[Player] Added 50 point bonus for ${wordInfo.score > 50 ? 'high scoring' : wordInfo.word.length + '-letter'} word: ${wordInfo.word}`);
 				bingoBonusAwarded = true;
 				console.log('[Player] BINGO DETECTED');
 				console.log('[Debug] wordDescriptions now:', wordDescriptions);
@@ -7682,41 +7689,82 @@ calculateScore() {
 		}
 	}
 
-	// Simple emoji-only confetti designed to be reliable on Android/Samsung browsers
+	// Enhanced emoji-only confetti designed to be extra reliable on Android/Samsung browsers
 	createEmojiConfetti(options = {}) {
 		try {
 			if (this._emojiConfettiActive) return;
 			this._emojiConfettiActive = true;
-			const count = options.count || Math.max(40, Math.min(200, Math.floor(window.innerWidth / 6)));
-			const emojis = options.emojis || ['🎉','🎊','✨','🥳','🎈','😊','😄','😁','🙂','😃','😺','😸'];
+			
+			// Increase particle count on mobile/Samsung for better effect
+			const baseCount = Math.max(50, Math.min(250, Math.floor(window.innerWidth / 5)));
+			const count = options.count || baseCount;
+			
+			// Enhanced emoji set with more variety and Samsung-friendly emojis
+			const emojis = options.emojis || ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
 			const container = document.createElement('div');
 			container.className = 'emoji-confetti-container';
 			// higher z-index and visible overflow to improve visibility on top of overlays
-			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:visible;z-index:100005';
+			// Enhanced container styles for better visibility on Samsung/Android
+			container.style.cssText = `
+				position: fixed;
+				left: 0;
+				top: 0;
+				width: 100vw;
+				height: 100vh;
+				pointer-events: none;
+				overflow: visible;
+				z-index: 100010;
+				transform: translateZ(0);
+				-webkit-transform: translateZ(0);
+			`;
 			container.setAttribute('data-confetti-count', count);
 			document.body.appendChild(container);
 			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container appended, count=' + count); } catch(e){}
 
+			// Enhanced particle creation with better visibility for Samsung/Android
 			for (let i = 0; i < count; i++) {
 				const el = document.createElement('div');
 				el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-				const size = 18 + Math.random() * 26;
+				// Increased base size for better visibility on mobile
+				const size = 24 + Math.random() * 30;
 				el.style.cssText = `position:absolute;left:${Math.random()*100}vw;top:-40px;font-size:${size}px;opacity:1;transform:rotate(${Math.random()*360}deg);transition:transform 2.4s ease-out, top 2.4s cubic-bezier(.2,.9,.3,1), opacity 2.4s ease-out;will-change:transform,opacity;`;
 				container.appendChild(el);
 				if (i % 12 === 0) try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji element created idx=' + i); } catch(e){}
 
 				// Force layout then animate
+				// Enhanced animation timing for smoother performance on Samsung/Android
 				setTimeout(() => {
-					el.style.top = (60 + Math.random()*70) + 'vh';
-					el.style.transform = `translateY(0) rotate(${Math.random()*720}deg) scale(${0.8 + Math.random()*0.6})`;
+					el.style.top = (50 + Math.random()*80) + 'vh';
+					el.style.transform = `translateY(0) rotate(${Math.random()*720}deg) scale(${1.0 + Math.random()*0.8})`;
 					el.style.opacity = '0';
-				}, 20 + Math.random()*120);
+					
+					// Log first and last particle for debugging
+					if (i === 0 || i === count-1) {
+						try { this.appendConsoleMessage && this.appendConsoleMessage(`[Confetti] emoji particle ${i} animated`); } catch(e){}
+					}
+				}, 10 + Math.random()*100);
 
-				setTimeout(() => el.remove(), 2400 + Math.random()*800);
+				// Extended duration for better visibility
+				setTimeout(() => {
+					el.remove();
+					// Log cleanup of first and last particles
+					if (i === 0 || i === count-1) {
+						try { this.appendConsoleMessage && this.appendConsoleMessage(`[Confetti] emoji particle ${i} removed`); } catch(e){}
+					}
+				}, 2800 + Math.random()*1000);
 			}
 
-			// Keep container slightly longer on screen to help flaky renderers
-			setTimeout(() => { this._emojiConfettiActive = false; try { container.remove(); } catch(e){} }, 3800 + Math.random()*1200);
+			// Extended container lifetime with safety checks for Samsung/Android
+			setTimeout(() => {
+				this._emojiConfettiActive = false;
+				try {
+					container.remove();
+					this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container cleanup complete');
+				} catch(e){
+					console.warn('Emoji container cleanup failed:', e);
+					try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container cleanup failed: ' + e); } catch(e2){}
+				}
+			}, 4200 + Math.random()*1200);
 			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji scheduled removal'); } catch(e){}
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}
