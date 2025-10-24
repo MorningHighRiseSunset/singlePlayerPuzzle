@@ -7069,9 +7069,9 @@ calculateScore() {
 				if (this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
 			}
 
-			if (newlyPlacedCount >= 7) {
+			if (wordInfo.word.length >= 7) {
 				wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-				console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word (used ${newlyPlacedCount} new tiles): ${wordInfo.word}`);
+				console.log(`[Player] Added 50 point bonus for ${wordInfo.word.length}-letter word: ${wordInfo.word}`);
 				bingoBonusAwarded = true;
 				console.log('[Player] BINGO DETECTED');
 				console.log('[Debug] wordDescriptions now:', wordDescriptions);
