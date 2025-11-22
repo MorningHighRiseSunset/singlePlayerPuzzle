@@ -3270,10 +3270,14 @@ async executeAIPlay(play) {
 
 			// --- BINGO BONUS for AI ---
 			let aiBingo = false;
+			let aiBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
 			wordsList.forEach(w => {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
 					aiBingo = true;
+					const len = w.word.length;
+					if (len >= 9) aiBingoVariant = 'gold';
+					else if (len === 8 && aiBingoVariant !== 'gold') aiBingoVariant = 'silver';
 					// AI should not display any celebration (no audio, no confetti) per user request.
 				}
 			});
@@ -3325,9 +3329,9 @@ async executeAIPlay(play) {
 				if (aiBingo) {
 					try {
 						if (typeof this.showBingoBonusEffect === 'function') {
-							this.showBingoBonusEffect();
+							this.showBingoBonusEffect(false, aiBingoVariant);
 						} else if (typeof this.createConfettiEffect === 'function') {
-							this.createConfettiEffect();
+							this.createConfettiEffect({ variant: aiBingoVariant });
 						}
 					} catch (e) { console.warn('AI bingo visual failed', e); }
 				}
@@ -6655,7 +6659,7 @@ calculateScore() {
 			try {
 				if (typeof this.createBingoSplash === 'function') {
 					console.log('[Visual] createBingoSplash() will be called');
-					this.createBingoSplash();
+					this.createBingoSplash('standard');
 				}
 			} catch (e) {
 				console.warn('createBingoSplash failed', e);
@@ -7066,6 +7070,7 @@ calculateScore() {
 
 		// Add bonus when the player actually used 7 or more newly placed tiles for a word
 		let bingoBonusAwarded = false;
+		let playerBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
 		formedWords.forEach(wordInfo => {
 			const len = wordInfo.word.length;
 			let newlyPlacedCount = 0;
@@ -7080,7 +7085,10 @@ calculateScore() {
 				wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
 				console.log(`[Player] Added 50 point bonus for ${wordInfo.score > 50 ? 'high scoring' : wordInfo.word.length + '-letter'} word: ${wordInfo.word}`);
 				bingoBonusAwarded = true;
-				console.log('[Player] BINGO DETECTED');
+				// choose variant based on longest bingo word encountered this move
+				if (len >= 9) playerBingoVariant = 'gold';
+				else if (len === 8 && playerBingoVariant !== 'gold') playerBingoVariant = 'silver';
+				console.log('[Player] BINGO DETECTED', { len, playerBingoVariant });
 				console.log('[Debug] wordDescriptions now:', wordDescriptions);
 			}
 		});
@@ -7124,17 +7132,17 @@ calculateScore() {
 					}
 					// Player-only visual celebration (confetti/emoji)
 					if (bingoBonusAwarded) {
-						// Use the same reliable confetti path as computer bingo
+						// Use the same reliable confetti path as computer bingo, but pass variant
 						try {
 							if (typeof this.showBingoBonusEffect === 'function') {
-								this.showBingoBonusEffect();
+								this.showBingoBonusEffect(false, playerBingoVariant);
 							} else if (typeof this.createConfettiEffect === 'function') {
-								this.createConfettiEffect();
+								this.createConfettiEffect({ variant: playerBingoVariant });
 							}
 							// Add celebratory splash after a tiny delay
 							setTimeout(() => {
 								if (typeof this.createBingoSplash === 'function') {
-									try { this.createBingoSplash(); } catch(e) { console.warn('Bingo splash skipped', e); }
+									try { this.createBingoSplash(playerBingoVariant); } catch(e) { console.warn('Bingo splash skipped', e); }
 								}
 							}, 180);
 						} catch (e) { console.error('Player bingo effect failed', e); }
@@ -7460,16 +7468,19 @@ calculateScore() {
 		});
 	}
 
-	createConfettiEffect() {
+	createConfettiEffect(options = {}) {
+		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
+		options = options || {};
+		const variant = options.variant || 'standard';
 		// Staggered orchestrator: run canvas -> DOM -> emoji consecutively to increase
 		// the chance at least one effect shows on flaky browsers.
 		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
 		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 		const preferEmoji = isSamsung;
 
-		// Tunable timings (ms)
-		const canvasDuration = 2500; // how long canvas confetti runs
-		const domDuration = 2400; // how long DOM confetti runs
+		// Tunable timings (ms) vary slightly by variant
+		const canvasDuration = variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500;
+		const domDuration = variant === 'gold' ? 3000 : variant === 'silver' ? 2600 : 2400;
 		const gapAfterCanvas = 200; // small gap before starting next
 		const gapAfterDOM = 180;
 
@@ -7478,15 +7489,18 @@ calculateScore() {
 		try {
 			// Start canvas first when available and not explicitly preferring emoji
 			if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
-				try { this.createCanvasConfetti({duration: canvasDuration}); triedSomething = true; }
+				try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
 				catch (e) { console.warn('createCanvasConfetti failed', e); }
 			}
 
 			// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
 			const startDOM = () => {
 				if (typeof this.createDOMConfetti === 'function') {
-					try { this.createDOMConfetti({count: Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)))}); triedSomething = true; }
-					catch (e) { console.warn('createDOMConfetti failed', e); }
+					try {
+						const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+						const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
+						this.createDOMConfetti({ count, variant }); triedSomething = true;
+					} catch (e) { console.warn('createDOMConfetti failed', e); }
 				}
 			};
 
@@ -7499,8 +7513,10 @@ calculateScore() {
 			// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
 			const startEmoji = () => {
 				if (typeof this.createEmojiConfetti === 'function') {
-					try { this.createEmojiConfetti({emojis: ['🎉','🎊','✨','🥳','🎈','😊','😄','😁','🙂','😃']}); triedSomething = true; }
-					catch (e) { console.warn('createEmojiConfetti failed', e); }
+					try {
+						const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
+						this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
+					} catch (e) { console.warn('createEmojiConfetti failed', e); }
 				}
 			};
 
@@ -7537,8 +7553,9 @@ calculateScore() {
 		try {
 			if (this._canvasConfettiActive) return;
 			this._canvasConfettiActive = true;
-			const count = options.count || (window.innerWidth > 720 ? 160 : 80);
-			const duration = options.duration || 2500;
+			const variant = options.variant || 'standard';
+			const count = options.count || (window.innerWidth > 720 ? (variant === 'gold' ? 260 : variant === 'silver' ? 200 : 160) : (variant === 'gold' ? 140 : variant === 'silver' ? 110 : 80));
+			const duration = options.duration || (variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500);
 			const canvas = document.createElement('canvas');
 			canvas.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:100000';
 			canvas.width = window.innerWidth * devicePixelRatio;
@@ -7548,7 +7565,7 @@ calculateScore() {
 			document.body.appendChild(canvas);
 			const ctx = canvas.getContext('2d');
 
-			const colors = options.colors || ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD'];
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const particles = [];
 			for (let i=0;i<count;i++) {
 				particles.push({
@@ -7594,8 +7611,10 @@ calculateScore() {
 		try {
 			if (this._domConfettiActive) return;
 			this._domConfettiActive = true;
-			const count = options.count || Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-			const colors = options.colors || ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD'];
+			const variant = options.variant || 'standard';
+			const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const container = document.createElement('div');
 			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
 			document.body.appendChild(container);
@@ -7618,7 +7637,8 @@ calculateScore() {
 	}
 
 	// Lightweight bingo splash used for player-only celebrations
-	createBingoSplash() {
+	// variant: 'standard' | 'silver' | 'gold'
+	createBingoSplash(variant = 'standard') {
 		// Subtle guard if called excessively
 		try {
 			this.appendConsoleMessage && this.appendConsoleMessage('createBingoSplash() called');
@@ -7629,8 +7649,16 @@ calculateScore() {
 		}
 		this._bingoSplashActive = true;
 		try {
-			const emojis = ["🎉","🎊","✨","🌟","💫","🎈","🥳"];
-			const colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
+			let emojis = ["🎉","🎊","✨","🌟","💫","🎈","🥳"];
+			let colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
+			// Tune visuals based on variant
+			if (variant === 'silver') {
+				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈"];
+				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40"];
+			} else if (variant === 'gold') {
+				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇"];
+				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081"];
+			}
 
 			// Overlay flash
 			const overlay = document.createElement('div');
@@ -7645,7 +7673,8 @@ calculateScore() {
 			setTimeout(() => overlay.style.opacity = '0', 320);
 			setTimeout(() => overlay.remove(), 1200);
 
-			const count = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
+			const baseCount = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
+			const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
 			const cx = window.innerWidth / 2;
 			const cy = Math.max(80, window.innerHeight * 0.28); // burst from upper-center, slightly higher on mobile
 
@@ -7702,13 +7731,15 @@ calculateScore() {
 		try {
 			if (this._emojiConfettiActive) return;
 			this._emojiConfettiActive = true;
-			
+            
+			const variant = options.variant || 'standard';
 			// Increase particle count on mobile/Samsung for better effect
 			const baseCount = Math.max(50, Math.min(250, Math.floor(window.innerWidth / 5)));
-			const count = options.count || baseCount;
-			
+			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
+            
 			// Enhanced emoji set with more variety and Samsung-friendly emojis
-			const emojis = options.emojis || ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
+			const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊'] : variant === 'silver' ? ['🎉','🎖️','✨','🎊','🥈'] : ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
+			const emojis = options.emojis || defaultEmojis;
 			const container = document.createElement('div');
 			container.className = 'emoji-confetti-container';
 			// higher z-index and visible overflow to improve visibility on top of overlays
@@ -7782,7 +7813,8 @@ calculateScore() {
 
 	// Safe wrapper used when a bingo is detected for the player or AI.
 	// This function triggers player visuals and guards against rapid reentrancy.
-	showBingoBonusEffect(force = false) {
+	// variant: 'standard' | 'silver' | 'gold'
+	showBingoBonusEffect(force = false, variant = 'standard') {
 		try {
 			// Prefer the lightweight bingo splash if available
 			if (typeof this.createBingoSplash === 'function') {
@@ -7791,13 +7823,13 @@ calculateScore() {
 					if (force && this._bingoSplashActive) {
 						this._bingoSplashActive = false;
 					}
-					this.createBingoSplash();
+					this.createBingoSplash(variant);
 				} catch (e) { console.warn('createBingoSplash failed', e); }
 			}
 
 			// Fallback: use the general confetti/win effect but keep it subtle for bingo
 			try {
-				try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] selecting confetti variant'); } catch(e){}
+				try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] selecting confetti variant ' + variant); } catch(e){}
 				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
 				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 				const isAndroid = /Android/i.test(ua) || isSamsung;
@@ -7805,7 +7837,7 @@ calculateScore() {
 					try {
 						console.info('[BingoEffect] Attempting emoji confetti for Android/Samsung');
 						try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Attempting emoji confetti for Android/Samsung'); } catch(e){}
-						this.createEmojiConfetti();
+						this.createEmojiConfetti({ variant });
 						// After a short delay, verify whether emoji elements exist; retry once if nothing rendered
 						setTimeout(() => {
 							try {
@@ -7816,13 +7848,13 @@ calculateScore() {
 								if (!found) {
 									console.warn('[BingoEffect] No emoji confetti rendered; retrying with larger count');
 									try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] retrying emoji confetti with larger count'); } catch(e){}
-									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)) }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
+									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)), variant }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
 								}
 							} catch (e) { console.warn('Emoji confetti verification failed', e); }
 						}, 400);
 					} catch (e) { console.warn('createEmojiConfetti failed', e); }
 				} else if (typeof this.createConfettiEffect === 'function') {
-					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+					try { this.createConfettiEffect({ variant }); } catch (e) { console.warn('createConfettiEffect failed', e); }
 				}
 			} catch (e) { console.warn('bingo confetti selection failed', e); }
 
@@ -7836,8 +7868,11 @@ calculateScore() {
 				setTimeout(() => overlay.remove(), 900);
 
 				const emoji = document.createElement('div');
-				emoji.textContent = '🎉';
-				emoji.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font-size:48px;z-index:100000;opacity:1;transition:transform .9s ease,opacity .9s ease;pointer-events:none';
+				// Pick celebratory emoji based on variant
+				const variantEmoji = variant === 'gold' ? '🏆' : variant === 'silver' ? '🎖️' : '🎉';
+				emoji.textContent = variantEmoji;
+				const fontSize = variant === 'gold' ? 64 : variant === 'silver' ? 56 : 48;
+				emoji.style.cssText = 'position:fixed;left:50%;top:28%;transform:translate(-50%,-50%);font-size:' + fontSize + 'px;z-index:100000;opacity:1;transition:transform .9s ease,opacity .9s ease;pointer-events:none';
 				document.body.appendChild(emoji);
 				requestAnimationFrame(() => { emoji.style.transform = 'translate(-50%,-50%) scale(2)'; emoji.style.opacity = '0'; });
 				setTimeout(() => emoji.remove(), 900);
