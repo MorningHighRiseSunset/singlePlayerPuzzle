@@ -165,6 +165,8 @@ class ScrabbleGame {
 		this.aiValidationLogSet = new Set();
 		// Set to true to enable verbose AI validation logging (off by default)
 		this.showAIDebug = false;
+		// preferred language short code (e.g. 'en','es','zh','fr') persisted to localStorage
+		this.preferredLang = (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
 
 		// When the player clicks Submit/Play, we may start speech inside that gesture
 		this._submitStartedSpeak = false;
@@ -5187,6 +5189,27 @@ formedWords.forEach((wordInfo) => {
 		this.fillRacks();
 		this.setupTapPlacement();
 		this.setupEventListeners();
+		// Initialize all language selector dropdowns and persist choice
+		try {
+			const selectors = Array.from(document.querySelectorAll('select.language-button'));
+			if (selectors && selectors.length > 0) {
+				// set initial value from stored preference for all selectors
+				for (const s of selectors) {
+					try { s.value = this.preferredLang || 'en'; } catch (e) { /* ignore */ }
+					// add change listener
+					s.addEventListener('change', (ev) => {
+						const val = ev.target.value || 'en';
+						this.preferredLang = val;
+						try { localStorage.setItem('preferredLang', this.preferredLang); } catch (e) { /* ignore */ }
+						// sync other selectors
+						for (const o of selectors) {
+							if (o !== ev.target) try { o.value = val; } catch (e) {}
+						}
+						console.log('Preferred language set to', this.preferredLang);
+					});
+				}
+			}
+		} catch (e) { /* ignore */ }
 		this.updateGameState();
 
 		// --- Build the Trie for pro-level AI word generation ---
@@ -6630,12 +6653,11 @@ calculateScore() {
 	}
 
 	speakWord(word) {
-		if ('speechSynthesis' in window && word) {
-			const utter = new SpeechSynthesisUtterance(word);
-			utter.lang = 'en-US';
-			utter.rate = 0.9;
-			window.speechSynthesis.speak(utter);
-		}
+		if (!word) return;
+		// Prefer remote TTS via Netlify function; fallback to browser TTS via _speakWithRetry
+		try {
+			this._speakWithRetry(word, { lang: this._getPreferredLangCode(), rate: 0.9 }).catch(() => {});
+		} catch (e) { /* ignore */ }
 	}
 
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
@@ -6644,7 +6666,7 @@ calculateScore() {
 			if (typeof window === 'undefined') return;
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
-				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
+				this._speakWithRetry('Bingo bonus!', { lang: this._getPreferredLangCode(), rate: 1.15, pitch: 1.4 }).catch(e => {
 					console.warn('speakBingo TTS path failed', e);
 					try { this.appendConsoleMessage('speakBingo TTS failed'); } catch(e){}
 				});
@@ -6733,22 +6755,30 @@ calculateScore() {
 		}
 	}
 
-	// Pick a preferred English voice if available. Returns a SpeechSynthesisVoice or null.
-	_getPreferredVoice() {
+	// Pick a preferred voice matching the current preferred language (falls back to English)
+	_getPreferredVoice(preferredLang) {
 		try {
 			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
 			const voices = window.speechSynthesis.getVoices() || [];
 			if (!voices || voices.length === 0) return null;
-			// Prefer explicit English voices (en-US/en-GB) and prefer female-like names if present
+			const target = (preferredLang && preferredLang.toLowerCase()) || (this._getPreferredLangCode && this._getPreferredLangCode().toLowerCase());
 			let pick = null;
-			for (const v of voices) {
-				if (!v.lang) continue;
-				const lang = v.lang.toLowerCase();
-				if (lang.startsWith('en') && (!pick || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'))) {
-					pick = v;
+			if (target) {
+				// prefer exact match first
+				for (const v of voices) {
+					if (!v.lang) continue;
+					const lang = v.lang.toLowerCase();
+					if (lang === target || lang.startsWith(target.split('-')[0])) { pick = v; break; }
 				}
 			}
-			if (!pick) pick = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || voices[0];
+			// fallback to any en* voice
+			if (!pick) {
+				for (const v of voices) {
+					if (!v.lang) continue;
+					if (v.lang.toLowerCase().startsWith('en')) { pick = v; break; }
+				}
+			}
+			if (!pick) pick = voices[0];
 			return pick || null;
 		} catch (e) {
 			console.debug('getPreferredVoice failed', e);
@@ -6760,67 +6790,95 @@ calculateScore() {
 	// Returns a Promise that resolves on end or rejects on persistent failure.
 	_speakWithRetry(text, opts = {}) {
 		return new Promise(async (resolve, reject) => {
-			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return resolve();
-			let tried = 0;
-			const attempt = async () => {
+			if (typeof window === 'undefined') return resolve();
+			const finalLang = opts.lang || this._getPreferredLangCode();
+			// First try remote Netlify Google TTS function (server-side, uses GOOGLE_API_KEY)
+			const tryRemote = async () => {
+				if (!window.fetch) return false;
 				try {
-					if (!text) return resolve();
-					const u = new SpeechSynthesisUtterance(text);
-					u.lang = opts.lang || 'en-US';
-					u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
-					u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
-					// assign preferred voice if available
-					try {
-						const v = this._getPreferredVoice();
-						if (v) u.voice = v;
-					} catch (e) { /* ignore */ }
-					u.onend = () => resolve();
-					u.onerror = async (ev) => {
-						if (tried === 0) {
-							tried++;
-							console.warn('utterance error, attempting unlock+retry', ev);
-							try { await this.ensureAudioUnlocked(); } catch (e) { /* ignore */ }
-							// try a tiny silent audio play as a fallback on Android
-							try {
-								const AC = window.AudioContext || window.webkitAudioContext;
-								if (AC) {
-									const ac = new AC();
-									if (ac.state === 'suspended' && ac.resume) await ac.resume();
-									const g = ac.createGain(); g.gain.value = 0; const o = ac.createOscillator(); o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.03);
-								}
-							} catch (e) { /* ignore */ }
-							// attempt to speak again
-							try { window.speechSynthesis.speak(u); } catch (e) { resolve(); }
-						} else {
-							console.error('utterance failed after retry', ev);
-							resolve();
-						}
-					};
-					try {
-						window.speechSynthesis.speak(u);
-					} catch (e) {
-						if (tried === 0) { tried++; try { await this.ensureAudioUnlocked(); } catch(e){}; try { window.speechSynthesis.speak(u); } catch(e2){ resolve(); } }
-						else resolve();
+					const resp = await fetch('/.netlify/functions/tts', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ text, lang: finalLang, audioEncoding: 'MP3' }),
+						cache: 'no-store'
+					});
+					if (!resp.ok) return false;
+					const j = await resp.json();
+					if (j && j.audioContent) {
+						try {
+							await this._playAudioBase64(j.audioContent);
+							return true;
+						} catch (e) { return false; }
 					}
-				} catch (e) {
-						// Fallback: if nothing is queued or speaking shortly after, try robust retry speaker
-						setTimeout(async () => {
-							try {
-								if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-								if (!window.speechSynthesis.pending && !window.speechSynthesis.speaking) {
-									// nothing queued/playing — perform robust speak outside gesture
-									for (let t of texts) {
-										try { await this._speakWithRetry(t, { lang: 'en-US' }); } catch (e) { /* ignore */ }
-									}
-									try { resolveInline(); } catch(e){}
-								}
-							} catch (e) { /* ignore */ }
-						}, 480);
-					console.warn('speakWithRetry inner error', e);
-					resolve();
+				} catch (e) { /* ignore */ }
+				return false;
+			};
+			// If remote succeeded, resolve early
+			try {
+				const ok = await tryRemote();
+				if (ok) return resolve();
+			} catch (e) { /* ignore */ }
+			// Fallback to in-browser SpeechSynthesis
+			if (!('speechSynthesis' in window) || !text) return resolve();
+			let tried = 0;
+			const u = new SpeechSynthesisUtterance(text);
+			u.lang = finalLang || 'en-US';
+			u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
+			u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
+				try {
+					const v = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
+					if (v) u.voice = v;
+				} catch (e) { /* ignore */ }
+			u.onend = () => resolve();
+			u.onerror = async (ev) => {
+				if (tried === 0) {
+					tried++;
+					try { await this.ensureAudioUnlocked(); } catch (e) { /* ignore */ }
+					try { window.speechSynthesis.speak(u); } catch (e) { return resolve(); }
+				} else {
+					return resolve();
 				}
 			};
-			attempt();
+			try {
+				window.speechSynthesis.speak(u);
+			} catch (e) {
+				if (tried === 0) { tried++; try { await this.ensureAudioUnlocked(); } catch(e){}; try { window.speechSynthesis.speak(u); } catch(e2){ return resolve(); } }
+				else return resolve();
+			}
+		});
+	}
+
+	_getPreferredLangCode() {
+		const short = this.preferredLang || 'en';
+		const map = {
+			'en': 'en-US',
+			'es': 'es-ES',
+			'zh': 'zh-CN',
+			'fr': 'fr-FR'
+		};
+		if (map[short]) return map[short];
+		// if already a locale-like code, return as-is
+		if (short && short.indexOf('-') !== -1) return short;
+		return 'en-US';
+	}
+
+	_playAudioBase64(base64Audio) {
+		return new Promise((resolve, reject) => {
+			try {
+				const binary = atob(base64Audio);
+				const len = binary.length;
+				const bytes = new Uint8Array(len);
+				for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+				const blob = new Blob([bytes], { type: 'audio/mpeg' });
+				const url = URL.createObjectURL(blob);
+				const a = new Audio(url);
+				a.addEventListener('ended', () => { try { URL.revokeObjectURL(url); } catch (e) {} resolve(); });
+				a.addEventListener('error', (e) => { try { URL.revokeObjectURL(url); } catch (e) {} reject(e); });
+				// Attempt to play; some browsers require user gesture — handle rejection
+				const p = a.play();
+				if (p && p.then) p.then(() => {}).catch(() => {});
+				// If play() didn't error, resolve when ended via event
+			} catch (e) { reject(e); }
 		});
 	}
 
@@ -6854,7 +6912,7 @@ calculateScore() {
 						text = text + ' Bingo bonus!';
 					}
 					try {
-						await this._speakWithRetry(text, { lang: 'en-US' });
+						await this._speakWithRetry(text, { lang: this._getPreferredLangCode() });
 					} catch (e) {
 						console.warn('speakSequence word failed', text, e);
 						try { this.appendConsoleMessage('speakSequence word failed: '+text); } catch(e){}
@@ -6925,8 +6983,8 @@ calculateScore() {
 							// Try to create and speak an utterance synchronously inside the user gesture first.
 							try {
 								if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-									try {
-										const pref = this._getPreferredVoice && this._getPreferredVoice();
+										try {
+											const pref = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
 										// Play a short audible beep to unlock audio on stubborn Android builds
 										try {
 											const actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -6946,12 +7004,13 @@ calculateScore() {
 										}
 										// Speak 'Bingo' and 'bonus!' as two synchronous utterances inside gesture
 										try {
+											const prefLang = this._getPreferredLangCode();
 											const b1 = new SpeechSynthesisUtterance('Bingo');
-											b1.lang = 'en-US';
-											if (pref) try { b1.voice = pref; } catch(_){}
+											b1.lang = prefLang;
+											if (pref) try { b1.voice = pref; } catch(_){ }
 											const b2 = new SpeechSynthesisUtterance('bonus!');
-											b2.lang = 'en-US';
-											if (pref) try { b2.voice = pref; } catch(_){}
+											b2.lang = prefLang;
+											if (pref) try { b2.voice = pref; } catch(_){ }
 											window.speechSynthesis.speak(b1);
 											// small gap before second utterance
 											setTimeout(() => { try { window.speechSynthesis.speak(b2); } catch(_){}; }, 130);
@@ -6974,7 +7033,7 @@ calculateScore() {
 										this.appendConsoleMessage(`Bingo speak attempt ${attempt}`);
 										// Only try speaking if nothing is currently queued/playing
 										if (!(typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
-											await this._speakWithRetry('Bingo bonus!', { lang: 'en-US' });
+											await this._speakWithRetry('Bingo bonus!', { lang: this._getPreferredLangCode() });
 										}
 										// small delay to let speech start
 										await new Promise(r => setTimeout(r, 220));
@@ -8340,6 +8399,8 @@ calculateScore() {
 	async handleTileExchange(tileIndex) {
 		if (!this.exchangeMode || this.tiles.length === 0 || isNaN(tileIndex))
 			return;
+		// If exchange portal removed from UI, do nothing
+		if (!document.getElementById('exchange-portal')) return;
 
 		const tile = this.playerRack[tileIndex];
 		if (!tile) {
@@ -8484,29 +8545,24 @@ calculateScore() {
 
 		// Disable exchange mode
 		this.exchangeMode = false;
-		this.exchangePortal.classList.remove("active");
-		document.getElementById("activate-exchange").textContent =
-			"Activate Exchange Portal";
+		// If portal present, remove active state; otherwise continue silently
+		const portal = document.getElementById('exchange-portal');
+		if (portal && portal.classList) portal.classList.remove('active');
+		const actBtn = document.getElementById('activate-exchange');
+		if (actBtn) actBtn.textContent = 'Activate Exchange Portal';
 
-		// Create portal closing animation
-		const portalClose = this.exchangePortal.animate(
-			[{
-					transform: "scale(1) rotate(0deg)",
-					opacity: 1
-				},
-				{
-					transform: "scale(0) rotate(360deg)",
-					opacity: 0
-				},
-			], {
-				duration: 1000,
-				easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-			},
-		);
+		// Optionally animate portal close if UI exists
+		let portalClose = null;
+		if (portal && portal.animate) {
+			portalClose = portal.animate([
+				{ transform: 'scale(1) rotate(0deg)', opacity: 1 },
+				{ transform: 'scale(0) rotate(360deg)', opacity: 0 }
+			], { duration: 1000, easing: 'cubic-bezier(0.4,0,0.2,1)' });
+		}
 
-		// Create new tiles animation
-		const newTilesContainer = document.createElement("div");
-		newTilesContainer.className = "new-tiles-container";
+		// Create new tiles animation container
+		const newTilesContainer = document.createElement('div');
+		newTilesContainer.className = 'new-tiles-container';
 		document.body.appendChild(newTilesContainer);
 
 		// Return exchanged tiles to bag and get new ones
@@ -8531,32 +8587,34 @@ calculateScore() {
                 `;
 			newTilesContainer.appendChild(tileElement);
 
-			const portalRect = this.exchangePortal.getBoundingClientRect();
-			const rackRect = document
-				.getElementById("tile-rack")
-				.getBoundingClientRect();
+			const portalRect = portal ? portal.getBoundingClientRect() : null;
+			const rackRect = document.getElementById("tile-rack").getBoundingClientRect();
 			const finalX = rackRect.left + i * 50; // Adjust spacing as needed
 			const finalY = rackRect.top;
+			// starting coordinates (use portal center if available, otherwise start at final position)
+			const startLeft = portalRect ? (portalRect.left + portalRect.width / 2) : finalX;
+			const startTop = portalRect ? (portalRect.top + portalRect.height / 2) : finalY;
 
 			await new Promise((resolve) => {
 				tileElement.animate(
-					[{
-							left: `${portalRect.left + portalRect.width / 2}px`,
-							top: `${portalRect.top + portalRect.height / 2}px`,
-							transform: "scale(0) rotate(-360deg)",
+					[
+						{
+							left: `${startLeft}px`,
+							top: `${startTop}px`,
+							transform: 'scale(0) rotate(-360deg)',
 							opacity: 0,
 						},
 						{
 							left: `${finalX}px`,
 							top: `${finalY}px`,
-							transform: "scale(1) rotate(0deg)",
+							transform: 'scale(1) rotate(0deg)',
 							opacity: 1,
 						},
 					], {
 						duration: 1000,
-						easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-						fill: "forwards",
-					},
+						easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+						fill: 'forwards',
+					}
 				).onfinish = resolve;
 			});
 		}
@@ -8635,6 +8693,10 @@ calculateScore() {
 
 	async showAIExchangeAnimation() {
 		const portal = document.getElementById("exchange-portal");
+		if (!portal) {
+			// Exchange UI removed — quickly resolve without visual animation
+			return;
+		}
 		portal.classList.add("active");
 
 		// Animate AI tiles going into portal
@@ -8846,8 +8908,10 @@ calculateScore() {
 			this.highlightValidPlacements();
 		});
 
-		// Add exchange system setup
-		this.setupExchangeSystem();
+		// Add exchange system setup only if exchange UI is present
+		if (document.getElementById('activate-exchange') || document.getElementById('activate-exchange-desktop')) {
+			this.setupExchangeSystem();
+		}
 
 		// Play word button
 		const playWordBtn = document.getElementById("play-word");
@@ -8892,6 +8956,7 @@ calculateScore() {
 					try {
 						if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 							const texts = formedWords.map(w => w.word).filter(w => w && w !== 'BINGO BONUS');
+							const inlinePrefLang = this._getPreferredLangCode();
 							// Ensure bingo phrase is queued last so it's heard after the spelled words
 							texts.push('Bingo bonus!');
 							let resolveInline;
@@ -8899,12 +8964,12 @@ calculateScore() {
 							texts.forEach((txt, idx) => {
 								try {
 									const u = new SpeechSynthesisUtterance(txt);
-									u.lang = 'en-US';
+									u.lang = inlinePrefLang;
 									u.rate = 0.95;
 									u.pitch = 1.0;
 									// Try to set a preferred voice synchronously inside the gesture
 									try {
-										const pref = this._getPreferredVoice && this._getPreferredVoice();
+										const pref = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
 										if (pref) {
 											u.voice = pref;
 											try { this.appendConsoleMessage('inline prequeue used voice: '+pref.name); } catch(e){}
@@ -9447,25 +9512,7 @@ calculateScore() {
 			this.toggleExchangeMode("desktop-drawer");
 		});
 
-		// Language selector (desktop drawer)
-		const languageSelectorDesktopDrawer = document.getElementById("language-selector-desktop-drawer");
-		if (languageSelectorDesktopDrawer) {
-			languageSelectorDesktopDrawer.addEventListener("change", (e) => {
-				const selectedLanguage = e.target.value;
-				if (selectedLanguage) {
-					// Update all language selectors to maintain consistency
-					const allLanguageSelectors = document.querySelectorAll('.language-selector select');
-					allLanguageSelectors.forEach(selector => {
-						if (selector !== e.target) {
-							selector.value = selectedLanguage;
-						}
-					});
-					
-					// Handle language change logic here
-					console.log(`Language changed to: ${selectedLanguage}`);
-				}
-			});
-		}
+		// (Language selectors are initialized earlier during init)
 
 		// Handle window resize to update AI rack visibility
 

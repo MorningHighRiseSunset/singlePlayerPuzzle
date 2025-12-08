@@ -399,6 +399,21 @@ button, .language-button,
   border: none;
   padding: 12px 18px;
 
+}
+
+/* Ensure select used for language is readable (white text on white was hiding options) */
+.language-button {
+  background: #fff;
+  color: #222;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  -webkit-appearance: menulist;
+  appearance: menulist;
+  width: auto;
+  min-width: 140px;
+}
+
 /* In-page toast (non-modal) to replace native alert sounds */
 .inpage-toast {
   position: fixed;
@@ -469,58 +484,7 @@ button:active,
   box-shadow: 0 0 0 4px #ffd70044, 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* --- Exchange Portal --- */
-.exchange-area {
-  margin-top: 20px;
-  padding: 15px;
-  background: #0d47a1;
-  border-radius: 10px;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.12);
-  position: relative;
-}
-
-.exchange-portal {
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #42a5f5 60%, #1976d2 100%);
-  margin: 10px 0;
-  opacity: 0.92;
-  transition: transform 0.3s, opacity 0.3s, box-shadow 0.3s;
-  box-shadow: 0 0 24px 6px var(--exchange-glow), 0 0 0 0 #fff0;
-  position: relative;
-  animation: whirlpool 2.5s linear infinite;
-  cursor: pointer;
-  overflow: visible;
-}
-.exchange-portal.active {
-  opacity: 1;
-  transform: scale(1.1) rotate(8deg);
-  box-shadow: 0 0 40px 12px var(--exchange-glow), 0 0 0 0 #fff0;
-  animation: whirlpool 1.2s linear infinite;
-}
-.exchange-portal::after {
-  content: "";
-  position: absolute;
-  left: 50%; top: 50%;
-  width: 80px; height: 80px;
-  border-radius: 50%;
-  border: 3px dashed #fff8;
-  transform: translate(-50%, -50%);
-  animation: whirlpool-ring 2.5s linear infinite;
-  pointer-events: none;
-}
-@keyframes whirlpool {
-  0% { box-shadow: 0 0 24px 6px var(--exchange-glow); transform: rotate(0deg);}
-  100% { box-shadow: 0 0 40px 12px var(--exchange-glow); transform: rotate(360deg);}
-}
-@keyframes whirlpool-ring {
-  0% { transform: translate(-50%, -50%) rotate(0deg);}
-  100% { transform: translate(-50%, -50%) rotate(-360deg);}
-}
+/* Exchange portal removed - related styles deleted */
 
 /* --- Win/Lose Overlay --- */
 .win-overlay {
