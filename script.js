@@ -20,6 +20,8 @@ const translations = {
 		bingoBonus: 'Bingo bonus!',
 		skip: 'SKIP',
 		quit: 'QUIT',
+		exchange: 'EXCHANGE',
+		aiExchanged: 'AI exchanged tiles',
 		noNewWords: '(No new words scored)',
 		howToPlayTitle: 'How to Play',
 		playingTiles: 'Playing Tiles:',
@@ -63,6 +65,8 @@ const translations = {
 		bingoBonus: '¡Bonificación de Bingo!',
 		skip: 'PASAR',
 		quit: 'SALIR',
+		exchange: 'INTERCAMBIAR',
+		aiExchanged: 'La IA intercambió fichas',
 		noNewWords: '(Sin palabras nuevas)',
 		howToPlayTitle: 'Cómo Jugar',
 		playingTiles: 'Colocación de Fichas:',
@@ -106,6 +110,8 @@ const translations = {
 		bingoBonus: 'Bonus Bingo !',
 		skip: 'PASSER',
 		quit: 'QUITTER',
+		exchange: 'ECHANGER',
+		aiExchanged: 'L\'IA a échangé des tuiles',
 		noNewWords: '(Aucun mot nouveau)',
 		howToPlayTitle: 'Comment Jouer',
 		playingTiles: 'Placement des Tuiles:',
@@ -149,6 +155,8 @@ const translations = {
 		bingoBonus: '宾果奖金！',
 		skip: '跳过',
 		quit: '退出',
+		exchange: '交换',
+		aiExchanged: 'AI 交换了瓷砖',
 		noNewWords: '(没有新单词)',
 		howToPlayTitle: '如何玩',
 		playingTiles: '放置瓷砖:',
@@ -7831,10 +7839,30 @@ calculateScore() {
 		// Populate history content
 		const historyContent = this.moveHistory
 			.map((move) => {
+				const playerLabel = getTranslation(move.player && move.player.toLowerCase() === 'computer' ? 'computer' : 'player', currentLang) || move.player;
 				if (Array.isArray(move.words)) {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.words.map(w => `"${translateWordForDisplay(w.word, currentLang)}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${move.words.map(w => `"${translateWordForDisplay(w.word, currentLang)}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
 				} else if (move.word) {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: "${translateWordForDisplay(move.word, currentLang)}" = ${move.score}pts</div>`;
+					const raw = String(move.word);
+					const rawUpper = raw.toUpperCase();
+					// Special-case SKIP: localized label, no points shown
+					if (rawUpper === 'SKIP') {
+						const label = getTranslation('skip', currentLang) || raw;
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${label}</div>`;
+					}
+					// Special-case EXCHANGE / AI exchange messages: localized label, no points shown
+					if (rawUpper === 'EXCHANGE' || raw.toLowerCase().includes('exchange')) {
+						const isAI = /ai|computer/i.test(raw);
+						const label = isAI ? getTranslation('aiExchanged', currentLang) : getTranslation('exchange', currentLang) || raw;
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${label}</div>`;
+					}
+					// Default: show translated word; show points only if > 0
+					const display = translateWordForDisplay(raw, currentLang);
+					if (typeof move.score === 'number' && move.score > 0) {
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}" = ${move.score}pts</div>`;
+					} else {
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"</div>`;
+					}
 				} else {
 					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.word || 'move'} = ${move.score}pts</div>`;
 				}
