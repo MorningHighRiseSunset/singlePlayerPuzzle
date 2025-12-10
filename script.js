@@ -5888,11 +5888,11 @@ formedWords.forEach((wordInfo) => {
 
 	async loadSpanishDictionary() {
 		try {
-			// Spanish Scrabble dictionary from GitHub
-			let response = await fetch("https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt");
-			// Fallback URL if the primary one fails
+			// Official Spanish Scrabble dictionary - more reliable source
+			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+			// Fallback to another curated Spanish word list
 			if (!response.ok) {
-				response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+				response = await fetch("https://raw.githubusercontent.com/olea/lemarios/master/espanol.txt");
 			}
 			// Final fallback: use English dictionary (many cognates work)
 			if (!response.ok) {
@@ -5909,6 +5909,40 @@ formedWords.forEach((wordInfo) => {
 				console.log("Spanish dictionary loaded successfully. Word count (English fallback):", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 				return;
 			}
+
+			let spanishText = await response.text();
+			const spanishRawWords = spanishText.split("\n").map(w => w.trim()).filter(Boolean);
+
+			// Filter out potentially invalid or obscure words for Scrabble
+			const excludedWords = new Set([
+				'segote', 'segota', // Not real Spanish words
+				'mojigato', 'mojigata', // Too obscure for Scrabble
+				'beato', 'beata', // Too obscure for Scrabble
+				// Add more known problematic words here as they are discovered
+			]);
+
+			// Filter for reasonable Scrabble words: 2-15 letters, no extremely obscure terms
+			const filteredWords = spanishRawWords.filter(word => {
+				const cleanWord = word.toLowerCase().trim();
+				return cleanWord.length >= 2 &&
+					   cleanWord.length <= 15 &&
+					   !excludedWords.has(cleanWord) &&
+					   /^[a-zñáéíóúü]+$/i.test(cleanWord); // Only Spanish letters
+			});
+
+			this.spanishDictionary = new Set();
+			this.spanishDictionaryNormalized = new Set();
+			this.spanishNormalizedMap = {};
+			for (const w of filteredWords) {
+				const orig = w;
+				const norm = normalizeWordForDict(orig);
+				if (norm) {
+					this.spanishDictionary.add(orig.toLowerCase());
+					this.spanishDictionaryNormalized.add(norm.toLowerCase());
+					this.spanishNormalizedMap[norm.toUpperCase()] = orig; // store original for display
+				}
+			}
+			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 			let text = await response.text();
 			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
 			this.spanishDictionary = new Set();
