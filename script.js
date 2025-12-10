@@ -40,6 +40,7 @@ const translations = {
 		submittingMove: 'Submitting Your Move:',
 		afterPlacing: 'After placing your tiles, click the "Submit" button',
 		invalidWords: 'Invalid words will be rejected and tiles returned to your rack',
+		invalidTry: 'Invalid word! Please try again.',
 		pointsCalculated: 'Points will be automatically calculated and added to your score',
 		exchangingTiles: 'Exchanging Tiles:',
 		activateExchange: 'Click "Activate Exchange Portal" to start an exchange',
@@ -89,6 +90,7 @@ const translations = {
 		submittingMove: 'Enviando Tu Movimiento:',
 		afterPlacing: 'Después de colocar tus fichas, haz clic en el botón "Enviar"',
 		invalidWords: 'Las palabras inválidas serán rechazadas y las fichas se devolverán a tu estante',
+		invalidTry: '¡Palabra inválida! Por favor, inténtalo de nuevo.',
 		pointsCalculated: 'Los puntos se calcularán automáticamente y se sumarán a tu puntuación',
 		exchangingTiles: 'Intercambiando Fichas:',
 		activateExchange: 'Haz clic en "Activar Portal de Intercambio" para iniciar un intercambio',
@@ -138,6 +140,7 @@ const translations = {
 		submittingMove: 'Soumettre Votre Coup:',
 		afterPlacing: 'Après avoir placé vos tuiles, cliquez sur le bouton "Soumettre"',
 		invalidWords: 'Les mots invalides seront rejetés et les tuiles retourneront à votre chevalet',
+		invalidTry: 'Mot invalide ! Veuillez réessayer.',
 		pointsCalculated: 'Les points seront calculés automatiquement et ajoutés à votre score',
 		exchangingTiles: 'Échanger des Tuiles:',
 		activateExchange: 'Cliquez sur "Activer le Portail d\'Échange" pour commencer un échange',
@@ -188,6 +191,7 @@ const translations = {
 		submittingMove: '提交您的移动:',
 		afterPlacing: '放置瓷砖后，单击"提交"按钮',
 		invalidWords: '无效的词将被拒绝，瓷砖将返回到您的架子',
+		invalidTry: '无效的单词！请再试一次。',
 		pointsCalculated: '分数将自动计算并添加到您的分数中',
 		exchangingTiles: '交换瓷砖:',
 		activateExchange: '单击"激活交换门户"以开始交换',
@@ -5842,6 +5846,7 @@ formedWords.forEach((wordInfo) => {
 			// Fallback Spanish words
 			const fallback = [
 				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija", "joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre", "joven", "viejo"
+			];
 			this.spanishDictionary = new Set();
 			this.spanishDictionaryNormalized = new Set();
 			this.spanishNormalizedMap = {};
