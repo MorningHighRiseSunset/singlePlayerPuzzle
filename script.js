@@ -5217,7 +5217,9 @@ formedWords.forEach((wordInfo) => {
 		for (const word of this.dictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
+
 	}
+
 
 	createBoard() {
 		const board = document.getElementById("scrabble-board");
