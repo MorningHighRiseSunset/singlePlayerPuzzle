@@ -812,10 +812,13 @@ button:active,
   box-sizing: border-box;
 }
 
-/* Hide the red "X" close buttons so the burger toggles the drawer
-   (user requested: toggle burger to open/close instead of X) */
-.desktop-drawer .drawer-close,
+/* Show the red "X" close buttons on mobile for better accessibility
+   (some users have difficulty with hamburger-only closing on mobile) */
 .mobile-drawer .drawer-close {
+  display: block !important;
+}
+
+.desktop-drawer .drawer-close {
   display: none !important;
 }
 

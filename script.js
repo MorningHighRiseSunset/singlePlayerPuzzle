@@ -1,5 +1,94 @@
 let shownBlunders = new Set();
 
+// Language translations
+const translations = {
+	en: {
+		submit: 'Submit',
+		shuffleRack: 'Shuffle Rack',
+		skipTurn: 'Skip Turn',
+		howToPlay: 'How to Play',
+		quitGame: 'Quit / End Game',
+		gameInfo: 'Game Info',
+		scores: 'Scores',
+		player: 'Player',
+		computer: 'Computer',
+		tilesRemaining: 'Tiles Remaining',
+		moveHistory: 'Move History',
+		landscape: 'For the best experience, please rotate your device to landscape mode',
+		scroll: 'You can scroll up and down to access your rack, game controls, and move history',
+		instructions: 'Please read "How to Play" in the menu before starting',
+		bingoBonus: 'Bingo bonus!',
+		skip: 'SKIP',
+		quit: 'QUIT',
+		noNewWords: '(No new words scored)'
+	},
+	es: {
+		submit: 'Enviar',
+		shuffleRack: 'Mezclar Fichas',
+		skipTurn: 'Pasar Turno',
+		howToPlay: 'Cómo Jugar',
+		quitGame: 'Salir / Terminar Juego',
+		gameInfo: 'Información del Juego',
+		scores: 'Puntuaciones',
+		player: 'Jugador',
+		computer: 'Computadora',
+		tilesRemaining: 'Fichas Restantes',
+		moveHistory: 'Historial de Movimientos',
+		landscape: 'Para la mejor experiencia, gira tu dispositivo a modo horizontal',
+		scroll: 'Puedes desplazarte hacia arriba y hacia abajo para acceder a tu estante, controles del juego e historial de movimientos',
+		instructions: 'Por favor, lee "Cómo Jugar" en el menú antes de comenzar',
+		bingoBonus: '¡Bonificación de Bingo!',
+		skip: 'PASAR',
+		quit: 'SALIR',
+		noNewWords: '(Sin palabras nuevas)'
+	},
+	fr: {
+		submit: 'Soumettre',
+		shuffleRack: 'Mélanger le Chevalet',
+		skipTurn: 'Passer le Tour',
+		howToPlay: 'Comment Jouer',
+		quitGame: 'Quitter / Terminer le Jeu',
+		gameInfo: 'Infos du Jeu',
+		scores: 'Scores',
+		player: 'Joueur',
+		computer: 'Ordinateur',
+		tilesRemaining: 'Tuiles Restantes',
+		moveHistory: 'Historique des Mouvements',
+		landscape: 'Pour une meilleure expérience, veuillez orienter votre appareil en mode paysage',
+		scroll: 'Vous pouvez faire défiler vers le haut et vers le bas pour accéder à votre chevalet, aux commandes du jeu et à l\'historique des mouvements',
+		instructions: 'Veuillez lire "Comment Jouer" dans le menu avant de commencer',
+		bingoBonus: 'Bonus Bingo !',
+		skip: 'PASSER',
+		quit: 'QUITTER',
+		noNewWords: '(Aucun mot nouveau)'
+	},
+	zh: {
+		submit: '提交',
+		shuffleRack: '打乱瓷砖',
+		skipTurn: '跳过回合',
+		howToPlay: '如何玩',
+		quitGame: '退出/结束游戏',
+		gameInfo: '游戏信息',
+		scores: '分数',
+		player: '玩家',
+		computer: '计算机',
+		tilesRemaining: '剩余瓷砖',
+		moveHistory: '移动历史',
+		landscape: '为了获得最佳体验，请将设备旋转至横向模式',
+		scroll: '您可以上下滚动以访问您的架子、游戏控制和移动历史',
+		instructions: '开始前请在菜单中阅读"如何玩"',
+		bingoBonus: '宾果奖金！',
+		skip: '跳过',
+		quit: '退出',
+		noNewWords: '(没有新单词)'
+	}
+};
+
+function getTranslation(key, lang = 'en') {
+	if (!lang || !translations[lang]) lang = 'en';
+	return translations[lang][key] || translations['en'][key] || key;
+}
+
 function isMobileDevice() {
 	return (
 		window.innerWidth <= 768 ||
@@ -5386,6 +5475,7 @@ formedWords.forEach((wordInfo) => {
 			if (!response.ok) {
 				console.warn(`Language dictionary not available for ${lang}, falling back to English`);
 				this.activeDictionary = new Set(this.dictionary);
+				this.updateUILanguage(lang);
 				return;
 			}
 			
@@ -5397,6 +5487,9 @@ formedWords.forEach((wordInfo) => {
 			for (const word of this.activeDictionary) {
 				this.trie.insert(word.toUpperCase());
 			}
+			
+			// Update UI language
+			this.updateUILanguage(lang);
 			
 			console.log(`Language dictionary loaded for ${lang}. Word count:`, this.activeDictionary.size);
 			testWords.forEach(word => {
@@ -5410,6 +5503,60 @@ formedWords.forEach((wordInfo) => {
 			this.trie = new Trie();
 			for (const word of this.activeDictionary) {
 				this.trie.insert(word.toUpperCase());
+			}
+			this.updateUILanguage(lang);
+		}
+	}
+
+	updateUILanguage(lang) {
+		const t = (key) => getTranslation(key, lang);
+		
+		// Update button text
+		const buttons = {
+			'play-word': t('submit'),
+			'play-word-desktop': t('submit'),
+			'play-word-desktop-drawer': t('submit'),
+			'play-word-mobile': t('submit'),
+			'play-word-desktop-bottom': t('submit'),
+			'shuffle-rack': t('shuffleRack'),
+			'shuffle-rack-desktop': t('shuffleRack'),
+			'shuffle-rack-desktop-drawer': t('shuffleRack'),
+			'skip-turn': t('skipTurn'),
+			'skip-turn-desktop': t('skipTurn'),
+			'skip-turn-desktop-drawer': t('skipTurn'),
+			'show-instructions': t('howToPlay'),
+			'show-instructions-desktop': t('howToPlay'),
+			'show-instructions-desktop-drawer': t('howToPlay'),
+			'quit-game': t('quitGame'),
+			'quit-game-desktop': t('quitGame'),
+			'quit-game-desktop-drawer': t('quitGame')
+		};
+		
+		for (const [id, text] of Object.entries(buttons)) {
+			const btn = document.getElementById(id);
+			if (btn) btn.textContent = text;
+		}
+		
+		// Update headers and panels
+		const headerUpdates = {
+			// These will be updated via updateMoveHistory and updateGameState
+		};
+		
+		// Update notification text
+		const notices = {
+			'landscape-notice': t('landscape'),
+			'scroll-notice': t('scroll'),
+			'instruction-notice': t('instructions')
+		};
+		
+		for (const [className, text] of Object.entries(notices)) {
+			const notice = document.querySelector(`.${className}`);
+			if (notice) {
+				// Find the text node and update it, preserving the emoji and close button
+				const parts = notice.innerHTML.split('<button');
+				const emoji = parts[0].match(/<span class="notice-icon">.*?<\/span>/)?.[0] || '';
+				const button = parts[1] ? '<button' + parts[1] : '';
+				notice.innerHTML = `${emoji} ${text} ${button}`;
 			}
 		}
 	}
