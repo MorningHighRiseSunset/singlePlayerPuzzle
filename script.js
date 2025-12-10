@@ -1130,44 +1130,68 @@ class ScrabbleGame {
 				return;
 			}
 
-			// --- Prefer longer words, fallback to 2-letter if needed, timeout after 1 min ---
-			const possiblePlays = this.findAIPossiblePlays();
-			if (possiblePlays && possiblePlays.length > 0) {
-				// Sort by word length (desc), then score (desc)
-				possiblePlays.sort((a, b) => {
-					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
-					return b.score - a.score;
-				});
+			// --- Keep trying different approaches until we find a valid move ---
+			let attempts = 0;
+			const maxAttempts = 5; // Try up to 5 different strategies
 
-				for (const candidate of possiblePlays) {
-					// If over 1 minute, just play the first valid move
-					if (Date.now() - startTime > 60000) {
-						bestPlay = candidate;
-						updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
-						setTimeout(() => {
-							thinkingMessage.style.opacity = "0";
-							setTimeout(() => {
-								thinkingMessage.remove();
-								this.unblockHintBox();
-								this.executeAIPlay(bestPlay);
-							}, 300);
-						}, 800);
-						return;
+			while (attempts < maxAttempts && !bestPlay) {
+				attempts++;
+				updateThinkingText(`${getTranslation('aiThinking', _aiLang)} (${attempts}/${maxAttempts})`);
+
+				// Try different word length preferences based on attempt number
+				let minWordLength = 2;
+				let maxWordLength = 15;
+
+				if (attempts === 1) {
+					// First try: prefer longer words (4+ letters)
+					minWordLength = 4;
+				} else if (attempts === 2) {
+					// Second try: medium words (3+ letters)
+					minWordLength = 3;
+				} else if (attempts === 3) {
+					// Third try: any length, prefer high-scoring
+					minWordLength = 2;
+				} else {
+					// Final attempts: even very short words
+					minWordLength = 2;
+					maxWordLength = 8; // Shorter words might be more reliable
+				}
+
+				const possiblePlays = this.findAIPossiblePlays(minWordLength, maxWordLength);
+				if (possiblePlays && possiblePlays.length > 0) {
+					// Sort by word length (desc), then score (desc)
+					possiblePlays.sort((a, b) => {
+						if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+						return b.score - a.score;
+					});
+
+					for (const candidate of possiblePlays) {
+						// If over 1 minute total, just play the first valid move we can find
+						if (Date.now() - startTime > 60000) {
+							const quickValidity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+							if (quickValidity.valid) {
+								bestPlay = candidate;
+								updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
+								break;
+							}
+							continue;
+						}
+
+						const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+						if (validity.valid) {
+							bestPlay = candidate;
+							updateThinkingText(getTranslation('aiFoundMove', _aiLang));
+							break;
+						}
 					}
-					const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-					if (validity.valid) {
-						bestPlay = candidate;
-						updateThinkingText(getTranslation('aiFoundMove', _aiLang));
-						setTimeout(() => {
-							thinkingMessage.style.opacity = "0";
-							setTimeout(() => {
-								thinkingMessage.remove();
-								this.unblockHintBox();
-								this.executeAIPlay(bestPlay);
-							}, 300);
-						}, 800);
-						return;
-					}
+				}
+
+				// If we found a valid play, break out of the attempt loop
+				if (bestPlay) break;
+
+				// Wait a bit between attempts to avoid overwhelming
+				if (attempts < maxAttempts) {
+					await new Promise(resolve => setTimeout(resolve, 500));
 				}
 			}
 
@@ -1846,7 +1870,7 @@ class ScrabbleGame {
 		this.setupHintSystem();
 	}
 
-	findAIPossiblePlays() {
+	findAIPossiblePlays(minWordLength = 2, maxWordLength = 15) {
 		try {
 			const possiblePlays = [];
 			const rack = this.aiRack.map(tile => tile.letter);
@@ -1863,8 +1887,8 @@ class ScrabbleGame {
 
 					// Only consider word lengths that fit the available space
 					let maxLen = 1 + prefix.length + suffix.length + rack.length;
-					let minLen = Math.max(2, prefix.length + suffix.length + 1);
-					maxLen = Math.min(maxLen, 15);
+					let minLen = Math.max(minWordLength, prefix.length + suffix.length + 1);
+					maxLen = Math.min(maxLen, maxWordLength);
 
 					// Use Trie to generate only words that fit prefix/suffix and rack
 					const candidateWords = this.trie.findWordsFromRack(
@@ -5763,12 +5787,30 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async init() {
-		await this.loadDictionary();
-		await this.loadLanguageDictionary(this.preferredLang);
-		this.createBoard();
-		this.fillRacks();
-		this.setupTapPlacement();
-		this.setupEventListeners();
+		// Show loading screen immediately
+		this.showLoadingScreen();
+
+		try {
+			// Load dictionaries asynchronously but show progress
+			await this.loadDictionary();
+			await this.loadLanguageDictionary(this.preferredLang);
+
+			// Create board and UI elements
+			this.updateLoadingProgress('Creating game board...');
+			this.createBoard();
+
+			this.updateLoadingProgress('Setting up game pieces...');
+			this.fillRacks();
+			this.setupTapPlacement();
+			this.setupEventListeners();
+		} catch (error) {
+			console.error('Initialization failed:', error);
+			this.showErrorScreen('Failed to load game. Please refresh the page.');
+			return;
+		}
+
+		// Hide loading screen and show the game
+		this.hideLoadingScreen();
 		// Initialize all language selector dropdowns and persist choice
 		try {
 			const selectors = Array.from(document.querySelectorAll('select.language-button'));
@@ -5795,11 +5837,135 @@ formedWords.forEach((wordInfo) => {
 		this.updateGameState();
 
 		// --- Build the Trie for pro-level AI word generation ---
+		this.updateLoadingProgress('Preparing AI word search...');
 		this.trie = new Trie();
 		for (const word of this.activeDictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
 
+	}
+
+	showLoadingScreen() {
+		// Create loading overlay
+		const loadingOverlay = document.createElement('div');
+		loadingOverlay.id = 'loading-overlay';
+		loadingOverlay.style.cssText = `
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			z-index: 9999;
+			color: white;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		`;
+
+		// Loading spinner
+		const spinner = document.createElement('div');
+		spinner.style.cssText = `
+			width: 60px;
+			height: 60px;
+			border: 4px solid rgba(255, 255, 255, 0.3);
+			border-top: 4px solid white;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+			margin-bottom: 20px;
+		`;
+
+		// Loading text
+		const loadingText = document.createElement('div');
+		loadingText.id = 'loading-text';
+		loadingText.style.cssText = `
+			font-size: 18px;
+			font-weight: 300;
+			text-align: center;
+			margin-bottom: 10px;
+		`;
+		loadingText.textContent = 'Loading Scrabble Game...';
+
+		// Progress indicator
+		const progressText = document.createElement('div');
+		progressText.id = 'loading-progress';
+		progressText.style.cssText = `
+			font-size: 14px;
+			opacity: 0.8;
+			text-align: center;
+		`;
+		progressText.textContent = 'Loading dictionaries...';
+
+		// Add CSS animation
+		const style = document.createElement('style');
+		style.textContent = `
+			@keyframes spin {
+				0% { transform: rotate(0deg); }
+				100% { transform: rotate(360deg); }
+			}
+		`;
+		document.head.appendChild(style);
+
+		loadingOverlay.appendChild(spinner);
+		loadingOverlay.appendChild(loadingText);
+		loadingOverlay.appendChild(progressText);
+		document.body.appendChild(loadingOverlay);
+
+		// Make body hidden initially to prevent flash of unstyled content
+		document.body.style.visibility = 'visible';
+	}
+
+	updateLoadingProgress(message) {
+		const progressElement = document.getElementById('loading-progress');
+		if (progressElement) {
+			progressElement.textContent = message;
+		}
+	}
+
+	hideLoadingScreen() {
+		const loadingOverlay = document.getElementById('loading-overlay');
+		if (loadingOverlay) {
+			loadingOverlay.style.transition = 'opacity 0.5s ease-out';
+			loadingOverlay.style.opacity = '0';
+			setTimeout(() => {
+				loadingOverlay.remove();
+			}, 500);
+		}
+	}
+
+	showErrorScreen(message) {
+		const loadingOverlay = document.getElementById('loading-overlay');
+		if (loadingOverlay) {
+			const spinner = loadingOverlay.querySelector('div');
+			const loadingText = document.getElementById('loading-text');
+			const progressText = document.getElementById('loading-progress');
+
+			if (spinner) spinner.style.display = 'none';
+			if (loadingText) loadingText.textContent = 'Error Loading Game';
+			if (progressText) progressText.textContent = message;
+
+			// Add retry button
+			const retryButton = document.createElement('button');
+			retryButton.textContent = 'Retry';
+			retryButton.style.cssText = `
+				margin-top: 20px;
+				padding: 10px 20px;
+				background: white;
+				color: #667eea;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				font-size: 16px;
+				font-weight: 500;
+			`;
+			retryButton.onclick = () => {
+				location.reload();
+			};
+
+			loadingOverlay.appendChild(retryButton);
+		}
 	}
 
 
@@ -5917,6 +6083,7 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
+		this.updateLoadingProgress('Loading English dictionary...');
 		try {
 			// Use a working SOWPODS mirror (English dictionary)
 			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
@@ -5935,6 +6102,7 @@ formedWords.forEach((wordInfo) => {
 		}
 
 		// Also load Spanish dictionary
+		this.updateLoadingProgress('Loading Spanish dictionary...');
 		await this.loadSpanishDictionary();
 	}
 
@@ -5970,6 +6138,24 @@ formedWords.forEach((wordInfo) => {
 				'segote', 'segota', // Not real Spanish words
 				'mojigato', 'mojigata', // Too obscure for Scrabble
 				'beato', 'beata', // Too obscure for Scrabble
+				'urea', // Means urine, inappropriate for Scrabble
+				'orina', // Means urine, inappropriate for Scrabble
+				'excremento', 'excrementos', // Inappropriate for Scrabble
+				'mierda', // Inappropriate for Scrabble
+				'culo', 'culos', // Inappropriate for Scrabble
+				'pedo', 'pedos', // Inappropriate for Scrabble
+				'coño', 'coños', // Inappropriate for Scrabble
+				'puta', 'putas', 'puto', 'putos', // Inappropriate for Scrabble
+				'joder', 'jodes', 'jode', // Inappropriate for Scrabble
+				'follar', // Inappropriate for Scrabble
+				'sexo', 'sexual', // Potentially inappropriate for Scrabble
+				'porno', 'pornografía', // Inappropriate for Scrabble
+				'viagra', // Inappropriate for Scrabble
+				'alcohol', 'alcohólico', 'alcohólicos', // Potentially inappropriate
+				'droga', 'drogas', 'droga', // Inappropriate for Scrabble
+				'marihuana', 'cocaína', 'heroína', // Inappropriate for Scrabble
+				'condón', 'condones', // Inappropriate for Scrabble
+				'aborto', 'abortos', // Inappropriate for Scrabble
 				// Add more known problematic words here as they are discovered
 			]);
 
@@ -5997,9 +6183,34 @@ formedWords.forEach((wordInfo) => {
 			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 		} catch (error) {
 			console.error("Error loading Spanish dictionary:", error);
-			// Fallback Spanish words
+			// Fallback Spanish words - expanded comprehensive list
 			const fallback = [
-				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija", "joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre", "joven", "viejo"
+				// Common nouns
+				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija",
+				// Adjectives
+				"joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre",
+				// More common words
+				"coche", "mesa", "silla", "cama", "baño", "cocina", "jardín", "parque", "escuela", "hospital", "tienda", "restaurante", "hotel", "aeropuerto", "estación", "tren", "autobús", "bicicleta", "avión", "barco", "playa", "montaña", "río", "lago", "bosque", "desierto",
+				// Verbs (common forms)
+				"ser", "estar", "tener", "hacer", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aparecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descubrir", "levantar",
+				// More nouns
+				"animal", "pájaro", "pez", "caballo", "vaca", "cerdo", "oveja", "gallina", "pollo", "conejo", "ratón", "elefante", "león", "tigre", "oso", "mono", "serpiente", "tortuga", "mariposa", "abeja", "hormiga", "araña", "mosca", "mosquito",
+				"fruta", "manzana", "plátano", "naranja", "limón", "pera", "uva", "fresa", "cereza", "melón", "sandía", "piña", "kiwi", "mango", "papaya", "coco",
+				"verdura", "tomate", "lechuga", "zanahoria", "cebolla", "ajo", "pimiento", "calabaza", "berenjena", "pepino", "col", "brócoli", "espinaca", "apio", "rábano",
+				"bebida", "café", "té", "leche", "jugo", "agua", "vino", "cerveza", "refresco", "zumo",
+				"ropa", "camisa", "pantalón", "falda", "vestido", "chaqueta", "abrigo", "sombrero", "zapato", "calcetín", "guante", "bufanda", "corbata",
+				"parte del cuerpo", "cabeza", "pelo", "cara", "ojo", "nariz", "boca", "diente", "lengua", "cuello", "hombro", "brazo", "codo", "mano", "dedo", "uña", "pecho", "espalda", "estómago", "pierna", "rodilla", "pie", "tobillo", "talón",
+				"casa partes", "techo", "pared", "suelo", "escalera", "habitación", "salón", "dormitorio", "despacho", "garaje", "terraza", "balcón", "jardín",
+				"tiempo", "hora", "minuto", "segundo", "semana", "mes", "año", "siglo", "primavera", "verano", "otoño", "invierno", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo",
+				"números y medidas", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "cien", "mil", "metro", "kilómetro", "gramo", "kilo", "litro",
+				"colores adicionales", "rosa", "morado", "gris", "marrón", "naranja", "violeta", "turquesa", "beige",
+				"emociones", "alegría", "dolor", "miedo", "sorpresa", "enojo", "vergüenza", "orgullo", "esperanza", "desesperación", "tranquilidad", "nerviosismo",
+				"profesiones", "médico", "enfermera", "profesor", "estudiante", "ingeniero", "abogado", "policía", "bombero", "cocinero", "camarero", "mecánico", "electricista", "plumber", "carpintero", "pintor", "cantante", "actor", "escritor", "periodista",
+				"deportes", "fútbol", "baloncesto", "tenis", "natación", "ciclismo", "atletismo", "gimnasia", "boxeo", "karate", "judo", "esquí", "snowboard", "surf", "windsurf", "buceo", "pesca", "caza", "golf", "bolos",
+				"música", "canción", "instrumento", "piano", "guitarra", "violín", "flauta", "trompeta", "tambor", "batería", "voz", "concierto", "orquesta", "banda", "rock", "pop", "jazz", "clásica", "flamenco", "reggaetón",
+				"arte", "pintura", "escultura", "fotografía", "cine", "teatro", "danza", "ópera", "museo", "galería", "lienzo", "pincel", "colores", "forma", "línea", "textura",
+				"tecnología", "ordenador", "teléfono", "internet", "red", "programa", "aplicación", "pantalla", "teclado", "ratón", "disco", "memoria", "procesador", "software", "hardware",
+				"naturaleza", "tierra", "aire", "fuego", "mar", "océano", "isla", "península", "continente", "país", "región", "provincia", "municipio", "pueblo", "aldea", "campo", "cielo", "nube", "lluvia", "nieve", "granizo", "trueno", "relámpago", "arcoíris"
 			];
 			this.spanishDictionary = new Set();
 			this.spanishDictionaryNormalized = new Set();
@@ -6017,13 +6228,14 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadLanguageDictionary(lang) {
+		this.updateLoadingProgress(`Setting up ${lang === 'es' ? 'Spanish' : 'English'} language...`);
 		// Set activeDictionary to the appropriate language dictionary
 		if (lang === 'es') {
 			// For Spanish, use ONLY Spanish dictionary
 			// Use normalized Spanish dictionary for matching (tiles are ASCII letters)
 			this.activeDictionary = new Set(this.spanishDictionaryNormalized);
 		} else {
-			// For other languages, use English dictionary
+			// For English, use English dictionary
 			this.activeDictionary = new Set(this.dictionary);
 		}
 
