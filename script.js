@@ -1792,7 +1792,7 @@ class ScrabbleGame {
 		});
 
 		// Check dictionary for potential words
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			// Skip words that are too short
 			if (word.length < 4) continue;
 
@@ -2275,7 +2275,7 @@ class ScrabbleGame {
 		});
 
 		// Check dictionary for words that can be formed
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (word.length >= 2) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -2385,7 +2385,7 @@ class ScrabbleGame {
 		});
 
 		// Search dictionary for longer words
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (word.length >= minLength && word.length <= maxLength) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -2825,7 +2825,7 @@ class ScrabbleGame {
 		});
 
 		// Check each word in dictionary
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (word.length >= 2 && word.length <= letters.length) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -2902,7 +2902,7 @@ class ScrabbleGame {
 
 		// Get all possible words from dictionary that can be formed
 		// with available letters and must connect with existing tiles
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (this.canFormWord(word, prefix, suffix, availableLetters)) {
 				const play = this.createPlay(
 					word,
@@ -3205,7 +3205,7 @@ class ScrabbleGame {
 		}
 
 		// Check each word in dictionary
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			// Allow shorter words (2-3 letters) for more possibilities
 			if (
 				word.length >= 2 &&
@@ -3229,7 +3229,7 @@ class ScrabbleGame {
 		});
 
 		// Check each word in dictionary
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (word.length >= 2 && word.length <= letters.length) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -4038,7 +4038,7 @@ async executeAIPlay(play) {
 		// Enhanced blank tile usage - prioritize high-value opportunities
 		const priorityLetters = new Set(['S', 'R', 'E', 'D', 'L', 'Y']); // Common useful letters
 
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			if (word.length >= 3) { // Minimum word length of 3
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -5776,10 +5776,10 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadLanguageDictionary(lang) {
-		// Set activeDictionary to include both English and Spanish words
+		// Set activeDictionary to the appropriate language dictionary
 		if (lang === 'es') {
-			// For Spanish, accept both Spanish and English words
-			this.activeDictionary = new Set([...this.dictionary, ...this.spanishDictionary]);
+			// For Spanish, use ONLY Spanish dictionary
+			this.activeDictionary = new Set(this.spanishDictionary);
 		} else {
 			// For other languages, use English dictionary
 			this.activeDictionary = new Set(this.dictionary);
