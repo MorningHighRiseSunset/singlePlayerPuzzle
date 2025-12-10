@@ -167,6 +167,8 @@ class ScrabbleGame {
 		this.showAIDebug = false;
 		// preferred language short code (e.g. 'en','es','zh','fr') persisted to localStorage
 		this.preferredLang = (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+		// Active dictionary for validation and AI word selection
+		this.activeDictionary = new Set();
 
 		// When the player clicks Submit/Play, we may start speech inside that gesture
 		this._submitStartedSpeak = false;
@@ -273,7 +275,7 @@ class ScrabbleGame {
 		if (this.placedTiles.length < 2) return false;
 		// Only check if the tiles form a valid dictionary word (ignore adjacency, first move, etc.)
 		const mainWord = this.getMainWord();
-		return this.dictionary.has(mainWord.toLowerCase());
+		return this.activeDictionary.has(mainWord.toLowerCase());
 	}
 
 	// Helper to block/unblock the hint box
@@ -1130,7 +1132,7 @@ class ScrabbleGame {
 				for (const letter2 of availableLetters) {
 					if (letter1 === letter2) continue;
 					const word = letter1 + letter2;
-					if (this.dictionary.has(word.toLowerCase())) {
+					if (this.activeDictionary.has(word.toLowerCase())) {
 						const startPos = this.findValidPositionForWord(word);
 						if (startPos) {
 							const play = {
@@ -1559,7 +1561,7 @@ class ScrabbleGame {
 			if (!play || !play.word) return false;
 
 			// Always check main word
-			if (!this.dictionary.has(play.word.toLowerCase())) return false;
+			if (!this.activeDictionary.has(play.word.toLowerCase())) return false;
 
 			// Always check cross-words
 			const crossWords = this.getAllCrossWords(
@@ -1572,12 +1574,12 @@ class ScrabbleGame {
 			// In strict mode, ALL cross-words must be valid and >1 letter
 			if (strictMode) {
 				return crossWords.every(word =>
-					this.dictionary.has(word.toLowerCase()) && word.length > 1
+					this.activeDictionary.has(word.toLowerCase()) && word.length > 1
 				);
 			} else {
 				// In normal mode, allow if most cross-words are valid
 				const validCount = crossWords.filter(word =>
-					this.dictionary.has(word.toLowerCase()) && word.length > 1
+					this.activeDictionary.has(word.toLowerCase()) && word.length > 1
 				).length;
 				return validCount === crossWords.length;
 			}
@@ -1921,7 +1923,7 @@ class ScrabbleGame {
 			const word = prefix + combination + suffix;
 			if (
 				word.length >= 2 &&
-				this.dictionary.has(word.toLowerCase()) &&
+				this.activeDictionary.has(word.toLowerCase()) &&
 				pattern.test(word)
 			) {
 				words.add(word);
@@ -2065,7 +2067,7 @@ class ScrabbleGame {
 					this.getHorizontalWordAt(row, col, tempBoard);
 
 				if (crossWord && crossWord.length > 1) {
-					if (!this.dictionary.has(crossWord.toLowerCase())) {
+					if (!this.activeDictionary.has(crossWord.toLowerCase())) {
 						console.log(`Invalid cross word formed: ${crossWord}`);
 						return false;
 					}
@@ -2972,7 +2974,7 @@ class ScrabbleGame {
 				if (
 					mainWord &&
 					mainWord.length > 1 &&
-					(!this.dictionary.has(mainWord.toLowerCase()) ||
+					(!this.activeDictionary.has(mainWord.toLowerCase()) ||
 					excludedVariants.has(mainWord.toLowerCase()))
 				) {
 					invalidWords.push(mainWord);
@@ -2991,7 +2993,7 @@ class ScrabbleGame {
 				!checkedWords.has(crossWord)
 			) {
 				if (
-					!this.dictionary.has(crossWord.toLowerCase()) ||
+					!this.activeDictionary.has(crossWord.toLowerCase()) ||
 					excludedVariants.has(crossWord.toLowerCase())
 				) {
 					invalidWords.push(crossWord);
@@ -3045,7 +3047,7 @@ async executeAIPlay(play) {
             const mainWord = isHorizontal ?
                 this.getHorizontalWordAt(row, col, tempBoard) :
                 this.getVerticalWordAt(row, col, tempBoard);
-            if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
+            if (mainWord && mainWord.length > 1 && !this.activeDictionary.has(mainWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(mainWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
@@ -3060,7 +3062,7 @@ async executeAIPlay(play) {
             this.getVerticalWordAt(row, col, tempBoard) :
             this.getHorizontalWordAt(row, col, tempBoard);
         if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
-            if (!this.dictionary.has(crossWord.toLowerCase())) {
+            if (!this.activeDictionary.has(crossWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(crossWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
@@ -3291,22 +3293,12 @@ async executeAIPlay(play) {
 
 			// Format move description for multiple words
 			let moveDescription;
-			// Translate word for move history if needed
-			function translateWord(word, lang) {
-				// Only translate a few known words for demo
-				if (lang === 'es') {
-					if (word.toUpperCase() === 'ETESIAN') return 'ETESIO';
-				}
-				// Add more translations as needed
-				return word;
-			}
-			const lang = this.preferredLang || 'en';
 			if (wordsList.length > 1) {
 				moveDescription = wordsList
-					.map((w) => `${translateWord(w.word, lang)} (${w.score})`)
+					.map((w) => `${w.word} (${w.score})`)
 					.join(" & ");
 			} else if (wordsList.length === 1) {
-				moveDescription = translateWord(wordsList[0].word, lang);
+				moveDescription = wordsList[0].word;
 			} else {
 				moveDescription = "(No new words scored)";
 			}
@@ -3728,7 +3720,7 @@ async executeAIPlay(play) {
 			return false;
 		}
 
-		if (!this.dictionary.has(word.toLowerCase())) {
+		if (!this.activeDictionary.has(word.toLowerCase())) {
 			this.logAIValidation(`${word} is not a valid word in the dictionary`);
 			return false;
 		}
@@ -3777,7 +3769,7 @@ async executeAIPlay(play) {
 						this.getHorizontalWordAt(row, col, tempBoard);
 
 					if (crossWord && crossWord.length > 1) {
-						if (!this.dictionary.has(crossWord.toLowerCase())) {
+						if (!this.activeDictionary.has(crossWord.toLowerCase())) {
 							this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
 							return false;
 						}
@@ -5195,6 +5187,7 @@ formedWords.forEach((wordInfo) => {
 
 	async init() {
 		await this.loadDictionary();
+		await this.loadLanguageDictionary(this.preferredLang);
 		this.createBoard();
 		this.fillRacks();
 		this.setupTapPlacement();
@@ -5207,10 +5200,12 @@ formedWords.forEach((wordInfo) => {
 				for (const s of selectors) {
 					try { s.value = this.preferredLang || 'en'; } catch (e) { /* ignore */ }
 					// add change listener
-					s.addEventListener('change', (ev) => {
+					s.addEventListener('change', async (ev) => {
 						const val = ev.target.value || 'en';
 						this.preferredLang = val;
 						try { localStorage.setItem('preferredLang', this.preferredLang); } catch (e) { /* ignore */ }
+						// Load the new language dictionary
+						await this.loadLanguageDictionary(val);
 						// sync other selectors
 						for (const o of selectors) {
 							if (o !== ev.target) try { o.value = val; } catch (e) {}
@@ -5224,7 +5219,7 @@ formedWords.forEach((wordInfo) => {
 
 		// --- Build the Trie for pro-level AI word generation ---
 		this.trie = new Trie();
-		for (const word of this.dictionary) {
+		for (const word of this.activeDictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
 
@@ -5346,30 +5341,13 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Use a working SOWPODS mirror
+			// Use a working SOWPODS mirror (English dictionary)
 			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
 			let text = await response.text();
 			// SOWPODS is all uppercase, one word per line
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
-			// Datamuse fetch removed to prevent CORS errors and speed up loading
-			// try {
-			//     const additionalWords = await this.loadAdditionalWords();
-			//     additionalWords.forEach(word => {
-			//         if (word.length >= 2) {
-			//             this.dictionary.add(word.toLowerCase());
-			//         }
-			//     });
-			// } catch (error) {
-			//     console.error("Error loading additional words:", error);
-			// }
-
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
-					// Test if some common words are in the dictionary
-		const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
-		testWords.forEach(word => {
-			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-		});
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			// More comprehensive fallback dictionary
@@ -5377,6 +5355,62 @@ formedWords.forEach((wordInfo) => {
 				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
 			]);
 			console.warn("Using fallback dictionary with limited words");
+		}
+	}
+
+	async loadLanguageDictionary(lang) {
+		try {
+			let dictUrl = "https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt";
+			let testWords = [];
+			
+			// Load language-specific dictionary
+			if (lang === 'es') {
+				// Spanish dictionary
+				dictUrl = "https://raw.githubusercontent.com/IgnoredAmbience/spanish-dictionary/master/words_es.txt";
+				testWords = ["hola", "mundo", "juego", "palabra"];
+			} else if (lang === 'fr') {
+				// French dictionary
+				dictUrl = "https://raw.githubusercontent.com/dwyl/french-words/master/words_fr.txt";
+				testWords = ["bonjour", "monde", "jeu", "mot"];
+			} else if (lang === 'zh') {
+				// Chinese uses a different approach - fallback for now
+				console.warn("Chinese language support limited - using English dictionary");
+				this.activeDictionary = new Set(this.dictionary);
+				return;
+			} else {
+				// English
+				testWords = ["hello", "world", "game", "play"];
+			}
+			
+			const response = await fetch(dictUrl);
+			if (!response.ok) {
+				console.warn(`Language dictionary not available for ${lang}, falling back to English`);
+				this.activeDictionary = new Set(this.dictionary);
+				return;
+			}
+			
+			const text = await response.text();
+			this.activeDictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
+			
+			// Rebuild the Trie with the new language dictionary
+			this.trie = new Trie();
+			for (const word of this.activeDictionary) {
+				this.trie.insert(word.toUpperCase());
+			}
+			
+			console.log(`Language dictionary loaded for ${lang}. Word count:`, this.activeDictionary.size);
+			testWords.forEach(word => {
+				console.log(`Active dictionary contains "${word}": ${this.activeDictionary.has(word.toLowerCase())}`);
+			});
+		} catch (error) {
+			console.error(`Error loading language dictionary for ${lang}:`, error);
+			// Fallback to English dictionary
+			this.activeDictionary = new Set(this.dictionary);
+			// Rebuild trie with fallback
+			this.trie = new Trie();
+			for (const word of this.activeDictionary) {
+				this.trie.insert(word.toUpperCase());
+			}
 		}
 	}
 
@@ -5923,7 +5957,7 @@ formedWords.forEach((wordInfo) => {
         let allWordsValid = true;
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
-            if (!this.dictionary.has(word)) {
+            if (!this.activeDictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
                 allWordsValid = false;
             } else {
