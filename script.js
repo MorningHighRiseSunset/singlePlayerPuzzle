@@ -6183,34 +6183,17 @@ formedWords.forEach((wordInfo) => {
 			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 		} catch (error) {
 			console.error("Error loading Spanish dictionary:", error);
-			// Fallback Spanish words - expanded comprehensive list
+			// Minimal fallback Spanish words - only essential words to reduce bundle size
+			// The game tries to load comprehensive dictionaries from external sources first
 			const fallback = [
-				// Common nouns
-				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija",
-				// Adjectives
-				"joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre",
-				// More common words
-				"coche", "mesa", "silla", "cama", "baño", "cocina", "jardín", "parque", "escuela", "hospital", "tienda", "restaurante", "hotel", "aeropuerto", "estación", "tren", "autobús", "bicicleta", "avión", "barco", "playa", "montaña", "río", "lago", "bosque", "desierto",
-				// Verbs (common forms)
-				"ser", "estar", "tener", "hacer", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aparecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descubrir", "levantar",
-				// More nouns
-				"animal", "pájaro", "pez", "caballo", "vaca", "cerdo", "oveja", "gallina", "pollo", "conejo", "ratón", "elefante", "león", "tigre", "oso", "mono", "serpiente", "tortuga", "mariposa", "abeja", "hormiga", "araña", "mosca", "mosquito",
-				"fruta", "manzana", "plátano", "naranja", "limón", "pera", "uva", "fresa", "cereza", "melón", "sandía", "piña", "kiwi", "mango", "papaya", "coco",
-				"verdura", "tomate", "lechuga", "zanahoria", "cebolla", "ajo", "pimiento", "calabaza", "berenjena", "pepino", "col", "brócoli", "espinaca", "apio", "rábano",
-				"bebida", "café", "té", "leche", "jugo", "agua", "vino", "cerveza", "refresco", "zumo",
-				"ropa", "camisa", "pantalón", "falda", "vestido", "chaqueta", "abrigo", "sombrero", "zapato", "calcetín", "guante", "bufanda", "corbata",
-				"parte del cuerpo", "cabeza", "pelo", "cara", "ojo", "nariz", "boca", "diente", "lengua", "cuello", "hombro", "brazo", "codo", "mano", "dedo", "uña", "pecho", "espalda", "estómago", "pierna", "rodilla", "pie", "tobillo", "talón",
-				"casa partes", "techo", "pared", "suelo", "escalera", "habitación", "salón", "dormitorio", "despacho", "garaje", "terraza", "balcón", "jardín",
-				"tiempo", "hora", "minuto", "segundo", "semana", "mes", "año", "siglo", "primavera", "verano", "otoño", "invierno", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo",
-				"números y medidas", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "cien", "mil", "metro", "kilómetro", "gramo", "kilo", "litro",
-				"colores adicionales", "rosa", "morado", "gris", "marrón", "naranja", "violeta", "turquesa", "beige",
-				"emociones", "alegría", "dolor", "miedo", "sorpresa", "enojo", "vergüenza", "orgullo", "esperanza", "desesperación", "tranquilidad", "nerviosismo",
-				"profesiones", "médico", "enfermera", "profesor", "estudiante", "ingeniero", "abogado", "policía", "bombero", "cocinero", "camarero", "mecánico", "electricista", "plumber", "carpintero", "pintor", "cantante", "actor", "escritor", "periodista",
-				"deportes", "fútbol", "baloncesto", "tenis", "natación", "ciclismo", "atletismo", "gimnasia", "boxeo", "karate", "judo", "esquí", "snowboard", "surf", "windsurf", "buceo", "pesca", "caza", "golf", "bolos",
-				"música", "canción", "instrumento", "piano", "guitarra", "violín", "flauta", "trompeta", "tambor", "batería", "voz", "concierto", "orquesta", "banda", "rock", "pop", "jazz", "clásica", "flamenco", "reggaetón",
-				"arte", "pintura", "escultura", "fotografía", "cine", "teatro", "danza", "ópera", "museo", "galería", "lienzo", "pincel", "colores", "forma", "línea", "textura",
-				"tecnología", "ordenador", "teléfono", "internet", "red", "programa", "aplicación", "pantalla", "teclado", "ratón", "disco", "memoria", "procesador", "software", "hardware",
-				"naturaleza", "tierra", "aire", "fuego", "mar", "océano", "isla", "península", "continente", "país", "región", "provincia", "municipio", "pueblo", "aldea", "campo", "cielo", "nube", "lluvia", "nieve", "granizo", "trueno", "relámpago", "arcoíris"
+				// Essential 2-3 letter words for Scrabble playability
+				"el", "la", "de", "en", "un", "es", "se", "no", "lo", "si", "me", "te", "le", "mi", "tu", "su", "al", "del", "y", "o", "a", "con", "por", "sin", "sobre", "tras", "durante", "desde", "hasta", "entre", "contra", "hacia", "para",
+				// Common short words
+				"casa", "agua", "gato", "perro", "libro", "día", "amor", "vida", "sol", "luna", "mano", "ojo", "pie", "cara", "mesa", "silla", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "padre", "madre", "hermano", "hijo",
+				// Essential adjectives
+				"bueno", "malo", "grande", "pequeño", "alto", "bajo", "rojo", "azul", "verde", "negro", "blanco", "feliz", "triste", "rápido", "lento", "caliente", "frío", "fácil", "difícil", "hermoso", "feo",
+				// Essential verbs (base forms)
+				"ser", "estar", "tener", "hacer", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "poner", "hablar", "dejar", "venir", "pensar", "salir", "volver", "tomar", "vivir", "sentir", "mirar", "trabajar", "escribir", "leer", "comer", "beber", "dormir", "correr", "jugar"
 			];
 			this.spanishDictionary = new Set();
 			this.spanishDictionaryNormalized = new Set();
