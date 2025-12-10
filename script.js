@@ -8350,66 +8350,101 @@ calculateScore() {
 	}
 
 	createConfettiEffect(options = {}) {
-		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
+		// options.variant: 'standard' | 'silver' | 'gold' | 'rainbow' | 'party' | 'celebration' | 'winter' - tune intensity/colours
 		options = options || {};
 		const variant = options.variant || 'standard';
-		// Staggered orchestrator: run canvas -> DOM -> emoji consecutively to increase
-		// the chance at least one effect shows on flaky browsers.
+		// Smart orchestrator: prioritize quality over quantity to avoid visual clutter
 		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
 		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
+		const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 		const preferEmoji = isSamsung;
 
-		// Tunable timings (ms) vary slightly by variant
-		const canvasDuration = variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500;
-		const domDuration = variant === 'gold' ? 3000 : variant === 'silver' ? 2600 : 2400;
-		const gapAfterCanvas = 200; // small gap before starting next
-		const gapAfterDOM = 180;
+		// On PC/desktop, prefer fewer but higher quality effects to avoid spam
+		// On mobile, keep fallback behavior for reliability
+		const isDesktop = !isMobile && !isSamsung;
+
+		// Tunable timings (ms) vary slightly by variant - increased for longer duration
+		const canvasDuration = variant === 'gold' ? 4200 : variant === 'silver' ? 3800 : variant === 'rainbow' ? 4500 : variant === 'party' ? 4800 : variant === 'celebration' ? 5000 : variant === 'winter' ? 4600 : 3500;
+		const domDuration = variant === 'gold' ? 4000 : variant === 'silver' ? 3600 : variant === 'rainbow' ? 4300 : variant === 'party' ? 4600 : variant === 'celebration' ? 4800 : variant === 'winter' ? 4400 : 3400;
+		const gapAfterCanvas = 300; // increased gap
+		const gapAfterDOM = 250; // increased gap
 
 		let triedSomething = false;
 
 		try {
-			// Start canvas first when available and not explicitly preferring emoji
-			if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
-				try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
-				catch (e) { console.warn('createCanvasConfetti failed', e); }
-			}
-
-			// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
-			const startDOM = () => {
-				if (typeof this.createDOMConfetti === 'function') {
-					try {
-						const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-						const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-						this.createDOMConfetti({ count, variant }); triedSomething = true;
-					} catch (e) { console.warn('createDOMConfetti failed', e); }
+			// Smart selection: prefer quality over quantity on desktop
+			if (isDesktop) {
+				// On desktop, try canvas first (highest quality), fallback to emoji if needed
+				if (typeof this.createCanvasConfetti === 'function') {
+					try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
+					catch (e) {
+						console.warn('createCanvasConfetti failed, trying emoji fallback', e);
+						// Fallback to emoji if canvas fails
+						if (typeof this.createEmojiConfetti === 'function') {
+							try {
+								const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
+													 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
+													 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
+													 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
+													 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
+													 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
+													 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
+								this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
+							} catch (e2) { console.warn('createEmojiConfetti fallback failed', e2); }
+						}
+					}
 				}
-			};
-
-			if (this._canvasConfettiActive) {
-				setTimeout(startDOM, canvasDuration + gapAfterCanvas);
 			} else {
-				setTimeout(startDOM, 420); // short fallback if canvas didn't start
-			}
-
-			// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
-			const startEmoji = () => {
-				if (typeof this.createEmojiConfetti === 'function') {
-					try {
-						const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
-						this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
-					} catch (e) { console.warn('createEmojiConfetti failed', e); }
+				// Mobile/Samsung: keep original staggered approach for reliability
+				// Start canvas first when available and not explicitly preferring emoji
+				if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
+					try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
+					catch (e) { console.warn('createCanvasConfetti failed', e); }
 				}
-			};
 
-			// Determine when to run emoji: if DOM will be active, schedule after DOM; otherwise after canvas or short delay
-			if (this._canvasConfettiActive) {
-				setTimeout(() => {
-					if (this._domConfettiActive) setTimeout(startEmoji, domDuration + gapAfterDOM);
-					else startEmoji();
-				}, canvasDuration + gapAfterCanvas + 30);
-			} else {
-				// neither started or canvas didn't start; run emoji after a slightly longer fallback
-				setTimeout(startEmoji, 900);
+				// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
+				const startDOM = () => {
+					if (typeof this.createDOMConfetti === 'function') {
+						try {
+							const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+							const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
+							this.createDOMConfetti({ count, variant }); triedSomething = true;
+						} catch (e) { console.warn('createDOMConfetti failed', e); }
+					}
+				};
+
+				if (this._canvasConfettiActive) {
+					setTimeout(startDOM, canvasDuration + gapAfterCanvas);
+				} else {
+					setTimeout(startDOM, 420); // short fallback if canvas didn't start
+				}
+
+				// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
+				const startEmoji = () => {
+					if (typeof this.createEmojiConfetti === 'function') {
+						try {
+							const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
+												 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
+												 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
+												 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
+												 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
+												 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
+												 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
+							this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
+						} catch (e) { console.warn('createEmojiConfetti failed', e); }
+					}
+				};
+
+				// Determine when to run emoji: if DOM will be active, schedule after DOM; otherwise after canvas or short delay
+				if (this._canvasConfettiActive) {
+					setTimeout(() => {
+						if (this._domConfettiActive) setTimeout(startEmoji, domDuration + gapAfterDOM);
+						else startEmoji();
+					}, canvasDuration + gapAfterCanvas + 30);
+				} else {
+					// neither started or canvas didn't start; run emoji after a slightly longer fallback
+					setTimeout(startEmoji, 900);
+				}
 			}
 
 		} catch (e) { console.warn('createConfettiEffect orchestrator failed', e); }
@@ -8435,8 +8470,8 @@ calculateScore() {
 			if (this._canvasConfettiActive) return;
 			this._canvasConfettiActive = true;
 			const variant = options.variant || 'standard';
-			const count = options.count || (window.innerWidth > 720 ? (variant === 'gold' ? 260 : variant === 'silver' ? 200 : 160) : (variant === 'gold' ? 140 : variant === 'silver' ? 110 : 80));
-			const duration = options.duration || (variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500);
+			const count = options.count || (window.innerWidth > 720 ? (variant === 'gold' ? 280 : variant === 'silver' ? 220 : variant === 'rainbow' ? 300 : variant === 'party' ? 320 : variant === 'celebration' ? 340 : variant === 'winter' ? 260 : 180) : (variant === 'gold' ? 150 : variant === 'silver' ? 120 : variant === 'rainbow' ? 160 : variant === 'party' ? 170 : variant === 'celebration' ? 180 : variant === 'winter' ? 140 : 90));
+			const duration = options.duration || (variant === 'gold' ? 4200 : variant === 'silver' ? 3800 : variant === 'rainbow' ? 4500 : variant === 'party' ? 4800 : variant === 'celebration' ? 5000 : variant === 'winter' ? 4600 : 3500);
 			const canvas = document.createElement('canvas');
 			canvas.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:100000';
 			canvas.width = window.innerWidth * devicePixelRatio;
@@ -8446,7 +8481,13 @@ calculateScore() {
 			document.body.appendChild(canvas);
 			const ctx = canvas.getContext('2d');
 
-			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081','#FFE082'] :
+											variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40','#B0BEC5'] :
+											variant === 'rainbow' ? ['#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3'] :
+											variant === 'party' ? ['#FF4081','#448AFF','#00E676','#FFD700','#FFAB40','#EA80FC','#FF5722'] :
+											variant === 'celebration' ? ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD','#FFC107'] :
+											variant === 'winter' ? ['#E3F2FD','#BBDEFB','#90CAF9','#42A5F5','#1E88E5','#1565C0','#0D47A1'] :
+											['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const particles = [];
 			for (let i=0;i<count;i++) {
 				particles.push({
@@ -8494,8 +8535,14 @@ calculateScore() {
 			this._domConfettiActive = true;
 			const variant = options.variant || 'standard';
 			const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
-			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
+			const count = options.count || (variant === 'gold' ? Math.min(480, Math.floor(baseCount * 1.8)) : variant === 'silver' ? Math.min(380, Math.floor(baseCount * 1.4)) : variant === 'rainbow' ? Math.min(520, Math.floor(baseCount * 2.0)) : variant === 'party' ? Math.min(540, Math.floor(baseCount * 2.1)) : variant === 'celebration' ? Math.min(560, Math.floor(baseCount * 2.2)) : variant === 'winter' ? Math.min(420, Math.floor(baseCount * 1.6)) : baseCount);
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081','#FFE082'] :
+											variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40','#B0BEC5'] :
+											variant === 'rainbow' ? ['#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3'] :
+											variant === 'party' ? ['#FF4081','#448AFF','#00E676','#FFD700','#FFAB40','#EA80FC','#FF5722'] :
+											variant === 'celebration' ? ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD','#FFC107'] :
+											variant === 'winter' ? ['#E3F2FD','#BBDEFB','#90CAF9','#42A5F5','#1E88E5','#1565C0','#0D47A1'] :
+											['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const container = document.createElement('div');
 			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
 			document.body.appendChild(container);
@@ -8511,9 +8558,9 @@ calculateScore() {
 					el.style.transform = `translateX(${dx}px) rotate(${Math.random()*1080}deg) translateY(0)`;
 					el.style.opacity = '0';
 				}, 20 + Math.random()*160);
-				setTimeout(() => el.remove(), 2200 + Math.random()*1000);
+				setTimeout(() => el.remove(), 3200 + Math.random()*1500);
 			}
-			setTimeout(() => { try { container.remove(); } catch(e){} this._domConfettiActive = false; }, 2600 + Math.random()*1200);
+			setTimeout(() => { try { container.remove(); } catch(e){} this._domConfettiActive = false; }, 3800 + Math.random()*1800);
 		} catch (e) { console.warn('createDOMConfetti failed', e); this._domConfettiActive = false; }
 	}
 
@@ -8534,11 +8581,23 @@ calculateScore() {
 			let colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
 			// Tune visuals based on variant
 			if (variant === 'silver') {
-				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈"];
-				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40"];
+				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈","🥳"];
+				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40","#90CAF9"];
 			} else if (variant === 'gold') {
-				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇"];
-				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081"];
+				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇","🎊"];
+				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081","#FFE082"];
+			} else if (variant === 'rainbow') {
+				emojis = ["🌈","🎨","🎭","🎪","🎡","🎢","🌟"];
+				colors = ["#FF0000","#FF7F00","#FFFF00","#00FF00","#0000FF","#4B0082","#9400D3"];
+			} else if (variant === 'party') {
+				emojis = ["🎉","🎊","🎈","🎂","🎁","🎀","🎶","🎵"];
+				colors = ["#FF4081","#448AFF","#00E676","#FFD700","#FFAB40","#EA80FC","#FF5722"];
+			} else if (variant === 'celebration') {
+				emojis = ["🎉","🎊","🎆","🎇","✨","🌟","💫","⭐"];
+				colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#8E44AD","#FFC107"];
+			} else if (variant === 'winter') {
+				emojis = ["❄️","⛄","🎄","🎅","🔔","🎁","🕯️"];
+				colors = ["#E3F2FD","#BBDEFB","#90CAF9","#42A5F5","#1E88E5","#1565C0","#0D47A1"];
 			}
 
 			// Overlay flash
@@ -8555,7 +8614,7 @@ calculateScore() {
 			setTimeout(() => overlay.remove(), 1200);
 
 			const baseCount = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
-			const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
+			const count = variant === 'gold' ? Math.min(480, Math.floor(baseCount * 1.8)) : variant === 'silver' ? Math.min(380, Math.floor(baseCount * 1.4)) : variant === 'rainbow' ? Math.min(520, Math.floor(baseCount * 2.0)) : variant === 'party' ? Math.min(540, Math.floor(baseCount * 2.1)) : variant === 'celebration' ? Math.min(560, Math.floor(baseCount * 2.2)) : variant === 'winter' ? Math.min(420, Math.floor(baseCount * 1.6)) : baseCount;
 			const cx = window.innerWidth / 2;
 			const cy = Math.max(80, window.innerHeight * 0.28); // burst from upper-center, slightly higher on mobile
 
@@ -8600,10 +8659,10 @@ calculateScore() {
 					el.style.opacity = '0';
 				});
 
-				setTimeout(() => el.remove(), 2000 + Math.random() * 1200);
+				setTimeout(() => el.remove(), 3000 + Math.random() * 1800);
 			}
 		} finally {
-			setTimeout(() => { this._bingoSplashActive = false; }, 2200);
+			setTimeout(() => { this._bingoSplashActive = false; }, 3200);
 		}
 	}
 
@@ -8619,7 +8678,13 @@ calculateScore() {
 			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
             
 			// Enhanced emoji set with more variety and Samsung-friendly emojis
-			const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊'] : variant === 'silver' ? ['🎉','🎖️','✨','🎊','🥈'] : ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
+			const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','🥇','✨'] :
+								 variant === 'silver' ? ['🎉','🎖️','✨','🎊','🥈','🥳','🎈'] :
+								 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨','🌟','✨'] :
+								 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵','🥳','🎈'] :
+								 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐','🎆','🎇'] :
+								 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️','🎄','❄️'] :
+								 ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
 			const emojis = options.emojis || defaultEmojis;
 			const container = document.createElement('div');
 			container.className = 'emoji-confetti-container';
@@ -8671,7 +8736,7 @@ calculateScore() {
 					if (i === 0 || i === count-1) {
 						try { this.appendConsoleMessage && this.appendConsoleMessage(`[Confetti] emoji particle ${i} removed`); } catch(e){}
 					}
-				}, 2800 + Math.random()*1000);
+				}, 3800 + Math.random()*1500);
 			}
 
 			// Extended container lifetime with safety checks for Samsung/Android
@@ -8684,7 +8749,7 @@ calculateScore() {
 					console.warn('Emoji container cleanup failed:', e);
 					try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container cleanup failed: ' + e); } catch(e2){}
 				}
-			}, 4200 + Math.random()*1200);
+			}, 5800 + Math.random()*1800);
 			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji scheduled removal'); } catch(e){}
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}
