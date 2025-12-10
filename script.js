@@ -189,6 +189,17 @@ function getTranslation(key, lang = 'en') {
 	return translations[lang][key] || translations['en'][key] || key;
 }
 
+function normalizeWordForDict(word) {
+	if (!word) return '';
+	// Remove diacritics and non-letter characters, return uppercase
+	try {
+		return word.normalize('NFD').replace(/[00-\u036f]/g, '').replace(/[^[A-Za-zÁÉÍÓÚÑáéíóúñ]]/g, '').toUpperCase();
+	} catch (e) {
+		// Fallback simple removal
+		return word.replace(/[\u0300-\u036f]/g, '').toUpperCase();
+	}
+}
+
 // English to Spanish word translations for common Scrabble words
 const wordTranslations = {
 	es: {
@@ -394,9 +405,15 @@ const wordTranslations = {
 };
 
 function translateWordForDisplay(word, lang) {
-	if (lang === 'es' && wordTranslations.es[word.toUpperCase()]) {
-		return wordTranslations.es[word.toUpperCase()];
+	if (!word) return word;
+	const up = String(word).toUpperCase();
+	// If Spanish mode and we have a normalized->original map, prefer original with diacritics
+	if (lang === 'es' && typeof this !== 'undefined' && this.spanishNormalizedMap) {
+		const norm = normalizeWordForDict(up).toUpperCase();
+		if (this.spanishNormalizedMap && this.spanishNormalizedMap[norm]) return this.spanishNormalizedMap[norm];
 	}
+	// Fallback: English->Spanish translation map for common words
+	if (lang === 'es' && wordTranslations.es[up]) return wordTranslations.es[up];
 	return word;
 }
 
@@ -548,6 +565,8 @@ class ScrabbleGame {
 		this.aiScore = 0;
 		this.dictionary = new Set();
 		this.spanishDictionary = new Set();
+		this.spanishDictionaryNormalized = new Set();
+		this.spanishNormalizedMap = {}; // normalized -> original
 		this.currentTurn = "player";
 		this.placedTiles = [];
 		this.gameEnded = false;
@@ -5771,14 +5790,36 @@ formedWords.forEach((wordInfo) => {
 			// Spanish Scrabble dictionary from GitHub
 			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
 			let text = await response.text();
-			this.spanishDictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
-			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size);
+			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
+			this.spanishDictionary = new Set();
+			this.spanishDictionaryNormalized = new Set();
+			this.spanishNormalizedMap = {};
+			for (const w of rawWords) {
+				const orig = w;
+				const norm = normalizeWordForDict(orig);
+				if (norm) {
+					this.spanishDictionary.add(orig.toLowerCase());
+					this.spanishDictionaryNormalized.add(norm.toLowerCase());
+					this.spanishNormalizedMap[norm.toUpperCase()] = orig; // store original for display
+				}
+			}
+			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 		} catch (error) {
 			console.error("Error loading Spanish dictionary:", error);
 			// Fallback Spanish words
-			this.spanishDictionary = new Set([
+			const fallback = [
 				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija", "joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre", "joven", "viejo"
-			]);
+			this.spanishDictionary = new Set();
+			this.spanishDictionaryNormalized = new Set();
+			this.spanishNormalizedMap = {};
+			for (const w of fallback) {
+				const norm = normalizeWordForDict(w);
+				if (norm) {
+					this.spanishDictionary.add(w);
+					this.spanishDictionaryNormalized.add(norm.toLowerCase());
+					this.spanishNormalizedMap[norm.toUpperCase()] = w;
+				}
+			}
 			console.warn("Using fallback Spanish dictionary with limited words");
 		}
 	}
@@ -5787,7 +5828,8 @@ formedWords.forEach((wordInfo) => {
 		// Set activeDictionary to the appropriate language dictionary
 		if (lang === 'es') {
 			// For Spanish, use ONLY Spanish dictionary
-			this.activeDictionary = new Set(this.spanishDictionary);
+			// Use normalized Spanish dictionary for matching (tiles are ASCII letters)
+			this.activeDictionary = new Set(this.spanishDictionaryNormalized);
 		} else {
 			// For other languages, use English dictionary
 			this.activeDictionary = new Set(this.dictionary);
@@ -7204,12 +7246,18 @@ calculateScore() {
 
 	speakWord(word) {
 		if (!word) return;
-		// Prefer remote TTS via Netlify function; fallback to browser TTS via _speakWithRetry
 		try {
-			this._speakWithRetry(word, { lang: this._getPreferredLangCode(), rate: 0.9 }).catch(() => {});
-		} catch (e) { /* ignore */ }
+			if (typeof this._speakWithRetry === 'function') {
+				this._speakWithRetry(word, { lang: this._getPreferredLangCode() }).catch(() => {});
+			} else if (typeof speechSynthesis !== 'undefined') {
+				const utter = new SpeechSynthesisUtterance(word);
+				utter.lang = this._getPreferredLangCode();
+				speechSynthesis.speak(utter);
+			}
+		} catch (e) {
+			console.warn('speakWord failed', e);
+		}
 	}
-
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
 		try {
