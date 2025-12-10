@@ -5995,21 +5995,6 @@ formedWords.forEach((wordInfo) => {
 				}
 			}
 			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
-			let text = await response.text();
-			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
-			this.spanishDictionary = new Set();
-			this.spanishDictionaryNormalized = new Set();
-			this.spanishNormalizedMap = {};
-			for (const w of rawWords) {
-				const orig = w;
-				const norm = normalizeWordForDict(orig);
-				if (norm) {
-					this.spanishDictionary.add(orig.toLowerCase());
-					this.spanishDictionaryNormalized.add(norm.toLowerCase());
-					this.spanishNormalizedMap[norm.toUpperCase()] = orig; // store original for display
-				}
-			}
-			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 		} catch (error) {
 			console.error("Error loading Spanish dictionary:", error);
 			// Fallback Spanish words
