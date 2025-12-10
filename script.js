@@ -7286,19 +7286,11 @@ calculateScore() {
 		if (!historyDisplay) {
 			historyDisplay = document.createElement("div");
 			historyDisplay.id = "move-history";
-			// Prefer placing history near the instructions (drawer-instructions)
-			const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
-			if (drawerInstructions) {
-				drawerInstructions.appendChild(historyDisplay);
-			} else {
-				// Fallbacks: mobile drawer's moves-panel then info-panel
-				const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
-				const infoPanel = document.querySelector(".info-panel");
-				if (mobileDrawer) {
-					mobileDrawer.appendChild(historyDisplay);
-				} else if (infoPanel) {
-					infoPanel.appendChild(historyDisplay);
-				}
+			historyDisplay.style.cssText = 'font-size:0.9em; color:#333;';
+			// Prefer placing in the move-history-container
+			const container = document.getElementById('move-history-container');
+			if (container) {
+				container.appendChild(historyDisplay);
 			}
 		}
 		// Populate history content
