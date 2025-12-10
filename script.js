@@ -7281,31 +7281,25 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		// Get or create the history display element
-		let historyDisplay = document.getElementById("move-history");
-		if (!historyDisplay) {
-			historyDisplay = document.createElement("div");
-			historyDisplay.id = "move-history";
-			historyDisplay.style.cssText = 'font-size:0.9em; color:#333;';
-			// Prefer placing in the move-history-container
-			const container = document.getElementById('move-history-container');
-			if (container) {
-				container.appendChild(historyDisplay);
-			}
-		}
+		// Update both mobile and desktop history displays
+		const historyDisplay = document.getElementById("move-history");
+		const historyDisplayDesktop = document.getElementById("move-history-desktop");
+		
 		// Populate history content
 		const historyContent = this.moveHistory
 			.map((move) => {
 				if (Array.isArray(move.words)) {
-					return `<div class="move">${move.player}: ${move.words.map(w => `"${w.word}" (${w.score || 0}pt)`).join(", ")} for ${move.score} points</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.words.map(w => `"${w.word}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
 				} else if (move.word) {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: "${move.word}" = ${move.score}pts</div>`;
 				} else {
-					return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.word || 'move'} = ${move.score}pts</div>`;
 				}
 			})
 			.join("");
-		historyDisplay.innerHTML = historyContent;
+		
+		if (historyDisplay) historyDisplay.innerHTML = historyContent;
+		if (historyDisplayDesktop) historyDisplayDesktop.innerHTML = historyContent;
 	}
 
 	updateGameState() {
