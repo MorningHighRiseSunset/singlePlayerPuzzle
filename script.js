@@ -22,6 +22,10 @@ const translations = {
 		quit: 'QUIT',
 		exchange: 'EXCHANGE',
 		aiExchanged: 'AI exchanged tiles',
+		aiPlayingPreview: 'AI is playing its previewed move!',
+		aiRunningOutOfTime: 'AI is running out of time, playing nearest valid move!',
+		aiFoundMove: 'AI found a move!',
+		aiNoMoveExchange: 'AI is dumbfounded and decides to exchange tiles...',
 		noNewWords: '(No new words scored)',
 		howToPlayTitle: 'How to Play',
 		playingTiles: 'Playing Tiles:',
@@ -67,6 +71,10 @@ const translations = {
 		quit: 'SALIR',
 		exchange: 'INTERCAMBIAR',
 		aiExchanged: 'La IA intercambió fichas',
+		aiPlayingPreview: 'La IA está jugando su movimiento previsualizado!',
+		aiRunningOutOfTime: 'La IA se está quedando sin tiempo, jugando el movimiento válido más cercano!',
+		aiFoundMove: 'La IA encontró un movimiento!',
+		aiNoMoveExchange: 'La IA está desconcertada y decide intercambiar fichas...',
 		noNewWords: '(Sin palabras nuevas)',
 		howToPlayTitle: 'Cómo Jugar',
 		playingTiles: 'Colocación de Fichas:',
@@ -112,6 +120,10 @@ const translations = {
 		quit: 'QUITTER',
 		exchange: 'ECHANGER',
 		aiExchanged: 'L\'IA a échangé des tuiles',
+		aiPlayingPreview: 'L\'IA joue son coup prévisualisé !',
+		aiRunningOutOfTime: 'L\'IA manque de temps, elle joue le coup valide le plus proche !',
+		aiFoundMove: 'L\'IA a trouvé un coup !',
+		aiNoMoveExchange: 'L\'IA est désemparée et décide d\'échanger des tuiles...',
 		noNewWords: '(Aucun mot nouveau)',
 		howToPlayTitle: 'Comment Jouer',
 		playingTiles: 'Placement des Tuiles:',
@@ -149,6 +161,11 @@ const translations = {
 		computer: '计算机',
 		tilesRemaining: '剩余瓷砖',
 		moveHistory: '移动历史',
+		aiExchanged: 'AI 交换了瓷砖',
+		aiPlayingPreview: 'AI 正在播放其预览的移动！',
+		aiRunningOutOfTime: 'AI 即将超时，正在播放最近的有效移动！',
+		aiFoundMove: 'AI 找到了一步！',
+		aiNoMoveExchange: 'AI 感到茫然，决定交换瓷砖...',
 		landscape: '为了获得最佳体验，请将设备旋转至横向模式',
 		scroll: '您可以上下滚动以访问您的架子、游戏控制和移动历史',
 		instructions: '开始前请在菜单中阅读"如何玩"',
@@ -600,6 +617,19 @@ class ScrabbleGame {
 		this.init();
 	}
 
+	// Centralized dictionary lookup that handles normalization (diacritics)
+	dictionaryHas(word) {
+		if (!word) return false;
+		// Preferred language may affect lookup strategy
+		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+		if (lang === 'es') {
+			const norm = normalizeWordForDict(word).toLowerCase();
+			return this.activeDictionary.has(norm);
+		} else {
+			return this.activeDictionary.has(String(word).toLowerCase());
+		}
+	}
+
 	pickNonRepeating(arr, type) {
 		let msg;
 		let tries = 0;
@@ -695,7 +725,7 @@ class ScrabbleGame {
 		if (this.placedTiles.length < 2) return false;
 		// Only check if the tiles form a valid dictionary word (ignore adjacency, first move, etc.)
 		const mainWord = this.getMainWord();
-		return this.activeDictionary.has(mainWord.toLowerCase());
+		return this.dictionaryHas(mainWord);
 	}
 
 	// Helper to block/unblock the hint box
@@ -982,6 +1012,9 @@ class ScrabbleGame {
 			thinkingMessage.querySelector('.ai-thinking-text').textContent = msg;
 		}
 
+		// Preferred language for AI thinking messages
+		const _aiLang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+
 		try {
 			// --- Use ghost move if available and valid ---
 			if (this.ghostAIMove) {
@@ -1000,7 +1033,7 @@ class ScrabbleGame {
 					);
 					if (validity.valid && canForm) {
 						if (this.showAIDebug) console.log("AI using ghost move:", this.ghostAIMove);
-						updateThinkingText("AI is playing its previewed move!");
+						updateThinkingText(getTranslation('aiPlayingPreview', _aiLang));
 						setTimeout(() => {
 							thinkingMessage.style.opacity = "0";
 							setTimeout(() => {
@@ -1041,7 +1074,7 @@ class ScrabbleGame {
 					// If over 1 minute, just play the first valid move
 					if (Date.now() - startTime > 60000) {
 						bestPlay = candidate;
-						updateThinkingText("AI is running out of time, playing nearest valid move!");
+						updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
 						setTimeout(() => {
 							thinkingMessage.style.opacity = "0";
 							setTimeout(() => {
@@ -1055,7 +1088,7 @@ class ScrabbleGame {
 					const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
 					if (validity.valid) {
 						bestPlay = candidate;
-						updateThinkingText("AI found a move!");
+						updateThinkingText(getTranslation('aiFoundMove', _aiLang));
 						setTimeout(() => {
 							thinkingMessage.style.opacity = "0";
 							setTimeout(() => {
@@ -1070,7 +1103,7 @@ class ScrabbleGame {
 			}
 
 			// If no valid play found, exchange tiles
-			updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
+			updateThinkingText(getTranslation('aiNoMoveExchange', _aiLang));
 			await new Promise(res => setTimeout(res, 1500));
 			thinkingMessage.style.opacity = "0";
 			setTimeout(() => {
@@ -1552,7 +1585,7 @@ class ScrabbleGame {
 				for (const letter2 of availableLetters) {
 					if (letter1 === letter2) continue;
 					const word = letter1 + letter2;
-					if (this.activeDictionary.has(word.toLowerCase())) {
+					if (this.dictionaryHas(word)) {
 						const startPos = this.findValidPositionForWord(word);
 						if (startPos) {
 							const play = {
@@ -1981,7 +2014,7 @@ class ScrabbleGame {
 			if (!play || !play.word) return false;
 
 			// Always check main word
-			if (!this.activeDictionary.has(play.word.toLowerCase())) return false;
+			if (!this.dictionaryHas(play.word)) return false;
 
 			// Always check cross-words
 			const crossWords = this.getAllCrossWords(
@@ -1994,12 +2027,12 @@ class ScrabbleGame {
 			// In strict mode, ALL cross-words must be valid and >1 letter
 			if (strictMode) {
 				return crossWords.every(word =>
-					this.activeDictionary.has(word.toLowerCase()) && word.length > 1
+					this.dictionaryHas(word) && word.length > 1
 				);
 			} else {
 				// In normal mode, allow if most cross-words are valid
 				const validCount = crossWords.filter(word =>
-					this.activeDictionary.has(word.toLowerCase()) && word.length > 1
+					this.dictionaryHas(word) && word.length > 1
 				).length;
 				return validCount === crossWords.length;
 			}
@@ -2343,7 +2376,7 @@ class ScrabbleGame {
 			const word = prefix + combination + suffix;
 			if (
 				word.length >= 2 &&
-				this.activeDictionary.has(word.toLowerCase()) &&
+				this.dictionaryHas(word) &&
 				pattern.test(word)
 			) {
 				words.add(word);
@@ -2487,7 +2520,7 @@ class ScrabbleGame {
 					this.getHorizontalWordAt(row, col, tempBoard);
 
 				if (crossWord && crossWord.length > 1) {
-					if (!this.activeDictionary.has(crossWord.toLowerCase())) {
+					if (!this.dictionaryHas(crossWord)) {
 						console.log(`Invalid cross word formed: ${crossWord}`);
 						return false;
 					}
@@ -3394,7 +3427,7 @@ class ScrabbleGame {
 				if (
 					mainWord &&
 					mainWord.length > 1 &&
-					(!this.activeDictionary.has(mainWord.toLowerCase()) ||
+					(!this.dictionaryHas(mainWord) ||
 					excludedVariants.has(mainWord.toLowerCase()))
 				) {
 					invalidWords.push(mainWord);
@@ -3413,7 +3446,7 @@ class ScrabbleGame {
 				!checkedWords.has(crossWord)
 			) {
 				if (
-					!this.activeDictionary.has(crossWord.toLowerCase()) ||
+					!this.dictionaryHas(crossWord) ||
 					excludedVariants.has(crossWord.toLowerCase())
 				) {
 					invalidWords.push(crossWord);
@@ -3467,7 +3500,7 @@ async executeAIPlay(play) {
             const mainWord = isHorizontal ?
                 this.getHorizontalWordAt(row, col, tempBoard) :
                 this.getVerticalWordAt(row, col, tempBoard);
-            if (mainWord && mainWord.length > 1 && !this.activeDictionary.has(mainWord.toLowerCase())) {
+			if (mainWord && mainWord.length > 1 && !this.dictionaryHas(mainWord)) {
                 allWordsValid = false;
                 invalidWords.push(mainWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
@@ -3482,7 +3515,7 @@ async executeAIPlay(play) {
             this.getVerticalWordAt(row, col, tempBoard) :
             this.getHorizontalWordAt(row, col, tempBoard);
         if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
-            if (!this.activeDictionary.has(crossWord.toLowerCase())) {
+			if (!this.dictionaryHas(crossWord)) {
                 allWordsValid = false;
                 invalidWords.push(crossWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
@@ -4144,7 +4177,7 @@ async executeAIPlay(play) {
 			return false;
 		}
 
-		if (!this.activeDictionary.has(word.toLowerCase())) {
+		if (!this.dictionaryHas(word)) {
 			this.logAIValidation(`${word} is not a valid word in the dictionary`);
 			return false;
 		}
@@ -4193,7 +4226,7 @@ async executeAIPlay(play) {
 						this.getHorizontalWordAt(row, col, tempBoard);
 
 					if (crossWord && crossWord.length > 1) {
-						if (!this.activeDictionary.has(crossWord.toLowerCase())) {
+						if (!this.dictionaryHas(crossWord)) {
 							this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
 							return false;
 						}
@@ -6503,7 +6536,7 @@ formedWords.forEach((wordInfo) => {
         let allWordsValid = true;
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
-            if (!this.activeDictionary.has(word)) {
+			if (!this.dictionaryHas(word)) {
                 console.log(`Invalid word: ${word}`);
                 allWordsValid = false;
             } else {
@@ -7832,10 +7865,12 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words
 				try { 
+					const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+					const invalidMsg = getTranslation('invalidWords', lang);
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(invalidMsg, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(invalidMsg);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
@@ -9247,8 +9282,12 @@ calculateScore() {
 			this.renderAIRack();
 			this.updateTilesCount();
 
-			// Add to move history
-			this.addToMoveHistory("Computer", "AI decided to exchange their tiles.", 0);
+			// Add to move history (localized)
+			{
+				const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+				const label = getTranslation('aiExchanged', lang);
+				this.addToMoveHistory("Computer", label, 0);
+			}
 
 			// Switch turn
 			this.currentTurn = "player";
