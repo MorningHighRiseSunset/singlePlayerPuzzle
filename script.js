@@ -3289,17 +3289,27 @@ async executeAIPlay(play) {
 				this.wordsPlayed.add(w.word.toUpperCase());
 			});
 
-            // Format move description for multiple words
-            let moveDescription;
-            if (wordsList.length > 1) {
-                moveDescription = wordsList
-                    .map((w) => `${w.word} (${w.score})`)
-                    .join(" & ");
-            } else if (wordsList.length === 1) {
-                moveDescription = wordsList[0].word;
-            } else {
-                moveDescription = "(No new words scored)";
-            }
+			// Format move description for multiple words
+			let moveDescription;
+			// Translate word for move history if needed
+			function translateWord(word, lang) {
+				// Only translate a few known words for demo
+				if (lang === 'es') {
+					if (word.toUpperCase() === 'ETESIAN') return 'ETESIO';
+				}
+				// Add more translations as needed
+				return word;
+			}
+			const lang = this.preferredLang || 'en';
+			if (wordsList.length > 1) {
+				moveDescription = wordsList
+					.map((w) => `${translateWord(w.word, lang)} (${w.score})`)
+					.join(" & ");
+			} else if (wordsList.length === 1) {
+				moveDescription = translateWord(wordsList[0].word, lang);
+			} else {
+				moveDescription = "(No new words scored)";
+			}
 
 			// --- Speak each word formed by AI sequentially. If AI scored a bingo, allow it to
 			// audibly announce it as well (some users want parity). If you want AI silent,
