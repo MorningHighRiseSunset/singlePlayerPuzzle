@@ -539,6 +539,7 @@ class ScrabbleGame {
 		this.playerScore = 0;
 		this.aiScore = 0;
 		this.dictionary = new Set();
+		this.spanishDictionary = new Set();
 		this.currentTurn = "player";
 		this.placedTiles = [];
 		this.gameEnded = false;
@@ -5752,20 +5753,45 @@ formedWords.forEach((wordInfo) => {
 			]);
 			console.warn("Using fallback dictionary with limited words");
 		}
+
+		// Also load Spanish dictionary
+		await this.loadSpanishDictionary();
+	}
+
+	async loadSpanishDictionary() {
+		try {
+			// Spanish Scrabble dictionary from GitHub
+			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+			let text = await response.text();
+			this.spanishDictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
+			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size);
+		} catch (error) {
+			console.error("Error loading Spanish dictionary:", error);
+			// Fallback Spanish words
+			this.spanishDictionary = new Set([
+				"casa", "agua", "árbol", "gato", "perro", "libro", "día", "noche", "amor", "vida", "mundo", "persona", "tiempo", "mano", "corazón", "palabra", "sol", "luna", "estrella", "flor", "ciudad", "país", "calle", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "abuelo", "abuela", "tío", "tía", "primo", "prima", "esposo", "esposa", "hijo", "hija", "joven", "viejo", "nuevo", "bueno", "malo", "grande", "pequeño", "largo", "corto", "alto", "bajo", "rojo", "azul", "verde", "amarillo", "negro", "blanco", "feliz", "triste", "alegre", "fuerte", "débil", "rápido", "lento", "caliente", "frío", "seco", "mojado", "lleno", "vacío", "fácil", "difícil", "hermoso", "feo", "rico", "pobre", "joven", "viejo"
+			]);
+			console.warn("Using fallback Spanish dictionary with limited words");
+		}
 	}
 
 	async loadLanguageDictionary(lang) {
-		// For now, always use English dictionary for validation
-		// The language selection only affects UI and word display translation
-		this.activeDictionary = new Set(this.dictionary);
+		// Set activeDictionary to include both English and Spanish words
+		if (lang === 'es') {
+			// For Spanish, accept both Spanish and English words
+			this.activeDictionary = new Set([...this.dictionary, ...this.spanishDictionary]);
+		} else {
+			// For other languages, use English dictionary
+			this.activeDictionary = new Set(this.dictionary);
+		}
 		
-		// Rebuild the Trie with the English dictionary (always the same)
+		// Rebuild the Trie with the active dictionary
 		this.trie = new Trie();
 		for (const word of this.activeDictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
 		
-		console.log(`Language set to ${lang}. Using English dictionary for validation.`);
+		console.log(`Language set to ${lang}. Dictionary size: ${this.activeDictionary.size}`);
 		
 		// Update UI language
 		this.updateUILanguage(lang);
