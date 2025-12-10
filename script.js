@@ -20,7 +20,30 @@ const translations = {
 		bingoBonus: 'Bingo bonus!',
 		skip: 'SKIP',
 		quit: 'QUIT',
-		noNewWords: '(No new words scored)'
+		noNewWords: '(No new words scored)',
+		howToPlayTitle: 'How to Play',
+		playingTiles: 'Playing Tiles:',
+		desktopTiles: 'On desktop: Click and drag tiles from your rack to the board',
+		mobileTiles: 'On mobile: Touch and hold a tile for 1 second, then drag to place it',
+		removeTiles: 'To remove a tile, drag it back to your rack',
+		creatingWords: 'Creating Words:',
+		horizontalVertical: 'Place tiles horizontally (left to right) or vertically (top to bottom)',
+		centerStar: 'First word must cross the center star',
+		connectExisting: 'New words must connect to existing tiles on the board',
+		validWords: 'All words formed must be valid dictionary words',
+		submittingMove: 'Submitting Your Move:',
+		afterPlacing: 'After placing your tiles, click the "Submit" button',
+		invalidWords: 'Invalid words will be rejected and tiles returned to your rack',
+		pointsCalculated: 'Points will be automatically calculated and added to your score',
+		exchangingTiles: 'Exchanging Tiles:',
+		activateExchange: 'Click "Activate Exchange Portal" to start an exchange',
+		dragUnwanted: 'Drag unwanted tiles into the portal',
+		receiveNewTiles: "You'll receive the same number of new tiles",
+		countsAsTurn: 'This counts as your turn',
+		skippingGameEnd: 'Skipping and Game End:',
+		useSkipTurn: "Use \"Skip Turn\" if you can't make a valid move",
+		gameEnds: 'The game ends when all tiles are used or both players skip twice in a row',
+		scoreBased: 'Your score is based on the letter values and bonus squares'
 	},
 	es: {
 		submit: 'Enviar',
@@ -40,7 +63,30 @@ const translations = {
 		bingoBonus: '¡Bonificación de Bingo!',
 		skip: 'PASAR',
 		quit: 'SALIR',
-		noNewWords: '(Sin palabras nuevas)'
+		noNewWords: '(Sin palabras nuevas)',
+		howToPlayTitle: 'Cómo Jugar',
+		playingTiles: 'Colocación de Fichas:',
+		desktopTiles: 'En computadora: Haz clic y arrastra fichas desde tu estante al tablero',
+		mobileTiles: 'En móvil: Toca y mantén presionada una ficha durante 1 segundo, luego arrástrala para colocarla',
+		removeTiles: 'Para quitar una ficha, arrástrala de vuelta a tu estante',
+		creatingWords: 'Creando Palabras:',
+		horizontalVertical: 'Coloca fichas horizontalmente (de izquierda a derecha) o verticalmente (de arriba a abajo)',
+		centerStar: 'La primera palabra debe cruzar la estrella central',
+		connectExisting: 'Las palabras nuevas deben conectar con fichas existentes en el tablero',
+		validWords: 'Todas las palabras formadas deben ser palabras válidas del diccionario',
+		submittingMove: 'Enviando Tu Movimiento:',
+		afterPlacing: 'Después de colocar tus fichas, haz clic en el botón "Enviar"',
+		invalidWords: 'Las palabras inválidas serán rechazadas y las fichas se devolverán a tu estante',
+		pointsCalculated: 'Los puntos se calcularán automáticamente y se sumarán a tu puntuación',
+		exchangingTiles: 'Intercambiando Fichas:',
+		activateExchange: 'Haz clic en "Activar Portal de Intercambio" para iniciar un intercambio',
+		dragUnwanted: 'Arrastra fichas no deseadas al portal',
+		receiveNewTiles: 'Recibirás el mismo número de fichas nuevas',
+		countsAsTurn: 'Esto cuenta como tu turno',
+		skippingGameEnd: 'Pasando y Fin del Juego:',
+		useSkipTurn: 'Usa "Pasar Turno" si no puedes hacer un movimiento válido',
+		gameEnds: 'El juego termina cuando se usan todas las fichas o ambos jugadores pasan dos veces seguidas',
+		scoreBased: 'Tu puntuación se basa en los valores de las letras y los cuadrados de bonificación'
 	},
 	fr: {
 		submit: 'Soumettre',
@@ -60,7 +106,30 @@ const translations = {
 		bingoBonus: 'Bonus Bingo !',
 		skip: 'PASSER',
 		quit: 'QUITTER',
-		noNewWords: '(Aucun mot nouveau)'
+		noNewWords: '(Aucun mot nouveau)',
+		howToPlayTitle: 'Comment Jouer',
+		playingTiles: 'Placement des Tuiles:',
+		desktopTiles: 'Sur ordinateur: Cliquez et faites glisser les tuiles de votre chevalet vers le plateau',
+		mobileTiles: 'Sur mobile: Appuyez longuement sur une tuile pendant 1 seconde, puis faites-la glisser pour la placer',
+		removeTiles: 'Pour retirer une tuile, faites-la glisser vers votre chevalet',
+		creatingWords: 'Créer des Mots:',
+		horizontalVertical: 'Placez les tuiles horizontalement (de gauche à droite) ou verticalement (de haut en bas)',
+		centerStar: 'Le premier mot doit traverser l\'étoile centrale',
+		connectExisting: 'Les nouveaux mots doivent se connecter aux tuiles existantes du plateau',
+		validWords: 'Tous les mots formés doivent être des mots valides du dictionnaire',
+		submittingMove: 'Soumettre Votre Coup:',
+		afterPlacing: 'Après avoir placé vos tuiles, cliquez sur le bouton "Soumettre"',
+		invalidWords: 'Les mots invalides seront rejetés et les tuiles retourneront à votre chevalet',
+		pointsCalculated: 'Les points seront calculés automatiquement et ajoutés à votre score',
+		exchangingTiles: 'Échanger des Tuiles:',
+		activateExchange: 'Cliquez sur "Activer le Portail d\'Échange" pour commencer un échange',
+		dragUnwanted: 'Faites glisser les tuiles indésirables dans le portail',
+		receiveNewTiles: 'Vous recevrez le même nombre de nouvelles tuiles',
+		countsAsTurn: 'Cela compte comme votre tour',
+		skippingGameEnd: 'Passer et Fin de Partie:',
+		useSkipTurn: 'Utilisez "Passer le Tour" si vous ne pouvez pas faire un coup valide',
+		gameEnds: 'Le jeu se termine quand toutes les tuiles sont utilisées ou que les deux joueurs passent deux fois de suite',
+		scoreBased: 'Votre score est basé sur les valeurs des lettres et les cases bonus'
 	},
 	zh: {
 		submit: '提交',
@@ -80,7 +149,30 @@ const translations = {
 		bingoBonus: '宾果奖金！',
 		skip: '跳过',
 		quit: '退出',
-		noNewWords: '(没有新单词)'
+		noNewWords: '(没有新单词)',
+		howToPlayTitle: '如何玩',
+		playingTiles: '放置瓷砖:',
+		desktopTiles: '在桌面上：点击并将瓷砖从您的架子拖到棋盘上',
+		mobileTiles: '在手机上：长按瓷砖1秒钟，然后拖动放置它',
+		removeTiles: '要移除瓷砖，请将其拖回您的架子',
+		creatingWords: '创建单词:',
+		horizontalVertical: '将瓷砖水平放置（从左到右）或垂直放置（从上到下）',
+		centerStar: '第一个词必须穿过中心星',
+		connectExisting: '新词必须连接到棋盘上的现有瓷砖',
+		validWords: '形成的所有词必须是字典中的有效词',
+		submittingMove: '提交您的移动:',
+		afterPlacing: '放置瓷砖后，单击"提交"按钮',
+		invalidWords: '无效的词将被拒绝，瓷砖将返回到您的架子',
+		pointsCalculated: '分数将自动计算并添加到您的分数中',
+		exchangingTiles: '交换瓷砖:',
+		activateExchange: '单击"激活交换门户"以开始交换',
+		dragUnwanted: '将不需要的瓷砖拖到门户中',
+		receiveNewTiles: '您将收到相同数量的新瓷砖',
+		countsAsTurn: '这算作您的回合',
+		skippingGameEnd: '跳过和游戏结束:',
+		useSkipTurn: '如果无法进行有效移动，请使用"跳过回合"',
+		gameEnds: '当所有瓷砖都用完或两个玩家连续跳过两次时，游戏结束',
+		scoreBased: '您的分数基于字母值和奖励方块'
 	}
 };
 
@@ -5537,10 +5629,23 @@ formedWords.forEach((wordInfo) => {
 			if (btn) btn.textContent = text;
 		}
 		
-		// Update headers and panels
-		const headerUpdates = {
-			// These will be updated via updateMoveHistory and updateGameState
-		};
+		// Update all elements with data-translate attribute
+		document.querySelectorAll('[data-translate]').forEach(el => {
+			const key = el.getAttribute('data-translate');
+			el.textContent = t(key);
+		});
+		
+		// Update fixed text headers
+		const gameInfoHeaders = document.querySelectorAll('[id*="info-panel"] h2');
+		gameInfoHeaders.forEach(h => h.textContent = t('gameInfo'));
+		
+		// Update "How to Play" sections
+		const drawerInstructionHeaders = document.querySelectorAll('[id*="drawer-instructions"] h3:first-of-type');
+		drawerInstructionHeaders.forEach(h => {
+			if (h.textContent.includes('How to Play') || h.textContent.includes('Cómo Jugar') || h.textContent.includes('Comment Jouer') || h.textContent.includes('如何玩')) {
+				h.textContent = t('howToPlayTitle');
+			}
+		});
 		
 		// Update notification text
 		const notices = {
@@ -5559,6 +5664,53 @@ formedWords.forEach((wordInfo) => {
 				notice.innerHTML = `${emoji} ${text} ${button}`;
 			}
 		}
+		
+		// Update instruction content paragraphs
+		this.updateInstructionContent(lang);
+	}
+
+	updateInstructionContent(lang) {
+		const t = (key) => getTranslation(key, lang);
+		
+		// Update all drawer instruction sections
+		document.querySelectorAll('[id*="drawer-instructions"]').forEach(section => {
+			const html = `
+				<h3>${t('howToPlayTitle')}</h3>
+				<p>1. ${t('playingTiles')}</p>
+				<ul>
+					<li>${t('desktopTiles')}</li>
+					<li>${t('mobileTiles')}</li>
+					<li>${t('removeTiles')}</li>
+				</ul>
+				<p>2. ${t('creatingWords')}</p>
+				<ul>
+					<li>${t('horizontalVertical')}</li>
+					<li>${t('centerStar')}</li>
+					<li>${t('connectExisting')}</li>
+					<li>${t('validWords')}</li>
+				</ul>
+				<p>3. ${t('submittingMove')}</p>
+				<ul>
+					<li>${t('afterPlacing')}</li>
+					<li>${t('invalidWords')}</li>
+					<li>${t('pointsCalculated')}</li>
+				</ul>
+				<p>4. ${t('exchangingTiles')}</p>
+				<ul>
+					<li>${t('activateExchange')}</li>
+					<li>${t('dragUnwanted')}</li>
+					<li>${t('receiveNewTiles')}</li>
+					<li>${t('countsAsTurn')}</li>
+				</ul>
+				<p>5. ${t('skippingGameEnd')}</p>
+				<ul>
+					<li>${t('useSkipTurn')}</li>
+					<li>${t('gameEnds')}</li>
+					<li>${t('scoreBased')}</li>
+				</ul>
+			`;
+			section.innerHTML = html;
+		});
 	}
 
 	balanceAIRack() {
