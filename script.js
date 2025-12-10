@@ -5889,10 +5889,10 @@ formedWords.forEach((wordInfo) => {
 	async loadSpanishDictionary() {
 		try {
 			// Spanish Scrabble dictionary from GitHub
-			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+			let response = await fetch("https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt");
 			// Fallback URL if the primary one fails
 			if (!response.ok) {
-				response = await fetch("https://raw.githubusercontent.com/olea/lemarios/master/espanol.txt");
+				response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
 			}
 			let text = await response.text();
 			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
