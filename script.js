@@ -50,7 +50,10 @@ const translations = {
 		skippingGameEnd: 'Skipping and Game End:',
 		useSkipTurn: "Use \"Skip Turn\" if you can't make a valid move",
 		gameEnds: 'The game ends when all tiles are used or both players skip twice in a row',
-		scoreBased: 'Your score is based on the letter values and bonus squares'
+		scoreBased: 'Your score is based on the letter values and bonus squares',
+		currentTurn: 'Current Turn',
+		yourTurn: 'Your Turn',
+		computerTurn: "Computer's Turn"
 	},
 	es: {
 		submit: 'Enviar',
@@ -100,7 +103,10 @@ const translations = {
 		skippingGameEnd: 'Pasando y Fin del Juego:',
 		useSkipTurn: 'Usa "Pasar Turno" si no puedes hacer un movimiento válido',
 		gameEnds: 'El juego termina cuando se usan todas las fichas o ambos jugadores pasan dos veces seguidas',
-		scoreBased: 'Tu puntuación se basa en los valores de las letras y los cuadrados de bonificación'
+		scoreBased: 'Tu puntuación se basa en los valores de las letras y los cuadrados de bonificación',
+		currentTurn: 'Turno Actual',
+		yourTurn: 'Tu Turno',
+		computerTurn: 'Turno de la Computadora'
 	},
 	fr: {
 		submit: 'Soumettre',
@@ -1707,7 +1713,7 @@ class ScrabbleGame {
 	}
 
 	setupHintSystem() {
-		const hints = [
+		const englishHints = [
 			"Triple Word Score (TW) squares multiply the entire word score by 3!",
 			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
 			"Double Word Score (DW) squares double your entire word score.",
@@ -1740,6 +1746,39 @@ class ScrabbleGame {
 			"Good luck and have fun!"
 		];
 
+		const spanishHints = [
+			"¡Los cuadrados de Triple Palabra (TW) multiplican toda la palabra por 3!",
+			"¡Los cuadrados de Triple Letra (TL) multiplican solo esa letra por 3!",
+			"Los cuadrados de Doble Palabra (DW) duplican tu puntuación total.",
+			"Los cuadrados de Doble Letra (DL) duplican el valor de una sola letra.",
+			"¡Usa las 7 fichas en un turno para un bono BINGO de 50 puntos!",
+			"Puedes intercambiar fichas si no te gusta tu estante.",
+			"Palabras cortas como 'QI', 'ZA' y 'JO' son válidas y útiles.",
+			"Las jugadas paralelas pueden puntuar mucho formando múltiples palabras.",
+			"Intenta bloquear a tu oponente de los cuadrados premium.",
+			"Guarda letras de alto valor como Q, Z, X, y J para cuadrados premium.",
+			"No olvides: la primera palabra debe cubrir la estrella central.",
+			"Puedes mezclar tu estante para obtener una nueva perspectiva.",
+			"Usa fichas blancas (*) como cualquier letra, pero puntúan cero.",
+			"Mantén un buen equilibrio de vocales y consonantes en tu estante.",
+			"Agregar una 'S' puede pluralizar y crear nuevas palabras por puntos extra.",
+			"Busca ganchos: agregar una letra a una palabra existente para formar una nueva.",
+			"Intenta construir sobre palabras existentes para más oportunidades de puntuación.",
+			"Si estás atascado, intercambia algunas fichas o salta tu turno.",
+			"El juego termina cuando se usan todas las fichas o ambos pasan 2 veces.",
+			"Puedes imprimir el historial de movimientos y definiciones después del juego.",
+			"Pasa el cursor sobre una ficha para ver su valor en puntos.",
+			"Puedes deshacer tu movimiento antes de enviarlo si te equivocas.",
+			"Usa el portal de intercambio para cambiar fichas no deseadas.",
+			"¡Planifica con anticipación: no abras cuadrados de triple palabra para tu oponente!",
+			"Intenta formar dos o más palabras en un movimiento por puntos extra.",
+			"¡La IA se vuelve más inteligente a medida que avanza el juego—cuidado!",
+			"Puedes hacer clic en 'Simular Final' para probar la IA.",
+			"Las palabras deben conectarse a fichas existentes después del primer movimiento.",
+			"Usa el botón 'Pasar Turno' si no puedes jugar.",
+			"¡Buena suerte y diviértete!"
+		];
+
 		let currentHintIndex = 0;
 		const hintBox = document.getElementById("hint-box");
 		const hintText = document.getElementById("hint-text");
@@ -1753,6 +1792,8 @@ class ScrabbleGame {
 			return array;
 		};
 
+		// Use appropriate hints based on language
+		const hints = (this.preferredLang === 'es') ? spanishHints : englishHints;
 		let shuffledHints = shuffleArray([...hints]);
 
 		// Show a hint, but only if not blocked
@@ -1792,6 +1833,17 @@ class ScrabbleGame {
 		// Store for later use
 		this.hintBox = hintBox;
 		this.showNextHint = showNextHint;
+	}
+
+	initializeHints() {
+		// Clear existing hint system
+		if (this.hintInterval) {
+			clearInterval(this.hintInterval);
+			this.hintInterval = null;
+		}
+
+		// Reinitialize with current language
+		this.setupHintSystem();
 	}
 
 	findAIPossiblePlays() {
@@ -5888,11 +5940,11 @@ formedWords.forEach((wordInfo) => {
 
 	async loadSpanishDictionary() {
 		try {
-			// Official Spanish Scrabble dictionary - more reliable source
-			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
-			// Fallback to another curated Spanish word list
+			// Working Spanish dictionary from javierarce/palabras
+			let response = await fetch("https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt");
+			// Fallback to official Spanish Scrabble dictionary
 			if (!response.ok) {
-				response = await fetch("https://raw.githubusercontent.com/olea/lemarios/master/espanol.txt");
+				response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
 			}
 			// Final fallback: use English dictionary (many cognates work)
 			if (!response.ok) {
@@ -6020,6 +6072,12 @@ formedWords.forEach((wordInfo) => {
 
 		// Update UI language
 		this.updateUILanguage(lang);
+
+		// Restart hints in new language
+		if (this.hintInterval) {
+			clearInterval(this.hintInterval);
+		}
+		this.initializeHints();
 	}
 
 	updateUILanguage(lang) {
@@ -8135,7 +8193,10 @@ calculateScore() {
 	updateTurnIndicator() {
 		const turnDisplay =
 			document.getElementById("current-turn") || this.createTurnIndicator();
-		turnDisplay.textContent = `Current Turn: ${this.currentTurn === "player" ? "Your" : "Computer's"} Turn`;
+		const lang = this.preferredLang || 'en';
+		const t = (key) => getTranslation(key, lang);
+		const playerText = this.currentTurn === "player" ? t('yourTurn') : t('computerTurn');
+		turnDisplay.textContent = `${t('currentTurn')}: ${playerText}`;
 		turnDisplay.className =
 			this.currentTurn === "player" ? "player-turn" : "ai-turn";
 	}
@@ -8143,7 +8204,20 @@ calculateScore() {
 	createTurnIndicator() {
 		const turnDisplay = document.createElement("div");
 		turnDisplay.id = "current-turn";
-		document.querySelector(".info-panel").prepend(turnDisplay);
+
+		// Try mobile first, then desktop panels
+		const mobilePanel = document.querySelector(".info-panel");
+		const desktopPanel = document.querySelector(".desktop-info-panel");
+
+		if (mobilePanel) {
+			mobilePanel.prepend(turnDisplay);
+		} else if (desktopPanel) {
+			desktopPanel.prepend(turnDisplay);
+		} else {
+			// Fallback: add to body
+			document.body.appendChild(turnDisplay);
+		}
+
 		return turnDisplay;
 	}
 
