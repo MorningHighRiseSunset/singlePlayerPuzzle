@@ -5894,6 +5894,21 @@ formedWords.forEach((wordInfo) => {
 			if (!response.ok) {
 				response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
 			}
+			// Final fallback: use English dictionary (many cognates work)
+			if (!response.ok) {
+				console.log("Spanish dictionary failed, using English dictionary as fallback");
+				this.spanishDictionary = new Set(this.dictionary);
+				this.spanishDictionaryNormalized = new Set([...this.dictionary].map(word => normalizeWordForDict(word)));
+				this.spanishNormalizedMap = {};
+				for (const word of this.dictionary) {
+					const norm = normalizeWordForDict(word);
+					if (norm) {
+						this.spanishNormalizedMap[norm.toUpperCase()] = word;
+					}
+				}
+				console.log("Spanish dictionary loaded successfully. Word count (English fallback):", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
+				return;
+			}
 			let text = await response.text();
 			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
 			this.spanishDictionary = new Set();
