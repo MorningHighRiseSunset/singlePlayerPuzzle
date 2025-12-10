@@ -7281,24 +7281,39 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		const historyDisplay = document.createElement("div");
-		historyDisplay.id = "move-history";
-		// Prefer placing history near the instructions (drawer-instructions)
-		const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
-		if (drawerInstructions) {
-			drawerInstructions.appendChild(historyDisplay);
-			return historyDisplay;
+		// Get or create the history display element
+		let historyDisplay = document.getElementById("move-history");
+		if (!historyDisplay) {
+			historyDisplay = document.createElement("div");
+			historyDisplay.id = "move-history";
+			// Prefer placing history near the instructions (drawer-instructions)
+			const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
+			if (drawerInstructions) {
+				drawerInstructions.appendChild(historyDisplay);
+			} else {
+				// Fallbacks: mobile drawer's moves-panel then info-panel
+				const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
+				const infoPanel = document.querySelector(".info-panel");
+				if (mobileDrawer) {
+					mobileDrawer.appendChild(historyDisplay);
+				} else if (infoPanel) {
+					infoPanel.appendChild(historyDisplay);
+				}
+			}
 		}
-		// Fallbacks: mobile drawer's moves-panel then info-panel
-		const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
-		const infoPanel = document.querySelector(".info-panel");
-		if (mobileDrawer) {
-			mobileDrawer.appendChild(historyDisplay);
-		} else if (infoPanel) {
-			infoPanel.appendChild(historyDisplay);
-		}
-		return historyDisplay;
-		if (desktopDrawerHistoryDisplay) desktopDrawerHistoryDisplay.innerHTML = historyContent;
+		// Populate history content
+		const historyContent = this.moveHistory
+			.map((move) => {
+				if (Array.isArray(move.words)) {
+					return `<div class="move">${move.player}: ${move.words.map(w => `"${w.word}" (${w.score || 0}pt)`).join(", ")} for ${move.score} points</div>`;
+				} else if (move.word) {
+					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+				} else {
+					return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
+				}
+			})
+			.join("");
+		historyDisplay.innerHTML = historyContent;
 	}
 
 	updateGameState() {

@@ -561,13 +561,9 @@
         const mobileToggle = document.getElementById('mobile-menu-toggle');
         const mobileCloseBtn = mobileDrawer.querySelector('.drawer-close');
         mobileToggle.addEventListener('click', () => {
-          if (mobileDrawer.classList.contains('open')) {
-            mobileDrawer.classList.remove('open');
-            document.body.style.overflow = '';
-          } else {
-            mobileDrawer.classList.add('open');
-            document.body.style.overflow = 'hidden';
-          }
+          // Toggle the drawer open/closed
+          mobileDrawer.classList.toggle('open');
+          document.body.style.overflow = mobileDrawer.classList.contains('open') ? 'hidden' : '';
         });
         mobileCloseBtn.addEventListener('click', () => {
           mobileDrawer.classList.remove('open');
@@ -584,13 +580,9 @@
         const desktopToggle = document.getElementById('desktop-menu-toggle');
         const desktopCloseBtn = desktopDrawer.querySelector('.drawer-close');
         desktopToggle.addEventListener('click', () => {
-          if (desktopDrawer.classList.contains('open')) {
-            desktopDrawer.classList.remove('open');
-            document.body.style.overflow = '';
-          } else {
-            desktopDrawer.classList.add('open');
-            document.body.style.overflow = 'hidden';
-          }
+          // Toggle the drawer open/closed
+          desktopDrawer.classList.toggle('open');
+          document.body.style.overflow = desktopDrawer.classList.contains('open') ? 'hidden' : '';
         });
         desktopCloseBtn.addEventListener('click', () => {
           desktopDrawer.classList.remove('open');
