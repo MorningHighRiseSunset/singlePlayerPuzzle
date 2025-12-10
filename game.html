@@ -351,11 +351,7 @@
     <div id="mobile-drawer" class="mobile-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
-        <aside class="moves-panel">
-          <h2>Definitions History</h2>
-          <button id="print-history" class="print-button">Print Definition History (Shows Word Definitions)</button>
-          <div id="move-history"></div>
-        </aside>
+        <!-- Definitions history will be created dynamically and placed near instructions -->
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
@@ -377,15 +373,6 @@
             <button id="show-instructions">How to Play</button>
             <button id="quit-game" class="quit-button">Quit / End Game</button>
           </nav>
-          <div class="language-selector">
-            <select id="language-selector" class="language-button">
-              <option value="" disabled selected hidden>Click to change language</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="zh">中文</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
           <!-- How to Play instructions INSIDE the burger menu drawer -->
           <div class="drawer-instructions" id="drawer-instructions">
             <h3>How to Play</h3>
@@ -429,11 +416,7 @@
     <div id="desktop-drawer" class="desktop-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
-        <aside class="moves-panel">
-          <h2>Definitions History</h2>
-          <button id="print-history-desktop-drawer" class="print-button">Print Definition History (Shows Word Definitions)</button>
-          <div id="move-history-desktop-drawer"></div>
-        </aside>
+        <!-- Definitions history inside desktop drawer removed; history will be shown near instructions -->
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
@@ -455,15 +438,7 @@
             <button id="show-instructions-desktop-drawer">How to Play</button>
             <button id="quit-game-desktop-drawer" class="quit-button">Quit / End Game</button>
           </nav>
-          <div class="language-selector">
-            <select id="language-selector-desktop-drawer" class="language-button">
-              <option value="" disabled selected hidden>Click to change language</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="zh">中文</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
+          <!-- Language selector removed (moved to index.html) -->
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
           <div class="drawer-instructions" id="drawer-instructions-desktop">
             <h3>How to Play</h3>
@@ -527,11 +502,7 @@
         </div>
       </main>
       <!-- Desktop Definitions/History Panel -->
-      <aside class="moves-panel">
-        <h2>Definitions History</h2>
-        <button id="print-history-desktop" class="print-button">Print Definition History (Shows Word Definitions)</button>
-        <div id="move-history-desktop"></div>
-      </aside>
+        <!-- Desktop definitions/history panel removed — history will appear near instructions -->
       <!-- Desktop Info Panel -->
       <aside class="info-panel">
         <h2>Game Info</h2>
@@ -554,15 +525,7 @@
           <button id="show-instructions-desktop">How to Play</button>
           <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
         </nav>
-        <div class="language-selector">
-          <select id="language-selector-desktop" class="language-button">
-            <option value="" disabled selected hidden>Click to change language</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="zh">中文</option>
-            <option value="fr">French</option>
-          </select>
-        </div>
+        <!-- Language selection moved to index.html -->
       </aside>
     </div>
     <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
@@ -690,6 +653,16 @@
         });
       });
     </script>
-    <script src="script.js"></script>
+      <script>
+        // Read language from URL (set by index) and persist before main script loads
+        (function(){
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang');
+            if (lang) localStorage.setItem('preferredLang', lang);
+          } catch (e) { /* ignore */ }
+        })();
+      </script>
+      <script src="script.js"></script>
   </body>
 </html>

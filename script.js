@@ -7281,60 +7281,24 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		// Update mobile, desktop, and desktop drawer move history containers
-		const mobileHistoryDisplay = document.getElementById("move-history");
-		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
-		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
-		
-		const historyContent = "<h3>Move History</h3>" +
-			this.moveHistory
-			.map((move) => {
-				// Structured entry with words array
-				if (move.words && Array.isArray(move.words)) {
-					// Check for bingo entries and format each word with its score if available
-					const parts = move.words.map(w => {
-						if (w.word === "BINGO BONUS") {
-							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
-						}
-						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
-						return `${w.word}`;
-					});
-					const formatted = parts.join(" & ");
-					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
-				}
-
-				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
-				if (move.word === "SKIP" || move.word === "EXCHANGE" || move.word === "QUIT") {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
-				}
-
-				// Fallback: single word string
-				if (move.word) {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
-				}
-
-				// Unknown format
-				return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
-			})
-			.join("");
-
-		// Update mobile history (create if doesn't exist)
-		if (mobileHistoryDisplay) {
-			mobileHistoryDisplay.innerHTML = historyContent;
-		} else {
-			const createdMobile = this.createMoveHistoryDisplay();
-			createdMobile.innerHTML = historyContent;
+		const historyDisplay = document.createElement("div");
+		historyDisplay.id = "move-history";
+		// Prefer placing history near the instructions (drawer-instructions)
+		const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
+		if (drawerInstructions) {
+			drawerInstructions.appendChild(historyDisplay);
+			return historyDisplay;
 		}
-
-		// Update desktop history
-		if (desktopHistoryDisplay) {
-			desktopHistoryDisplay.innerHTML = historyContent;
+		// Fallbacks: mobile drawer's moves-panel then info-panel
+		const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
+		const infoPanel = document.querySelector(".info-panel");
+		if (mobileDrawer) {
+			mobileDrawer.appendChild(historyDisplay);
+		} else if (infoPanel) {
+			infoPanel.appendChild(historyDisplay);
 		}
-
-		// Update desktop drawer history
-		if (desktopDrawerHistoryDisplay) {
-			desktopDrawerHistoryDisplay.innerHTML = historyContent;
-		}
+		return historyDisplay;
+		if (desktopDrawerHistoryDisplay) desktopDrawerHistoryDisplay.innerHTML = historyContent;
 	}
 
 	updateGameState() {
@@ -7971,29 +7935,17 @@ calculateScore() {
 	createMoveHistoryDisplay() {
 		const historyDisplay = document.createElement("div");
 		historyDisplay.id = "move-history";
-		// Try to append to mobile drawer first, then fallback to info-panel
+		// Prefer placing history near the instructions (drawer-instructions)
+		const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
+		if (drawerInstructions) {
+			drawerInstructions.appendChild(historyDisplay);
+			return historyDisplay;
+		}
+		// Fallbacks: mobile drawer's moves-panel then info-panel
 		const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
 		const infoPanel = document.querySelector(".info-panel");
 		if (mobileDrawer) {
 			mobileDrawer.appendChild(historyDisplay);
-			// Also add a console output container at the bottom of the drawer for debug messages
-			let consoleBox = mobileDrawer.querySelector('.drawer-console-output');
-			if (!consoleBox) {
-				consoleBox = document.createElement('div');
-				consoleBox.className = 'drawer-console-output';
-				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
-				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
-				const copyBtn = consoleBox.querySelector('.copy-console-btn');
-				if (copyBtn) {
-					copyBtn.addEventListener('click', () => {
-						try {
-							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
-							navigator.clipboard && navigator.clipboard.writeText(entries).then(() => { alert('Console copied'); }, () => { alert('Copy failed'); });
-						} catch (e) { alert('Copy failed'); }
-					});
-				}
-				mobileDrawer.appendChild(consoleBox);
-			}
 		} else if (infoPanel) {
 			infoPanel.appendChild(historyDisplay);
 		}
@@ -9808,116 +9760,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		};
 	}
 
-	// Ensure the in-drawer console output container exists for mobile drawer diagnostics
-	try {
-		const mobileDrawer = document.getElementById('mobile-drawer');
-		if (mobileDrawer) {
-			let consoleContainer = mobileDrawer.querySelector('.drawer-console-output');
-			if (!consoleContainer) {
-				consoleContainer = document.createElement('div');
-				consoleContainer.className = 'drawer-console-output';
-				consoleContainer.style.whiteSpace = 'pre-wrap';
-				consoleContainer.style.maxHeight = '220px';
-				consoleContainer.style.overflow = 'auto';
-				consoleContainer.style.padding = '8px';
-				consoleContainer.style.background = '#f6f8fb';
-				consoleContainer.style.borderRadius = '6px';
-				consoleContainer.style.border = '1px solid rgba(0,0,0,0.06)';
-
-				const header = document.createElement('div');
-				header.style.display = 'flex';
-				header.style.justifyContent = 'space-between';
-				header.style.alignItems = 'center';
-				header.style.marginBottom = '6px';
-
-				const title = document.createElement('div');
-				title.textContent = 'Console';
-				title.style.fontWeight = '600';
-				title.style.color = '#123';
-
-				const copyBtn = document.createElement('button');
-				copyBtn.textContent = 'Copy All';
-				copyBtn.style.fontSize = '0.9em';
-				copyBtn.style.padding = '4px 8px';
-				copyBtn.style.borderRadius = '4px';
-				copyBtn.style.border = 'none';
-				copyBtn.style.background = '#1a237e';
-				copyBtn.style.color = '#fff';
-				copyBtn.addEventListener('click', () => {
-					try {
-						const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
-							.map(n => n.textContent).join('\n');
-						navigator.clipboard.writeText(text);
-						game.appendConsoleMessage('Console copied to clipboard');
-					} catch (err) {
-						game.appendConsoleMessage('Copy failed: ' + (err && err.message));
-					}
-				});
-
-				header.appendChild(title);
-				header.appendChild(copyBtn);
-				consoleContainer.appendChild(header);
-
-				// Add an inner list for messages
-				const list = document.createElement('div');
-				list.className = 'drawer-console-list';
-				consoleContainer.appendChild(list);
-
-				// insert near the top of drawer content if possible
-				const drawerContent = mobileDrawer.querySelector('.drawer-content');
-				if (drawerContent) drawerContent.insertBefore(consoleContainer, drawerContent.firstChild);
-			}
-
-			// Hook the game's appendConsoleMessage to also write into the drawer list
-			try {
-				const consoleList = mobileDrawer.querySelector('.drawer-console-list');
-				if (consoleList && game && typeof game.appendConsoleMessage === 'function') {
-					const original = game.appendConsoleMessage.bind(game);
-					game.appendConsoleMessage = function (msg) {
-						try {
-							const line = document.createElement('div');
-							line.className = 'console-line';
-							line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-							consoleList.appendChild(line);
-							while (consoleList.childNodes.length > 200) consoleList.removeChild(consoleList.firstChild);
-							consoleList.scrollTop = consoleList.scrollHeight;
-						} catch (_) {}
-						original(msg);
-					};
-				}
-			} catch (err) {
-				console.warn('Failed to attach drawer console hook', err);
-			}
-		}
-	} catch (err) {
-		console.warn('Failed to ensure drawer console:', err);
-	}
-	// Also ensure desktop drawer has the same console UI for users on larger screens
-	try {
-		const desktopDrawer = document.getElementById('desktop-drawer');
-		if (desktopDrawer && !desktopDrawer.querySelector('.drawer-console-output')) {
-			// Clone the mobile console if present to keep parity
-			const mobileConsole = document.querySelector('#mobile-drawer .drawer-console-output');
-			if (mobileConsole) {
-				const clone = mobileConsole.cloneNode(true);
-				// Reattach the copy handler on the cloned header button
-				const copyBtn = clone.querySelector('button');
-				if (copyBtn) {
-					copyBtn.addEventListener('click', () => {
-						try {
-							const text = Array.from(clone.querySelectorAll('.console-line')).map(n => n.textContent).join('\n');
-							navigator.clipboard.writeText(text);
-							game.appendConsoleMessage('Console copied to clipboard');
-						} catch (err) {
-							game.appendConsoleMessage('Copy failed: ' + (err && err.message));
-						}
-					});
-				}
-				const drawerContent = desktopDrawer.querySelector('.drawer-content');
-				if (drawerContent) drawerContent.insertBefore(clone, drawerContent.firstChild);
-			}
-		}
-	} catch (err) { console.warn('Failed to ensure desktop drawer console', err); }
+	// In-game drawer console UI removed per request — no DOM console will be created or attached
 });
 
 document.addEventListener('DOMContentLoaded', function() {

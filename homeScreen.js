@@ -106,7 +106,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 fadeDiv.style.opacity = "1";
             }, 10);
             setTimeout(() => {
-                window.location.href = "game.html";
+                // read selected language from index page and pass as query param
+                try {
+                    const sel = document.getElementById('language-select');
+                    const lang = (sel && sel.value) ? encodeURIComponent(sel.value) : 'en';
+                    window.location.href = "game.html?lang=" + lang;
+                } catch (e) {
+                    window.location.href = "game.html";
+                }
             }, 800);
         }, 4000);
     });
