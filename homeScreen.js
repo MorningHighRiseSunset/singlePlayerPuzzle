@@ -75,14 +75,25 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1000 + i * 120);
         });
 
-        // --- SPEECH: Enthusiastic "Puzzle!" immediately ---
+        // --- SPEECH: Enthusiastic "Puzzle!" in selected language ---
         window.speechSynthesis.cancel();
+        const sel = document.getElementById('language-select');
+        let lang = (sel && sel.value) ? sel.value : 'en';
+        let label = 'Puzzle';
+        if (sel) {
+            const opt = sel.options[sel.selectedIndex];
+            label = opt.getAttribute('data-label') || 'Puzzle';
+        }
         const voices = window.speechSynthesis.getVoices();
-        const femaleVoice = voices.find(v => v.name.toLowerCase().includes("female") || v.gender === "female" || v.name.toLowerCase().includes("woman") || v.name.toLowerCase().includes("girl"));
-        const enFemale = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"));
-        const chosenVoice = femaleVoice || enFemale || null;
-
-        const utter = new SpeechSynthesisUtterance("Puzzle!");
+        // Try to find a voice matching the selected language
+        let chosenVoice = voices.find(v => v.lang.startsWith(lang));
+        // Prefer female voice if available
+        if (chosenVoice && voices.filter(v => v.lang.startsWith(lang)).length > 1) {
+            const female = voices.filter(v => v.lang.startsWith(lang)).find(v => v.name.toLowerCase().includes('female') || v.gender === 'female');
+            if (female) chosenVoice = female;
+        }
+        const utter = new SpeechSynthesisUtterance(label + '!');
+        utter.lang = lang;
         utter.rate = 1.25;
         utter.pitch = 1.3;
         utter.volume = 1.0;
