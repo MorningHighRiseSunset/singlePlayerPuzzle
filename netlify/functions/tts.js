@@ -34,7 +34,13 @@ exports.handler = async function(event, context) {
 
     if (!resp.ok) {
       const errText = await resp.text();
-      return { statusCode: resp.status || 502, body: JSON.stringify({ error: 'TTS provider error', detail: errText }) };
+      // Log provider error for Netlify function logs (safe: does not log API key)
+      console.error('[TTS] Google API error', { status: resp.status, statusText: resp.statusText, body: errText });
+      return {
+        statusCode: resp.status || 502,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: 'TTS provider error', status: resp.status, detail: errText })
+      };
     }
 
     const data = await resp.json();

@@ -6796,6 +6796,8 @@ calculateScore() {
 			const tryRemote = async () => {
 				if (!window.fetch) return false;
 				try {
+					// Debug: log TTS payload being sent to server
+					try { console.debug('[TTS] tryRemote payload', { text, lang: finalLang }); } catch (e) {}
 					const resp = await fetch('/.netlify/functions/tts', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
