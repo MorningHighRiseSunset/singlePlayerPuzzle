@@ -212,12 +212,12 @@ function getTranslation(key, lang = 'en') {
 
 function normalizeWordForDict(word) {
 	if (!word) return '';
-	// Remove diacritics and non-letter characters, return uppercase
+	// Remove diacritics but preserve ñ, return uppercase
 	try {
-		return word.normalize('NFD').replace(/[00-\u036f]/g, '').replace(/[^[A-Za-zÁÉÍÓÚÑáéíóúñ]]/g, '').toUpperCase();
+		return word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-ZÑ]/gi, '').toUpperCase();
 	} catch (e) {
-		// Fallback simple removal
-		return word.replace(/[\u0300-\u036f]/g, '').toUpperCase();
+		// Fallback: preserve ñ, remove other diacritics
+		return word.replace(/[\u0300-\u036f]/g, '').replace(/[^\wÑ]/gi, '').toUpperCase();
 	}
 }
 
@@ -576,6 +576,65 @@ class ScrabbleGame {
 			Y: 2,
 			Z: 1,
 			"*": 4, // Increased from 2 to 4 wild tiles
+		};
+
+		// Spanish tile values and distribution
+		this.spanishTileValues = {
+			A: 1,
+			B: 3,
+			C: 3,
+			D: 2,
+			E: 1,
+			F: 4,
+			G: 2,
+			H: 4,
+			I: 1,
+			J: 8,
+			L: 1,
+			M: 3,
+			N: 1,
+			Ñ: 8,
+			O: 1,
+			P: 3,
+			Q: 5,
+			R: 1,
+			S: 1,
+			T: 1,
+			U: 1,
+			V: 4,
+			X: 8,
+			Y: 4,
+			Z: 10,
+			"*": 0,
+		};
+
+		this.spanishTileDistribution = {
+			A: 12,
+			B: 2,
+			C: 4,
+			D: 5,
+			E: 12,
+			F: 1,
+			G: 2,
+			H: 2,
+			I: 6,
+			J: 1,
+			L: 4,
+			M: 2,
+			N: 5,
+			Ñ: 1,
+			O: 9,
+			P: 2,
+			Q: 1,
+			R: 5,
+			S: 6,
+			T: 4,
+			U: 5,
+			V: 1,
+			X: 1,
+			Y: 1,
+			Z: 1,
+			"*": 2,
 		};
 		this.setupHintSystem();
 		this.previousBoard = null;
@@ -5627,12 +5686,17 @@ formedWords.forEach((wordInfo) => {
 
 	generateTileBag() {
 		this.tiles = [];
-		for (const [letter, count] of Object.entries(this.tileDistribution)) {
+		const lang = this.preferredLang || 'en';
+		const distribution = lang === 'es' ? this.spanishTileDistribution : this.tileDistribution;
+		const values = lang === 'es' ? this.spanishTileValues : this.tileValues;
+
+		for (const [letter, count] of Object.entries(distribution)) {
 			for (let i = 0; i < count; i++) {
 				this.tiles.push({
 					letter,
-					value: this.tileValues[letter],
+					value: values[letter],
 					id: `${letter}_${i}`,
+					isBlank: letter === "*",
 				});
 			}
 		}
@@ -5826,6 +5890,10 @@ formedWords.forEach((wordInfo) => {
 		try {
 			// Spanish Scrabble dictionary from GitHub
 			let response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+			// Fallback URL if the primary one fails
+			if (!response.ok) {
+				response = await fetch("https://raw.githubusercontent.com/olea/lemarios/master/espanol.txt");
+			}
 			let text = await response.text();
 			const rawWords = text.split("\n").map(w => w.trim()).filter(Boolean);
 			this.spanishDictionary = new Set();
@@ -5872,15 +5940,35 @@ formedWords.forEach((wordInfo) => {
 			// For other languages, use English dictionary
 			this.activeDictionary = new Set(this.dictionary);
 		}
-		
+
 		// Rebuild the Trie with the active dictionary
 		this.trie = new Trie();
 		for (const word of this.activeDictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
-		
+
 		console.log(`Language set to ${lang}. Dictionary size: ${this.activeDictionary.size}`);
-		
+
+		// Regenerate tile bag with correct letter distribution for the language
+		this.generateTileBag();
+
+		// Return existing rack tiles to bag and redraw new ones
+		const existingPlayerTiles = [...this.playerRack];
+		const existingAITiles = [...this.aiRack];
+
+		// Return tiles to bag
+		this.tiles.push(...existingPlayerTiles);
+		this.tiles.push(...existingAITiles);
+
+		// Clear racks
+		this.playerRack = [];
+		this.aiRack = [];
+
+		// Redraw racks with new language tiles
+		this.fillRacks();
+		this.renderRack();
+		this.renderAIRack();
+
 		// Update UI language
 		this.updateUILanguage(lang);
 	}
@@ -6058,7 +6146,7 @@ formedWords.forEach((wordInfo) => {
 		tileElement.innerHTML = `
                     ${tile.letter}
                     <span class="points">${tile.value}</span>
-                    ${tile.letter === "*" ? '<span class="blank-indicator">★</span>' : ""}
+                    ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                 `;
 		return tileElement;
 	}
