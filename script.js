@@ -181,6 +181,217 @@ function getTranslation(key, lang = 'en') {
 	return translations[lang][key] || translations['en'][key] || key;
 }
 
+// English to Spanish word translations for common Scrabble words
+const wordTranslations = {
+	es: {
+		'THE': 'EL',
+		'AND': 'Y',
+		'TO': 'A',
+		'OF': 'DE',
+		'A': 'UN',
+		'IN': 'EN',
+		'IS': 'ES',
+		'YOU': 'TU',
+		'THAT': 'ESO',
+		'IT': 'ESTO',
+		'HE': 'EL',
+		'WAS': 'ERA',
+		'FOR': 'PARA',
+		'ON': 'EN',
+		'ARE': 'SOMOS',
+		'AS': 'COMO',
+		'I': 'YO',
+		'WITH': 'CON',
+		'BE': 'SER',
+		'AT': 'EN',
+		'OR': 'O',
+		'BY': 'POR',
+		'FROM': 'DE',
+		'UP': 'ARRIBA',
+		'ABOUT': 'ACERCA',
+		'OUT': 'FUERA',
+		'HAD': 'TENIA',
+		'HAS': 'TIENE',
+		'HAVE': 'TENER',
+		'BUT': 'PERO',
+		'DO': 'HACER',
+		'DOES': 'HACE',
+		'DID': 'HIZO',
+		'WILL': 'SERA',
+		'CAN': 'PUEDE',
+		'COULD': 'PODRIA',
+		'WOULD': 'SERIA',
+		'SHOULD': 'DEBERIA',
+		'THEY': 'ELLOS',
+		'WHICH': 'CUAL',
+		'WHO': 'QUIEN',
+		'WHERE': 'DONDE',
+		'WHEN': 'CUANDO',
+		'WHY': 'POR QUE',
+		'HOW': 'COMO',
+		'ALL': 'TODO',
+		'EACH': 'CADA',
+		'EVERY': 'CADA',
+		'BOTH': 'AMBOS',
+		'SOME': 'ALGUNOS',
+		'MANY': 'MUCHOS',
+		'MUCH': 'MUCHO',
+		'MORE': 'MAS',
+		'MOST': 'LA MAYORIA',
+		'LESS': 'MENOS',
+		'SAME': 'MISMO',
+		'OTHER': 'OTRO',
+		'ANOTHER': 'OTRO',
+		'SUCH': 'TAL',
+		'VERY': 'MUY',
+		'TOO': 'TAMBIEN',
+		'ONLY': 'SOLO',
+		'OVER': 'SOBRE',
+		'UNDER': 'BAJO',
+		'THROUGH': 'A TRAVES',
+		'AFTER': 'DESPUES',
+		'BEFORE': 'ANTES',
+		'BETWEEN': 'ENTRE',
+		'DURING': 'DURANTE',
+		'WITHOUT': 'SIN',
+		'WITHIN': 'DENTRO',
+		'AGAINST': 'CONTRA',
+		'ALONG': 'JUNTO',
+		'AMONG': 'ENTRE',
+		'AROUND': 'ALREDEDOR',
+		'BEFORE': 'ANTES',
+		'BEHIND': 'DETRAS',
+		'BESIDE': 'AL LADO',
+		'BEYOND': 'MAS ALLA',
+		'ABOVE': 'ARRIBA',
+		'BELOW': 'DEBAJO',
+		'AROUND': 'ALREDEDOR',
+		'HOUSE': 'CASA',
+		'PERSON': 'PERSONA',
+		'PEOPLE': 'GENTE',
+		'FAMILY': 'FAMILIA',
+		'FRIEND': 'AMIGO',
+		'BOY': 'CHICO',
+		'GIRL': 'CHICA',
+		'MAN': 'HOMBRE',
+		'WOMAN': 'MUJER',
+		'DAY': 'DIA',
+		'NIGHT': 'NOCHE',
+		'YEAR': 'ANO',
+		'MONTH': 'MES',
+		'WEEK': 'SEMANA',
+		'HOUR': 'HORA',
+		'MINUTE': 'MINUTO',
+		'SECOND': 'SEGUNDO',
+		'TIME': 'TIEMPO',
+		'PLACE': 'LUGAR',
+		'THING': 'COSA',
+		'WORK': 'TRABAJO',
+		'WATER': 'AGUA',
+		'FIRE': 'FUEGO',
+		'FOOD': 'COMIDA',
+		'MONEY': 'DINERO',
+		'BOOK': 'LIBRO',
+		'WORD': 'PALABRA',
+		'HAND': 'MANO',
+		'FOOT': 'PIE',
+		'FACE': 'CARA',
+		'HEAD': 'CABEZA',
+		'BODY': 'CUERPO',
+		'HEART': 'CORAZON',
+		'WORLD': 'MUNDO',
+		'COUNTRY': 'PAIS',
+		'CITY': 'CIUDAD',
+		'STREET': 'CALLE',
+		'ROAD': 'CAMINO',
+		'DOOR': 'PUERTA',
+		'WINDOW': 'VENTANA',
+		'TREE': 'ARBOL',
+		'FLOWER': 'FLOR',
+		'ANIMAL': 'ANIMAL',
+		'DOG': 'PERRO',
+		'CAT': 'GATO',
+		'BIRD': 'PAJARO',
+		'FISH': 'PEZ',
+		'HORSE': 'CABALLO',
+		'SUN': 'SOL',
+		'MOON': 'LUNA',
+		'STAR': 'ESTRELLA',
+		'RAIN': 'LLUVIA',
+		'SNOW': 'NIEVE',
+		'WIND': 'VIENTO',
+		'CLOUD': 'NUBE',
+		'SKY': 'CIELO',
+		'ROCK': 'PIEDRA',
+		'HILL': 'COLINA',
+		'MOUNTAIN': 'MONTANA',
+		'RIVER': 'RIO',
+		'LAKE': 'LAGO',
+		'SEA': 'MAR',
+		'OCEAN': 'OCEANO',
+		'RED': 'ROJO',
+		'BLUE': 'AZUL',
+		'GREEN': 'VERDE',
+		'YELLOW': 'AMARILLO',
+		'BLACK': 'NEGRO',
+		'WHITE': 'BLANCO',
+		'GOOD': 'BUENO',
+		'BAD': 'MALO',
+		'BETTER': 'MEJOR',
+		'BEST': 'LO MEJOR',
+		'WORSE': 'PEOR',
+		'WORST': 'LO PEOR',
+		'BIG': 'GRANDE',
+		'SMALL': 'PEQUENO',
+		'LARGE': 'GRANDE',
+		'LITTLE': 'PEQUENO',
+		'OLD': 'VIEJO',
+		'NEW': 'NUEVO',
+		'YOUNG': 'JOVEN',
+		'LONG': 'LARGO',
+		'SHORT': 'CORTO',
+		'HIGH': 'ALTO',
+		'LOW': 'BAJO',
+		'HOT': 'CALIENTE',
+		'COLD': 'FRIO',
+		'WARM': 'CALUROSO',
+		'COOL': 'FRESCO',
+		'DRY': 'SECO',
+		'WET': 'MOJADO',
+		'HARD': 'DURO',
+		'SOFT': 'SUAVE',
+		'STRONG': 'FUERTE',
+		'WEAK': 'DEBIL',
+		'FAST': 'RAPIDO',
+		'SLOW': 'LENTO',
+		'HAPPY': 'FELIZ',
+		'SAD': 'TRISTE',
+		'ANGRY': 'ENOJADO',
+		'AFRAID': 'ASUSTADO',
+		'SURE': 'SEGURO',
+		'QUIET': 'TRANQUILO',
+		'LOUD': 'FUERTE',
+		'FULL': 'LLENO',
+		'EMPTY': 'VACIO',
+		'EASY': 'FACIL',
+		'HARD': 'DIFICIL',
+		'SIMPLE': 'SIMPLE',
+		'CLEAN': 'LIMPIO',
+		'DIRTY': 'SUCIO',
+		'RIGHT': 'CORRECTO',
+		'WRONG': 'INCORRECTO',
+		'TRUE': 'VERDADERO',
+		'FALSE': 'FALSO'
+	}
+};
+
+function translateWordForDisplay(word, lang) {
+	if (lang === 'es' && wordTranslations.es[word.toUpperCase()]) {
+		return wordTranslations.es[word.toUpperCase()];
+	}
+	return word;
+}
+
 function isMobileDevice() {
 	return (
 		window.innerWidth <= 768 ||
@@ -3474,12 +3685,16 @@ async executeAIPlay(play) {
 
 			// Format move description for multiple words
 			let moveDescription;
+			const currentLang = localStorage.getItem('preferredLang') || 'en';
 			if (wordsList.length > 1) {
 				moveDescription = wordsList
-					.map((w) => `${w.word} (${w.score})`)
+					.map((w) => {
+						const displayWord = translateWordForDisplay(w.word, currentLang);
+						return `${displayWord} (${w.score})`;
+					})
 					.join(" & ");
 			} else if (wordsList.length === 1) {
-				moveDescription = wordsList[0].word;
+				moveDescription = translateWordForDisplay(wordsList[0].word, currentLang);
 			} else {
 				moveDescription = "(No new words scored)";
 			}
@@ -5540,64 +5755,20 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadLanguageDictionary(lang) {
-		try {
-			let dictUrl = "https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt";
-			let testWords = [];
-			
-			// Load language-specific dictionary
-			if (lang === 'es') {
-				// Spanish dictionary
-				dictUrl = "https://raw.githubusercontent.com/IgnoredAmbience/spanish-dictionary/master/words_es.txt";
-				testWords = ["hola", "mundo", "juego", "palabra"];
-			} else if (lang === 'fr') {
-				// French dictionary
-				dictUrl = "https://raw.githubusercontent.com/dwyl/french-words/master/words_fr.txt";
-				testWords = ["bonjour", "monde", "jeu", "mot"];
-			} else if (lang === 'zh') {
-				// Chinese uses a different approach - fallback for now
-				console.warn("Chinese language support limited - using English dictionary");
-				this.activeDictionary = new Set(this.dictionary);
-				return;
-			} else {
-				// English
-				testWords = ["hello", "world", "game", "play"];
-			}
-			
-			const response = await fetch(dictUrl);
-			if (!response.ok) {
-				console.warn(`Language dictionary not available for ${lang}, falling back to English`);
-				this.activeDictionary = new Set(this.dictionary);
-				this.updateUILanguage(lang);
-				return;
-			}
-			
-			const text = await response.text();
-			this.activeDictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
-			
-			// Rebuild the Trie with the new language dictionary
-			this.trie = new Trie();
-			for (const word of this.activeDictionary) {
-				this.trie.insert(word.toUpperCase());
-			}
-			
-			// Update UI language
-			this.updateUILanguage(lang);
-			
-			console.log(`Language dictionary loaded for ${lang}. Word count:`, this.activeDictionary.size);
-			testWords.forEach(word => {
-				console.log(`Active dictionary contains "${word}": ${this.activeDictionary.has(word.toLowerCase())}`);
-			});
-		} catch (error) {
-			console.error(`Error loading language dictionary for ${lang}:`, error);
-			// Fallback to English dictionary
-			this.activeDictionary = new Set(this.dictionary);
-			// Rebuild trie with fallback
-			this.trie = new Trie();
-			for (const word of this.activeDictionary) {
-				this.trie.insert(word.toUpperCase());
-			}
-			this.updateUILanguage(lang);
+		// For now, always use English dictionary for validation
+		// The language selection only affects UI and word display translation
+		this.activeDictionary = new Set(this.dictionary);
+		
+		// Rebuild the Trie with the English dictionary (always the same)
+		this.trie = new Trie();
+		for (const word of this.activeDictionary) {
+			this.trie.insert(word.toUpperCase());
 		}
+		
+		console.log(`Language set to ${lang}. Using English dictionary for validation.`);
+		
+		// Update UI language
+		this.updateUILanguage(lang);
 	}
 
 	updateUILanguage(lang) {
@@ -7629,14 +7800,15 @@ calculateScore() {
 		// Update both mobile and desktop history displays
 		const historyDisplay = document.getElementById("move-history");
 		const historyDisplayDesktop = document.getElementById("move-history-desktop");
+		const currentLang = localStorage.getItem('preferredLang') || 'en';
 		
 		// Populate history content
 		const historyContent = this.moveHistory
 			.map((move) => {
 				if (Array.isArray(move.words)) {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.words.map(w => `"${w.word}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.words.map(w => `"${translateWordForDisplay(w.word, currentLang)}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
 				} else if (move.word) {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: "${move.word}" = ${move.score}pts</div>`;
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: "${translateWordForDisplay(move.word, currentLang)}" = ${move.score}pts</div>`;
 				} else {
 					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.word || 'move'} = ${move.score}pts</div>`;
 				}
