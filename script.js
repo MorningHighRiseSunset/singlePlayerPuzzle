@@ -4084,7 +4084,7 @@ async executeAIPlay(play) {
 			// --- AI auto-speech disabled by user request ---
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
-				this.aiScore += totalScore;
+				// Score will be added in final update below
 				this.isFirstMove = false;
 				this.consecutiveSkips = 0;
 
@@ -4110,7 +4110,7 @@ async executeAIPlay(play) {
 				// --- AI auto-speech disabled by user request ---
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
-				this.aiScore += totalScore;
+				// Score will be added in final update below
 				this.isFirstMove = false;
 				this.consecutiveSkips = 0;
 
@@ -8948,6 +8948,12 @@ calculateScore() {
 	// - a string like "SKIP"/"EXCHANGE"/single word
 	// - an array of {word, score} for multiple words scored in one move
 	addToMoveHistory(player, words, score) {
+		// Prevent duplicate entries by checking the last move
+		const lastMove = this.moveHistory[this.moveHistory.length - 1];
+		if (lastMove && lastMove.player === player && JSON.stringify(lastMove.words || lastMove.word) === JSON.stringify(words) && lastMove.score === score) {
+			return; // Skip adding duplicate move
+		}
+
 		const entry = {
 			player,
 			timestamp: new Date(),
