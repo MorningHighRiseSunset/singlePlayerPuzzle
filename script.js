@@ -3871,6 +3871,8 @@ async executeAIPlay(play) {
     }));
 
     return new Promise(async (resolve) => {
+        let totalScore = 0; // Declare at Promise scope for both setTimeout callbacks
+
         // Start placing tiles with animation
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
@@ -3987,7 +3989,7 @@ async executeAIPlay(play) {
         setTimeout(() => {
             // Get all formed words and calculate total score
             const formedWords = this.getFormedWords();
-            let totalScore = 0;
+            totalScore = 0; // Already declared at Promise scope
             let wordsList = [];
 
             // --- Extra insurance: skip words that already existed on the previous board or were already played ---
@@ -4086,9 +4088,6 @@ async executeAIPlay(play) {
 				this.consecutiveSkips = 0;
 
 				this.currentTurn = "player";
-				// Prefer structured words (word + score) when available
-				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
-
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
 
@@ -4115,9 +4114,6 @@ async executeAIPlay(play) {
 				this.consecutiveSkips = 0;
 
 				this.currentTurn = "player";
-				// Prefer structured words (word + score) when available
-				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
-
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
 
@@ -4148,9 +4144,6 @@ async executeAIPlay(play) {
 				this.consecutiveSkips = 0;
 
 				this.currentTurn = "player";
-				// Prefer structured words (word + score) when available
-				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
-
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
 
@@ -8147,6 +8140,9 @@ calculateScore() {
 
 	async speakWordInEnglish(word) {
 		if (!word) return;
+
+		// Temporarily disable TTS to prevent 403 API errors
+		return;
 
 		try {
 			// Try to translate Spanish word to English using Google Translate API
