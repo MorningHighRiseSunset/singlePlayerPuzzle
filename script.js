@@ -8189,6 +8189,11 @@ calculateScore() {
 
 		const upperWord = word.toUpperCase();
 
+		// Debug: log words being checked (only in debug mode)
+		if (this.showAIDebug && (upperWord.includes('SOSEDAD') || Math.random() < 0.01)) {
+			console.log(`[AI Word Check] Evaluating: ${upperWord}`);
+		}
+
 		// Check for suspicious word patterns that indicate invalid or inappropriate words
 		// This uses intelligent pattern matching instead of a hardcoded list
 
@@ -8239,8 +8244,13 @@ calculateScore() {
 
 		// 5. Dictionary validation - final check against known words
 		// Even if a word passes all pattern checks, it must exist in our dictionary
-		if (!this.dictionaryHas(word)) {
+		const inDict = this.dictionaryHas(word);
+		if (!inDict) {
+			if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in dictionary`);
 			return false; // Reject words not in dictionary, regardless of patterns
+		}
+		if (this.showAIDebug && (upperWord.includes('SOSEDAD') || Math.random() < 0.01)) {
+			console.log(`[AI Word Check] Accepted ${upperWord}: in dictionary`);
 		}
 
 		// 6. API-based validation for words that pass basic checks
