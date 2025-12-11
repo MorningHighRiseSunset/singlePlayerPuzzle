@@ -813,7 +813,6 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0.3'; // Make transparent but visible
 					ghost.style.visibility = 'visible';
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
@@ -8404,34 +8403,12 @@ calculateScore() {
 				return false;
 			}
 
-			// Use Spanish Royal Academy API
-			const response = await fetch(`https://dle.rae.es/data/search?w=${encodeURIComponent(word.toLowerCase())}`, {
-				method: 'GET',
-				headers: {
-					'Accept': 'application/json',
-				}
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				// Check if the word exists in RAE dictionary
-				return data && data.length > 0 && data.some(entry =>
-					entry && entry.word && entry.word.toLowerCase() === word.toLowerCase()
-				);
-			}
-
-			// Fallback: try alternative Spanish dictionary API
-			const altResponse = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(word.toLowerCase())}`);
-			if (altResponse.ok) {
-				const altData = await altResponse.json();
-				return altData && altData.length > 0;
-			}
-
-			// Last resort: basic Spanish pattern validation
-			return this.couldBeValidSpanishWord(word);
+			// Skip API validation for now due to CORS issues - rely on local validation
+			// The local dictionary and pattern matching should be sufficient
+			return this.couldBeValidSpanishWord(word) && this.dictionaryHas(word);
 		} catch (error) {
-			console.debug('Spanish API validation failed for', word, ':', error);
-			// If API fails, fall back to pattern validation
+			console.debug('Spanish validation failed for', word, ':', error);
+			// If validation fails, fall back to basic pattern validation
 			return this.couldBeValidSpanishWord(word);
 		}
 	}
