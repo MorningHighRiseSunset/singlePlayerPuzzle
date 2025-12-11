@@ -1,0 +1,9 @@
+{
+  "name": "singleplayer-puzzle",
+  "version": "1.0.0",
+  "description": "Single Player Scrabble Puzzle Game",
+  "main": "script.js",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  }
+}
