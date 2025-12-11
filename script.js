@@ -6023,6 +6023,14 @@ formedWords.forEach((wordInfo) => {
 			this.trie.insert(word.toUpperCase());
 		}
 
+		// Show the game container now that initialization is complete
+		const gameContainer = document.querySelector('.game-container');
+		if (gameContainer) {
+			gameContainer.style.transition = 'opacity 0.5s ease-in';
+			gameContainer.style.opacity = '1';
+			gameContainer.style.visibility = 'visible';
+		}
+
 	}
 
 	showLoadingScreen() {
@@ -6066,7 +6074,7 @@ formedWords.forEach((wordInfo) => {
 			text-align: center;
 			margin-bottom: 10px;
 		`;
-		loadingText.textContent = 'Loading Blue Game...';
+		loadingText.textContent = 'Loading Puzzle Game...';
 
 		// Progress indicator
 		const progressText = document.createElement('div');
@@ -6368,6 +6376,18 @@ formedWords.forEach((wordInfo) => {
 			// Also suppress fetch network errors by overriding XMLHttpRequest and fetch
 			const originalFetch = window.fetch;
 			window.fetch = async function(...args) {
+				const url = args[0];
+				// Skip problematic URLs entirely to prevent 404 errors
+				if (url && typeof url === 'string') {
+					if (url.includes('pabloduran024') || url.includes('JorgeDuenasLpz')) {
+						// Return a successful empty response to prevent errors
+						return new Response('[]', {
+							status: 200,
+							statusText: 'OK',
+							headers: { 'Content-Type': 'application/json' }
+						});
+					}
+				}
 				try {
 					return await originalFetch.apply(this, args);
 				} catch (e) {
