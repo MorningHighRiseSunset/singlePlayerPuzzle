@@ -685,6 +685,8 @@ class ScrabbleGame {
 		this.ghostThinkingTimer = null;
 		this.lastGhostBoardState = null;
 		this.lastGhostRackState = null;
+		this.lastAIGhostPlays = null;
+		this.ghostDisplayMode = 0;
 
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
@@ -754,6 +756,59 @@ class ScrabbleGame {
 		}
 	}
 
+	// Show multiple rotating ghost moves with different colors
+	showRotatingGhostMoves(plays) {
+		// Remove any existing ghost tiles
+		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+
+		if (!plays || plays.length === 0) return;
+
+		// Limit to top 5 moves to avoid clutter
+		const topMoves = plays.slice(0, 5);
+
+		// Colors for different ghost moves
+		const ghostColors = [
+			{ bg: '#b3e5fc', border: '#0288d1', text: '#01579b' }, // Blue
+			{ bg: '#c8e6c9', border: '#2e7d32', text: '#1b5e20' }, // Green
+			{ bg: '#ffcdd2', border: '#c62828', text: '#b71c1c' }, // Red
+			{ bg: '#fff3e0', border: '#ef6c00', text: '#e65100' }, // Orange
+			{ bg: '#e1bee7', border: '#6a1b9a', text: '#4a148c' }  // Purple
+		];
+
+		topMoves.forEach((play, moveIndex) => {
+			const { word, startPos, isHorizontal } = play;
+			const colorScheme = ghostColors[moveIndex % ghostColors.length];
+
+			for (let i = 0; i < word.length; i++) {
+				const row = isHorizontal ? startPos.row : startPos.row + i;
+				const col = isHorizontal ? startPos.col + i : startPos.col;
+				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+
+				// Only add ghost if cell is empty or only contains the center star
+				if (cell && !cell.querySelector('.tile')) {
+					// Remove center star if present (ghost overlays it)
+					const star = cell.querySelector('.center-star');
+					if (star) star.style.opacity = '0.2';
+
+					const ghost = document.createElement('div');
+					ghost.className = 'tile ghost-tile';
+					ghost.dataset.moveIndex = moveIndex;
+					ghost.innerHTML = `
+						${word[i]}
+						<span class="points">${this.tileValues[word[i]] || 0}</span>
+					`;
+					ghost.style.opacity = '0.25'; // More transparent for multiple moves
+					ghost.style.pointerEvents = 'none';
+					ghost.style.background = colorScheme.bg;
+					ghost.style.color = colorScheme.text;
+					ghost.style.border = `2px dashed ${colorScheme.border}`;
+					ghost.style.zIndex = 10 + moveIndex; // Stack them properly
+					cell.appendChild(ghost);
+				}
+			}
+		});
+	}
+
 	async showAIGhostIfPlayerMoveValid() {
 		if (this.currentTurn !== "player") {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
@@ -773,6 +828,7 @@ class ScrabbleGame {
 		}
 
 		const aiPlays = this.findAIPossiblePlays();
+		this.lastAIGhostPlays = aiPlays; // Store for rotating display
 	if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
 
 		// --- REMOVE temp placed tiles after preview ---
@@ -783,7 +839,9 @@ class ScrabbleGame {
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
-			this.showAIGhostMove(aiPlays[0]);
+			// Show rotating ghost moves with different colors
+			this.showRotatingGhostMoves(aiPlays);
+			// Store the best move for when AI actually plays
 			this.ghostAIMove = {
 				...aiPlays[0],
 				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
@@ -820,6 +878,9 @@ class ScrabbleGame {
 						this.lastGhostRackState = currentRackState;
 
 						await this.showAIGhostIfPlayerMoveValid();
+					} else {
+						// If board hasn't changed, cycle through different ghost move displays
+						this.rotateGhostDisplay();
 					}
 				} catch (e) {
 					// Silently handle errors to avoid disrupting gameplay
@@ -827,6 +888,30 @@ class ScrabbleGame {
 				}
 			}
 		}, 3000); // Update every 3 seconds
+	}
+
+	// Rotate through different ghost move displays to show AI's various options
+	rotateGhostDisplay() {
+		if (!this.lastAIGhostPlays || this.lastAIGhostPlays.length <= 1) return;
+
+		// Cycle through different display modes
+		this.ghostDisplayMode = (this.ghostDisplayMode || 0) + 1;
+
+		if (this.ghostDisplayMode % 3 === 0) {
+			// Show all top moves with colors
+			this.showRotatingGhostMoves(this.lastAIGhostPlays);
+		} else if (this.ghostDisplayMode % 3 === 1) {
+			// Show just the best move
+			if (this.lastAIGhostPlays.length > 0) {
+				this.showAIGhostMove(this.lastAIGhostPlays[0]);
+			}
+		} else {
+			// Show 2-3 alternative moves
+			const altMoves = this.lastAIGhostPlays.slice(1, Math.min(4, this.lastAIGhostPlays.length));
+			if (altMoves.length > 0) {
+				this.showRotatingGhostMoves(altMoves);
+			}
+		}
 	}
 
 	// Stop ghost thinking (call when game ends or AI turn starts)
@@ -6195,9 +6280,9 @@ formedWords.forEach((wordInfo) => {
 			// Try multiple Spanish dictionary sources for comprehensive coverage
 			const sources = [
 				"https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt",
-				"https://raw.githubusercontent.com/olea/lemarios/master/lemas.txt",
 				"https://raw.githubusercontent.com/titoBouzout/Dictionaries/master/Spanish.dic",
-				"https://raw.githubusercontent.com/Beluki/Spanish-Checker/master/words.json"
+				"https://raw.githubusercontent.com/pabloduran024/diccionario-espanol/main/diccionario.txt",
+				"https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt"
 			];
 
 			let loadedFromSource = false;
@@ -6214,7 +6299,8 @@ formedWords.forEach((wordInfo) => {
 					}
 				} catch (e) {
 					// Silently skip failed sources - this is normal and expected
-					console.debug(`Skipped dictionary source ${source.split('/').pop()}`);
+					// 404 errors just mean the external dictionary URL doesn't exist anymore
+					console.debug(`Skipped dictionary source ${source.split('/').pop()} (404 - source no longer available)`);
 				}
 			}
 
