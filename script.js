@@ -746,8 +746,7 @@ class ScrabbleGame {
 					${word[i]}
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
-				ghost.style.opacity = '0';
-				ghost.style.visibility = 'hidden';
+				ghost.style.opacity = '0.35';
 				ghost.style.pointerEvents = 'none';
 				ghost.style.background = '#b3e5fc';
 				ghost.style.color = '#222';
@@ -798,8 +797,7 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0';
-				ghost.style.visibility = 'hidden'; // Invisible - no longer needed for testing
+					ghost.style.opacity = '0.25'; // More transparent for multiple moves
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
