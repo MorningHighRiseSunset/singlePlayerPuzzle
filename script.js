@@ -6139,15 +6139,37 @@ formedWords.forEach((wordInfo) => {
 
 	async loadSpanishDictionary() {
 		try {
-			// Working Spanish dictionary from javierarce/palabras
-			let response = await fetch("https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt");
-			// Fallback to official Spanish Scrabble dictionary
-			if (!response.ok) {
-				response = await fetch("https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt");
+			this.updateLoadingProgress('Loading Spanish dictionary...');
+			const allSpanishWords = new Set();
+
+			// Try multiple Spanish dictionary sources for comprehensive coverage
+			const sources = [
+				"https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt",
+				"https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt",
+				"https://raw.githubusercontent.com/pabloduran024/diccionario-espanol/main/diccionario.txt",
+				"https://raw.githubusercontent.com/olea/lemarios/master/morfol%C3%B3gico-variante.txt"
+			];
+
+			let loadedFromSource = false;
+			for (const source of sources) {
+				try {
+					this.updateLoadingProgress(`Loading from ${source.split('/').pop()}...`);
+					const response = await fetch(source);
+					if (response.ok) {
+						const text = await response.text();
+						const words = text.split("\n").map(w => w.trim()).filter(Boolean);
+						words.forEach(word => allSpanishWords.add(word.toLowerCase()));
+						loadedFromSource = true;
+						console.log(`Loaded ${words.length} words from ${source}`);
+					}
+				} catch (e) {
+					console.warn(`Failed to load from ${source}:`, e);
+				}
 			}
-			// Final fallback: use English dictionary (many cognates work)
-			if (!response.ok) {
-				console.log("Spanish dictionary failed, using English dictionary as fallback");
+
+			// If we couldn't load from any source, use English fallback
+			if (!loadedFromSource || allSpanishWords.size < 1000) {
+				console.log("Spanish dictionary sources failed, using English dictionary as fallback");
 				this.spanishDictionary = new Set(this.dictionary);
 				this.spanishDictionaryNormalized = new Set([...this.dictionary].map(word => normalizeWordForDict(word)));
 				this.spanishNormalizedMap = {};
@@ -6161,8 +6183,18 @@ formedWords.forEach((wordInfo) => {
 				return;
 			}
 
-			let spanishText = await response.text();
-			const spanishRawWords = spanishText.split("\n").map(w => w.trim()).filter(Boolean);
+			// Convert set to array for processing
+			let spanishRawWords = Array.from(allSpanishWords);
+
+			// Try to expand dictionary using Google Translate API for common English Scrabble words
+			try {
+				this.updateLoadingProgress('Expanding dictionary with translations...');
+				const expandedWords = await this.expandDictionaryWithTranslations(spanishRawWords);
+				spanishRawWords = spanishRawWords.concat(expandedWords);
+				console.log(`Added ${expandedWords.length} translated words to dictionary`);
+			} catch (e) {
+				console.warn('Translation expansion failed, continuing with base dictionary:', e);
+			}
 
 			// Filter out potentially invalid or obscure words for Scrabble
 			const excludedWords = new Set([
@@ -6238,6 +6270,96 @@ formedWords.forEach((wordInfo) => {
 				}
 			}
 			console.warn("Using fallback Spanish dictionary with limited words");
+		}
+	}
+
+	async expandDictionaryWithTranslations(existingWords) {
+		// Use Google Translate API to translate common English Scrabble words to Spanish
+		const translatedWords = [];
+
+		try {
+			// Common English Scrabble words that often have good Spanish translations
+			const commonEnglishWords = [
+				// High-frequency Scrabble words that translate well
+				"play", "game", "word", "time", "day", "night", "love", "life", "world", "hand", "eye", "head", "face", "door", "window", "food", "work", "friend", "family", "man", "woman", "child", "father", "mother", "brother", "son", "good", "bad", "big", "small", "high", "low", "red", "blue", "green", "black", "white", "happy", "sad", "fast", "slow", "hot", "cold", "easy", "hard", "beautiful", "ugly",
+				// More Scrabble words
+				"home", "house", "water", "fire", "earth", "air", "light", "dark", "new", "old", "young", "rich", "poor", "strong", "weak", "long", "short", "right", "left", "first", "last", "best", "worst", "more", "less", "many", "few", "all", "some", "none", "here", "there", "now", "then", "yes", "no",
+				// Action words
+				"run", "walk", "eat", "drink", "sleep", "see", "hear", "speak", "read", "write", "sing", "dance", "work", "play", "stop", "go", "come", "open", "close", "begin", "end", "win", "lose", "find", "lose", "give", "take", "make", "do", "say", "tell", "ask", "answer", "help", "hurt", "live", "die", "kill", "save", "build", "break", "buy", "sell", "pay", "cost", "start", "finish"
+			];
+
+			// Filter out words we already have
+			const existingSet = new Set(existingWords.map(w => w.toLowerCase()));
+			const wordsToTranslate = commonEnglishWords.filter(word =>
+				!existingSet.has(word.toLowerCase()) &&
+				word.length >= 2 && word.length <= 15
+			);
+
+			// Translate in batches to avoid API limits
+			const batchSize = 10;
+			for (let i = 0; i < wordsToTranslate.length; i += batchSize) {
+				const batch = wordsToTranslate.slice(i, i + batchSize);
+				try {
+					const translations = await this.translateBatchToSpanish(batch);
+					for (const translated of translations) {
+						if (translated &&
+							translated.length >= 2 &&
+							translated.length <= 15 &&
+							/^[a-zñáéíóúü]+$/i.test(translated) && // Only Spanish letters
+							!existingSet.has(translated.toLowerCase())) {
+							translatedWords.push(translated);
+							existingSet.add(translated.toLowerCase());
+						}
+					}
+				} catch (e) {
+					console.warn('Batch translation failed:', e);
+					// Continue with next batch
+				}
+
+				// Small delay to respect API limits
+				if (i + batchSize < wordsToTranslate.length) {
+					await new Promise(resolve => setTimeout(resolve, 100));
+				}
+			}
+
+		} catch (error) {
+			console.warn('Translation expansion failed:', error);
+		}
+
+		return translatedWords;
+	}
+
+	async translateBatchToSpanish(englishWords) {
+		// Use Google Translate API through Netlify function
+		try {
+			const response = await fetch('/.netlify/functions/translate', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					text: englishWords.join('\n'),
+					source: 'en',
+					target: 'es'
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error(`Translation API returned ${response.status}`);
+			}
+
+			const data = await response.json();
+			const translatedText = data.translatedText || data.translation || '';
+
+			// Split by newlines and clean up
+			return translatedText.split('\n')
+				.map(word => word.trim().toLowerCase())
+				.filter(word => word.length > 0);
+
+		} catch (error) {
+			console.warn('Google Translate API call failed:', error);
+			// Fallback: return empty array
+			return [];
 		}
 	}
 
