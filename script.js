@@ -841,8 +841,8 @@ class ScrabbleGame {
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
-			// Limit to top 5-10 moves and show them initially
-			const topMoves = aiPlays.slice(0, Math.min(8, aiPlays.length)); // Show top 8 moves
+			// Limit to top 3 moves for cleaner display
+			const topMoves = aiPlays.slice(0, Math.min(3, aiPlays.length)); // Show top 3 moves
 			this.showRotatingGhostMoves(topMoves);
 
 			// Hide ghost tiles after 3 seconds to avoid distraction
