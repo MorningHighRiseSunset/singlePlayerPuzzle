@@ -1151,7 +1151,7 @@ class ScrabbleGame {
 					this.placeTile(tile, row, col);
 
 					// Redo ghost preview after placement
-					await this.showAIGhostIfPlayerMoveValid();
+					this.showAIGhostIfPlayerMoveValid();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
@@ -4146,7 +4146,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				await this.showAIGhostIfPlayerMoveValid();
+				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
@@ -4172,7 +4172,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				await this.showAIGhostIfPlayerMoveValid();
+				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
@@ -4205,7 +4205,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				await this.showAIGhostIfPlayerMoveValid();
+				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
