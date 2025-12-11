@@ -8192,6 +8192,9 @@ calculateScore() {
 		// Additional Scrabble-inappropriate words that might slip through filters
 		const scrabbleBlacklist = new Set([
 			'SAUSA', // Not a real word
+			'SENSUAL', // May be inappropriate for family-friendly Scrabble
+			'FASTA', // Not a valid Spanish word (possibly invalid conjugation)
+			'SALMEAR', // Not a standard Spanish word (possibly invalid form)
 			// Add more invalid words here as they're discovered
 		]);
 
