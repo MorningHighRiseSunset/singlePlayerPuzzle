@@ -9,10 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
 
-        // Responsive tile size for mobile/desktop
+        // Responsive tile size for mobile/desktop - made smaller
         const isMobile = window.innerWidth <= 600;
-        const tileSize = isMobile ? 32 : 48;
-        const fontSize = isMobile ? "1.2rem" : "2rem";
+        const tileSize = isMobile ? 24 : 36;
+        const fontSize = isMobile ? "0.9rem" : "1.4rem";
 
         // Get all cells in the true center row (row 4, 0-based, the 5th row)
         const centerRow = board.querySelectorAll(".mini-row")[4];

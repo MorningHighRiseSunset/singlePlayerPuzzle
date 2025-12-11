@@ -6286,6 +6286,13 @@ formedWords.forEach((wordInfo) => {
 			];
 
 			let loadedFromSource = false;
+
+			// Suppress console errors for dictionary loading
+			const originalConsoleError = console.error;
+			const originalConsoleWarn = console.warn;
+			console.error = () => {};
+			console.warn = () => {};
+
 			for (const source of sources) {
 				try {
 					this.updateLoadingProgress(`Loading from ${source.split('/').pop()}...`);
@@ -6303,6 +6310,10 @@ formedWords.forEach((wordInfo) => {
 					console.debug(`Skipped dictionary source ${source.split('/').pop()} (404 - source no longer available)`);
 				}
 			}
+
+			// Restore console
+			console.error = originalConsoleError;
+			console.warn = originalConsoleWarn;
 
 			// If we couldn't load from any source, use English fallback
 			if (!loadedFromSource || allSpanishWords.size < 1000) {
@@ -7968,6 +7979,21 @@ calculateScore() {
 			console.warn('speakWord failed', e);
 		}
 	}
+
+	speakWordInEnglish(word) {
+		if (!word) return;
+		try {
+			if (typeof this._speakWithRetry === 'function') {
+				this._speakWithRetry(word, { lang: 'en-US' }).catch(() => {});
+			} else if (typeof speechSynthesis !== 'undefined') {
+				const utter = new SpeechSynthesisUtterance(word);
+				utter.lang = 'en-US'; // Force English
+				speechSynthesis.speak(utter);
+			}
+		} catch (e) {
+			console.warn('speakWordInEnglish failed', e);
+		}
+	}
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
 		try {
@@ -8103,6 +8129,11 @@ calculateScore() {
 			// First try remote Netlify Google TTS function (server-side, uses GOOGLE_API_KEY)
 			const tryRemote = async () => {
 				if (!window.fetch) return false;
+
+				// Suppress console errors for TTS API calls
+				const originalConsoleError = console.error;
+				console.error = () => {};
+
 				try {
 					// Debug: log TTS payload being sent to server
 					try { console.debug('[TTS] tryRemote payload', { text, lang: finalLang }); } catch (e) {}
@@ -8112,6 +8143,10 @@ calculateScore() {
 						body: JSON.stringify({ text, lang: finalLang, audioEncoding: 'MP3' }),
 						cache: 'no-store'
 					});
+
+					// Restore console before processing response
+					console.error = originalConsoleError;
+
 					if (!resp.ok) {
 						// Silently skip TTS API failures (403, 429, etc.) - fallback to browser TTS
 						return false;
@@ -8123,7 +8158,10 @@ calculateScore() {
 							return true;
 						} catch (e) { return false; }
 					}
-				} catch (e) { /* ignore */ }
+				} catch (e) {
+					// Restore console on error
+					console.error = originalConsoleError;
+				}
 				return false;
 			};
 			// If remote succeeded, resolve early
@@ -8599,12 +8637,21 @@ calculateScore() {
 		const historyDisplayDesktop = document.getElementById("move-history-desktop");
 		const currentLang = localStorage.getItem('preferredLang') || 'en';
 		
+		// Helper function to create word display with speech button
+		const createWordDisplay = (word, score, isMultiple = false) => {
+			const translatedWord = translateWordForDisplay(word, currentLang);
+			const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;">🔊</button>`;
+			const scoreText = score > 0 ? `(${score}pt)` : '';
+			return `"${translatedWord}"${scoreText}${speechButton}`;
+		};
+
 		// Populate history content
 		const historyContent = this.moveHistory
 			.map((move) => {
 				const playerLabel = getTranslation(move.player && move.player.toLowerCase() === 'computer' ? 'computer' : 'player', currentLang) || move.player;
 				if (Array.isArray(move.words)) {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${move.words.map(w => `"${translateWordForDisplay(w.word, currentLang)}"(${w.score || 0}pt)`).join(", ")} = ${move.score}pts</div>`;
+					const wordsDisplay = move.words.map(w => createWordDisplay(w.word, w.score || 0, true)).join(", ");
+					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${wordsDisplay} = ${move.score}pts</div>`;
 				} else if (move.word) {
 					const raw = String(move.word);
 					const rawUpper = raw.toUpperCase();
@@ -8619,12 +8666,13 @@ calculateScore() {
 						const label = isAI ? getTranslation('aiExchanged', currentLang) : getTranslation('exchange', currentLang) || raw;
 						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${label}</div>`;
 					}
-					// Default: show translated word; show points only if > 0
+					// Default: show translated word with speech button; show points only if > 0
 					const display = translateWordForDisplay(raw, currentLang);
+					const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;">🔊</button>`;
 					if (typeof move.score === 'number' && move.score > 0) {
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}" = ${move.score}pts</div>`;
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"(${move.score}pt)${speechButton} = ${move.score}pts</div>`;
 					} else {
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"</div>`;
+						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"${speechButton}</div>`;
 					}
 				} else {
 					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.word || 'move'} = ${move.score}pts</div>`;
