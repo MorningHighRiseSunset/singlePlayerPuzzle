@@ -3872,6 +3872,8 @@ async executeAIPlay(play) {
 
     return new Promise(async (resolve) => {
         let totalScore = 0; // Declare at Promise scope for both setTimeout callbacks
+        let aiBingo = false; // Declare for bingo detection
+        let aiBingoVariant = 'standard'; // Declare for bingo variant
 
         // Start placing tiles with animation
         for (let i = 0; i < word.length; i++) {
@@ -4046,14 +4048,12 @@ async executeAIPlay(play) {
             });
 
 			// --- BINGO BONUS for AI ---
-			let aiBingo = false;
-			let aiBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
 			wordsList.forEach(w => {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
-					aiBingo = true;
+					aiBingo = true; // Already declared at Promise scope
 					const len = w.word.length;
-					if (len >= 9) aiBingoVariant = 'gold';
+					if (len >= 9) aiBingoVariant = 'gold'; // Already declared at Promise scope
 					else if (len === 8 && aiBingoVariant !== 'gold') aiBingoVariant = 'silver';
 					// AI should not display any celebration (no audio, no confetti) per user request.
 				}
@@ -4144,6 +4144,9 @@ async executeAIPlay(play) {
 				this.consecutiveSkips = 0;
 
 				this.currentTurn = "player";
+				// Prefer structured words (word + score) when available
+				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
+
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
 
