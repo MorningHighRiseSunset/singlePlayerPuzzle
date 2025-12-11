@@ -438,6 +438,7 @@ button, .language-button,
 }
 
 /* Confetti styles removed by request */
+button, .language-button, #play-word-mobile, .play-word-mobile {
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
