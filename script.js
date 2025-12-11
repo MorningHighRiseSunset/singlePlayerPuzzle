@@ -8145,9 +8145,6 @@ calculateScore() {
 	async speakWordInEnglish(word) {
 		if (!word) return;
 
-		// Temporarily disable TTS to prevent 403 API errors
-		return;
-
 		try {
 			// Try to translate Spanish word to English using Google Translate API
 			let englishWord = word;
