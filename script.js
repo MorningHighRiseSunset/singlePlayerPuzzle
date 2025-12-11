@@ -747,6 +747,7 @@ class ScrabbleGame {
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
 				ghost.style.opacity = '0';
+				ghost.style.visibility = 'hidden';
 				ghost.style.pointerEvents = 'none';
 				ghost.style.background = '#b3e5fc';
 				ghost.style.color = '#222';
@@ -797,7 +798,8 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0'; // Invisible - no longer needed for testing
+					ghost.style.opacity = '0';
+				ghost.style.visibility = 'hidden'; // Invisible - no longer needed for testing
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
@@ -6344,8 +6346,10 @@ formedWords.forEach((wordInfo) => {
 			// Suppress console errors for dictionary loading
 			const originalConsoleError = console.error;
 			const originalConsoleWarn = console.warn;
+			const originalConsoleLog = console.log;
 			console.error = () => {};
 			console.warn = () => {};
+			console.log = () => {};
 
 			for (const source of sources) {
 				try {
@@ -6368,6 +6372,7 @@ formedWords.forEach((wordInfo) => {
 			// Restore console
 			console.error = originalConsoleError;
 			console.warn = originalConsoleWarn;
+			console.log = originalConsoleLog;
 
 			// If we couldn't load from any source, use English fallback
 			if (!loadedFromSource || allSpanishWords.size < 1000) {
@@ -8036,11 +8041,15 @@ calculateScore() {
 
 	speakWordInEnglish(word) {
 		if (!word) return;
+
+		// Translate Spanish word to English equivalent if needed
+		const englishWord = this._translateWordToEnglish(word);
+
 		try {
 			if (typeof this._speakWithRetry === 'function') {
-				this._speakWithRetry(word, { lang: 'en-US' }).catch(() => {});
+				this._speakWithRetry(englishWord, { lang: 'en-US' }).catch(() => {});
 			} else if (typeof speechSynthesis !== 'undefined') {
-				const utter = new SpeechSynthesisUtterance(word);
+				const utter = new SpeechSynthesisUtterance(englishWord);
 				utter.lang = 'en-US'; // Force English
 				speechSynthesis.speak(utter);
 			}
@@ -8048,13 +8057,75 @@ calculateScore() {
 			console.warn('speakWordInEnglish failed', e);
 		}
 	}
+
+	_translateWordToEnglish(word) {
+		if (!word) return word;
+
+		// Common Spanish-to-English Scrabble word translations
+		const translations = {
+			'DESLEIR': 'dissolve',
+			'ATANE': 'attacks',
+			// Add more common translations
+			'PERRO': 'dog',
+			'GATO': 'cat',
+			'CASA': 'house',
+			'AGUA': 'water',
+			'PAN': 'bread',
+			'TIEMPO': 'time',
+			'DIA': 'day',
+			'NOCHE': 'night',
+			'AMOR': 'love',
+			'VIDA': 'life',
+			'MANO': 'hand',
+			'OJO': 'eye',
+			'CABEZA': 'head',
+			'CARACABEZA': 'face',
+			'PUERTA': 'door',
+			'VENTANA': 'window',
+			'COMIDA': 'food',
+			'TRABAJO': 'work',
+			'AMIGO': 'friend',
+			'FAMILIA': 'family',
+			'HOMBRE': 'man',
+			'MUJER': 'woman',
+			'NIÑO': 'child',
+			'PADRE': 'father',
+			'MADRE': 'mother',
+			'HERMANO': 'brother',
+			'SON': 'son',
+			'BUENO': 'good',
+			'MALO': 'bad',
+			'GRANDE': 'big',
+			'PEQUEÑO': 'small',
+			'ALTO': 'high',
+			'BAJO': 'low',
+			'ROJO': 'red',
+			'AZUL': 'blue',
+			'VERDE': 'green',
+			'NEGRO': 'black',
+			'BLANCO': 'white',
+			'FELIZ': 'happy',
+			'TRISTE': 'sad',
+			'RAPIDO': 'fast',
+			'LENTO': 'slow',
+			'CALIENTE': 'hot',
+			'FRIO': 'cold',
+			'FACIL': 'easy',
+			'DIFICIL': 'hard',
+			'HERMOSO': 'beautiful',
+			'FEO': 'ugly'
+		};
+
+		const upperWord = word.toUpperCase();
+		return translations[upperWord] || word; // Return translation or original word
+	}
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
 		try {
 			if (typeof window === 'undefined') return;
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
-				this._speakWithRetry('Bingo bonus!', { lang: this._getPreferredLangCode(), rate: 1.15, pitch: 1.4 }).catch(e => {
+				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
 					console.warn('speakBingo TTS path failed', e);
 					try { this.appendConsoleMessage('speakBingo TTS failed'); } catch(e){}
 				});
@@ -8186,7 +8257,9 @@ calculateScore() {
 
 				// Suppress console errors for TTS API calls
 				const originalConsoleError = console.error;
+				const originalConsoleWarn = console.warn;
 				console.error = () => {};
+				console.warn = () => {};
 
 				try {
 					// Debug: log TTS payload being sent to server
@@ -8200,6 +8273,7 @@ calculateScore() {
 
 					// Restore console before processing response
 					console.error = originalConsoleError;
+					console.warn = originalConsoleWarn;
 
 					if (!resp.ok) {
 						// Silently skip TTS API failures (403, 429, etc.) - fallback to browser TTS
@@ -8215,6 +8289,7 @@ calculateScore() {
 				} catch (e) {
 					// Restore console on error
 					console.error = originalConsoleError;
+					console.warn = originalConsoleWarn;
 				}
 				return false;
 			};
@@ -8438,7 +8513,7 @@ calculateScore() {
 										this.appendConsoleMessage(`Bingo speak attempt ${attempt}`);
 										// Only try speaking if nothing is currently queued/playing
 										if (!(typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
-											await this._speakWithRetry('Bingo bonus!', { lang: this._getPreferredLangCode() });
+											await this._speakWithRetry('Bingo bonus!', { lang: 'en-US' });
 										}
 										// small delay to let speech start
 										await new Promise(r => setTimeout(r, 220));
