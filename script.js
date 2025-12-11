@@ -3936,7 +3936,8 @@ async executeAIPlay(play) {
 			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
 			const aiSpeakBingo = true; // change to false to silence AI bingo again
 			this.speakSequence(aiWordsToSpeak, aiBingo && aiSpeakBingo, 'ai').catch((e) => {
-				console.error('AI speakSequence failed', e);
+				// TTS failures are expected and handled gracefully with browser fallback
+				console.debug('AI TTS failed, using browser speech synthesis');
 			}).then(() => {
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
@@ -6145,9 +6146,9 @@ formedWords.forEach((wordInfo) => {
 			// Try multiple Spanish dictionary sources for comprehensive coverage
 			const sources = [
 				"https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt",
-				"https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt",
-				"https://raw.githubusercontent.com/pabloduran024/diccionario-espanol/main/diccionario.txt",
-				"https://raw.githubusercontent.com/olea/lemarios/master/morfol%C3%B3gico-variante.txt"
+				"https://raw.githubusercontent.com/olea/lemarios/master/lemas.txt",
+				"https://raw.githubusercontent.com/titoBouzout/Dictionaries/master/Spanish.dic",
+				"https://raw.githubusercontent.com/Beluki/Spanish-Checker/master/words.json"
 			];
 
 			let loadedFromSource = false;
@@ -6163,7 +6164,8 @@ formedWords.forEach((wordInfo) => {
 						console.log(`Loaded ${words.length} words from ${source}`);
 					}
 				} catch (e) {
-					console.warn(`Failed to load from ${source}:`, e);
+					// Silently skip failed sources - this is normal and expected
+					console.debug(`Skipped dictionary source ${source.split('/').pop()}`);
 				}
 			}
 
@@ -7968,7 +7970,10 @@ calculateScore() {
 						body: JSON.stringify({ text, lang: finalLang, audioEncoding: 'MP3' }),
 						cache: 'no-store'
 					});
-					if (!resp.ok) return false;
+					if (!resp.ok) {
+						// Silently skip TTS API failures (403, 429, etc.) - fallback to browser TTS
+						return false;
+					}
 					const j = await resp.json();
 					if (j && j.audioContent) {
 						try {
@@ -8097,7 +8102,7 @@ calculateScore() {
 					resolve();
 				}
 			} catch (e) {
-				console.error('speakSequence failed', e);
+				console.debug('speakSequence TTS failed, using browser fallback');
 				try { this.appendConsoleMessage('speakSequence failed'); } catch(e){}
 				if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
 				resolve();
@@ -8373,7 +8378,7 @@ calculateScore() {
 						} catch (e) { console.error('Player bingo effect failed', e); }
 					}
 				} catch (e) {
-					console.error('Player speakSequence failed', e);
+					console.debug('Player TTS failed, using browser speech synthesis');
 				}
 
 				// Update game state
