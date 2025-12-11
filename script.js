@@ -746,7 +746,7 @@ class ScrabbleGame {
 					${word[i]}
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
-				ghost.style.opacity = '0.35';
+				ghost.style.opacity = '0';
 				ghost.style.pointerEvents = 'none';
 				ghost.style.background = '#b3e5fc';
 				ghost.style.color = '#222';
@@ -797,7 +797,7 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0.25'; // More transparent for multiple moves
+					ghost.style.opacity = '0'; // Invisible - no longer needed for testing
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
@@ -6021,7 +6021,7 @@ formedWords.forEach((wordInfo) => {
 			left: 0;
 			width: 100vw;
 			height: 100vh;
-			background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+			background: linear-gradient(135deg, #1a237e 0%, #151d69 100%);
 			display: flex;
 			flex-direction: column;
 			align-items: center;
@@ -6077,8 +6077,8 @@ formedWords.forEach((wordInfo) => {
 		`;
 
 		// Create floating tiles
-		const tileLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-		for (let i = 0; i < 8; i++) {
+		const tileLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
+		for (let i = 0; i < 12; i++) {
 			const tile = document.createElement('div');
 			tile.textContent = tileLetters[i % tileLetters.length];
 			tile.style.cssText = `
@@ -8694,7 +8694,7 @@ calculateScore() {
 		// Helper function to create word display with speech button
 		const createWordDisplay = (word, score, isMultiple = false) => {
 			const translatedWord = translateWordForDisplay(word, currentLang);
-			const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;">🔊</button>`;
+			const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
 			const scoreText = score > 0 ? `(${score}pt)` : '';
 			return `"${translatedWord}"${scoreText}${speechButton}`;
 		};
@@ -8722,7 +8722,7 @@ calculateScore() {
 					}
 					// Default: show translated word with speech button; show points only if > 0
 					const display = translateWordForDisplay(raw, currentLang);
-					const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;">🔊</button>`;
+					const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
 					if (typeof move.score === 'number' && move.score > 0) {
 						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"(${move.score}pt)${speechButton} = ${move.score}pts</div>`;
 					} else {
