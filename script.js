@@ -685,6 +685,7 @@ class ScrabbleGame {
 		this.ghostThinkingTimer = null;
 		this.lastGhostBoardState = null;
 		this.lastGhostRackState = null;
+		this.validWordsFound = 0;
 		this.lastAIGhostPlays = null;
 		this.ghostDisplayMode = 0;
 
@@ -700,7 +701,21 @@ class ScrabbleGame {
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
 		if (lang === 'es') {
 			const norm = normalizeWordForDict(word).toLowerCase();
-			return this.activeDictionary.has(norm);
+
+			// First check local Spanish dictionary
+			if (this.activeDictionary.has(norm)) {
+				return true;
+			}
+
+			// For Spanish, be more strict - reject obvious non-Spanish words
+			const upperWord = word.toUpperCase();
+			if (this.isObviouslyInvalidSpanishWord(upperWord)) {
+				return false;
+			}
+
+			// For words not in local dictionary, check if they could be valid Spanish
+			// This helps prevent English words from being accepted in Spanish mode
+			return this.couldBeValidSpanishWord(upperWord);
 		} else {
 			return this.activeDictionary.has(String(word).toLowerCase());
 		}
@@ -798,8 +813,8 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0';
-					ghost.style.visibility = 'hidden'; // Completely invisible
+					ghost.style.opacity = '0.3'; // Make transparent but visible
+					ghost.style.visibility = 'visible';
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
@@ -841,6 +856,9 @@ class ScrabbleGame {
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
+			// Increment valid words counter
+			this.validWordsFound += aiPlays.length;
+
 			// Limit to top 3 moves for cleaner display
 			const topMoves = aiPlays.slice(0, Math.min(3, aiPlays.length)); // Show top 3 moves
 			this.showRotatingGhostMoves(topMoves);
@@ -860,13 +878,21 @@ class ScrabbleGame {
 				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
 				boardSnapshot: JSON.stringify(this.board)
 			};
+
+			// Stop ghost thinking after finding 5 valid words
+			if (this.validWordsFound >= 5) {
+				this.stopGhostThinking();
+				return;
+			}
 		} else {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
 			this.ghostAIMove = null;
 		}
 
-		// Set up continuous ghost thinking for better AI preview
-		this.startGhostThinking();
+		// Set up continuous ghost thinking for better AI preview (only if we haven't found 5 words yet)
+		if (this.validWordsFound < 5) {
+			this.startGhostThinking();
+		}
 	}
 
 	// Start continuous ghost move calculation for better user experience
@@ -875,6 +901,9 @@ class ScrabbleGame {
 		if (this.ghostThinkingTimer) {
 			clearInterval(this.ghostThinkingTimer);
 		}
+
+		// Reset valid words counter when starting ghost thinking
+		this.validWordsFound = 0;
 
 		// Update ghost move every 3 seconds when it's the player's turn
 		this.ghostThinkingTimer = setInterval(async () => {
@@ -6398,6 +6427,45 @@ formedWords.forEach((wordInfo) => {
 		await this.loadSpanishDictionary();
 	}
 
+	async loadSpanishDictionaryFromAPI() {
+		try {
+			// Try multiple Spanish dictionary APIs
+			const apis = [
+				'https://raw.githubusercontent.com/JorgeDuenasLpz/diccionario-es/master/diccionario_es.txt',
+				'https://raw.githubusercontent.com/pabloduran024/diccionario-espanol/main/diccionario.txt',
+				'https://raw.githubusercontent.com/titoBouzout/Dictionaries/master/Spanish.dic'
+			];
+
+			for (const apiUrl of apis) {
+				try {
+					const response = await fetch(apiUrl);
+					if (response.ok) {
+						const text = await response.text();
+						// Process the dictionary text
+						let words = text.split('\n').map(line => line.trim().toLowerCase()).filter(line =>
+							line.length >= 2 &&
+							line.length <= 15 &&
+							/^[a-zñáéíóúü\s]+$/.test(line) &&
+							!line.includes(' ') // No multi-word entries
+						);
+						if (words.length > 1000) {
+							return words;
+						}
+					}
+				} catch (e) {
+					console.warn(`Failed to load from ${apiUrl}:`, e);
+					continue;
+				}
+			}
+
+			// If all APIs fail, return empty array
+			return [];
+		} catch (error) {
+			console.error("Error in loadSpanishDictionaryFromAPI:", error);
+			return [];
+		}
+	}
+
 	async loadSpanishDictionary() {
 		try {
 			this.updateLoadingProgress('Loading Spanish dictionary...');
@@ -6558,6 +6626,38 @@ formedWords.forEach((wordInfo) => {
 			console.log("Spanish dictionary loaded successfully. Word count:", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
 		} catch (error) {
 			console.error("Error loading Spanish dictionary:", error);
+			// Try to load Spanish dictionary from alternative API
+			try {
+				this.updateLoadingProgress('Loading Spanish dictionary from API...');
+				const apiWords = await this.loadSpanishDictionaryFromAPI();
+				if (apiWords && apiWords.length > 1000) {
+					// Process API words
+					let filteredWords = apiWords.filter(word =>
+						word.length >= 2 &&
+						word.length <= 15 &&
+						/^[a-zñáéíóúü]+$/i.test(word) &&
+						!/\d/.test(word)
+					);
+
+					this.spanishDictionary = new Set();
+					this.spanishDictionaryNormalized = new Set();
+					this.spanishNormalizedMap = {};
+					for (const w of filteredWords) {
+						const orig = w.toLowerCase();
+						const norm = normalizeWordForDict(orig);
+						if (norm) {
+							this.spanishDictionary.add(orig);
+							this.spanishDictionaryNormalized.add(norm.toLowerCase());
+							this.spanishNormalizedMap[norm.toUpperCase()] = orig;
+						}
+					}
+					console.log("Spanish dictionary loaded from API. Word count:", this.spanishDictionary.size);
+					return;
+				}
+			} catch (apiError) {
+				console.error("API dictionary loading also failed:", apiError);
+			}
+
 			// Minimal fallback Spanish words - only essential words to reduce bundle size
 			// The game tries to load comprehensive dictionaries from external sources first
 			const fallback = [
@@ -8258,6 +8358,41 @@ calculateScore() {
 		// For now, we rely on dictionary + pattern-based filtering
 
 		return true; // Allow if in dictionary and passes all intelligent checks
+	}
+
+	isObviouslyInvalidSpanishWord(word) {
+		// Common invalid patterns in Spanish Scrabble
+		const invalidPatterns = [
+			// English-specific letter combinations
+			/WW/, /QQ/, /VV/, /XX/, /YY/, /ZZ/,
+			// Invalid consonant clusters (simplified check)
+			/BB/, /CC/, /DD/, /FF/, /GG/, /HH/, /JJ/, /KK/, /LL/, /MM/, /NN/, /PP/, /QQ/, /RR/, /SS/, /TT/, /VV/, /WW/, /XX/, /YY/, /ZZ/,
+			// Words that are clearly English
+			/^SARAN$/, /^QUILT$/, /^JEEP$/, /^WHISKY$/, /^ZEBRA$/, /^JOLLY$/, /^QUIZZ$/, /^JUMBO$/, /^ZESTY$/
+		];
+
+		return invalidPatterns.some(pattern => pattern.test(word));
+	}
+
+	couldBeValidSpanishWord(word) {
+		// Basic Spanish word validation heuristics
+		if (!word) return false;
+
+		// Must contain only valid Spanish letters
+		if (!/^[A-ZÑ]+$/.test(word)) return false;
+
+		// Must have at least one vowel
+		if (!/[AEIOUÁÉÍÓÚÜ]/.test(word)) return false;
+
+		// Spanish words typically don't start with certain consonants
+		if (/^[JKWXY]/.test(word) && word.length < 4) return false;
+
+		// Check for common Spanish letter patterns
+		const hasCommonSpanishPattern =
+			/[AEIOUÁÉÍÓÚÜ]/.test(word) && // Has vowels
+			(/[NQ]/.test(word) || /[LR]/.test(word) || word.length >= 3); // Common consonants or longer words
+
+		return hasCommonSpanishPattern;
 	}
 
 	_translateViaAPI(text, sourceLang = 'es', targetLang = 'en') {
