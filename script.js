@@ -746,7 +746,7 @@ class ScrabbleGame {
 					${word[i]}
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
-				ghost.style.opacity = '0.35';
+				ghost.style.opacity = '0.4';
 				ghost.style.pointerEvents = 'none';
 				ghost.style.background = '#b3e5fc';
 				ghost.style.color = '#222';
@@ -797,7 +797,7 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0.25'; // More transparent for multiple moves
+					ghost.style.opacity = '0.3'; // More transparent for multiple moves
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
@@ -839,8 +839,19 @@ class ScrabbleGame {
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
-			// Show rotating ghost moves with different colors
-			this.showRotatingGhostMoves(aiPlays);
+			// Limit to top 5-10 moves and show them initially
+			const topMoves = aiPlays.slice(0, Math.min(8, aiPlays.length)); // Show top 8 moves
+			this.showRotatingGhostMoves(topMoves);
+
+			// Hide ghost tiles after 3 seconds to avoid distraction
+			setTimeout(() => {
+				document.querySelectorAll('.ghost-tile').forEach(tile => {
+					tile.style.transition = 'opacity 0.5s ease-out';
+					tile.style.opacity = '0';
+					setTimeout(() => tile.remove(), 500); // Remove after fade out
+				});
+			}, 3000);
+
 			// Store the best move for when AI actually plays
 			this.ghostAIMove = {
 				...aiPlays[0],
