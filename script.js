@@ -8087,13 +8087,30 @@ calculateScore() {
 		}
 	}
 
-	speakWordInEnglish(word) {
+	_handleSpeechClick(word) {
+		// Handle async speech for onclick
+		this.speakWordInEnglish(word).catch(e => console.warn('Speech failed:', e));
+	}
+
+	async speakWordInEnglish(word) {
 		if (!word) return;
 
-		// Translate Spanish word to English equivalent if needed
-		const englishWord = this._translateWordToEnglish(word.toUpperCase()) || word;
-
 		try {
+			// Try to translate Spanish word to English using Google Translate API
+			let englishWord = word;
+			try {
+				const translation = await this._translateViaAPI(word, 'es', 'en');
+				if (translation && translation !== word) {
+					englishWord = translation;
+				}
+			} catch (apiError) {
+				// Fallback to dictionary if API fails
+				const dictTranslation = this._translateWordToEnglish(word.toUpperCase());
+				if (dictTranslation) {
+					englishWord = dictTranslation;
+				}
+			}
+
 			if (typeof this._speakWithRetry === 'function') {
 				this._speakWithRetry(englishWord, { lang: 'en-US' }).catch(() => {});
 			} else if (typeof speechSynthesis !== 'undefined') {
@@ -8142,10 +8159,43 @@ calculateScore() {
 		return true; // Allow if not blacklisted and passes checks
 	}
 
+	_translateViaAPI(text, sourceLang = 'es', targetLang = 'en') {
+		return new Promise((resolve, reject) => {
+			fetch('/.netlify/functions/translate', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					text: text,
+					source: sourceLang,
+					target: targetLang
+				})
+			})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				if (data.translatedText) {
+					resolve(data.translatedText);
+				} else {
+					reject(new Error('No translation received'));
+				}
+			})
+			.catch(error => {
+				console.warn('Translation API failed:', error);
+				reject(error);
+			});
+		});
+	}
+
 	_translateWordToEnglish(word) {
 		if (!word) return word;
 
-		// Common Spanish-to-English Scrabble word translations
+		// Fallback dictionary for when API fails
 		const translations = {
 			// Words mentioned by user
 			'DESLEIR': 'dissolve',
@@ -8158,82 +8208,11 @@ calculateScore() {
 			'GATO': 'cat',
 			'CASA': 'house',
 			'AGUA': 'water',
-			'PAN': 'bread',
-			'TIEMPO': 'time',
-			'DIA': 'day',
-			'NOCHE': 'night',
-			'AMOR': 'love',
-			'VIDA': 'life',
-			'MANO': 'hand',
-			'OJO': 'eye',
-			'CABEZA': 'head',
-			'CARACABEZA': 'face',
-			'PUERTA': 'door',
-			'VENTANA': 'window',
-			'COMIDA': 'food',
-			'TRABAJO': 'work',
-			'AMIGO': 'friend',
-			'FAMILIA': 'family',
-			'HOMBRE': 'man',
-			'MUJER': 'woman',
-			'NIÑO': 'child',
-			'PADRE': 'father',
-			'MADRE': 'mother',
-			'HERMANO': 'brother',
-			'SON': 'son',
-			'BUENO': 'good',
-			'MALO': 'bad',
-			'GRANDE': 'big',
-			'PEQUEÑO': 'small',
-			'ALTO': 'high',
-			'BAJO': 'low',
-			'ROJO': 'red',
-			'AZUL': 'blue',
-			'VERDE': 'green',
-			'NEGRO': 'black',
-			'BLANCO': 'white',
-			'FELIZ': 'happy',
-			'TRISTE': 'sad',
-			'RAPIDO': 'fast',
-			'LENTO': 'slow',
-			'CALIENTE': 'hot',
-			'FRIO': 'cold',
-			'FACIL': 'easy',
-			'DIFICIL': 'hard',
-			'HERMOSO': 'beautiful',
-			'FEO': 'ugly',
-
-			// More common Scrabble words
-			'UNO': 'one',
-			'DOS': 'two',
-			'TRES': 'three',
-			'SI': 'yes',
-			'NO': 'no',
-			'HOLA': 'hello',
-			'ADIOS': 'goodbye',
-			'GRACIAS': 'thanks',
-			'POR': 'for',
-			'CON': 'with',
-			'SIN': 'without',
-			'EN': 'in',
-			'A': 'to',
-			'DE': 'of',
-			'EL': 'the',
-			'LA': 'the',
-			'LOS': 'the',
-			'LAS': 'the',
-			'Y': 'and',
-			'O': 'or',
-			'QUE': 'that',
-			'QUIEN': 'who',
-			'CUANDO': 'when',
-			'DONDE': 'where',
-			'COMO': 'how',
-			'PORQUE': 'because'
+			'PAN': 'bread'
 		};
 
 		const upperWord = word.toUpperCase();
-		return translations[upperWord] || word; // Return translation or original word
+		return translations[upperWord] || null; // Return translation or null
 	}
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
@@ -8902,7 +8881,7 @@ calculateScore() {
 		// Helper function to create word display with speech button
 		const createWordDisplay = (word, score, isMultiple = false) => {
 			const translatedWord = translateWordForDisplay(word, currentLang);
-			const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
+			const speechButton = `<button class="speech-btn" onclick="game._handleSpeechClick('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
 			const scoreText = score > 0 ? `(${score}pt)` : '';
 			return `"${translatedWord}"${scoreText}${speechButton}`;
 		};
@@ -8930,7 +8909,7 @@ calculateScore() {
 					}
 					// Default: show translated word with speech button; show points only if > 0
 					const display = translateWordForDisplay(raw, currentLang);
-					const speechButton = `<button class="speech-btn" onclick="game.speakWordInEnglish('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
+					const speechButton = `<button class="speech-btn" onclick="game._handleSpeechClick('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
 					if (typeof move.score === 'number' && move.score > 0) {
 						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"(${move.score}pt)${speechButton} = ${move.score}pts</div>`;
 					} else {
