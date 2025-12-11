@@ -3874,6 +3874,7 @@ async executeAIPlay(play) {
         let totalScore = 0; // Declare at Promise scope for both setTimeout callbacks
         let aiBingo = false; // Declare for bingo detection
         let aiBingoVariant = 'standard'; // Declare for bingo variant
+        let wordsList = []; // Declare for storing formed words
 
         // Start placing tiles with animation
         for (let i = 0; i < word.length; i++) {
@@ -3992,7 +3993,7 @@ async executeAIPlay(play) {
             // Get all formed words and calculate total score
             const formedWords = this.getFormedWords();
             totalScore = 0; // Already declared at Promise scope
-            let wordsList = [];
+            wordsList = []; // Already declared at Promise scope
 
             // --- Extra insurance: skip words that already existed on the previous board or were already played ---
             formedWords.forEach((wordInfo) => {
