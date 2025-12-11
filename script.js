@@ -2074,7 +2074,8 @@ class ScrabbleGame {
 						minLen,
 						maxLen
 					).filter(word =>
-						word.startsWith(prefix) && word.endsWith(suffix)
+						word.startsWith(prefix) && word.endsWith(suffix) &&
+						this.isScrabbleAppropriate(word)
 					);
 
 					for (const word of candidateWords) {
@@ -6459,6 +6460,7 @@ formedWords.forEach((wordInfo) => {
 				'turani', 'turania', 'turaneo', // Not real words
 				'turanio', // Not a real word
 				'roseola', // Medical term, too obscure
+				'sausa', // Not a real word/invalid for Scrabble
 				// Add more known problematic words here as they are discovered
 			]);
 
@@ -8082,6 +8084,42 @@ calculateScore() {
 		} catch (e) {
 			console.warn('speakWordInEnglish failed', e);
 		}
+	}
+
+	isScrabbleAppropriate(word) {
+		if (!word) return false;
+
+		const upperWord = word.toUpperCase();
+
+		// Additional Scrabble-inappropriate words that might slip through filters
+		const scrabbleBlacklist = new Set([
+			'SAUSA', // Not a real word
+			// Add more invalid words here as they're discovered
+		]);
+
+		// Reject blacklisted words
+		if (scrabbleBlacklist.has(upperWord)) {
+			return false;
+		}
+
+		// Check for suspicious word patterns that indicate invalid words
+		// Too many repeated letters or unusual combinations
+		const letterCounts = {};
+		for (const letter of upperWord) {
+			letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+		}
+
+		// Reject words with too many of the same letter (unless it's a valid word)
+		const maxSameLetter = Math.max(...Object.values(letterCounts));
+		if (maxSameLetter > 4 && upperWord.length > 6) {
+			return false; // Too many repeated letters for Scrabble
+		}
+
+		// Additional checks for Scrabble appropriateness
+		// Words should be reasonably common and not too obscure
+		// This is a secondary filter beyond the dictionary
+
+		return true; // Allow if not blacklisted and passes checks
 	}
 
 	_translateWordToEnglish(word) {
