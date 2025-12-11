@@ -6021,7 +6021,7 @@ formedWords.forEach((wordInfo) => {
 			left: 0;
 			width: 100vw;
 			height: 100vh;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
 			display: flex;
 			flex-direction: column;
 			align-items: center;
@@ -6052,7 +6052,7 @@ formedWords.forEach((wordInfo) => {
 			text-align: center;
 			margin-bottom: 10px;
 		`;
-		loadingText.textContent = 'Loading Scrabble Game...';
+		loadingText.textContent = 'Loading Blue Game...';
 
 		// Progress indicator
 		const progressText = document.createElement('div');
@@ -6064,16 +6064,70 @@ formedWords.forEach((wordInfo) => {
 		`;
 		progressText.textContent = 'Loading dictionaries...';
 
-		// Add CSS animation
+		// Floating white tiles
+		const tilesContainer = document.createElement('div');
+		tilesContainer.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+			z-index: 1;
+		`;
+
+		// Create floating tiles
+		const tileLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+		for (let i = 0; i < 8; i++) {
+			const tile = document.createElement('div');
+			tile.textContent = tileLetters[i % tileLetters.length];
+			tile.style.cssText = `
+				position: absolute;
+				width: 32px;
+				height: 32px;
+				background: linear-gradient(145deg, #ffffff 70%, #f5f5f5 100%);
+				border: 2px solid #e0e0e0;
+				border-radius: 4px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 14px;
+				font-weight: bold;
+				color: #333;
+				box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+				animation: floatTile ${3 + Math.random() * 2}s infinite ease-in-out;
+				animation-delay: ${Math.random() * 2}s;
+				left: ${10 + Math.random() * 80}vw;
+				top: ${10 + Math.random() * 80}vh;
+			`;
+			tilesContainer.appendChild(tile);
+		}
+
+		// Add CSS animation for tiles
 		const style = document.createElement('style');
 		style.textContent = `
 			@keyframes spin {
 				0% { transform: rotate(0deg); }
 				100% { transform: rotate(360deg); }
 			}
+			@keyframes floatTile {
+				0%, 100% {
+					transform: translateY(0px) rotate(0deg);
+				}
+				25% {
+					transform: translateY(-15px) rotate(5deg);
+				}
+				50% {
+					transform: translateY(-5px) rotate(-3deg);
+				}
+				75% {
+					transform: translateY(-20px) rotate(2deg);
+				}
+			}
 		`;
 		document.head.appendChild(style);
 
+		loadingOverlay.appendChild(tilesContainer);
 		loadingOverlay.appendChild(spinner);
 		loadingOverlay.appendChild(loadingText);
 		loadingOverlay.appendChild(progressText);
@@ -8896,118 +8950,24 @@ calculateScore() {
 	}
 
 	createConfettiEffect(options = {}) {
-		// options.variant: 'standard' | 'silver' | 'gold' | 'rainbow' | 'party' | 'celebration' | 'winter' - tune intensity/colours
+		// Simplified: only use emoji confetti for one clean splash
 		options = options || {};
 		const variant = options.variant || 'standard';
-		// Smart orchestrator: prioritize quality over quantity to avoid visual clutter
-		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
-		const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-		const preferEmoji = isSamsung;
-
-		// On PC/desktop, prefer fewer but higher quality effects to avoid spam
-		// On mobile, keep fallback behavior for reliability
-		const isDesktop = !isMobile && !isSamsung;
-
-		// Tunable timings (ms) vary slightly by variant - increased for longer duration
-		const canvasDuration = variant === 'gold' ? 4200 : variant === 'silver' ? 3800 : variant === 'rainbow' ? 4500 : variant === 'party' ? 4800 : variant === 'celebration' ? 5000 : variant === 'winter' ? 4600 : 3500;
-		const domDuration = variant === 'gold' ? 4000 : variant === 'silver' ? 3600 : variant === 'rainbow' ? 4300 : variant === 'party' ? 4600 : variant === 'celebration' ? 4800 : variant === 'winter' ? 4400 : 3400;
-		const gapAfterCanvas = 300; // increased gap
-		const gapAfterDOM = 250; // increased gap
-
-		let triedSomething = false;
 
 		try {
-			// Smart selection: prefer quality over quantity on desktop
-			if (isDesktop) {
-				// On desktop, try canvas first (highest quality), fallback to emoji if needed
-				if (typeof this.createCanvasConfetti === 'function') {
-					try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
-					catch (e) {
-						console.warn('createCanvasConfetti failed, trying emoji fallback', e);
-						// Fallback to emoji if canvas fails
-						if (typeof this.createEmojiConfetti === 'function') {
-							try {
-								const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
-													 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
-													 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
-													 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
-													 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
-													 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
-													 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
-								this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
-							} catch (e2) { console.warn('createEmojiConfetti fallback failed', e2); }
-						}
-					}
-				}
-			} else {
-				// Mobile/Samsung: keep original staggered approach for reliability
-				// Start canvas first when available and not explicitly preferring emoji
-				if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
-					try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
-					catch (e) { console.warn('createCanvasConfetti failed', e); }
-				}
+			// Simplified: only use emoji confetti for one clean splash
+			if (typeof this.createEmojiConfetti === 'function') {
+				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
+									 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
+									 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
+									 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
+									 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
+									 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
+									 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
 
-				// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
-				const startDOM = () => {
-					if (typeof this.createDOMConfetti === 'function') {
-						try {
-							const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-							const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-							this.createDOMConfetti({ count, variant }); triedSomething = true;
-						} catch (e) { console.warn('createDOMConfetti failed', e); }
-					}
-				};
-
-				if (this._canvasConfettiActive) {
-					setTimeout(startDOM, canvasDuration + gapAfterCanvas);
-				} else {
-					setTimeout(startDOM, 420); // short fallback if canvas didn't start
-				}
-
-				// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
-				const startEmoji = () => {
-					if (typeof this.createEmojiConfetti === 'function') {
-						try {
-							const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
-												 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
-												 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
-												 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
-												 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
-												 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
-												 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
-							this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
-						} catch (e) { console.warn('createEmojiConfetti failed', e); }
-					}
-				};
-
-				// Determine when to run emoji: if DOM will be active, schedule after DOM; otherwise after canvas or short delay
-				if (this._canvasConfettiActive) {
-					setTimeout(() => {
-						if (this._domConfettiActive) setTimeout(startEmoji, domDuration + gapAfterDOM);
-						else startEmoji();
-					}, canvasDuration + gapAfterCanvas + 30);
-				} else {
-					// neither started or canvas didn't start; run emoji after a slightly longer fallback
-					setTimeout(startEmoji, 900);
-				}
+				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
 			}
-
-		} catch (e) { console.warn('createConfettiEffect orchestrator failed', e); }
-
-		// If nothing started at all, do a tiny overlay flash as ultimate fallback
-		setTimeout(() => {
-			if (!triedSomething) {
-				try {
-					const overlay = document.createElement('div');
-					overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
-					document.body.appendChild(overlay);
-					requestAnimationFrame(() => overlay.style.opacity = '1');
-					setTimeout(() => overlay.style.opacity = '0', 140);
-					setTimeout(() => overlay.remove(), 520);
-				} catch (e) { /* best-effort only */ }
-			}
-		}, 1200);
+		} catch (e) { console.warn('createConfettiEffect failed', e); }
 	}
 
 	// Canvas-based confetti: lightweight particle simulation drawn into a single canvas.
