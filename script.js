@@ -681,6 +681,11 @@ class ScrabbleGame {
 		this._inlineSpeakPromise = null;
 		this.wordsPlayed = new Set();
 
+		// Ghost thinking state
+		this.ghostThinkingTimer = null;
+		this.lastGhostBoardState = null;
+		this.lastGhostRackState = null;
+
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
 		this.init();
@@ -787,6 +792,48 @@ class ScrabbleGame {
 		} else {
 			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
 			this.ghostAIMove = null;
+		}
+
+		// Set up continuous ghost thinking for better AI preview
+		this.startGhostThinking();
+	}
+
+	// Start continuous ghost move calculation for better user experience
+	startGhostThinking() {
+		// Clear any existing ghost thinking timer
+		if (this.ghostThinkingTimer) {
+			clearInterval(this.ghostThinkingTimer);
+		}
+
+		// Update ghost move every 3 seconds when it's the player's turn
+		this.ghostThinkingTimer = setInterval(async () => {
+			if (this.currentTurn === "player" && !this.isGameEnded) {
+				try {
+					// Only recalculate if the board state has changed
+					const currentBoardState = JSON.stringify(this.board);
+					const currentRackState = this.aiRack.map(t => t.letter).sort().join('');
+
+					if (currentBoardState !== this.lastGhostBoardState ||
+						currentRackState !== this.lastGhostRackState) {
+
+						this.lastGhostBoardState = currentBoardState;
+						this.lastGhostRackState = currentRackState;
+
+						await this.showAIGhostIfPlayerMoveValid();
+					}
+				} catch (e) {
+					// Silently handle errors to avoid disrupting gameplay
+					console.debug('Ghost thinking update failed:', e);
+				}
+			}
+		}, 3000); // Update every 3 seconds
+	}
+
+	// Stop ghost thinking (call when game ends or AI turn starts)
+	stopGhostThinking() {
+		if (this.ghostThinkingTimer) {
+			clearInterval(this.ghostThinkingTimer);
+			this.ghostThinkingTimer = null;
 		}
 	}
 
@@ -1020,6 +1067,8 @@ class ScrabbleGame {
 
 	async aiTurn() {
 		this.aiValidationLogSet = new Set();
+		// Stop ghost thinking during AI turn
+		this.stopGhostThinking();
 	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
@@ -6221,6 +6270,13 @@ formedWords.forEach((wordInfo) => {
 				'marihuana', 'cocaína', 'heroína', // Inappropriate for Scrabble
 				'condón', 'condones', // Inappropriate for Scrabble
 				'aborto', 'abortos', // Inappropriate for Scrabble
+				'sisa', // Too obscure (pilfering)
+				'uni', // Abbreviation, not a proper word
+				'ea', // Not a real word
+				'nahua', // Too obscure/ethnic-specific
+				'turani', 'turania', 'turaneo', // Not real words
+				'turanio', // Not a real word
+				'roseola', // Medical term, too obscure
 				// Add more known problematic words here as they are discovered
 			]);
 
@@ -8579,6 +8635,9 @@ calculateScore() {
 	}
 
 	announceWinner() {
+		// Stop ghost thinking when game ends
+		this.stopGhostThinking();
+
 		// --- 1. Sum up points from move history for each player ---
 		let playerScore = 0;
 		let aiScore = 0;
