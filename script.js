@@ -746,7 +746,8 @@ class ScrabbleGame {
 					${word[i]}
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
-				ghost.style.opacity = '0.4';
+				ghost.style.opacity = '0';
+				ghost.style.visibility = 'hidden';
 				ghost.style.pointerEvents = 'none';
 				ghost.style.background = '#b3e5fc';
 				ghost.style.color = '#222';
@@ -797,7 +798,8 @@ class ScrabbleGame {
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
 					`;
-					ghost.style.opacity = '0.3'; // More transparent for multiple moves
+					ghost.style.opacity = '0';
+					ghost.style.visibility = 'hidden'; // Completely invisible
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = colorScheme.bg;
 					ghost.style.color = colorScheme.text;
@@ -6356,9 +6358,22 @@ formedWords.forEach((wordInfo) => {
 			const originalConsoleError = console.error;
 			const originalConsoleWarn = console.warn;
 			const originalConsoleLog = console.log;
+			const originalConsoleDebug = console.debug;
 			console.error = () => {};
 			console.warn = () => {};
 			console.log = () => {};
+			console.debug = () => {};
+
+			// Also suppress fetch network errors by overriding XMLHttpRequest and fetch
+			const originalFetch = window.fetch;
+			window.fetch = async function(...args) {
+				try {
+					return await originalFetch.apply(this, args);
+				} catch (e) {
+					// Silently ignore network errors
+					return new Response('', { status: 404, statusText: 'Not Found' });
+				}
+			};
 
 			for (const source of sources) {
 				try {
@@ -6378,10 +6393,12 @@ formedWords.forEach((wordInfo) => {
 				}
 			}
 
-			// Restore console
+			// Restore console and fetch
 			console.error = originalConsoleError;
 			console.warn = originalConsoleWarn;
 			console.log = originalConsoleLog;
+			console.debug = originalConsoleDebug;
+			window.fetch = originalFetch;
 
 			// If we couldn't load from any source, use English fallback
 			if (!loadedFromSource || allSpanishWords.size < 1000) {
@@ -8267,8 +8284,21 @@ calculateScore() {
 				// Suppress console errors for TTS API calls
 				const originalConsoleError = console.error;
 				const originalConsoleWarn = console.warn;
+				const originalConsoleDebug = console.debug;
 				console.error = () => {};
 				console.warn = () => {};
+				console.debug = () => {};
+
+				// Also suppress fetch network errors
+				const originalFetch = window.fetch;
+				window.fetch = async function(...args) {
+					try {
+						return await originalFetch.apply(this, args);
+					} catch (e) {
+						// Silently ignore network errors
+						return new Response('', { status: 403, statusText: 'Forbidden' });
+					}
+				};
 
 				try {
 					// Debug: log TTS payload being sent to server
@@ -8280,9 +8310,11 @@ calculateScore() {
 						cache: 'no-store'
 					});
 
-					// Restore console before processing response
+					// Restore console and fetch before processing response
 					console.error = originalConsoleError;
 					console.warn = originalConsoleWarn;
+					console.debug = originalConsoleDebug;
+					window.fetch = originalFetch;
 
 					if (!resp.ok) {
 						// Silently skip TTS API failures (403, 429, etc.) - fallback to browser TTS
@@ -8296,9 +8328,11 @@ calculateScore() {
 						} catch (e) { return false; }
 					}
 				} catch (e) {
-					// Restore console on error
+					// Restore console and fetch on error
 					console.error = originalConsoleError;
 					console.warn = originalConsoleWarn;
+					console.debug = originalConsoleDebug;
+					window.fetch = originalFetch;
 				}
 				return false;
 			};
