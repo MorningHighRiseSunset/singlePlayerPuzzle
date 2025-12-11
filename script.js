@@ -1391,7 +1391,7 @@ class ScrabbleGame {
 		// AI is forced to pass (should theoretically never happen)
 		this.consecutiveSkips++;
 		this.currentTurn = "player";
-		this.addToMoveHistory("Computadora", "PASAR", 0);
+		this.addToMoveHistory("computer", "SKIP", 0);
 		this.updateGameState();
 		this.highlightValidPlacements();
 		if (!this.checkGameEnd()) {
@@ -8091,7 +8091,7 @@ calculateScore() {
 		if (!word) return;
 
 		// Translate Spanish word to English equivalent if needed
-		const englishWord = this._translateWordToEnglish(word);
+		const englishWord = this._translateWordToEnglish(word.toUpperCase()) || word;
 
 		try {
 			if (typeof this._speakWithRetry === 'function') {
@@ -8147,9 +8147,13 @@ calculateScore() {
 
 		// Common Spanish-to-English Scrabble word translations
 		const translations = {
+			// Words mentioned by user
 			'DESLEIR': 'dissolve',
 			'ATANE': 'attacks',
-			// Add more common translations
+			'NOVOA': 'new',
+			'NOMAS': 'just',
+
+			// Common Spanish Scrabble words
 			'PERRO': 'dog',
 			'GATO': 'cat',
 			'CASA': 'house',
@@ -8197,7 +8201,35 @@ calculateScore() {
 			'FACIL': 'easy',
 			'DIFICIL': 'hard',
 			'HERMOSO': 'beautiful',
-			'FEO': 'ugly'
+			'FEO': 'ugly',
+
+			// More common Scrabble words
+			'UNO': 'one',
+			'DOS': 'two',
+			'TRES': 'three',
+			'SI': 'yes',
+			'NO': 'no',
+			'HOLA': 'hello',
+			'ADIOS': 'goodbye',
+			'GRACIAS': 'thanks',
+			'POR': 'for',
+			'CON': 'with',
+			'SIN': 'without',
+			'EN': 'in',
+			'A': 'to',
+			'DE': 'of',
+			'EL': 'the',
+			'LA': 'the',
+			'LOS': 'the',
+			'LAS': 'the',
+			'Y': 'and',
+			'O': 'or',
+			'QUE': 'that',
+			'QUIEN': 'who',
+			'CUANDO': 'when',
+			'DONDE': 'where',
+			'COMO': 'how',
+			'PORQUE': 'because'
 		};
 
 		const upperWord = word.toUpperCase();
