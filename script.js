@@ -4107,9 +4107,70 @@ async executeAIPlay(play) {
 						}
 					} catch (e) { console.warn('AI bingo visual failed', e); }
 				}
-				resolve();
+				// --- AI auto-speech disabled by user request ---
+				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
+
+				this.aiScore += totalScore;
+				this.isFirstMove = false;
+				this.consecutiveSkips = 0;
+
+				this.currentTurn = "player";
+				// Prefer structured words (word + score) when available
+				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
+
+				// Clear the placed tiles array after scoring
+				this.placedTiles = [];
+
+				// Refill racks and update display
+				this.fillRacks();
+				this.showAIGhostIfPlayerMoveValid();
+				this.updateGameState();
+
+				// If AI scored a bingo, trigger the same bingo visuals as the player
+				if (aiBingo) {
+					try {
+						if (typeof this.showBingoBonusEffect === 'function') {
+							this.showBingoBonusEffect(false, aiBingoVariant);
+						} else if (typeof this.createConfettiEffect === 'function') {
+							this.createConfettiEffect({ variant: aiBingoVariant });
+						}
+					} catch (e) { console.warn('AI bingo visual failed', e); }
+				}
 			});
-        }, 500);
+
+			// --- AI auto-speech disabled by user request ---
+			// Execute final game state updates after tile placement animation
+			setTimeout(() => {
+				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
+
+				this.aiScore += totalScore;
+				this.isFirstMove = false;
+				this.consecutiveSkips = 0;
+
+				this.currentTurn = "player";
+				// Prefer structured words (word + score) when available
+				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
+
+				// Clear the placed tiles array after scoring
+				this.placedTiles = [];
+
+				// Refill racks and update display
+				this.fillRacks();
+				this.showAIGhostIfPlayerMoveValid();
+				this.updateGameState();
+
+				// If AI scored a bingo, trigger the same bingo visuals as the player
+				if (aiBingo) {
+					try {
+						if (typeof this.showBingoBonusEffect === 'function') {
+							this.showBingoBonusEffect(false, aiBingoVariant);
+						} else if (typeof this.createConfettiEffect === 'function') {
+							this.createConfettiEffect({ variant: aiBingoVariant });
+						}
+					} catch (e) { console.warn('AI bingo visual failed', e); }
+				}
+				resolve();
+			}, 1000);  // Slightly longer delay for final updates
     });
 }
 
