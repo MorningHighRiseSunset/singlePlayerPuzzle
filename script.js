@@ -8189,38 +8189,56 @@ calculateScore() {
 
 		const upperWord = word.toUpperCase();
 
-		// Additional Scrabble-inappropriate words that might slip through filters
-		const scrabbleBlacklist = new Set([
-			'SAUSA', // Not a real word
-			'SENSUAL', // May be inappropriate for family-friendly Scrabble
-			'FASTA', // Not a valid Spanish word (possibly invalid conjugation)
-			'SALMEAR', // Not a standard Spanish word (possibly invalid form)
-			// Add more invalid words here as they're discovered
-		]);
+		// Check for suspicious word patterns that indicate invalid or inappropriate words
+		// This uses intelligent pattern matching instead of a hardcoded list
 
-		// Reject blacklisted words
-		if (scrabbleBlacklist.has(upperWord)) {
-			return false;
-		}
-
-		// Check for suspicious word patterns that indicate invalid words
-		// Too many repeated letters or unusual combinations
+		// 1. Letter repetition patterns (too many of the same letter)
 		const letterCounts = {};
 		for (const letter of upperWord) {
 			letterCounts[letter] = (letterCounts[letter] || 0) + 1;
 		}
-
-		// Reject words with too many of the same letter (unless it's a valid word)
 		const maxSameLetter = Math.max(...Object.values(letterCounts));
 		if (maxSameLetter > 4 && upperWord.length > 6) {
-			return false; // Too many repeated letters for Scrabble
+			return false; // Too many repeated letters for reasonable words
 		}
 
-		// Additional checks for Scrabble appropriateness
-		// Words should be reasonably common and not too obscure
-		// This is a secondary filter beyond the dictionary
+		// 2. Check for words that are too obscure or unlikely to be real
+		// Words with unusual letter combinations or patterns
+		const suspiciousPatterns = [
+			/(.)\1{3,}/, // Four or more identical letters in a row
+			/^[AEIOU]{4,}/, // Starts with 4+ vowels (very rare in Spanish)
+			/(.)(.)\1\2/, // ABAB pattern (often indicates made-up words)
+			/^[Q][^U]/, // Q not followed by U (invalid in Spanish except some exceptions)
+			/[WX]/, // W or X in Spanish words (extremely rare, mostly foreign words)
+		];
 
-		return true; // Allow if not blacklisted and passes checks
+		for (const pattern of suspiciousPatterns) {
+			if (pattern.test(upperWord)) {
+				return false;
+			}
+		}
+
+		// 3. Length and complexity checks
+		// Reject extremely short words that are too simple or long words that are too complex
+		if (upperWord.length < 2 || upperWord.length > 15) {
+			return false;
+		}
+
+		// 4. Vowel/consonant ratio check (Spanish words should have reasonable balance)
+		const vowels = upperWord.match(/[AEIOUÁÉÍÓÚÜ]/g) || [];
+		const consonants = upperWord.match(/[BCDFGHJKLMNÑPQRSTVWXYZ]/g) || [];
+		const vowelRatio = vowels.length / upperWord.length;
+
+		// Reject words with too few vowels (makes them hard to pronounce) or too many
+		if (vowelRatio < 0.15 || vowelRatio > 0.7) {
+			return false;
+		}
+
+		// 5. API-based validation for words that pass basic checks
+		// This could be expanded to call an external API for word validation
+		// For now, we rely on the pattern-based filtering above
+
+		return true; // Allow if passes all intelligent checks
 	}
 
 	_translateViaAPI(text, sourceLang = 'es', targetLang = 'en') {
