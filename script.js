@@ -1292,7 +1292,7 @@ class ScrabbleGame {
 				const currentBoard = JSON.stringify(this.board);
 
 				if (rackSnapshot === currentRack && boardSnapshot === currentBoard) {
-					const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
+					const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
 					const canForm = this.canFormWord(
 						word,
 						this.getPrefix(startPos, isHorizontal),
@@ -1354,7 +1354,7 @@ class ScrabbleGame {
 					for (const candidate of possiblePlays) {
 						// If over 1 minute total, just play the first valid move we can find
 						if (Date.now() - startTime > 60000) {
-							const quickValidity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+							const quickValidity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
 							if (quickValidity.valid) {
 								bestPlay = candidate;
 								updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
@@ -1363,7 +1363,7 @@ class ScrabbleGame {
 							continue;
 						}
 
-						const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
 						if (validity.valid) {
 							bestPlay = candidate;
 							updateThinkingText(getTranslation('aiFoundMove', _aiLang));
@@ -3762,7 +3762,7 @@ class ScrabbleGame {
 
 	// Place this inside your ScrabbleGame class
 
-	checkAIMoveValidity(word, startPos, isHorizontal) {
+	async checkAIMoveValidity(word, startPos, isHorizontal) {
 		// List of variant spellings or non-English words to exclude
 		const excludedVariants = new Set([
 			"atropin", // German spelling, not valid in English Scrabble
@@ -3836,7 +3836,7 @@ async executeAIPlay(play) {
 	if (this.showAIDebug) console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
 
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
-    const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
+    const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
     if (!validity.valid) {
         this.showAINotification(
             `❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
