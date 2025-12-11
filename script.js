@@ -4078,15 +4078,7 @@ async executeAIPlay(play) {
 				moveDescription = "(No new words scored)";
 			}
 
-			// --- Speak each word formed by AI sequentially. If AI scored a bingo, allow it to
-			// audibly announce it as well (some users want parity). If you want AI silent,
-			// set aiSpeakBingo = false.
-			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
-			const aiSpeakBingo = true; // change to false to silence AI bingo again
-			this.speakSequence(aiWordsToSpeak, aiBingo && aiSpeakBingo, 'ai').catch((e) => {
-				// TTS failures are expected and handled gracefully with browser fallback
-				console.debug('AI TTS failed, using browser speech synthesis');
-			}).then(() => {
+			// --- AI auto-speech disabled by user request ---
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
 				this.aiScore += totalScore;
@@ -9187,13 +9179,19 @@ calculateScore() {
 		try {
 			// Simplified: only use emoji confetti for one clean splash
 			if (typeof this.createEmojiConfetti === 'function') {
-				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇'] :
-									 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️'] :
-									 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨'] :
-									 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵'] :
-									 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐'] :
-									 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️'] :
-									 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪'];
+				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇','👑','💎','🌟'] :
+									 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️','🥈','🌙','💫'] :
+									 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨','🌟','💫','✨','🎨'] :
+									 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵','🥳','🎈','🎊','🎂'] :
+									 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐','🎆','🎇','🎊','🎉'] :
+									 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️','🎄','❄️','🎅','⛄'] :
+									 variant === 'hearts' ? ['❤️','💖','💕','💗','💓','💘','💝','💞','💟','💌'] :
+									 variant === 'stars' ? ['⭐','🌟','✨','💫','🌠','🎇','🎆','🎊','🎉','✨'] :
+									 variant === 'fireworks' ? ['🎆','🎇','✨','💥','🎆','🎇','🎆','🎇','✨','💫'] :
+									 variant === 'nature' ? ['🌸','🌺','🌻','🌹','🌷','🌼','🌻','🌺','🌸','🌼'] :
+									 variant === 'animals' ? ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'] :
+									 variant === 'food' ? ['🍕','🍔','🍟','🌭','🍿','🍩','🍪','🍰','🧁','🍭'] :
+									 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪','🌟','💫','⭐'];
 
 				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
 			}
@@ -9509,36 +9507,8 @@ calculateScore() {
 				} catch (e) { console.warn('createBingoSplash failed', e); }
 			}
 
-			// Fallback: use the general confetti/win effect but keep it subtle for bingo
-			try {
-				try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] selecting confetti variant ' + variant); } catch(e){}
-				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
-				const isAndroid = /Android/i.test(ua) || isSamsung;
-				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
-					try {
-						console.info('[BingoEffect] Attempting emoji confetti for Android/Samsung');
-						try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Attempting emoji confetti for Android/Samsung'); } catch(e){}
-						this.createEmojiConfetti({ variant });
-						// After a short delay, verify whether emoji elements exist; retry once if nothing rendered
-						setTimeout(() => {
-							try {
-								const container = document.querySelector('.emoji-confetti-container');
-								const found = container && container.children && container.children.length > 0;
-								console.info('[BingoEffect] Emoji confetti presence check:', { found, children: container ? container.children.length : 0 });
-								try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Emoji confetti presence check: found=' + !!found + ' children=' + (container ? container.children.length : 0)); } catch(e){}
-								if (!found) {
-									console.warn('[BingoEffect] No emoji confetti rendered; retrying with larger count');
-									try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] retrying emoji confetti with larger count'); } catch(e){}
-									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)), variant }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
-								}
-							} catch (e) { console.warn('Emoji confetti verification failed', e); }
-						}, 400);
-					} catch (e) { console.warn('createEmojiConfetti failed', e); }
-				} else if (typeof this.createConfettiEffect === 'function') {
-					try { this.createConfettiEffect({ variant }); } catch (e) { console.warn('createConfettiEffect failed', e); }
-				}
-			} catch (e) { console.warn('bingo confetti selection failed', e); }
+			// Confetti is now handled by the calling code (createConfettiEffect)
+			// to avoid duplicate confetti effects
 
 			// Ultimate fallback: flash an overlay and small emoji burst
 			try {
