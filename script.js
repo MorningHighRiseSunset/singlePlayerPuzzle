@@ -8112,10 +8112,21 @@ calculateScore() {
 			}
 
 			if (typeof this._speakWithRetry === 'function') {
-				this._speakWithRetry(englishWord, { lang: 'en-US' }).catch(() => {});
+				this._speakWithRetry(englishWord, { lang: 'en-US', forceEnglishVoice: true }).catch(() => {});
 			} else if (typeof speechSynthesis !== 'undefined') {
 				const utter = new SpeechSynthesisUtterance(englishWord);
 				utter.lang = 'en-US'; // Force English
+
+				// Force English voice selection
+				try {
+					const englishVoice = this._getEnglishVoice();
+					if (englishVoice) {
+						utter.voice = englishVoice;
+					}
+				} catch (e) {
+					console.debug('Voice selection failed, using default');
+				}
+
 				speechSynthesis.speak(utter);
 			}
 		} catch (e) {
@@ -8340,12 +8351,39 @@ calculateScore() {
 		}
 	}
 
+	_getEnglishVoice() {
+		try {
+			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+			const voices = window.speechSynthesis.getVoices() || [];
+			if (!voices || voices.length === 0) return null;
+
+			// Prioritize US English voices
+			for (const v of voices) {
+				if (!v.lang) continue;
+				const lang = v.lang.toLowerCase();
+				if (lang === 'en-us' || lang === 'en_us') { return v; }
+			}
+
+			// Then any English voice
+			for (const v of voices) {
+				if (!v.lang) continue;
+				if (v.lang.toLowerCase().startsWith('en')) { return v; }
+			}
+
+			// Finally any voice (better than nothing)
+			return voices[0] || null;
+		} catch (e) {
+			console.debug('getEnglishVoice failed', e);
+			return null;
+		}
+	}
+
 	// Speak a single utterance, with a single retry attempt after trying to unlock audio.
 	// Returns a Promise that resolves on end or rejects on persistent failure.
 	_speakWithRetry(text, opts = {}) {
 		return new Promise(async (resolve, reject) => {
 			if (typeof window === 'undefined') return resolve();
-			const finalLang = opts.lang || this._getPreferredLangCode();
+			const finalLang = opts.forceEnglishVoice ? 'en-US' : (opts.lang || this._getPreferredLangCode());
 			// First try remote Netlify Google TTS function (server-side, uses GOOGLE_API_KEY)
 			const tryRemote = async () => {
 				if (!window.fetch) return false;
@@ -8418,8 +8456,13 @@ calculateScore() {
 			u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
 			u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
 				try {
-					const v = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
-					if (v) u.voice = v;
+					let voiceToUse = null;
+					if (opts.forceEnglishVoice) {
+						voiceToUse = this._getEnglishVoice();
+					} else {
+						voiceToUse = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
+					}
+					if (voiceToUse) u.voice = voiceToUse;
 				} catch (e) { /* ignore */ }
 			u.onend = () => resolve();
 			u.onerror = async (ev) => {
