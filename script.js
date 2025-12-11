@@ -845,8 +845,31 @@ class ScrabbleGame {
 		}
 
 		const aiPlays = this.findAIPossiblePlays();
-		this.lastAIGhostPlays = aiPlays; // Store for rotating display
-	if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
+
+		// Filter out invalid Spanish words when in Spanish mode
+		let filteredPlays = aiPlays;
+		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
+		if (lang === 'es') {
+			filteredPlays = [];
+			for (const play of aiPlays) {
+				try {
+					const isValidSpanish = await this.validateSpanishWordWithAPI(play.word);
+					if (isValidSpanish) {
+						filteredPlays.push(play);
+					} else {
+						if (this.showAIDebug) console.log(`Filtered out invalid Spanish word: ${play.word}`);
+					}
+				} catch (e) {
+					// If API validation fails, include the word anyway (fallback to local validation)
+					if (this.dictionaryHas(play.word)) {
+						filteredPlays.push(play);
+					}
+				}
+			}
+		}
+
+		this.lastAIGhostPlays = filteredPlays; // Store for rotating display
+	if (this.showAIDebug) console.log("AI ghost possible plays:", filteredPlays);
 
 		// --- REMOVE temp placed tiles after preview ---
 		if (tempPlaced.length > 0) {
@@ -1020,7 +1043,7 @@ class ScrabbleGame {
 		}, 3700);
 	}
 
-	setupTapPlacement() {
+	async setupTapPlacement() {
 		// Helper to clear selection
 		const deselect = () => {
 			if (this.selectedTile) this.selectedTile.classList.remove("selected");
@@ -1128,7 +1151,7 @@ class ScrabbleGame {
 					this.placeTile(tile, row, col);
 
 					// Redo ghost preview after placement
-					this.showAIGhostIfPlayerMoveValid();
+					await this.showAIGhostIfPlayerMoveValid();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
@@ -4123,7 +4146,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				this.showAIGhostIfPlayerMoveValid();
+				await this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
@@ -4149,7 +4172,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				this.showAIGhostIfPlayerMoveValid();
+				await this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
@@ -4182,7 +4205,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				this.showAIGhostIfPlayerMoveValid();
+				await this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals as the player
@@ -7151,7 +7174,7 @@ formedWords.forEach((wordInfo) => {
 		});
 	}
 
-	placeTile(tile, row, col) {
+	async placeTile(tile, row, col) {
 		if (this.board[row][col]) {
 			alert("This cell is already occupied!");
 			return;
@@ -7341,7 +7364,7 @@ formedWords.forEach((wordInfo) => {
 
 			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
 		}
-		this.showAIGhostIfPlayerMoveValid(); 
+		await this.showAIGhostIfPlayerMoveValid();
 	}
 
 	areTilesConnected() {
@@ -7387,7 +7410,7 @@ formedWords.forEach((wordInfo) => {
 		return true;
 	}
 
-	resetPlacedTiles() {
+	async resetPlacedTiles() {
         this.placedTiles.forEach(({ tile, row, col }) => {
             this.board[row][col] = null;
             const cell = document.querySelector(
@@ -7428,7 +7451,7 @@ formedWords.forEach((wordInfo) => {
         this.renderRack();
 
         // Remove ghost tiles when resetting
-        this.showAIGhostIfPlayerMoveValid();
+        await this.showAIGhostIfPlayerMoveValid();
     }
 
     validateWord() {
@@ -8374,6 +8397,45 @@ calculateScore() {
 		return invalidPatterns.some(pattern => pattern.test(word));
 	}
 
+	async validateSpanishWordWithAPI(word) {
+		try {
+			// First check local validation
+			if (this.isObviouslyInvalidSpanishWord(word)) {
+				return false;
+			}
+
+			// Use Spanish Royal Academy API
+			const response = await fetch(`https://dle.rae.es/data/search?w=${encodeURIComponent(word.toLowerCase())}`, {
+				method: 'GET',
+				headers: {
+					'Accept': 'application/json',
+				}
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				// Check if the word exists in RAE dictionary
+				return data && data.length > 0 && data.some(entry =>
+					entry && entry.word && entry.word.toLowerCase() === word.toLowerCase()
+				);
+			}
+
+			// Fallback: try alternative Spanish dictionary API
+			const altResponse = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(word.toLowerCase())}`);
+			if (altResponse.ok) {
+				const altData = await altResponse.json();
+				return altData && altData.length > 0;
+			}
+
+			// Last resort: basic Spanish pattern validation
+			return this.couldBeValidSpanishWord(word);
+		} catch (error) {
+			console.debug('Spanish API validation failed for', word, ':', error);
+			// If API fails, fall back to pattern validation
+			return this.couldBeValidSpanishWord(word);
+		}
+	}
+
 	couldBeValidSpanishWord(word) {
 		// Basic Spanish word validation heuristics
 		if (!word) return false;
@@ -9089,7 +9151,7 @@ calculateScore() {
 				this.fillRacks();
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
-				this.showAIGhostIfPlayerMoveValid();
+				await this.showAIGhostIfPlayerMoveValid();
 
 				// Pass structured wordDescriptions (array of {word,score}) so move history shows per-word scores
 				this.addToMoveHistory("Player", wordDescriptions, totalScore);
