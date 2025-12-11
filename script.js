@@ -1117,20 +1117,7 @@ class ScrabbleGame {
 				}
 			}
 
-			const shouldExchange = this.shouldExchangeTiles();
-			if (shouldExchange && this.tiles.length >= 5) {
-				setTimeout(() => {
-					thinkingMessage.style.opacity = "0";
-					setTimeout(() => {
-						thinkingMessage.remove();
-						this.unblockHintBox();
-						this.handleAIExchange();
-					}, 300);
-				}, 1000);
-				return;
-			}
-
-			// --- Keep trying different approaches until we find a valid move ---
+			// --- AI should NEVER exchange tiles or skip - keep trying until valid move found ---
 			let attempts = 0;
 			const maxAttempts = 5; // Try up to 5 different strategies
 
@@ -1195,21 +1182,53 @@ class ScrabbleGame {
 				}
 			}
 
-			// If no valid play found, exchange tiles
-			updateThinkingText(getTranslation('aiNoMoveExchange', _aiLang));
-			await new Promise(res => setTimeout(res, 1500));
-			thinkingMessage.style.opacity = "0";
+			// If still no valid play found after all attempts, keep trying with increasingly desperate measures
+			if (!bestPlay) {
+				updateThinkingText("AI is desperately searching...");
+				await new Promise(res => setTimeout(res, 1000));
+
+				// Try one final comprehensive search
+				const desperatePlays = this.findAIPossiblePlays(2, 15);
+				for (const candidate of desperatePlays) {
+					const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+					if (validity.valid) {
+						bestPlay = candidate;
+						updateThinkingText("AI finally found a move!");
+						break;
+					}
+				}
+			}
+
+			// If we found a move, play it
+			if (bestPlay) {
+				setTimeout(() => {
+					thinkingMessage.style.opacity = "0";
+					setTimeout(() => {
+						thinkingMessage.remove();
+						this.unblockHintBox();
+						this.executeAIPlay(bestPlay);
+					}, 300);
+				}, 800);
+				return;
+			}
+
+			// ABSOLUTE LAST RESORT: Force a pass (should theoretically never happen)
+			console.warn("AI forced to pass - this indicates a serious issue");
+			this.showAINotification("🤖 AI was forced to pass - dictionary may be incomplete");
 			setTimeout(() => {
-				thinkingMessage.remove();
-				this.unblockHintBox();
-				this.handleAIExchange();
-			}, 600);
+				thinkingMessage.style.opacity = "0";
+				setTimeout(() => {
+					thinkingMessage.remove();
+					this.unblockHintBox();
+					this.aiPass();
+				}, 300);
+			}, 1000);
 
 		} catch (error) {
 			console.error("Error in AI turn:", error);
 			thinkingMessage.remove();
 			this.unblockHintBox();
-			this.handleAIExchange();
+			this.aiPass();
 		}
 
 		this.aiValidationLogSet = new Set();
@@ -1219,6 +1238,18 @@ class ScrabbleGame {
 		// Only exchange if there are truly no valid moves
 		const plays = this.findAIPossiblePlays();
 		return plays.length === 0;
+	}
+
+	aiPass() {
+		// AI is forced to pass (should theoretically never happen)
+		this.consecutiveSkips++;
+		this.currentTurn = "player";
+		this.addToMoveHistory("Computadora", "PASAR", 0);
+		this.updateGameState();
+		this.highlightValidPlacements();
+		if (!this.checkGameEnd()) {
+			// Game continues, player's turn now
+		}
 	}
 
 	evaluatePositionStrategy(play) {
