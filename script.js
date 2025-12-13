@@ -7164,10 +7164,21 @@ formedWords.forEach((wordInfo) => {
 
 		// Add transformation functionality for Spanish mode
 		if (canTransform && this.preferredLang === 'es') {
+			// DESKTOP: Right-click (shows transformation), double-click (quick transform)
+			tileElement.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+				this.showTransformationMenu(e, tileElement, tile);
+			});
+
+			tileElement.addEventListener('dblclick', (e) => {
+				e.preventDefault();
+				this.transformTileElement(tileElement, tile);
+			});
+
+			// MOBILE: Long press (keep existing functionality)
 			let pressTimer;
 			const longPressDuration = 800; // ms
 
-			// Start press timer on mouse/touch down
 			const startPress = (e) => {
 				e.preventDefault();
 				pressTimer = setTimeout(() => {
@@ -7175,28 +7186,87 @@ formedWords.forEach((wordInfo) => {
 				}, longPressDuration);
 			};
 
-			// Clear timer on mouse/touch up or move
 			const endPress = (e) => {
-				e.preventDefault();
 				if (pressTimer) {
 					clearTimeout(pressTimer);
 					pressTimer = null;
 				}
 			};
 
-			// Add event listeners
-			tileElement.addEventListener('mousedown', startPress);
 			tileElement.addEventListener('touchstart', startPress);
-			tileElement.addEventListener('mouseup', endPress);
 			tileElement.addEventListener('touchend', endPress);
-			tileElement.addEventListener('mouseleave', endPress);
 			tileElement.addEventListener('touchcancel', endPress);
 
-			// Add tooltip
-			tileElement.title = `Long press to transform ${tile.letter} → ${this.transformTile(tile.letter)}`;
+			// Enhanced tooltip for both desktop and mobile
+			tileElement.title = `Desktop: Right-click or double-click to transform ${tile.letter} → ${this.transformTile(tile.letter)}\nMobile: Long press to transform`;
 		}
 
 		return tileElement;
+	}
+
+	showTransformationMenu(event, tileElement, tile) {
+		// Remove any existing menus
+		document.querySelectorAll('.transformation-menu').forEach(menu => menu.remove());
+
+		const menu = document.createElement('div');
+		menu.className = 'transformation-menu';
+		menu.style.position = 'absolute';
+		menu.style.left = `${event.pageX}px`;
+		menu.style.top = `${event.pageY}px`;
+		menu.style.background = 'white';
+		menu.style.border = '2px solid #0288d1';
+		menu.style.borderRadius = '8px';
+		menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+		menu.style.zIndex = '10000';
+		menu.style.padding = '8px';
+		menu.style.minWidth = '120px';
+
+		const currentLetter = tile.letter;
+		const transformedLetter = this.transformTile(currentLetter);
+
+		// Create menu items with proper event handlers
+		const titleDiv = document.createElement('div');
+		titleDiv.style.fontWeight = 'bold';
+		titleDiv.style.marginBottom = '8px';
+		titleDiv.style.color = '#0288d1';
+		titleDiv.textContent = 'Transform Tile';
+
+		const transformDiv = document.createElement('div');
+		transformDiv.style.padding = '4px 8px';
+		transformDiv.style.cursor = 'pointer';
+		transformDiv.style.borderRadius = '4px';
+		transformDiv.style.marginBottom = '4px';
+		transformDiv.textContent = `${currentLetter} → ${transformedLetter}`;
+		transformDiv.onmouseover = () => transformDiv.style.background = '#e3f2fd';
+		transformDiv.onmouseout = () => transformDiv.style.background = 'transparent';
+		transformDiv.onclick = () => {
+			this.transformTileElement(tileElement, tile);
+			menu.remove();
+		};
+
+		const cancelDiv = document.createElement('div');
+		cancelDiv.style.padding = '4px 8px';
+		cancelDiv.style.cursor = 'pointer';
+		cancelDiv.style.borderRadius = '4px';
+		cancelDiv.style.fontSize = '12px';
+		cancelDiv.style.color = '#666';
+		cancelDiv.textContent = 'Cancel';
+		cancelDiv.onclick = () => menu.remove();
+
+		menu.appendChild(titleDiv);
+		menu.appendChild(transformDiv);
+		menu.appendChild(cancelDiv);
+
+		document.body.appendChild(menu);
+
+		// Close menu when clicking outside
+		const closeMenu = (e) => {
+			if (!menu.contains(e.target)) {
+				menu.remove();
+				document.removeEventListener('click', closeMenu);
+			}
+		};
+		setTimeout(() => document.addEventListener('click', closeMenu), 10);
 	}
 
 	transformTileElement(tileElement, tile) {
