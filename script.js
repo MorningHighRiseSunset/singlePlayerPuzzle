@@ -4055,6 +4055,7 @@ async executeAIPlay(play) {
         let aiBingo = false; // Declare for bingo detection
         let aiBingoVariant = 'standard'; // Declare for bingo variant
         let wordsList = []; // Declare for storing formed words
+        let aiBingoEffectShown = false; // Prevent duplicate bingo effects
 
         // Start placing tiles with animation
         for (let i = 0; i < word.length; i++) {
@@ -4277,20 +4278,6 @@ async executeAIPlay(play) {
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
-				// If AI scored a bingo, trigger the same bingo visuals and speech as the player
-				if (aiBingo) {
-					try {
-						if (typeof this.showBingoBonusEffect === 'function') {
-							this.showBingoBonusEffect(false, aiBingoVariant);
-						} else if (typeof this.createConfettiEffect === 'function') {
-							this.createConfettiEffect({ variant: aiBingoVariant });
-						}
-						// Also trigger bingo speech for AI
-						if (typeof this.speakBingo === 'function') {
-							this.speakBingo('computer');
-						}
-					} catch (e) { console.warn('AI bingo effects failed', e); }
-				}
 				// --- AI auto-speech disabled by user request ---
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
@@ -4306,17 +4293,6 @@ async executeAIPlay(play) {
 				this.fillRacks();
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
-
-				// If AI scored a bingo, trigger the same bingo visuals as the player
-				if (aiBingo) {
-					try {
-						if (typeof this.showBingoBonusEffect === 'function') {
-							this.showBingoBonusEffect(false, aiBingoVariant);
-						} else if (typeof this.createConfettiEffect === 'function') {
-							this.createConfettiEffect({ variant: aiBingoVariant });
-						}
-					} catch (e) { console.warn('AI bingo visual failed', e); }
-				}
 			});
 
 			// --- AI auto-speech disabled by user request ---
@@ -4340,15 +4316,20 @@ async executeAIPlay(play) {
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
-				// If AI scored a bingo, trigger the same bingo visuals as the player
-				if (aiBingo) {
+				// If AI scored a bingo, trigger the same bingo visuals and speech as the player (ONLY ONCE)
+				if (aiBingo && !aiBingoEffectShown) {
+					aiBingoEffectShown = true; // Mark as shown to prevent duplicates
 					try {
 						if (typeof this.showBingoBonusEffect === 'function') {
 							this.showBingoBonusEffect(false, aiBingoVariant);
 						} else if (typeof this.createConfettiEffect === 'function') {
 							this.createConfettiEffect({ variant: aiBingoVariant });
 						}
-					} catch (e) { console.warn('AI bingo visual failed', e); }
+						// Also trigger bingo speech for AI
+						if (typeof this.speakBingo === 'function') {
+							this.speakBingo('computer');
+						}
+					} catch (e) { console.warn('AI bingo effects failed', e); }
 				}
 				resolve();
 			}, 1000);  // Slightly longer delay for final updates
