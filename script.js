@@ -7145,41 +7145,58 @@ formedWords.forEach((wordInfo) => {
 
 		// Add transformation functionality for Spanish mode
 		if (canTransform && this.preferredLang === 'es') {
-			// DESKTOP: Right-click (shows transformation), double-click (quick transform)
-			tileElement.addEventListener('contextmenu', (e) => {
-				e.preventDefault();
-				this.showTransformationMenu(e, tileElement, tile);
-			});
-
+			// DESKTOP: Double-click to transform
 			tileElement.addEventListener('dblclick', (e) => {
 				e.preventDefault();
+				e.stopPropagation();
 				this.transformTileElement(tileElement, tile);
 			});
 
-			// MOBILE: Long press (keep existing functionality)
-			let pressTimer;
-			const longPressDuration = 800; // ms
+			// MOBILE: Double-tap to transform
+			let lastTapTime = 0;
+			let lastTapPosition = null;
+			let tapTimeout;
+			const doubleTapDelay = 400; // ms between taps
+			const doubleTapMaxDistance = 20; // pixels - max movement between taps
 
-			const startPress = (e) => {
-				e.preventDefault();
-				pressTimer = setTimeout(() => {
-					this.transformTileElement(tileElement, tile);
-				}, longPressDuration);
-			};
+			tileElement.addEventListener('touchend', (e) => {
+				const currentTime = Date.now();
+				const currentPosition = {
+					x: e.changedTouches[0].clientX,
+					y: e.changedTouches[0].clientY
+				};
 
-			const endPress = (e) => {
-				if (pressTimer) {
-					clearTimeout(pressTimer);
-					pressTimer = null;
+				if (lastTapTime > 0 && lastTapPosition) {
+					const timeSinceLastTap = currentTime - lastTapTime;
+					const distance = Math.sqrt(
+						Math.pow(currentPosition.x - lastTapPosition.x, 2) +
+						Math.pow(currentPosition.y - lastTapPosition.y, 2)
+					);
+
+					if (timeSinceLastTap < doubleTapDelay && distance < doubleTapMaxDistance) {
+						// Double tap detected - transform tile
+						e.preventDefault();
+						e.stopPropagation();
+						clearTimeout(tapTimeout);
+						this.transformTileElement(tileElement, tile);
+						lastTapTime = 0;
+						lastTapPosition = null;
+						return;
+					}
 				}
-			};
 
-			tileElement.addEventListener('touchstart', startPress);
-			tileElement.addEventListener('touchend', endPress);
-			tileElement.addEventListener('touchcancel', endPress);
+				// First tap - record time and position
+				lastTapTime = currentTime;
+				lastTapPosition = currentPosition;
+				clearTimeout(tapTimeout);
+				tapTimeout = setTimeout(() => {
+					lastTapTime = 0;
+					lastTapPosition = null;
+				}, doubleTapDelay);
+			});
 
 			// Enhanced tooltip for both desktop and mobile
-			tileElement.title = `Desktop: Right-click or double-click to transform ${tile.letter} → ${this.transformTile(tile.letter)}\nMobile: Long press to transform`;
+			tileElement.title = `Double-click (PC) or double-tap (mobile) to transform ${tile.letter} → ${this.transformTile(tile.letter)}`;
 		}
 
 		return tileElement;
@@ -7255,7 +7272,6 @@ formedWords.forEach((wordInfo) => {
 		const transformedLetter = this.transformTile(currentLetter);
 
 		if (currentLetter === transformedLetter) return; // No transformation available
-
 		// Update tile data
 		tile.letter = transformedLetter;
 		tileElement.innerHTML = `
