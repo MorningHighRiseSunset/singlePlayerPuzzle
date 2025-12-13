@@ -699,26 +699,71 @@ class ScrabbleGame {
 		if (!word) return false;
 		// Preferred language may affect lookup strategy
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-		if (lang === 'es') {
-			const norm = normalizeWordForDict(word).toLowerCase();
 
-			// First check local Spanish dictionary
-			if (this.activeDictionary.has(norm)) {
-				return true;
-			}
+		const wordLower = String(word).toLowerCase();
 
-			// For Spanish, be more strict - reject obvious non-Spanish words
-			const upperWord = word.toUpperCase();
-			if (this.isObviouslyInvalidSpanishWord(upperWord)) {
-				return false;
-			}
-
-			// For words not in local dictionary, check if they could be valid Spanish
-			// This helps prevent English words from being accepted in Spanish mode
-			return this.couldBeValidSpanishWord(upperWord);
-		} else {
-			return this.activeDictionary.has(String(word).toLowerCase());
+		// Always check local dictionary first
+		if (this.activeDictionary.has(wordLower)) {
+			return true;
 		}
+
+		// For non-English languages, use API validation
+		if (lang !== 'en') {
+			return this.validateWordForLanguageSync(word, lang);
+		}
+
+		// For English, just check basic validity
+		return this.isBasicValidForLanguage(String(word).toUpperCase(), 'en');
+	}
+
+	// Synchronous wrapper for language validation with caching
+	validateWordForLanguageSync(word, lang) {
+		const cacheKey = `${lang}_validation_${word.toLowerCase()}`;
+
+		// Check cache first
+		if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
+			return this.validationCache[cacheKey];
+		}
+
+		// Initialize cache if needed
+		if (!this.validationCache) {
+			this.validationCache = {};
+		}
+
+		// For sync context, use basic validation as fallback
+		const result = this.isBasicValidForLanguage(word.toUpperCase(), lang);
+
+		// Cache result
+		this.validationCache[cacheKey] = result;
+
+		return result;
+	}
+
+	// Synchronous wrapper for Spanish validation with caching
+	validateSpanishWordSync(word) {
+		const cacheKey = `spanish_validation_${word.toLowerCase()}`;
+
+		// Check cache first
+		if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
+			return this.validationCache[cacheKey];
+		}
+
+		// Initialize cache if needed
+		if (!this.validationCache) {
+			this.validationCache = {};
+		}
+
+		// For sync context, use basic validation as fallback
+		// Real API validation will happen in async contexts
+		const upperWord = word.toUpperCase();
+		const isBasicValid = this.couldBeValidSpanishWord(upperWord);
+
+		const result = isBasicValid;
+
+		// Cache result
+		this.validationCache[cacheKey] = result;
+
+		return result;
 	}
 
 	pickNonRepeating(arr, type) {
@@ -792,8 +837,23 @@ class ScrabbleGame {
 		];
 
 		topMoves.forEach((play, moveIndex) => {
-			const { word, startPos, isHorizontal } = play;
+			const { word, startPos, isHorizontal, confidence, score } = play;
 			const colorScheme = ghostColors[moveIndex % ghostColors.length];
+
+			// Enhanced color scheme based on confidence
+			let enhancedColorScheme = { ...colorScheme };
+			if (confidence !== undefined) {
+				if (confidence >= 90) {
+					enhancedColorScheme.bg = '#c8e6c9'; // Light green for high confidence
+					enhancedColorScheme.border = '#2e7d32';
+				} else if (confidence >= 70) {
+					enhancedColorScheme.bg = '#fff3e0'; // Light orange for medium confidence
+					enhancedColorScheme.border = '#ef6c00';
+				} else {
+					enhancedColorScheme.bg = '#ffcdd2'; // Light red for low confidence
+					enhancedColorScheme.border = '#c62828';
+				}
+			}
 
 			for (let i = 0; i < word.length; i++) {
 				const row = isHorizontal ? startPos.row : startPos.row + i;
@@ -809,16 +869,26 @@ class ScrabbleGame {
 					const ghost = document.createElement('div');
 					ghost.className = 'tile ghost-tile';
 					ghost.dataset.moveIndex = moveIndex;
+
+					// Enhanced ghost tile with confidence indicator
+					const confidenceIndicator = confidence !== undefined ?
+						`<span class="confidence" style="font-size: 8px; position: absolute; top: -2px; right: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center;">${Math.round(confidence / 10)}</span>` : '';
+
 					ghost.innerHTML = `
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
+						${confidenceIndicator}
 					`;
+
 					ghost.style.visibility = 'visible';
 					ghost.style.pointerEvents = 'none';
-					ghost.style.background = colorScheme.bg;
-					ghost.style.color = colorScheme.text;
-					ghost.style.border = `2px dashed ${colorScheme.border}`;
+					ghost.style.background = enhancedColorScheme.bg;
+					ghost.style.color = enhancedColorScheme.text;
+					ghost.style.border = `2px dashed ${enhancedColorScheme.border}`;
 					ghost.style.zIndex = 10 + moveIndex; // Stack them properly
+					ghost.title = confidence !== undefined ?
+						`${word} (Score: ${score || '?'}, Confidence: ${confidence}%)` :
+						`${word} (Score: ${score || '?'})`;
 					cell.appendChild(ghost);
 				}
 			}
@@ -852,7 +922,10 @@ class ScrabbleGame {
 			filteredPlays = [];
 			for (const play of aiPlays) {
 				try {
-					const isValidSpanish = await this.validateSpanishWordWithAPI(play.word);
+					const lang = this.preferredLang || 'en';
+					const isValidWord = lang === 'es' ?
+						await this.validateSpanishWordWithAPI(play.word) :
+						this.dictionaryHas(play.word);
 					if (isValidSpanish) {
 						filteredPlays.push(play);
 					} else {
@@ -3762,10 +3835,10 @@ class ScrabbleGame {
 	// Place this inside your ScrabbleGame class
 
 	async checkAIMoveValidity(word, startPos, isHorizontal) {
-		// List of variant spellings or non-English words to exclude
+		// Enhanced AI validation with confidence scoring
+		const lang = this.preferredLang || 'en';
 		const excludedVariants = new Set([
 			"atropin", // German spelling, not valid in English Scrabble
-			// Add more known variants as needed
 		]);
 
 		// Simulate the move on a temporary board
@@ -3780,59 +3853,115 @@ class ScrabbleGame {
 			}
 		}
 
-		// Collect all words formed (main and crosswords)
+		// Collect all words formed with confidence scores
 		let invalidWords = [];
-		let checkedWords = new Set();
+		let validWords = [];
+		let totalConfidence = 0;
+		let wordCount = 0;
+		let transformationsNeeded = []; // Track tile transformations AI would need
 
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 
-			// Main word (only check once)
+			// Main word validation with confidence scoring
 			if (i === 0) {
 				const mainWord = isHorizontal ?
 					this.getHorizontalWordAt(row, col, tempBoard) :
 					this.getVerticalWordAt(row, col, tempBoard);
-				if (
-					mainWord &&
-					mainWord.length > 1 &&
-					(!this.dictionaryHas(mainWord) ||
-					excludedVariants.has(mainWord.toLowerCase()))
-				) {
-					invalidWords.push(mainWord);
-				} else if (mainWord && mainWord.length > 1) {
-					checkedWords.add(mainWord);
+
+				if (mainWord && mainWord.length > 1) {
+					const validation = await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true);
+
+					if (validation.isValid && !excludedVariants.has(mainWord.toLowerCase())) {
+						// Check if AI can form this word with available tiles (considering transformations)
+						const canForm = this.canFormWordWithTiles(mainWord, this.aiRack || []);
+						if (canForm) {
+							validWords.push({ word: mainWord, confidence: validation.confidence, isMain: true });
+							totalConfidence += validation.confidence;
+							wordCount++;
+
+							// Track transformations needed
+							const transforms = this.getTransformedTilesForWord(mainWord);
+							transformationsNeeded.push(...transforms);
+						} else {
+							invalidWords.push(`${mainWord} (insufficient tiles)`);
+						}
+					} else {
+						invalidWords.push(mainWord);
+					}
 				}
 			}
 
-			// Crosswords for each new tile
+			// Crosswords validation with confidence scoring
 			const crossWord = isHorizontal ?
 				this.getVerticalWordAt(row, col, tempBoard) :
 				this.getHorizontalWordAt(row, col, tempBoard);
-			if (
-				crossWord &&
-				crossWord.length > 1 &&
-				!checkedWords.has(crossWord)
-			) {
-				if (
-					!this.dictionaryHas(crossWord) ||
-					excludedVariants.has(crossWord.toLowerCase())
-				) {
-					invalidWords.push(crossWord);
+
+			if (crossWord && crossWord.length > 1 && !validWords.some(v => v.word === crossWord)) {
+				const validation = await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false);
+
+				if (validation.isValid && !excludedVariants.has(crossWord.toLowerCase())) {
+					// Check if AI can form this cross-word
+					const canForm = this.canFormWordWithTiles(crossWord, this.aiRack || []);
+					if (canForm) {
+						validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
+						totalConfidence += validation.confidence;
+						wordCount++;
+
+						// Track transformations needed for cross-words too
+						const transforms = this.getTransformedTilesForWord(crossWord);
+						transformationsNeeded.push(...transforms);
+					} else {
+						invalidWords.push(`${crossWord} (insufficient tiles)`);
+					}
 				} else {
-					checkedWords.add(crossWord);
+					invalidWords.push(crossWord);
 				}
 			}
 		}
 
-		return invalidWords.length === 0
-			? { valid: true }
-			: { valid: false, invalidWords };
+		// Calculate average confidence for valid moves
+		const avgConfidence = wordCount > 0 ? totalConfidence / wordCount : 0;
+
+		// AI decision logic based on confidence and validity
+		if (invalidWords.length === 0) {
+			return {
+				valid: true,
+				confidence: avgConfidence,
+				validWords: validWords,
+				transformationsNeeded: transformationsNeeded,
+				aiRecommendation: avgConfidence >= 85 ? 'excellent' : avgConfidence >= 70 ? 'good' : 'acceptable'
+			};
+		} else {
+			return {
+				valid: false,
+				invalidWords: invalidWords,
+				validWords: validWords,
+				confidence: avgConfidence,
+				transformationsNeeded: transformationsNeeded,
+				reason: `Invalid words: ${invalidWords.join(', ')}`
+			};
+		}
 	}
 
 async executeAIPlay(play) {
     const { word, startPos, isHorizontal, score } = play;
 	if (this.showAIDebug) console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
+
+    // --- TILE TRANSFORMATION: AI transforms tiles as needed ---
+    const transformations = this.getTransformedTilesForWord(word);
+    if (transformations.length > 0) {
+        console.log(`🔄 AI transforming tiles for "${word}":`, transformations);
+        // Apply transformations to AI's rack
+        transformations.forEach(transform => {
+            const tileIndex = this.aiRack.findIndex(tile => tile.letter === transform.from);
+            if (tileIndex !== -1) {
+                this.aiRack[tileIndex].letter = transform.to;
+                console.log(`AI transformed: ${transform.from} → ${transform.to}`);
+            }
+        });
+    }
 
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
     const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
@@ -4148,7 +4277,7 @@ async executeAIPlay(play) {
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
-				// If AI scored a bingo, trigger the same bingo visuals as the player
+				// If AI scored a bingo, trigger the same bingo visuals and speech as the player
 				if (aiBingo) {
 					try {
 						if (typeof this.showBingoBonusEffect === 'function') {
@@ -4156,7 +4285,11 @@ async executeAIPlay(play) {
 						} else if (typeof this.createConfettiEffect === 'function') {
 							this.createConfettiEffect({ variant: aiBingoVariant });
 						}
-					} catch (e) { console.warn('AI bingo visual failed', e); }
+						// Also trigger bingo speech for AI
+						if (typeof this.speakBingo === 'function') {
+							this.speakBingo('computer');
+						}
+					} catch (e) { console.warn('AI bingo effects failed', e); }
 				}
 				// --- AI auto-speech disabled by user request ---
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
@@ -7017,12 +7150,81 @@ formedWords.forEach((wordInfo) => {
 		tileElement.draggable = true;
 		tileElement.dataset.index = index;
 		tileElement.dataset.id = tile.id;
+
+		// TILE TRANSFORMATION SYSTEM
+		const canTransform = this.canTransformTile(tile.letter);
+		const transformIndicator = canTransform ? '<span class="transform-indicator">⚡</span>' : '';
+
 		tileElement.innerHTML = `
                     ${tile.letter}
                     <span class="points">${tile.value}</span>
                     ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                    ${transformIndicator}
                 `;
+
+		// Add transformation functionality for Spanish mode
+		if (canTransform && this.preferredLang === 'es') {
+			let pressTimer;
+			const longPressDuration = 800; // ms
+
+			// Start press timer on mouse/touch down
+			const startPress = (e) => {
+				e.preventDefault();
+				pressTimer = setTimeout(() => {
+					this.transformTileElement(tileElement, tile);
+				}, longPressDuration);
+			};
+
+			// Clear timer on mouse/touch up or move
+			const endPress = (e) => {
+				e.preventDefault();
+				if (pressTimer) {
+					clearTimeout(pressTimer);
+					pressTimer = null;
+				}
+			};
+
+			// Add event listeners
+			tileElement.addEventListener('mousedown', startPress);
+			tileElement.addEventListener('touchstart', startPress);
+			tileElement.addEventListener('mouseup', endPress);
+			tileElement.addEventListener('touchend', endPress);
+			tileElement.addEventListener('mouseleave', endPress);
+			tileElement.addEventListener('touchcancel', endPress);
+
+			// Add tooltip
+			tileElement.title = `Long press to transform ${tile.letter} → ${this.transformTile(tile.letter)}`;
+		}
+
 		return tileElement;
+	}
+
+	transformTileElement(tileElement, tile) {
+		const currentLetter = tile.letter;
+		const transformedLetter = this.transformTile(currentLetter);
+
+		if (currentLetter === transformedLetter) return; // No transformation available
+
+		// Update tile data
+		tile.letter = transformedLetter;
+		tileElement.innerHTML = `
+			${transformedLetter}
+			<span class="points">${tile.value}</span>
+			${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+			<span class="transform-indicator transformed">✨</span>
+		`;
+
+		// Update tooltip
+		tileElement.title = `Transformed! ${currentLetter} → ${transformedLetter}`;
+
+		// Visual feedback
+		tileElement.classList.add('tile-transformed');
+		setTimeout(() => tileElement.classList.remove('tile-transformed'), 500);
+
+		// Update rack display
+		this.renderRack();
+
+		console.log(`🔄 Tile transformed: ${currentLetter} → ${transformedLetter}`);
 	}
 
 	isValidPlacement(row, col, tile) {
@@ -7453,7 +7655,72 @@ formedWords.forEach((wordInfo) => {
         await this.showAIGhostIfPlayerMoveValid();
     }
 
-    validateWord() {
+    // Context-aware word validation with detailed results
+    async validateWordInContext(word, wordInfo, isMainWord) {
+        const upperWord = word.toUpperCase();
+
+        // Layer 1: Basic validation (fastest)
+        if (!this.isBasicValidForLanguage(upperWord, this.preferredLang || 'en')) {
+            return {
+                isValid: false,
+                confidence: 0,
+                reason: 'Invalid characters or pattern',
+                layer: 'basic'
+            };
+        }
+
+        // Layer 2: Local dictionary check
+        if (this.activeDictionary.has(word)) {
+            return {
+                isValid: true,
+                confidence: 95,
+                reason: 'Found in local dictionary',
+                layer: 'local'
+            };
+        }
+
+        // Layer 3: API validation (slowest, most accurate)
+        try {
+            const lang = this.preferredLang || 'en';
+            let apiValid = false;
+            let apiConfidence = 0;
+
+            if (lang === 'es') {
+                const result = await this.validateSpanishWordWithGoogle(upperWord);
+                apiValid = result;
+                apiConfidence = result ? 90 : 0;
+            } else {
+                // For other languages, use basic validation for now
+                apiValid = this.isBasicValidForLanguage(upperWord, lang);
+                apiConfidence = apiValid ? 70 : 0;
+            }
+
+            // Context bonus: Main words get higher confidence
+            if (apiValid && isMainWord) {
+                apiConfidence += 5;
+            }
+
+            return {
+                isValid: apiValid,
+                confidence: Math.min(100, apiConfidence),
+                reason: apiValid ? 'API validated' : 'API rejected',
+                layer: 'api'
+            };
+
+        } catch (error) {
+            console.warn(`API validation failed for ${word}:`, error);
+            // Fallback to basic validation
+            const basicValid = this.couldBeValidSpanishWord(upperWord);
+            return {
+                isValid: basicValid,
+                confidence: basicValid ? 60 : 0,
+                reason: 'API failed, using basic validation',
+                layer: 'fallback'
+            };
+        }
+    }
+
+    async validateWord() {
         if (this.placedTiles.length === 0) return false;
 
         // Check if tiles are properly connected (same row/col, no gaps)
@@ -7499,17 +7766,40 @@ formedWords.forEach((wordInfo) => {
             return false;
         }
 
-        // Validate each word
+        // Enhanced context-aware validation for each word
         let allWordsValid = true;
-        formedWords.forEach((wordInfo) => {
+        let validationResults = [];
+
+        for (const wordInfo of formedWords) {
             const word = wordInfo.word.toLowerCase();
-			if (!this.dictionaryHas(word)) {
-                console.log(`Invalid word: ${word}`);
+            const isMainWord = wordInfo.direction !== undefined; // Main words have direction
+
+            // Multi-layer validation pipeline
+            const validationResult = await this.validateWordInContext(word, wordInfo, isMainWord);
+
+            validationResults.push({
+                word: wordInfo.word,
+                ...validationResult
+            });
+
+            if (!validationResult.isValid) {
+                console.log(`❌ Invalid word: ${wordInfo.word} (${validationResult.reason})`);
+
+                // Generate suggestions for invalid words
+                const suggestions = await this.getWordSuggestions(wordInfo.word, this.preferredLang || 'en');
+                if (suggestions.length > 0) {
+                    console.log(`💡 Suggestions for "${wordInfo.word}": ${suggestions.map(s => `${s.word}(${s.confidence}%)`).join(', ')}`);
+                    validationResult.suggestions = suggestions;
+                }
+
                 allWordsValid = false;
             } else {
-                console.log(`Valid word found: ${word}`);
+                console.log(`✅ Valid word: ${wordInfo.word} (confidence: ${validationResult.confidence}%)`);
             }
-        });
+        }
+
+        // Log validation summary
+        console.log(`Validation summary: ${validationResults.filter(r => r.isValid).length}/${formedWords.length} words valid`);
 
         // First move must use center square
         if (this.isFirstMove) {
@@ -8382,33 +8672,551 @@ calculateScore() {
 		return true; // Allow if in dictionary and passes all intelligent checks
 	}
 
-	isObviouslyInvalidSpanishWord(word) {
-		// Common invalid patterns in Spanish Scrabble
-		const invalidPatterns = [
-			// English-specific letter combinations
-			/WW/, /QQ/, /VV/, /XX/, /YY/, /ZZ/,
-			// Invalid consonant clusters (simplified check)
-			/BB/, /CC/, /DD/, /FF/, /GG/, /HH/, /JJ/, /KK/, /LL/, /MM/, /NN/, /PP/, /QQ/, /RR/, /SS/, /TT/, /VV/, /WW/, /XX/, /YY/, /ZZ/,
-			// Words that are clearly English
-			/^SARAN$/, /^QUILT$/, /^JEEP$/, /^WHISKY$/, /^ZEBRA$/, /^JOLLY$/, /^QUIZZ$/, /^JUMBO$/, /^ZESTY$/
-		];
+	async validateWordWithGoogleAPI(word, targetLang = 'es') {
+		// Use Google Translate API to validate if word exists in target language
+		// Strategy: Translate word from target language to English, then back to target language
+		// If the word comes back similar, it's likely valid in that language
 
-		return invalidPatterns.some(pattern => pattern.test(word));
-	}
-
-	async validateSpanishWordWithAPI(word) {
 		try {
-			// First check local validation
-			if (this.isObviouslyInvalidSpanishWord(word)) {
+			// First check basic letter validity for the target language
+			if (!this.isBasicValidForLanguage(word, targetLang)) {
 				return false;
 			}
 
-			// Skip API validation for now due to CORS issues - rely on local validation
-			// The local dictionary and pattern matching should be sufficient
-			return this.couldBeValidSpanishWord(word) && this.dictionaryHas(word);
+			// Skip API validation for very short words (they're often valid)
+			if (word.length <= 2) {
+				return true;
+			}
+
+			// For Spanish, use more comprehensive validation
+			if (targetLang === 'es') {
+				return await this.validateSpanishWordWithGoogle(word);
+			}
+
+			// For other languages, implement similar validation
+			return await this.validateOtherLanguageWord(word, targetLang);
+
 		} catch (error) {
-			console.debug('Spanish validation failed for', word, ':', error);
-			// If validation fails, fall back to basic pattern validation
+			console.warn(`API validation failed for ${word} in ${targetLang}:`, error);
+			// Fall back to basic pattern validation
+			return this.isBasicValidForLanguage(word, targetLang);
+		}
+	}
+
+	isBasicValidForLanguage(word, lang) {
+		// Basic letter validation for different languages
+		switch (lang) {
+			case 'es': // Spanish
+				return /^[A-ZÑ]+$/.test(word) &&
+					   /[AEIOUÁÉÍÓÚÜ]/.test(word) && // Must have vowels
+					   word.length >= 2;
+
+			case 'fr': // French
+				return /^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜŸÇ]+$/.test(word) &&
+					   /[AEIOUYÀÂÄÉÈÊËÏÎÔÖÙÛÜŸ]/.test(word) &&
+					   word.length >= 2;
+
+			case 'zh': // Chinese (simplified for Scrabble context)
+				// For Chinese, we'll rely more on API validation
+				return word.length >= 1;
+
+			default: // English and others
+				return /^[A-Z]+$/.test(word) &&
+					   /[AEIOU]/.test(word) &&
+					   word.length >= 2;
+		}
+	}
+
+	async validateSpanishWordWithGoogle(word) {
+		try {
+			// Stricter Spanish validation with multiple checks
+
+			// TILE TRANSFORMATION SYSTEM: Players can transform tiles for Spanish characters
+	// Allow words with Ñ and accented vowels since players can transform tiles:
+	// N → Ñ, A → Á, E → É, I → Í, O → Ó, U → Ú/Ü
+	// Validation passes through - tile transformation is handled during word formation
+
+			// First, ensure basic Spanish word requirements
+			const upperWord = word.toUpperCase();
+			if (!this.couldBeValidSpanishWord(upperWord)) {
+				return false;
+			}
+
+			// Use Google Translate round-trip validation
+			// Translate Spanish -> English -> Spanish
+			const englishTranslation = await this._translateViaAPI(word, 'es', 'en');
+
+			// If no translation or too generic, word might not exist in Spanish
+			if (!englishTranslation ||
+				englishTranslation.trim() === '' ||
+				englishTranslation.toLowerCase().includes('translation') ||
+				englishTranslation.toLowerCase().includes('spanish')) {
+				return false;
+			}
+
+			// Translate back to Spanish
+			const spanishTranslation = await this._translateViaAPI(englishTranslation, 'en', 'es');
+
+			if (!spanishTranslation || spanishTranslation.trim() === '') {
+				return false;
+			}
+
+			// Compare normalized versions since Google may return accented forms
+			// Input words are accent-free (tile-compatible), Google may add accents
+			const inputNormalized = word.toLowerCase(); // Input has no accents (we rejected them above)
+			const googleNormalized = spanishTranslation.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+			// Exact match (input matches Google's response exactly)
+			const exactMatch = inputNormalized === spanishTranslation.toLowerCase();
+
+			// Match after normalizing Google's accented response
+			const normalizedMatch = inputNormalized === googleNormalized;
+
+			// Similarity score for partial matches
+			const similarity = this.calculateWordSimilarity(inputNormalized, googleNormalized);
+
+			// Confidence scoring system
+			let confidence = 0;
+			if (exactMatch) confidence = 100;  // Perfect match (unlikely - Google adds accents)
+			else if (normalizedMatch) confidence = 95;  // Google returned accent-free version or we normalized it
+			else if (similarity >= 0.9) confidence = 85;  // Very similar
+			else if (similarity >= 0.8) confidence = 70;  // Similar
+			else confidence = similarity * 100;  // Raw similarity score
+
+			// Validation rules based on confidence
+			const isValid = confidence >= 80; // Require 80% confidence minimum
+
+			// Enhanced logging
+			const googleHasAccents = spanishTranslation !== googleNormalized;
+			console.log(`Spanish validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
+			console.log(`  Google response: "${spanishTranslation}" (accents: ${googleHasAccents})`);
+			console.log(`  Comparison: "${inputNormalized}" vs "${googleNormalized}", valid: ${isValid}`);
+
+			console.log(`Spanish validation for "${word}": similarity ${(similarity * 100).toFixed(1)}%, translated: "${spanishTranslation}", valid: ${isValid}`);
+
+			return isValid;
+
+		} catch (error) {
+			console.warn('Spanish Google validation failed:', error);
+			return false;
+		}
+	}
+
+	// TILE TRANSFORMATION SYSTEM
+	// Players can transform tiles to create Spanish characters
+	getTileTransformations() {
+		return {
+			// Base tile → Transformed tile
+			'N': 'Ñ',
+			'A': 'Á',
+			'E': 'É',
+			'I': 'Í',
+			'O': 'Ó',
+			'U': 'Ú', // Can also be Ü in some contexts
+		};
+	}
+
+	canTransformTile(tileLetter) {
+		const transforms = this.getTileTransformations();
+		return transforms[tileLetter] !== undefined;
+	}
+
+	transformTile(tileLetter) {
+		const transforms = this.getTileTransformations();
+		return transforms[tileLetter] || tileLetter;
+	}
+
+	getTransformedTilesForWord(word) {
+		// Calculate which tiles need to be transformed to form this word
+		const transforms = this.getTileTransformations();
+		const neededTransforms = [];
+
+		for (let i = 0; i < word.length; i++) {
+			const char = word[i].toUpperCase();
+			// Find if this character requires transformation
+			const baseTile = Object.keys(transforms).find(base => transforms[base] === char);
+			if (baseTile) {
+				neededTransforms.push({
+					position: i,
+					from: baseTile,
+					to: char,
+					available: this.playerRack.some(tile => tile.letter === baseTile)
+				});
+			}
+		}
+
+		return neededTransforms;
+	}
+
+	// Check if player has tiles to form word (considering transformations)
+	canFormWordWithTiles(word, rack = this.playerRack) {
+		if (!word || !rack) return false;
+
+		const tileCounts = {};
+		const transforms = this.getTileTransformations();
+
+		// Count available tiles
+		rack.forEach(tile => {
+			const letter = tile.letter.toUpperCase();
+			tileCounts[letter] = (tileCounts[letter] || 0) + 1;
+		});
+
+		// Check each letter in word
+		for (let i = 0; i < word.length; i++) {
+			const neededChar = word[i].toUpperCase();
+			let tileFound = false;
+
+			// Try exact match first
+			if (tileCounts[neededChar] > 0) {
+				tileCounts[neededChar]--;
+				tileFound = true;
+			} else {
+				// Try transformation (e.g., Ñ needs N, Á needs A)
+				const baseTile = Object.keys(transforms).find(base => transforms[base] === neededChar);
+				if (baseTile && tileCounts[baseTile] > 0) {
+					tileCounts[baseTile]--;
+					tileFound = true;
+				}
+			}
+
+			if (!tileFound) {
+				return false; // Cannot form this letter
+			}
+		}
+
+		return true;
+	}
+
+	// Intelligent error recovery with word suggestions
+	async getWordSuggestions(invalidWord, lang = 'es') {
+		try {
+			const suggestions = [];
+			const upperWord = invalidWord.toUpperCase();
+
+			// Strategy 1: Try common Spanish word variations (tile-playable only)
+			if (lang === 'es') {
+				const accentVariations = this.generateAccentVariations(upperWord);
+				for (const variation of accentVariations) {
+					// Only suggest accent-free words since tiles don't have accents
+					const hasAccents = variation !== variation.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+					if (!hasAccents && await this.validateSpanishWordWithGoogle(variation)) {
+						suggestions.push({
+							word: variation,
+							type: 'accent_variation',
+							confidence: 90
+						});
+					}
+				}
+			}
+
+			// Strategy 2: Try removing/replacing suspicious characters
+			const cleanedWord = upperWord.replace(/[^A-ZÑ]/g, '');
+			if (cleanedWord !== upperWord && cleanedWord.length >= 3) {
+				if (lang === 'es' && await this.validateSpanishWordWithGoogle(cleanedWord)) {
+					suggestions.push({
+						word: cleanedWord,
+						type: 'character_cleaned',
+						confidence: 75
+					});
+				}
+			}
+
+			// Strategy 3: Find similar words from local dictionary
+			const similarWords = this.findSimilarWords(upperWord, lang);
+			for (const similar of similarWords) {
+				if (await this.validateWordWithGoogleAPI(similar, lang)) {
+					suggestions.push({
+						word: similar,
+						type: 'similar_word',
+						confidence: 60
+					});
+				}
+			}
+
+			// Strategy 4: Try Google Translate suggestions
+			try {
+				if (lang === 'es') {
+					const englishGuess = await this._translateViaAPI(upperWord, 'es', 'en');
+					if (englishGuess && !englishGuess.includes('translation')) {
+						// Try to get Spanish suggestions from English
+						const spanishSuggestions = await this._translateViaAPI(englishGuess, 'en', 'es');
+						if (spanishSuggestions && spanishSuggestions !== upperWord) {
+							const variations = this.generateSimilarWords(spanishSuggestions);
+							for (const variation of variations) {
+								if (variation.length >= 3 && await this.validateSpanishWordWithGoogle(variation)) {
+									suggestions.push({
+										word: variation,
+										type: 'translation_suggestion',
+										confidence: 50
+									});
+								}
+							}
+						}
+					}
+				}
+			} catch (e) {
+				// Translation suggestions failed, continue with other strategies
+			}
+
+			// Remove duplicates and sort by confidence
+			const uniqueSuggestions = suggestions.filter((s, index, arr) =>
+				arr.findIndex(x => x.word === s.word) === index
+			).sort((a, b) => b.confidence - a.confidence);
+
+			return uniqueSuggestions.slice(0, 5); // Return top 5 suggestions
+
+		} catch (error) {
+			console.warn('Error generating word suggestions:', error);
+			return [];
+		}
+	}
+
+	generateAccentVariations(word) {
+		// Generate accent variations, but return accent-FREE versions for tile compatibility
+		// This helps suggest the tile-playable version of accented words
+		const variations = [word];
+
+		// Since tiles don't have accents, we suggest the base forms
+		// Google Translate will validate that these mean the same as accented versions
+		const normalized = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+		if (normalized !== word) {
+			variations.push(normalized); // Add the accent-free version
+		}
+
+		// Also try common accent positions for suggestions
+		const accentMap = {
+			'A': 'Á', 'E': 'É', 'I': 'Í', 'O': 'Ó', 'U': 'Ú',
+			'a': 'á', 'e': 'é', 'i': 'í', 'o': 'ó', 'u': 'ú'
+		};
+
+		// Add variations with accents on vowels (for validation purposes)
+		for (let i = 0; i < word.length; i++) {
+			const char = word[i];
+			if (accentMap[char]) {
+				const variation = word.substring(0, i) + accentMap[char] + word.substring(i + 1);
+				variations.push(variation);
+			}
+		}
+
+		return [...new Set(variations)]; // Remove duplicates
+	}
+
+	findSimilarWords(word, lang) {
+		// Find similar words from local dictionary (simplified implementation)
+		const similar = [];
+		const wordLength = word.length;
+
+		// Check local dictionary for words of similar length
+		for (const dictWord of this.dictionary || []) {
+			if (Math.abs(dictWord.length - wordLength) <= 1) {
+				const similarity = this.calculateWordSimilarity(word.toLowerCase(), dictWord.toLowerCase());
+				if (similarity >= 0.7) {
+					similar.push(dictWord);
+				}
+			}
+		}
+
+		return similar.slice(0, 3);
+	}
+
+	generateSimilarWords(baseWord) {
+		// Generate slight variations of a word
+		const variations = [baseWord];
+		const length = baseWord.length;
+
+		// Remove one character variations
+		for (let i = 0; i < length; i++) {
+			variations.push(baseWord.substring(0, i) + baseWord.substring(i + 1));
+		}
+
+		// Add one character variations (common letters)
+		const commonLetters = 'AEIOUNRLST';
+		for (let i = 0; i <= length; i++) {
+			for (const letter of commonLetters) {
+				variations.push(baseWord.substring(0, i) + letter + baseWord.substring(i));
+			}
+		}
+
+		return [...new Set(variations)].filter(w => w.length >= 3 && w.length <= 15);
+	}
+
+	async validateOtherLanguageWord(word, targetLang) {
+		// Language-specific validation strategies
+		switch (targetLang) {
+			case 'fr':
+				return await this.validateFrenchWord(word);
+			case 'zh':
+				return await this.validateChineseWord(word);
+			case 'de':
+				return await this.validateGermanWord(word);
+			default:
+				// Generic round-trip validation for other languages
+				return await this.validateWithRoundTrip(word, targetLang);
+		}
+	}
+
+	async validateFrenchWord(word) {
+		try {
+			// Check for obviously invalid French patterns
+			if (!this.isBasicValidForLanguage(word, 'fr')) {
+				return false;
+			}
+
+			// Use round-trip validation: French -> English -> French
+			const englishTranslation = await this._translateViaAPI(word, 'fr', 'en');
+			if (!englishTranslation) return false;
+
+			const frenchTranslation = await this._translateViaAPI(englishTranslation, 'en', 'fr');
+			if (!frenchTranslation) return false;
+
+			// French words often have consistent translations
+			const similarity = this.calculateWordSimilarity(
+				word.toLowerCase(),
+				frenchTranslation.toLowerCase()
+			);
+
+			console.log(`French validation for "${word}": similarity ${similarity}`);
+
+			return similarity >= 0.6; // Slightly lower threshold for French
+
+		} catch (error) {
+			console.warn('French validation failed:', error);
+			return this.isBasicValidForLanguage(word, 'fr');
+		}
+	}
+
+	async validateChineseWord(word) {
+		// Chinese validation is trickier since Google Translate works with characters
+		// For now, use basic validation and check against common patterns
+		try {
+			if (!this.isBasicValidForLanguage(word, 'zh')) {
+				return false;
+			}
+
+			// Check if it's in a basic Chinese dictionary (simplified for now)
+			// In a full implementation, you'd want a proper Chinese dictionary API
+			const commonChineseWords = [
+				'一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
+				'人', '大', '小', '中', '国', '天', '地', '水', '火', '山'
+			];
+
+			// For single characters, check if they're common
+			if (word.length === 1) {
+				return commonChineseWords.includes(word);
+			}
+
+			// For longer words, use translation validation
+			const englishTranslation = await this._translateViaAPI(word, 'zh', 'en');
+			return englishTranslation && englishTranslation.trim() !== '';
+
+		} catch (error) {
+			console.warn('Chinese validation failed:', error);
+			return word.length >= 1; // Very basic fallback
+		}
+	}
+
+	async validateGermanWord(word) {
+		try {
+			if (!this.isBasicValidForLanguage(word, 'de')) {
+				return false;
+			}
+
+			// German round-trip validation
+			const englishTranslation = await this._translateViaAPI(word, 'de', 'en');
+			if (!englishTranslation) return false;
+
+			const germanTranslation = await this._translateViaAPI(englishTranslation, 'en', 'de');
+			if (!germanTranslation) return false;
+
+			const similarity = this.calculateWordSimilarity(
+				word.toLowerCase(),
+				germanTranslation.toLowerCase()
+			);
+
+			return similarity >= 0.7;
+
+		} catch (error) {
+			console.warn('German validation failed:', error);
+			return this.isBasicValidForLanguage(word, 'de');
+		}
+	}
+
+	async validateWithRoundTrip(word, targetLang) {
+		// Generic round-trip validation for any language
+		try {
+			const englishTranslation = await this._translateViaAPI(word, targetLang, 'en');
+			if (!englishTranslation) return false;
+
+			const backTranslation = await this._translateViaAPI(englishTranslation, 'en', targetLang);
+			if (!backTranslation) return false;
+
+			const similarity = this.calculateWordSimilarity(
+				word.toLowerCase(),
+				backTranslation.toLowerCase()
+			);
+
+			return similarity >= 0.7;
+
+		} catch (error) {
+			console.warn(`${targetLang} validation failed:`, error);
+			return this.isBasicValidForLanguage(word, targetLang);
+		}
+	}
+
+	calculateWordSimilarity(word1, word2) {
+		// Simple Levenshtein distance-based similarity
+		if (word1 === word2) return 1.0;
+
+		const longer = word1.length > word2.length ? word1 : word2;
+		const shorter = word1.length > word2.length ? word2 : word1;
+
+		if (longer.length === 0) return 1.0;
+
+		const distance = this.levenshteinDistance(longer, shorter);
+		return (longer.length - distance) / longer.length;
+	}
+
+	levenshteinDistance(str1, str2) {
+		const matrix = [];
+		for (let i = 0; i <= str2.length; i++) {
+			matrix[i] = [i];
+		}
+		for (let j = 0; j <= str1.length; j++) {
+			matrix[0][j] = j;
+		}
+		for (let i = 1; i <= str2.length; i++) {
+			for (let j = 1; j <= str1.length; j++) {
+				if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+					matrix[i][j] = matrix[i - 1][j - 1];
+				} else {
+					matrix[i][j] = Math.min(
+						matrix[i - 1][j - 1] + 1, // substitution
+						matrix[i][j - 1] + 1,     // insertion
+						matrix[i - 1][j] + 1      // deletion
+					);
+				}
+			}
+		}
+		return matrix[str2.length][str1.length];
+	}
+
+	// Keep the old function for backward compatibility but make it much more targeted
+
+	async validateSpanishWordWithAPI(word) {
+		try {
+			// Use the new Google API validation system
+			const isValid = await this.validateWordWithGoogleAPI(word, 'es');
+
+			// Cache the result for future sync checks
+			if (!this.validationCache) {
+				this.validationCache = {};
+			}
+			this.validationCache[`spanish_validation_${word.toLowerCase()}`] = isValid;
+
+			return isValid;
+		} catch (error) {
+			console.warn('Spanish API validation failed for', word, ':', error);
+			// Fall back to basic validation
 			return this.couldBeValidSpanishWord(word);
 		}
 	}
@@ -8468,26 +9276,9 @@ calculateScore() {
 	}
 
 	_translateWordToEnglish(word) {
-		if (!word) return word;
-
-		// Fallback dictionary for when API fails
-		const translations = {
-			// Words mentioned by user
-			'DESLEIR': 'dissolve',
-			'ATANE': 'attacks',
-			'NOVOA': 'new',
-			'NOMAS': 'just',
-
-			// Common Spanish Scrabble words
-			'PERRO': 'dog',
-			'GATO': 'cat',
-			'CASA': 'house',
-			'AGUA': 'water',
-			'PAN': 'bread'
-		};
-
-		const upperWord = word.toUpperCase();
-		return translations[upperWord] || null; // Return translation or null
+		// Since we removed the hardcoded translations, return null
+		// The Google Translate API should handle all translation needs
+		return null;
 	}
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {

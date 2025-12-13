@@ -842,3 +842,64 @@ button:active,
   -ms-user-select: text !important;
   user-select: text !important;
 }
+
+/* TILE TRANSFORMATION SYSTEM */
+.transform-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 10px;
+  background: rgba(255, 193, 7, 0.8);
+  color: #000;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.transform-indicator.transformed {
+  background: rgba(76, 175, 80, 0.9);
+  animation: transformPulse 0.6s ease-out;
+}
+
+@keyframes transformPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.tile-transformed {
+  animation: tileTransformGlow 0.5s ease-out;
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+}
+
+@keyframes tileTransformGlow {
+  0% { box-shadow: 0 0 0 rgba(255, 193, 7, 0.6); }
+  50% { box-shadow: 0 0 15px rgba(255, 193, 7, 0.8); }
+  100% { box-shadow: 0 0 0 rgba(255, 193, 7, 0.6); }
+}
+
+/* Long press feedback */
+.tile:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Spanish mode indicators */
+spanish-mode .tile .transform-indicator {
+  opacity: 1;
+}
+
+spanish-mode .tile .transform-indicator::before {
+  content: "⚡";
+  animation: spark 2s infinite;
+}
+
+@keyframes spark {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
