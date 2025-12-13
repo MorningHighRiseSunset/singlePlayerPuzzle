@@ -7728,37 +7728,61 @@ formedWords.forEach((wordInfo) => {
     // Context-aware word validation with detailed results
     async validateWordInContext(word, wordInfo, isMainWord) {
         const upperWord = word.toUpperCase();
+        const cacheKey = `validation_${this.preferredLang || 'en'}_${word.toLowerCase()}`;
+
+        // Check cache first (fastest)
+        if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
+            const cached = this.validationCache[cacheKey];
+            return {
+                isValid: cached,
+                confidence: cached ? 90 : 0,
+                reason: cached ? 'Cached: valid' : 'Cached: invalid',
+                layer: 'cache'
+            };
+        }
 
         // Layer 1: Basic validation (fastest)
         if (!this.isBasicValidForLanguage(upperWord, this.preferredLang || 'en')) {
-            return {
-                isValid: false,
-                confidence: 0,
-                reason: 'Invalid characters or pattern',
-                layer: 'basic'
-            };
+            const result = { isValid: false, confidence: 0, reason: 'Invalid characters or pattern', layer: 'basic' };
+            // Cache negative results too
+            if (!this.validationCache) this.validationCache = {};
+            this.validationCache[cacheKey] = false;
+            return result;
         }
 
         // Layer 2: Local dictionary check
         if (this.activeDictionary.has(word)) {
-            return {
-                isValid: true,
-                confidence: 95,
-                reason: 'Found in local dictionary',
-                layer: 'local'
-            };
+            const result = { isValid: true, confidence: 95, reason: 'Found in local dictionary', layer: 'local' };
+            // Cache positive results
+            if (!this.validationCache) this.validationCache = {};
+            this.validationCache[cacheKey] = true;
+            return result;
         }
 
-        // Layer 3: API validation (slowest, most accurate)
+        // Layer 3: API validation (slowest, most accurate) - with timeout
         try {
             const lang = this.preferredLang || 'en';
             let apiValid = false;
             let apiConfidence = 0;
 
             if (lang === 'es') {
-                const result = await this.validateSpanishWordWithGoogle(upperWord);
-                apiValid = result;
-                apiConfidence = result ? 90 : 0;
+                // Add timeout to prevent hanging
+                const validationPromise = this.validateSpanishWordWithGoogle(upperWord);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Validation timeout')), 5000)
+                );
+                
+                try {
+                    const result = await Promise.race([validationPromise, timeoutPromise]);
+                    apiValid = result;
+                    apiConfidence = result ? 90 : 0;
+                } catch (timeoutError) {
+                    // Timeout - fallback to basic validation
+                    if (this.showAIDebug) console.warn(`Validation timeout for ${word}, using fallback`);
+                    const basicValid = this.couldBeValidSpanishWord(upperWord);
+                    apiValid = basicValid;
+                    apiConfidence = basicValid ? 60 : 0;
+                }
             } else {
                 // For other languages, use basic validation for now
                 apiValid = this.isBasicValidForLanguage(upperWord, lang);
@@ -7770,6 +7794,10 @@ formedWords.forEach((wordInfo) => {
                 apiConfidence += 5;
             }
 
+            // Cache API results
+            if (!this.validationCache) this.validationCache = {};
+            this.validationCache[cacheKey] = apiValid;
+
             return {
                 isValid: apiValid,
                 confidence: Math.min(100, apiConfidence),
@@ -7778,15 +7806,19 @@ formedWords.forEach((wordInfo) => {
             };
 
         } catch (error) {
-            console.warn(`API validation failed for ${word}:`, error);
+            if (this.showAIDebug) console.warn(`API validation failed for ${word}:`, error);
             // Fallback to basic validation
             const basicValid = this.couldBeValidSpanishWord(upperWord);
-            return {
+            const result = {
                 isValid: basicValid,
                 confidence: basicValid ? 60 : 0,
                 reason: 'API failed, using basic validation',
                 layer: 'fallback'
             };
+            // Cache fallback results
+            if (!this.validationCache) this.validationCache = {};
+            this.validationCache[cacheKey] = basicValid;
+            return result;
         }
     }
 
@@ -8799,16 +8831,25 @@ calculateScore() {
 
 	async validateSpanishWordWithGoogle(word) {
 		try {
+			// Check cache first to avoid duplicate API calls
+			const cacheKey = `spanish_api_${word.toLowerCase()}`;
+			if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
+				return this.validationCache[cacheKey];
+			}
+
 			// Stricter Spanish validation with multiple checks
 
 			// TILE TRANSFORMATION SYSTEM: Players can transform tiles for Spanish characters
-	// Allow words with Ñ and accented vowels since players can transform tiles:
-	// N → Ñ, A → Á, E → É, I → Í, O → Ó, U → Ú/Ü
-	// Validation passes through - tile transformation is handled during word formation
+			// Allow words with Ñ and accented vowels since players can transform tiles:
+			// N → Ñ, A → Á, E → É, I → Í, O → Ó, U → Ú/Ü
+			// Validation passes through - tile transformation is handled during word formation
 
 			// First, ensure basic Spanish word requirements
 			const upperWord = word.toUpperCase();
 			if (!this.couldBeValidSpanishWord(upperWord)) {
+				// Cache negative result
+				if (!this.validationCache) this.validationCache = {};
+				this.validationCache[cacheKey] = false;
 				return false;
 			}
 
@@ -8853,21 +8894,42 @@ calculateScore() {
 			else if (similarity >= 0.8) confidence = 70;  // Similar
 			else confidence = similarity * 100;  // Raw similarity score
 
-			// Validation rules based on confidence
-			const isValid = confidence >= 80; // Require 80% confidence minimum
+			// Stricter validation: Require high confidence AND word must match closely
+			// Reject words where Google translates to something completely different
+			// This catches cases like "BISONE" → "bison" → "bisonte" (different word)
+			let isValid = false;
+			
+			if (normalizedMatch) {
+				// Perfect normalized match - accept with 85%+ confidence
+				isValid = confidence >= 85;
+			} else if (similarity >= 0.95) {
+				// Very high similarity (95%+) - might be valid with accents
+				isValid = confidence >= 90;
+			} else {
+				// Too different - reject
+				isValid = false;
+			}
 
-			// Enhanced logging
-			const googleHasAccents = spanishTranslation !== googleNormalized;
-			console.log(`Spanish validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
-			console.log(`  Google response: "${spanishTranslation}" (accents: ${googleHasAccents})`);
-			console.log(`  Comparison: "${inputNormalized}" vs "${googleNormalized}", valid: ${isValid}`);
+			// Enhanced logging (only in debug mode to reduce console spam)
+			if (this.showAIDebug) {
+				const googleHasAccents = spanishTranslation !== googleNormalized;
+				console.log(`Spanish validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
+				console.log(`  Google response: "${spanishTranslation}" (accents: ${googleHasAccents})`);
+				console.log(`  Comparison: "${inputNormalized}" vs "${googleNormalized}", valid: ${isValid}`);
+			}
 
-			console.log(`Spanish validation for "${word}": similarity ${(similarity * 100).toFixed(1)}%, translated: "${spanishTranslation}", valid: ${isValid}`);
+			// Cache result
+			if (!this.validationCache) this.validationCache = {};
+			this.validationCache[cacheKey] = isValid;
 
 			return isValid;
 
 		} catch (error) {
-			console.warn('Spanish Google validation failed:', error);
+			if (this.showAIDebug) console.warn('Spanish Google validation failed:', error);
+			// Cache negative result on error
+			const cacheKey = `spanish_api_${word.toLowerCase()}`;
+			if (!this.validationCache) this.validationCache = {};
+			this.validationCache[cacheKey] = false;
 			return false;
 		}
 	}
