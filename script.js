@@ -6995,7 +6995,15 @@ formedWords.forEach((wordInfo) => {
 
 		// TILE TRANSFORMATION SYSTEM
 		const canTransform = this.canTransformTile(tile.letter);
+		const reverseTransforms = this.getReverseTransformations();
+		const isTransformed = reverseTransforms[tile.letter] !== undefined;
+		// Show ⚡ indicator for any tile that can be transformed/reversed
 		const transformIndicator = canTransform ? '<span class="transform-indicator">⚡</span>' : '';
+		
+		// Debug: Log if indicator should show for transformed tiles
+		if (isTransformed && !canTransform) {
+			console.warn(`[Tile] Transformed tile ${tile.letter} cannot transform - this shouldn't happen!`);
+		}
 
 		tileElement.innerHTML = `
                     ${tile.letter}
@@ -7056,8 +7064,13 @@ formedWords.forEach((wordInfo) => {
 				}, doubleTapDelay);
 			});
 
-			// Enhanced tooltip for both desktop and mobile
-			tileElement.title = `Double-click (PC) or double-tap (mobile) to transform ${tile.letter} → ${this.transformTile(tile.letter)}`;
+			// Enhanced tooltip for both desktop and mobile - show correct direction
+			const nextLetter = this.transformTile(tile.letter);
+			if (isTransformed) {
+				tileElement.title = `Double-click (PC) or double-tap (mobile) to reverse ${tile.letter} → ${nextLetter}`;
+			} else {
+				tileElement.title = `Double-click (PC) or double-tap (mobile) to transform ${tile.letter} → ${nextLetter}`;
+			}
 		}
 
 		return tileElement;
@@ -7130,29 +7143,49 @@ formedWords.forEach((wordInfo) => {
 
 	transformTileElement(tileElement, tile) {
 		const currentLetter = tile.letter;
-		const transformedLetter = this.transformTile(currentLetter);
+		const newLetter = this.transformTile(currentLetter);
 
-		if (currentLetter === transformedLetter) return; // No transformation available
-		// Update tile data
-		tile.letter = transformedLetter;
-		tileElement.innerHTML = `
-			${transformedLetter}
-			<span class="points">${tile.value}</span>
-			${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-			<span class="transform-indicator transformed">✨</span>
-		`;
-
-		// Update tooltip
-		tileElement.title = `Transformed! ${currentLetter} → ${transformedLetter}`;
-
-		// Visual feedback
-		tileElement.classList.add('tile-transformed');
-		setTimeout(() => tileElement.classList.remove('tile-transformed'), 500);
-
-		// Update rack display
+		if (currentLetter === newLetter) return; // No transformation available
+		
+		// Update tile data FIRST - this is critical for renderRack() to work correctly
+		// Find the tile in playerRack and update it directly to ensure the reference is correct
+		const rackIndex = this.playerRack.findIndex(t => t.id === tile.id);
+		if (rackIndex !== -1) {
+			this.playerRack[rackIndex].letter = newLetter;
+		}
+		// Also update the passed tile object
+		tile.letter = newLetter;
+		
+		// Check if this is a reverse transformation (transformed back to base)
+		const reverseTransforms = this.getReverseTransformations();
+		const isReversed = reverseTransforms[currentLetter] !== undefined;
+		
+		// Verify the new letter can be transformed/reversed (should always be true for our tiles)
+		const canStillTransform = this.canTransformTile(newLetter);
+		if (!canStillTransform) {
+			console.error(`[Transform] ERROR: Transformed tile ${newLetter} cannot be transformed/reversed! This is a bug.`);
+		}
+		
+		// Update rack display - this will recreate tiles with the updated letter
+		// and createTileElement will show the ⚡ indicator for transformed tiles
 		this.renderRack();
-
-		console.log(`🔄 Tile transformed: ${currentLetter} → ${transformedLetter}`);
+		
+		// Verify the indicator is showing after render
+		setTimeout(() => {
+			const rack = document.getElementById("tile-rack");
+			const transformedTileElement = Array.from(rack.children).find(el => {
+				const idx = parseInt(el.dataset.index);
+				return idx === rackIndex && this.playerRack[idx]?.letter === newLetter;
+			});
+			if (transformedTileElement) {
+				const hasIndicator = transformedTileElement.querySelector('.transform-indicator');
+				if (!hasIndicator && canStillTransform) {
+					console.warn(`[Transform] Indicator missing for transformed tile ${newLetter}!`);
+				}
+			}
+		}, 100);
+		
+		console.log(`🔄 Tile ${isReversed ? 'reversed' : 'transformed'}: ${currentLetter} → ${newLetter} (can reverse: ${canStillTransform})`);
 	}
 
 	isValidPlacement(row, col, tile) {
@@ -8806,13 +8839,33 @@ calculateScore() {
 		};
 	}
 
+	getReverseTransformations() {
+		return {
+			// Transformed tile → Base tile
+			'Ñ': 'N',
+			'Á': 'A',
+			'É': 'E',
+			'Í': 'I',
+			'Ó': 'O',
+			'Ú': 'U',
+			'Ü': 'U', // Ü also maps back to U
+		};
+	}
+
 	canTransformTile(tileLetter) {
 		const transforms = this.getTileTransformations();
-		return transforms[tileLetter] !== undefined;
+		const reverseTransforms = this.getReverseTransformations();
+		// Can transform if it's a base letter OR if it's already transformed (can reverse)
+		return transforms[tileLetter] !== undefined || reverseTransforms[tileLetter] !== undefined;
 	}
 
 	transformTile(tileLetter) {
 		const transforms = this.getTileTransformations();
+		const reverseTransforms = this.getReverseTransformations();
+		// If it's already transformed, reverse it; otherwise transform forward
+		if (reverseTransforms[tileLetter]) {
+			return reverseTransforms[tileLetter];
+		}
 		return transforms[tileLetter] || tileLetter;
 	}
 

@@ -44,20 +44,20 @@ document.addEventListener("DOMContentLoaded", () => {
         button.appendChild(textSpan);
         button.style.cssText = `
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            justify-content: center;
-            gap: 4px;
-            padding: 8px 6px;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 8px 12px;
             border: 2px solid #1976d2;
             border-radius: 8px;
             background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
             color: #1976d2;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 65px;
+            min-height: 50px;
             width: 100%;
-            max-width: 120px;
+            max-width: 200px;
         `;
 
         // Hover effects
@@ -109,13 +109,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const style = document.createElement('style');
     style.textContent = `
         #language-buttons {
-            grid-template-columns: repeat(5, 1fr) !important;
-            gap: 12px !important;
-            max-width: 750px !important;
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+            max-width: 220px !important;
             justify-items: center !important;
         }
         .flag-emoji {
-            font-size: 28px !important;
+            font-size: 20px !important;
             line-height: 1 !important;
             display: inline-block !important;
             font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne", "Segoe UI Symbol", "Noto Emoji", sans-serif !important;
@@ -129,37 +129,25 @@ document.addEventListener("DOMContentLoaded", () => {
             direction: ltr !important;
             font-variant-emoji: emoji !important;
             -webkit-text-size-adjust: 100% !important;
-            min-height: 28px !important;
+            flex-shrink: 0 !important;
         }
         .lang-text {
-            font-size: 10px !important;
-            text-align: center !important;
-            line-height: 1.2 !important;
+            font-size: 12px !important;
+            text-align: left !important;
+            line-height: 1.3 !important;
             word-break: break-word !important;
             font-weight: 600 !important;
-        }
-        @media (max-width: 768px) {
-            #language-buttons {
-                grid-template-columns: repeat(3, 1fr) !important;
-                gap: 10px !important;
-            }
-            .flag-emoji {
-                font-size: 24px !important;
-            }
-            .lang-text {
-                font-size: 9px !important;
-            }
+            flex: 1 !important;
         }
         @media (max-width: 480px) {
             #language-buttons {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 8px !important;
+                max-width: 100% !important;
             }
             .flag-emoji {
-                font-size: 22px !important;
+                font-size: 18px !important;
             }
             .lang-text {
-                font-size: 8px !important;
+                font-size: 11px !important;
             }
         }
     `;
