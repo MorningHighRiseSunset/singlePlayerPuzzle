@@ -1,10 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Language configuration with flags and labels
     const languages = [
-        { code: 'en', flag: '🇺🇸', name: 'English', label: 'Puzzle' },
-        { code: 'es', flag: '🇪🇸', name: 'Spanish', label: 'Rompecabezas' },
-        { code: 'zh', flag: '🇨🇳', name: 'Chinese', label: '拼图' },
-        { code: 'fr', flag: '🇫🇷', name: 'French', label: 'Puzzle' }
+        { code: 'en', flag: '🇺🇸', name: 'English', nameNative: 'English', label: 'Puzzle' },
+        { code: 'es', flag: '🇪🇸', name: 'Spanish', nameNative: 'Español', label: 'Rompecabezas' },
+        { code: 'zh', flag: '🇨🇳', name: 'Mandarin', nameNative: '中文', label: '拼图' },
+        { code: 'fr', flag: '🇫🇷', name: 'French', nameNative: 'Français', label: 'Puzzle' },
+        { code: 'hi', flag: '🇮🇳', name: 'Hindi', nameNative: 'हिन्दी', label: 'पहेली' }
     ];
 
     // Create language buttons
@@ -16,26 +17,47 @@ document.addEventListener("DOMContentLoaded", () => {
         button.className = 'language-btn';
         button.dataset.lang = lang.code;
         button.dataset.label = lang.label;
-        button.innerHTML = `
-            <span class="flag-emoji">${lang.flag}</span>
-            <span class="lang-text">Play in ${lang.name}</span>
-        `;
+        // Get play text entirely in target language
+        const playTexts = {
+            'en': 'Play in English',
+            'es': 'Jugar en Español',
+            'zh': '用中文玩',
+            'fr': 'Jouer en Français',
+            'hi': 'हिन्दी में खेलें'
+        };
+        const playText = playTexts[lang.code] || 'Play in English';
+
+        // Create flag element with proper Unicode
+        const flagSpan = document.createElement('span');
+        flagSpan.className = 'flag-emoji';
+        flagSpan.textContent = lang.flag; // Use textContent to ensure proper emoji rendering
+        flagSpan.setAttribute('aria-label', lang.name);
+        
+        // Create text element
+        const textSpan = document.createElement('span');
+        textSpan.className = 'lang-text';
+        textSpan.textContent = playText;
+        
+        // Clear and append
+        button.innerHTML = '';
+        button.appendChild(flagSpan);
+        button.appendChild(textSpan);
         button.style.cssText = `
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 16px 12px;
+            gap: 4px;
+            padding: 8px 6px;
             border: 2px solid #1976d2;
-            border-radius: 12px;
+            border-radius: 8px;
             background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
             color: #1976d2;
-            font-size: 14px;
-            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 80px;
+            min-height: 65px;
+            width: 100%;
+            max-width: 120px;
         `;
 
         // Hover effects
@@ -83,28 +105,61 @@ document.addEventListener("DOMContentLoaded", () => {
         languageButtonsContainer.appendChild(button);
     });
 
-    // Flag emoji styling
+    // Flag emoji styling and grid layout
     const style = document.createElement('style');
     style.textContent = `
+        #language-buttons {
+            grid-template-columns: repeat(5, 1fr) !important;
+            gap: 12px !important;
+            max-width: 750px !important;
+            justify-items: center !important;
+        }
         .flag-emoji {
-            font-size: 32px;
-            line-height: 1;
-            display: block;
+            font-size: 28px !important;
+            line-height: 1 !important;
+            display: inline-block !important;
+            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne", "Segoe UI Symbol", "Noto Emoji", sans-serif !important;
+            -webkit-font-feature-settings: normal !important;
+            font-feature-settings: normal !important;
+            font-style: normal !important;
+            text-rendering: optimizeLegibility !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            unicode-bidi: normal !important;
+            direction: ltr !important;
+            font-variant-emoji: emoji !important;
+            -webkit-text-size-adjust: 100% !important;
+            min-height: 28px !important;
         }
         .lang-text {
-            font-size: 13px;
-            text-align: center;
-            line-height: 1.2;
+            font-size: 10px !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            word-break: break-word !important;
+            font-weight: 600 !important;
         }
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
+            #language-buttons {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 10px !important;
+            }
             .flag-emoji {
-                font-size: 28px;
+                font-size: 24px !important;
             }
             .lang-text {
-                font-size: 12px;
+                font-size: 9px !important;
             }
+        }
+        @media (max-width: 480px) {
             #language-buttons {
                 grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+            .flag-emoji {
+                font-size: 22px !important;
+            }
+            .lang-text {
+                font-size: 8px !important;
             }
         }
     `;
