@@ -702,6 +702,17 @@ class ScrabbleGame {
 
 		const wordLower = String(word).toLowerCase();
 
+		// Stricter validation for Spanish: Reject 2-letter words (they're often just syllables)
+		// In Spanish Scrabble, 2-letter words like "NI", "DE", "EL" are technically valid
+		// but can make the game too easy. Require 3+ letters for better gameplay.
+		if (lang === 'es' && word.length === 2) {
+			// Only allow common 2-letter Spanish words that are actual words, not just syllables
+			const allowedTwoLetterWords = new Set(['el', 'la', 'un', 'de', 'en', 'es', 'se', 'le', 'te', 'me', 'lo', 'al', 'si', 'no', 'ya']);
+			if (!allowedTwoLetterWords.has(wordLower)) {
+				return false; // Reject uncommon 2-letter words
+			}
+		}
+
 		// Always check local dictionary first
 		if (this.activeDictionary.has(wordLower)) {
 			return true;
@@ -7111,16 +7122,10 @@ formedWords.forEach((wordInfo) => {
 		rack.innerHTML = "";
 
 		this.playerRack.forEach((tile, index) => {
-			const tileElement = document.createElement("div");
-			tileElement.className = "tile";
-			tileElement.dataset.index = index;
-			tileElement.dataset.id = tile.id;
-			tileElement.innerHTML = `
-                ${tile.letter}
-                <span class="points">${tile.value}</span>
-                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-            `;
-			// DO NOT set draggable or add any drag/touch logic
+			// Use createTileElement to get transformation functionality
+			// But we need to make it non-draggable for the rack
+			const tileElement = this.createTileElement(tile, index);
+			tileElement.draggable = false; // Rack tiles shouldn't be draggable
 			rack.appendChild(tileElement);
 		});
 	}
