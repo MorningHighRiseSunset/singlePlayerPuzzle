@@ -942,3 +942,31 @@ spanish-mode .tile .transform-indicator::before {
 .transformation-menu > div:hover:not(:first-child) {
   background-color: #e3f2fd !important;
 }
+
+/* Language Selection Buttons */
+.language-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.language-btn.selected {
+  animation: buttonPulse 0.3s ease-out;
+}
+
+@keyframes buttonPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.language-btn:active {
+  transform: scale(0.98);
+}
+
+/* Ensure flag emojis display correctly on all platforms */
+.flag-emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-style: normal;
+  -webkit-font-feature-settings: normal;
+  font-feature-settings: normal;
+}

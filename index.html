@@ -129,15 +129,11 @@
           </div>
         </div>
       </div>
-      <div style="margin:10px 0; display:flex; gap:8px; align-items:center; justify-content:center; flex-direction:column;">
-        <select id="language-select" style="min-width:180px; padding:8px; border-radius:8px;">
-          <option value="" disabled selected>Select Language</option>
-          <option value="en" data-label="Puzzle">English</option>
-          <option value="es" data-label="Rompecabezas">Español</option>
-          <option value="zh" data-label="拼图">中文</option>
-          <option value="fr" data-label="Puzzle">Français</option>
-        </select>
-        <button class="start-btn">Start Game</button>
+      <div style="margin:20px 0; display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div id="language-buttons" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; width:100%; max-width:600px; padding:0 20px;">
+          <!-- Language buttons will be generated here -->
+        </div>
+        <button class="start-btn" style="display:none;">Start Game</button>
       </div>
     </div>
     <script src="homeScreen.js"></script>

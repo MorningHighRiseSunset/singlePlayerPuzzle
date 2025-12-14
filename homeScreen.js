@@ -1,10 +1,119 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const playBtn = document.querySelector(".start-btn");
-    const board = document.querySelector(".mini-scrabble-board");
-    const homeContainer = document.querySelector(".home-container");
+    // Language configuration with flags and labels
+    const languages = [
+        { code: 'en', flag: '🇺🇸', name: 'English', label: 'Puzzle' },
+        { code: 'es', flag: '🇪🇸', name: 'Spanish', label: 'Rompecabezas' },
+        { code: 'zh', flag: '🇨🇳', name: 'Chinese', label: '拼图' },
+        { code: 'fr', flag: '🇫🇷', name: 'French', label: 'Puzzle' }
+    ];
 
-    playBtn.addEventListener("click", function (e) {
-        e.preventDefault();
+    // Create language buttons
+    const languageButtonsContainer = document.getElementById('language-buttons');
+    let selectedLanguage = null;
+
+    languages.forEach(lang => {
+        const button = document.createElement('button');
+        button.className = 'language-btn';
+        button.dataset.lang = lang.code;
+        button.dataset.label = lang.label;
+        button.innerHTML = `
+            <span class="flag-emoji">${lang.flag}</span>
+            <span class="lang-text">Play in ${lang.name}</span>
+        `;
+        button.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 12px;
+            border: 2px solid #1976d2;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
+            color: #1976d2;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 80px;
+        `;
+
+        // Hover effects
+        button.addEventListener('mouseenter', () => {
+            if (!button.classList.contains('selected')) {
+                button.style.background = 'linear-gradient(145deg, #e3f2fd 0%, #bbdefb 100%)';
+                button.style.transform = 'translateY(-2px)';
+                button.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
+            }
+        });
+
+        button.addEventListener('mouseleave', () => {
+            if (!button.classList.contains('selected')) {
+                button.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
+                button.style.transform = 'translateY(0)';
+                button.style.boxShadow = 'none';
+            }
+        });
+
+        // Click handler
+        button.addEventListener('click', () => {
+            // Remove selection from all buttons
+            document.querySelectorAll('.language-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
+                btn.style.borderColor = '#1976d2';
+                btn.style.color = '#1976d2';
+            });
+
+            // Select this button
+            button.classList.add('selected');
+            button.style.background = 'linear-gradient(145deg, #1976d2 0%, #1565c0 100%)';
+            button.style.borderColor = '#0d47a1';
+            button.style.color = '#ffffff';
+            button.style.boxShadow = '0 4px 16px rgba(25, 118, 210, 0.4)';
+
+            selectedLanguage = lang;
+            
+            // Auto-start game after selection
+            setTimeout(() => {
+                startGame(lang);
+            }, 300);
+        });
+
+        languageButtonsContainer.appendChild(button);
+    });
+
+    // Flag emoji styling
+    const style = document.createElement('style');
+    style.textContent = `
+        .flag-emoji {
+            font-size: 32px;
+            line-height: 1;
+            display: block;
+        }
+        .lang-text {
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        @media (max-width: 600px) {
+            .flag-emoji {
+                font-size: 28px;
+            }
+            .lang-text {
+                font-size: 12px;
+            }
+            #language-buttons {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    function startGame(lang) {
+        const board = document.querySelector(".mini-scrabble-board");
+        const homeContainer = document.querySelector(".home-container");
+        const selectedButton = document.querySelector(`.language-btn[data-lang="${lang.code}"]`);
 
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
@@ -35,11 +144,16 @@ document.addEventListener("DOMContentLoaded", () => {
             tile.textContent = l.letter;
             document.body.appendChild(tile);
 
-            // Start at play button
-            const btnRect = playBtn.getBoundingClientRect();
+            // Start at selected language button (or center if button not found)
+            const startRect = selectedButton ? selectedButton.getBoundingClientRect() : {
+                left: window.innerWidth / 2,
+                top: window.innerHeight / 2,
+                width: 0,
+                height: 0
+            };
             tile.style.position = "fixed";
-            tile.style.left = `${btnRect.left + btnRect.width / 2 - tileSize / 2}px`;
-            tile.style.top = `${btnRect.top + btnRect.height / 2 - tileSize / 2}px`;
+            tile.style.left = `${startRect.left + startRect.width / 2 - tileSize / 2}px`;
+            tile.style.top = `${startRect.top + startRect.height / 2 - tileSize / 2}px`;
             tile.style.width = `${tileSize}px`;
             tile.style.height = `${tileSize}px`;
             tile.style.background = "linear-gradient(145deg, #e3eafc 70%, #b6c7e6 100%)";
@@ -60,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 const cellRect = l.cell.getBoundingClientRect();
                 tile.style.opacity = "1";
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1.1)`;
+                tile.style.transform = `translate(${cellRect.left - (startRect.left + startRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (startRect.top + startRect.height / 2 - tileSize / 2)}px) scale(1.1)`;
             }, 100 + i * 120);
 
             // Add a little bounce
@@ -71,29 +185,23 @@ document.addEventListener("DOMContentLoaded", () => {
             // Settle back to normal scale (but stay on board)
             setTimeout(() => {
                 const cellRect = l.cell.getBoundingClientRect();
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1)`;
+                tile.style.transform = `translate(${cellRect.left - (startRect.left + startRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (startRect.top + startRect.height / 2 - tileSize / 2)}px) scale(1)`;
             }, 1000 + i * 120);
         });
 
         // --- SPEECH: Enthusiastic "Puzzle!" in selected language ---
         window.speechSynthesis.cancel();
-        const sel = document.getElementById('language-select');
-        let lang = (sel && sel.value) ? sel.value : 'en';
-        let label = 'Puzzle';
-        if (sel) {
-            const opt = sel.options[sel.selectedIndex];
-            label = opt.getAttribute('data-label') || 'Puzzle';
-        }
+        const label = lang.label || 'Puzzle';
         const voices = window.speechSynthesis.getVoices();
         // Try to find a voice matching the selected language
-        let chosenVoice = voices.find(v => v.lang.startsWith(lang));
+        let chosenVoice = voices.find(v => v.lang.startsWith(lang.code));
         // Prefer female voice if available
-        if (chosenVoice && voices.filter(v => v.lang.startsWith(lang)).length > 1) {
-            const female = voices.filter(v => v.lang.startsWith(lang)).find(v => v.name.toLowerCase().includes('female') || v.gender === 'female');
+        if (chosenVoice && voices.filter(v => v.lang.startsWith(lang.code)).length > 1) {
+            const female = voices.filter(v => v.lang.startsWith(lang.code)).find(v => v.name.toLowerCase().includes('female') || v.gender === 'female');
             if (female) chosenVoice = female;
         }
         const utter = new SpeechSynthesisUtterance(label + '!');
-        utter.lang = lang;
+        utter.lang = lang.code;
         utter.rate = 1.25;
         utter.pitch = 1.3;
         utter.volume = 1.0;
@@ -117,15 +225,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 fadeDiv.style.opacity = "1";
             }, 10);
             setTimeout(() => {
-                // read selected language from index page and pass as query param
+                // Use selected language and pass as query param
                 try {
-                    const sel = document.getElementById('language-select');
-                    const lang = (sel && sel.value) ? encodeURIComponent(sel.value) : 'en';
-                    window.location.href = "game.html?lang=" + lang;
+                    const langCode = lang ? encodeURIComponent(lang.code) : 'en';
+                    window.location.href = "game.html?lang=" + langCode;
                 } catch (e) {
                     window.location.href = "game.html";
                 }
             }, 800);
         }, 4000);
-    });
+    }
 });
