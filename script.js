@@ -4350,34 +4350,35 @@ async executeAIPlay(play) {
                                     targetCell.classList.add("tile-placed");
                                     animatedTile.remove();
 
-                                this.aiRack.splice(tileIndex, 1);
-                                this.board[row][col] = tile;
-                                this.renderAIRack();
+                                    this.aiRack.splice(tileIndex, 1);
+                                    this.board[row][col] = tile;
+                                    this.renderAIRack();
 
-                                const permanentTile = document.createElement("div");
-                                permanentTile.className = "tile";
-                                if (tile.isBlank) {
-                                    permanentTile.classList.add("blank-tile");
-                                }
-                                permanentTile.style.cssText = `
-                                  background: linear-gradient(145deg, #ffffff, #f0f0f0);
-                                  color: #000;
-                              `;
-                                permanentTile.innerHTML = `
-                                  ${tile.letter}
-                                  <span class="points" style="color: #000;">${tile.value}</span>
-                                  ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                              `;
+                                    const permanentTile = document.createElement("div");
+                                    permanentTile.className = "tile";
+                                    if (tile.isBlank) {
+                                        permanentTile.classList.add("blank-tile");
+                                    }
+                                    permanentTile.style.cssText = `
+                                      background: linear-gradient(145deg, #ffffff, #f0f0f0);
+                                      color: #000;
+                                    `;
+                                    permanentTile.innerHTML = `
+                                      ${tile.letter}
+                                      <span class="points" style="color: #000;">${tile.value}</span>
+                                      ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                                    `;
 
-                                targetCell.innerHTML = "";
-                                targetCell.appendChild(permanentTile);
+                                    targetCell.innerHTML = "";
+                                    targetCell.appendChild(permanentTile);
 
-                                setTimeout(() => {
-                                    targetCell.classList.remove("tile-placed");
-                                }, 500);
+                                    setTimeout(() => {
+                                        targetCell.classList.remove("tile-placed");
+                                    }, 500);
 
-                                resolve();
-                            }, 1000);
+                                    resolve();
+                                }, 250);
+                            }, 200);
                         }, 200);
                     });
 
