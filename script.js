@@ -898,21 +898,193 @@ class ScrabbleGame {
 		// Cycle through different display modes
 		this.ghostDisplayMode = (this.ghostDisplayMode || 0) + 1;
 
-		if (this.ghostDisplayMode % 3 === 0) {
-			// Show all top moves with colors
-			this.showRotatingGhostMoves(this.lastAIGhostPlays);
-		} else if (this.ghostDisplayMode % 3 === 1) {
-			// Show just the best move
+		if (this.ghostDisplayMode % 4 === 0) {
+			// Show the BEST strategic move with special highlighting
 			if (this.lastAIGhostPlays.length > 0) {
-				this.showAIGhostMove(this.lastAIGhostPlays[0]);
+				this.showStrategicGhostMove(this.lastAIGhostPlays[0]);
 			}
+		} else if (this.ghostDisplayMode % 4 === 1) {
+			// Show top 3 highest-scoring moves
+			const topScoring = this.lastAIGhostPlays
+				.sort((a, b) => (b.strategicScore || b.score) - (a.strategicScore || a.score))
+				.slice(0, 3);
+			this.showRotatingGhostMoves(topScoring, 'gold');
+		} else if (this.ghostDisplayMode % 4 === 2) {
+			// Show longest word moves
+			const longestWords = this.lastAIGhostPlays
+				.sort((a, b) => b.word.length - a.word.length)
+				.slice(0, 2);
+			this.showRotatingGhostMoves(longestWords, 'blue');
 		} else {
-			// Show 2-3 alternative moves
-			const altMoves = this.lastAIGhostPlays.slice(1, Math.min(4, this.lastAIGhostPlays.length));
-			if (altMoves.length > 0) {
-				this.showRotatingGhostMoves(altMoves);
+			// Show blocking/defensive moves
+			const defensiveMoves = this.findDefensiveMoves();
+			if (defensiveMoves.length > 0) {
+				this.showRotatingGhostMoves(defensiveMoves, 'red');
+			} else {
+				// Fallback to regular moves
+				this.showRotatingGhostMoves(this.lastAIGhostPlays.slice(0, 3));
 			}
 		}
+	}
+
+	// Show the best strategic move with enhanced visual effects
+	showStrategicGhostMove(play) {
+		// Remove any existing ghost tiles
+		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+
+		const { word, startPos, isHorizontal } = play;
+		for (let i = 0; i < word.length; i++) {
+			const row = isHorizontal ? startPos.row : startPos.row + i;
+			const col = isHorizontal ? startPos.col + i : startPos.col;
+			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+			// Only add ghost if cell is empty or only contains the center star
+			if (cell && !cell.querySelector('.tile')) {
+				// Remove center star if present (ghost overlays it)
+				const star = cell.querySelector('.center-star');
+				if (star) star.style.opacity = '0.2';
+
+				const ghost = document.createElement('div');
+				ghost.className = 'tile ghost-tile strategic-ghost';
+				ghost.innerHTML = `
+					${word[i]}
+					<span class="points">${this.tileValues[word[i]] || 0}</span>
+				`;
+				ghost.style.opacity = '0';
+				ghost.style.visibility = 'hidden';
+				ghost.style.pointerEvents = 'none';
+				ghost.style.background = 'linear-gradient(45deg, #FFD700, #FFA500)';
+				ghost.style.color = '#000';
+				ghost.style.border = '3px solid #FF4500';
+				ghost.style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.6)';
+				ghost.style.animation = 'strategicPulse 1.5s infinite';
+				cell.appendChild(ghost);
+			}
+		}
+
+		// Fade in with delay
+		setTimeout(() => {
+			document.querySelectorAll('.strategic-ghost').forEach(ghost => {
+				ghost.style.opacity = '0.9';
+				ghost.style.visibility = 'visible';
+			});
+		}, 200);
+	}
+
+	// Find defensive/blocking moves that prevent opponent from getting high scores
+	findDefensiveMoves() {
+		const defensiveMoves = [];
+		const opponentRack = this.playerRack; // Assume we can see player's rack
+
+		// Look for positions that would create high-scoring opportunities for opponent
+		for (let row = 0; row < 15; row++) {
+			for (let col = 0; col < 15; col++) {
+				if (!this.board[row][col]) {
+					// Check if this position could lead to premium square usage
+					const adjacentPremiums = this.getAdjacentPremiumSquares(row, col);
+					if (adjacentPremiums.length > 0) {
+						// Find words that would block this position
+						const blockingWords = this.findBlockingWords(row, col, opponentRack);
+						defensiveMoves.push(...blockingWords);
+					}
+				}
+			}
+		}
+
+		return defensiveMoves.slice(0, 3); // Return top 3 defensive moves
+	}
+
+	findBlockingWords(targetRow, targetCol, opponentRack) {
+		const blockingMoves = [];
+		const anchors = this.findAnchors();
+
+		// Look for words that would occupy or block the premium area
+		for (const anchor of anchors) {
+			const rack = opponentRack.map(tile => tile.letter);
+			const prefix = this.getPrefix(anchor, true);
+			const suffix = this.getSuffix(anchor, true);
+
+			const candidateWords = this.trie.findWordsFromRack(
+				rack.concat(prefix.split("")).concat(suffix.split("")),
+				3, 8 // Medium length words for blocking
+			).filter(word =>
+				word.startsWith(prefix) && word.endsWith(suffix) &&
+				this.isScrabbleAppropriate(word)
+			);
+
+			for (const word of candidateWords) {
+				const startRow = anchor.row;
+				const startCol = anchor.col - prefix.length;
+
+				if (this.isValidPosition(startRow, startCol) &&
+					this.isValidAIPlacement(word, startRow, startCol, true)) {
+
+					// Check if this word blocks the premium position
+					let blocksPremium = false;
+					for (let i = 0; i < word.length; i++) {
+						const checkRow = startRow;
+						const checkCol = startCol + i;
+						if (Math.abs(checkRow - targetRow) <= 1 && Math.abs(checkCol - targetCol) <= 1) {
+							blocksPremium = true;
+							break;
+						}
+					}
+
+					if (blocksPremium) {
+						const score = this.calculatePotentialScore(word, startRow, startCol, true);
+						blockingMoves.push({
+							word,
+							startPos: { row: startRow, col: startCol },
+							isHorizontal: true,
+							score,
+							strategicScore: score + 50 // Bonus for defensive play
+						});
+					}
+				}
+			}
+		}
+
+		return blockingMoves;
+	}
+
+	// Analyze entire board to find repositioning opportunities for better scoring
+	analyzeBoardForRepositioning() {
+		const repositioningMoves = [];
+		const existingWords = this.getExistingWords();
+
+		// For each existing word, check if repositioning it would give higher score
+		for (const wordInfo of existingWords) {
+			const { word, startPos, direction } = wordInfo;
+			const isHorizontal = direction === 'horizontal';
+
+			// Try to find better positions for this word
+			const currentScore = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
+
+			// Look for alternative positions that might score higher
+			for (let row = 0; row < 15; row++) {
+				for (let col = 0; col < 15; col++) {
+					if (row === startPos.row && col === startPos.col) continue;
+
+					// Check if we can place this word at the new position
+					if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
+						const newScore = this.calculatePotentialScore(word, row, col, isHorizontal);
+
+						// If significantly better score and the word fits
+						if (newScore > currentScore * 1.5) { // At least 50% better
+							repositioningMoves.push({
+								word,
+								startPos: { row, col },
+								isHorizontal,
+								score: newScore,
+								strategicScore: newScore + 100, // Bonus for repositioning
+								type: 'repositioning'
+							});
+						}
+					}
+				}
+			}
+		}
+
+		return repositioningMoves.slice(0, 2); // Top 2 repositioning opportunities
 	}
 
 	// Stop ghost thinking (call when game ends or AI turn starts)
@@ -2103,6 +2275,12 @@ class ScrabbleGame {
 				}
 			}
 
+			// Include repositioning moves when board has words and AI has good tiles
+			if (!this.isFirstMove && this.aiRack.length >= 5) {
+				const repositioningMoves = this.analyzeBoardForRepositioning();
+				possiblePlays.push(...repositioningMoves);
+			}
+
 			// Fallback: if no anchor plays, try first move logic (center square)
 			if (possiblePlays.length === 0 && this.isFirstMove) {
 				const possibleWords = this.trie.findWordsFromRack(rack, 2, rack.length);
@@ -2136,11 +2314,18 @@ class ScrabbleGame {
 				}
 			}
 
-			// Sort by: score, then word quality, then word length (all descending)
+			// Use strategic scoring for much smarter AI decisions
 			return possiblePlays
+				.map(play => ({
+					...play,
+					strategicScore: this.calculateStrategicScore(play.word, play.startPos.row, play.startPos.col, play.isHorizontal)
+				}))
 				.sort((a, b) => {
+					// Prioritize strategic score (includes length, premium squares, cross-words)
+					if (b.strategicScore !== a.strategicScore) return b.strategicScore - a.strategicScore;
+					// Then regular score
 					if (b.score !== a.score) return b.score - a.score;
-					if (b.quality !== a.quality) return b.quality - a.quality;
+					// Then word length
 					return b.word.length - a.word.length;
 				});
 		} catch (error) {
@@ -10938,10 +11123,10 @@ calculateScore() {
 			rareLetters: ['J', 'K', 'Q', 'V', 'W', 'X', 'Y', 'Z']
 		};
 
-		// AI gets better distribution and higher chance of blank tiles
+		// AI gets significantly better distribution and higher chance of premium tiles
 		while (this.aiRack.length < 7 && this.tiles.length > 0) {
-			// 40% chance to get exactly what AI needs
-			if (Math.random() < 0.4) {
+			// 60% chance to get strategic tiles (increased from 40%)
+			if (Math.random() < 0.6) {
 				const currentVowels = this.aiRack.filter(tile =>
 					optimalDistribution.vowels.includes(tile.letter)).length;
 
@@ -10954,8 +11139,17 @@ calculateScore() {
 					// Need consonants
 					desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
 				} else {
-					// Get blank tile or common letter
-					desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
+					// Get blank tile (higher chance), premium letter, or common letter
+					if (Math.random() < 0.3) {
+						// 30% chance for blank tile
+						desiredTile = this.findTileInBag(['*']);
+					} else if (Math.random() < 0.4) {
+						// 28% chance for premium consonant (J, Q, X, Z)
+						desiredTile = this.findTileInBag(optimalDistribution.rareLetters);
+					} else {
+						// 42% chance for common letter
+						desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
+					}
 				}
 
 				if (desiredTile) {

@@ -539,6 +539,18 @@ button:active,
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* Strategic ghost moves - gold/orange pulsing */
+@keyframes strategicPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(255, 69, 0, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(255, 69, 0, 0.9);
+  }
+}
+
 /* --- Hint Box --- */
 #hint-box {
   position: static; /* Not fixed */
