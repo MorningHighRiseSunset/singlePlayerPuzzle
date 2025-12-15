@@ -6762,9 +6762,7 @@ formedWords.forEach((wordInfo) => {
 			console.warn("Using fallback dictionary with limited words");
 		}
 
-		// Also load Spanish dictionary
-		this.updateLoadingProgress('Loading Spanish dictionary...');
-		await this.loadSpanishDictionary();
+		// Spanish dictionary will be loaded only when Spanish language is selected
 	}
 
 	async loadSpanishDictionaryFromAPI() {
@@ -7116,6 +7114,13 @@ formedWords.forEach((wordInfo) => {
 			'hi': 'Hindi'
 		};
 		this.updateLoadingProgress(`Setting up ${langNames[lang] || 'English'} language...`);
+
+		// Load Spanish dictionary only when Spanish is selected
+		if (lang === 'es' && (!this.spanishDictionaryNormalized || this.spanishDictionaryNormalized.size === 0)) {
+			this.updateLoadingProgress('Loading Spanish dictionary...');
+			await this.loadSpanishDictionary();
+		}
+
 		// Set activeDictionary to the appropriate language dictionary
 		if (lang === 'es') {
 			// For Spanish, use ONLY Spanish dictionary
