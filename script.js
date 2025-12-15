@@ -791,11 +791,8 @@ class ScrabbleGame {
 			filteredPlays = [];
 			for (const play of aiPlays) {
 				try {
-					const lang = this.preferredLang || 'en';
-					const isValidWord = lang === 'es' ?
-						await this.validateSpanishWordWithAPI(play.word) :
-						this.dictionaryHas(play.word);
-					if (isValidSpanish) {
+					const isValidWord = await this.validateSpanishWordWithAPI(play.word);
+					if (isValidWord) {
 						filteredPlays.push(play);
 					} else {
 						if (this.showAIDebug) console.log(`Filtered out invalid Spanish word: ${play.word}`);
@@ -853,10 +850,8 @@ class ScrabbleGame {
 			this.ghostAIMove = null;
 		}
 
-		// Set up continuous ghost thinking for better AI preview (only if we haven't found 5 words yet)
-		if (this.validWordsFound < 5) {
-			this.startGhostThinking();
-		}
+		// Set up continuous ghost thinking for better AI preview
+		this.startGhostThinking();
 	}
 
 	// Start continuous ghost move calculation for better user experience
@@ -1264,7 +1259,7 @@ class ScrabbleGame {
 
 			// --- AI should NEVER exchange tiles or skip - keep trying until valid move found ---
 			let attempts = 0;
-			const maxAttempts = 5; // Try up to 5 different strategies
+			const maxAttempts = 10; // Try up to 10 different strategies to find a move
 
 			while (attempts < maxAttempts && !bestPlay) {
 				attempts++;
