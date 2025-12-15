@@ -1391,6 +1391,7 @@ class ScrabbleGame {
 		this.currentTurn = "player";
 		this.addToMoveHistory("computer", "SKIP", 0);
 		this.updateGameState();
+		this.renderRack(); // Update draggable state
 		this.highlightValidPlacements();
 		if (!this.checkGameEnd()) {
 			// Game continues, player's turn now
@@ -4127,6 +4128,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
+				this.renderRack(); // Ensure draggable state is updated
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
@@ -4143,6 +4145,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
+				this.renderRack(); // Ensure draggable state is updated
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 			});
@@ -4165,6 +4168,7 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
+				this.renderRack(); // Ensure draggable state is updated
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
@@ -6302,7 +6306,133 @@ formedWords.forEach((wordInfo) => {
 					cell.classList.add(premiumSquares[key]);
 				}
 
-				// Only log if cell is empty (no tile)
+				// Add drag and drop handlers for tile placement
+				cell.addEventListener('dragover', (e) => {
+					e.preventDefault();
+					if (this.currentTurn !== "player") return;
+
+					const tileData = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+					if (!tileData.tileId) return;
+
+					// Check if this cell can accept the tile
+					const row = parseInt(cell.dataset.row);
+					const col = parseInt(cell.dataset.col);
+					const canPlace = this.isValidPlacement(row, col, { id: tileData.tileId });
+
+					if (canPlace) {
+						e.dataTransfer.dropEffect = 'move';
+						cell.classList.add('droppable-hover');
+					} else {
+						e.dataTransfer.dropEffect = 'none';
+					}
+				});
+
+				cell.addEventListener('dragleave', (e) => {
+					cell.classList.remove('droppable-hover');
+				});
+
+				cell.addEventListener('drop', (e) => {
+					e.preventDefault();
+					cell.classList.remove('droppable-hover');
+
+					if (this.currentTurn !== "player") return;
+
+					try {
+						const tileData = JSON.parse(e.dataTransfer.getData('text/plain'));
+						if (!tileData.tileId) return;
+
+						const row = parseInt(cell.dataset.row);
+						const col = parseInt(cell.dataset.col);
+
+						// Find the tile in player's rack
+						const rackIndex = this.playerRack.findIndex(t => t.id === tileData.tileId);
+						if (rackIndex === -1) return;
+
+						const tile = this.playerRack[rackIndex];
+
+						// Check if placement is valid
+						if (!this.isValidPlacement(row, col, tile)) return;
+
+						// Place the tile
+						this.placeTile(tile, row, col);
+
+						// Remove from rack
+						this.playerRack.splice(rackIndex, 1);
+
+						// Update UI
+						this.renderRack();
+						this.highlightValidPlacements();
+
+					} catch (error) {
+						console.error('Drop handling error:', error);
+					}
+				});
+
+				// Touch drop support for mobile
+				let isTouchDropping = false;
+				let touchTileData = null;
+
+				cell.addEventListener('touchstart', (e) => {
+					if (this.currentTurn !== "player") return;
+
+					// Check if there's a tile being dragged
+					const touch = e.touches[0];
+					const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+					const draggedTile = elementAtPoint?.closest('.tile.dragging');
+
+					if (draggedTile) {
+						isTouchDropping = true;
+						const tileId = draggedTile.dataset.id;
+						const rackIndex = Array.from(document.querySelectorAll('#tile-rack .tile')).indexOf(draggedTile);
+						touchTileData = { tileId, source: 'rack', rackIndex };
+					}
+				});
+
+				cell.addEventListener('touchend', (e) => {
+					if (!isTouchDropping || !touchTileData) {
+						isTouchDropping = false;
+						touchTileData = null;
+						return;
+					}
+
+					try {
+						const row = parseInt(cell.dataset.row);
+						const col = parseInt(cell.dataset.col);
+
+						// Find the tile in player's rack
+						const rackIndex = this.playerRack.findIndex(t => t.id === touchTileData.tileId);
+						if (rackIndex === -1) {
+							isTouchDropping = false;
+							touchTileData = null;
+							return;
+						}
+
+						const tile = this.playerRack[rackIndex];
+
+						// Check if placement is valid
+						if (!this.isValidPlacement(row, col, tile)) {
+							isTouchDropping = false;
+							touchTileData = null;
+							return;
+						}
+
+						// Place the tile
+						this.placeTile(tile, row, col);
+
+						// Remove from rack
+						this.playerRack.splice(rackIndex, 1);
+
+						// Update UI
+						this.renderRack();
+						this.highlightValidPlacements();
+
+					} catch (error) {
+						console.error('Touch drop handling error:', error);
+					}
+
+					isTouchDropping = false;
+					touchTileData = null;
+				});
 
 				board.appendChild(cell);
 			}
@@ -7184,10 +7314,9 @@ formedWords.forEach((wordInfo) => {
 		rack.innerHTML = "";
 
 		this.playerRack.forEach((tile, index) => {
-			// Use createTileElement to get transformation functionality
-			// But we need to make it non-draggable for the rack
 			const tileElement = this.createTileElement(tile, index);
-			tileElement.draggable = false; // Rack tiles shouldn't be draggable
+			// Make tiles draggable only during player's turn
+			tileElement.draggable = (this.currentTurn === "player");
 			rack.appendChild(tileElement);
 		});
 	}
@@ -7204,6 +7333,74 @@ formedWords.forEach((wordInfo) => {
                     <span class="points">${tile.value}</span>
                     ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                 `;
+
+		// Add drag functionality
+		tileElement.addEventListener('dragstart', (e) => {
+			// Only allow dragging during player's turn
+			if (this.currentTurn !== "player") {
+				e.preventDefault();
+				return;
+			}
+
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', JSON.stringify({
+				tileId: tile.id,
+				source: 'rack',
+				rackIndex: index
+			}));
+
+			tileElement.classList.add('dragging');
+			this.highlightValidPlacements();
+		});
+
+		tileElement.addEventListener('dragend', (e) => {
+			tileElement.classList.remove('dragging');
+			this.highlightValidPlacements();
+		});
+
+		// Touch events for mobile drag support
+		let touchStartX = 0;
+		let touchStartY = 0;
+		let isDragging = false;
+
+		tileElement.addEventListener('touchstart', (e) => {
+			if (this.currentTurn !== "player") return;
+
+			const touch = e.touches[0];
+			touchStartX = touch.clientX;
+			touchStartY = touch.clientY;
+
+			// Add visual feedback for touch
+			tileElement.classList.add('touch-active');
+		});
+
+		tileElement.addEventListener('touchmove', (e) => {
+			if (this.currentTurn !== "player") return;
+
+			const touch = e.touches[0];
+			const deltaX = Math.abs(touch.clientX - touchStartX);
+			const deltaY = Math.abs(touch.clientY - touchStartY);
+
+			// Start dragging if moved enough
+			if (!isDragging && (deltaX > 10 || deltaY > 10)) {
+				isDragging = true;
+				tileElement.classList.add('dragging');
+				this.highlightValidPlacements();
+			}
+
+			if (isDragging) {
+				e.preventDefault(); // Prevent scrolling
+			}
+		});
+
+		tileElement.addEventListener('touchend', (e) => {
+			tileElement.classList.remove('touch-active');
+			if (isDragging) {
+				tileElement.classList.remove('dragging');
+				this.highlightValidPlacements();
+			}
+			isDragging = false;
+		});
 
 		return tileElement;
 	}
