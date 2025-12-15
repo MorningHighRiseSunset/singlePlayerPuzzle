@@ -1631,7 +1631,7 @@ class ScrabbleGame {
 			console.warn("AI rack when forced to pass:", this.aiRack.map(t => t.letter));
 			console.warn("Current board state (first move):", this.isFirstMove);
 			console.warn("Available anchors:", this.findAnchors().length);
-			this.showAINotification("🤖 AI was forced to pass - dictionary may be incomplete");
+			if (this.showAIDebug) this.showAINotification("🤖 AI was forced to pass - dictionary may be incomplete");
 			setTimeout(() => {
 				thinkingMessage.style.opacity = "0";
 				setTimeout(() => {
@@ -2827,7 +2827,31 @@ class ScrabbleGame {
 
 		if (this.showAIDebug) console.log(`AI found ${validPlays.length} valid moves out of ${plays.length} candidates`);
 
-		if (validPlays.length === 0) return null;
+		if (validPlays.length === 0) {
+			// Lenient fallback: pick the smallest valid placement if strict checks fail.
+			try {
+				const lenientCandidates = plays.filter(p => p && p.word && p.startPos && this.isValidAIPlacement(p.word, p.startPos.row, p.startPos.col, p.isHorizontal));
+				if (lenientCandidates.length > 0) {
+					// sort by shortest word first, then highest score
+					lenientCandidates.sort((a, b) => a.word.length - b.word.length || (b.score - a.score));
+					for (const cand of lenientCandidates) {
+						// Avoid recently rejected exact placements
+						const rejKey = `${cand.word}:${cand.startPos.row}:${cand.startPos.col}:${cand.isHorizontal}`;
+						if (this.aiRejectedPlays && this.aiRejectedPlays.has(rejKey)) continue;
+
+						// Ensure cross words are not blatantly invalid (allow single letters)
+						const crossWords = this.getAllCrossWords(cand.startPos.row, cand.startPos.col, cand.isHorizontal, cand.word) || [];
+						const badCross = crossWords.some(w => w && w.length > 1 && !this.dictionaryHas(w));
+						if (!badCross) return cand;
+					}
+					// As a final fallback, return the absolute smallest candidate (may be risky)
+					return lenientCandidates[0];
+				}
+			} catch (e) {
+				if (this.showAIDebug) console.warn('Lenient fallback in selectBestPlay failed', e);
+			}
+			return null;
+		}
 
 		return validPlays.sort((a, b) => {
 			// Balanced sorting that prioritizes score but considers strategy
@@ -4313,10 +4337,8 @@ async executeAIPlay(play) {
 			// Remove rejection after short delay so AI can reconsider later
 			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
 		} catch (e) {/* ignore */}
-		this.showAINotification(
-			`❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
-		);
-		console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords, "key:", rejKey);
+		// Suppress UI blunder notification to avoid spam; debug log only when enabled
+		if (this.showAIDebug) console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords, "key:", rejKey);
 		setTimeout(() => this.aiTurn(), 1000);
 		return;
     }
@@ -4377,10 +4399,9 @@ async executeAIPlay(play) {
 			this.aiRejectedPlays.add(rejKey);
 			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
 		} catch (e) {}
-		this.showAINotification(
-			`🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
-		);
-	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords, 'key:', rejKey);
+		// Suppress UI blunder notification to avoid spam; debug log only when enabled
+		if (this.showAIDebug) console.warn(`AI would have formed invalid words: ${invalidWords.join(", ")}. Retrying...`);
+		if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords, 'key:', rejKey);
 		setTimeout(() => this.aiTurn(), 1000);
 		return;
     }
@@ -6643,6 +6664,16 @@ formedWords.forEach((wordInfo) => {
 			this.dictionary = new Set(validWords);
 			// Keep a backupDictionary set containing all source words (unfiltered raw union)
 			this.backupDictionary = new Set(Array.from(seenWords || []));
+			// Optionally remove known CSW-only / non-US words when running English (US) mode
+			if ((this.preferredLang || 'en') === 'en') {
+				const cswBlocked = [
+					'etwas','razour','odah','aln','enoil','caid','lav','ios'
+				];
+				for (const w of cswBlocked) {
+					if (this.dictionary.has(w)) this.dictionary.delete(w);
+					if (this.backupDictionary && this.backupDictionary.has(w)) this.backupDictionary.delete(w);
+				}
+			}
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
