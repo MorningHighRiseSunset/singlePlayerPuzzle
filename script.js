@@ -771,17 +771,7 @@ class ScrabbleGame {
 			return;
 		}
 
-		// --- TEMPORARILY add placed tiles to board for ghost preview on first move ---
-		let tempPlaced = [];
-		if (this.isFirstMove && this.placedTiles.length > 0) {
-			for (const {tile, row, col} of this.placedTiles) {
-				if (!this.board[row][col]) {
-					this.board[row][col] = tile;
-					tempPlaced.push({row, col});
-				}
-			}
-		}
-
+		// Don't temporarily place tiles for AI move finding - it causes validation inconsistencies
 		const aiPlays = this.findAIPossiblePlays();
 
 		// Filter out invalid Spanish words when in Spanish mode
@@ -808,13 +798,6 @@ class ScrabbleGame {
 
 		this.lastAIGhostPlays = filteredPlays; // Store for rotating display
 	if (this.showAIDebug) console.log("AI ghost possible plays:", filteredPlays);
-
-		// --- REMOVE temp placed tiles after preview ---
-		if (tempPlaced.length > 0) {
-			for (const {row, col} of tempPlaced) {
-				this.board[row][col] = null;
-			}
-		}
 
 		if (aiPlays && aiPlays.length > 0) {
 			// Increment valid words counter
@@ -1840,111 +1823,12 @@ class ScrabbleGame {
 	}
 
 	findTwoLetterPlay() {
-		const validTwoLetterWords = new Set([
-			"AA",
-			"AB",
-			"AD",
-			"AE",
-			"AG",
-			"AH",
-			"AI",
-			"AL",
-			"AM",
-			"AN",
-			"AR",
-			"AS",
-			"AT",
-			"AW",
-			"AX",
-			"AY",
-			"BA",
-			"BE",
-			"BI",
-			"BO",
-			"BY",
-			"DE",
-			"DO",
-			"ED",
-			"EF",
-			"EH",
-			"EL",
-			"EM",
-			"EN",
-			"ER",
-			"ES",
-			"ET",
-			"EX",
-			"FA",
-			"FE",
-			"GO",
-			"HA",
-			"HE",
-			"HI",
-			"HM",
-			"HO",
-			"ID",
-			"IF",
-			"IN",
-			"IS",
-			"IT",
-			"JO",
-			"KA",
-			"LA",
-			"LI",
-			"LO",
-			"MA",
-			"ME",
-			"MI",
-			"MM",
-			"MO",
-			"MU",
-			"MY",
-			"NA",
-			"NE",
-			"NO",
-			"NU",
-			"OD",
-			"OE",
-			"OF",
-			"OH",
-			"OI",
-			"OK",
-			"OM",
-			"ON",
-			"OP",
-			"OR",
-			"OS",
-			"OW",
-			"OX",
-			"OY",
-			"PA",
-			"PE",
-			"PI",
-			"PO",
-			"QI",
-			"RE",
-			"SH",
-			"SI",
-			"SO",
-			"TA",
-			"TE",
-			"TI",
-			"TO",
-			"UH",
-			"UM",
-			"UN",
-			"UP",
-			"US",
-			"UT",
-			"WE",
-			"WO",
-			"XI",
-			"XU",
-			"YA",
-			"YE",
-			"YO",
-			"ZA",
-		]);
+		// Use active dictionary for two-letter validity instead of hard-coded lists
+		const validTwoLetterWords = new Set(
+			Array.from(this.activeDictionary)
+				.filter(w => w && w.length === 2)
+				.map(w => w.toUpperCase())
+		);
 
 		const rack = this.aiRack.map((t) => t.letter);
 
@@ -4826,6 +4710,13 @@ async executeAIPlay(play) {
 			return false;
 		}
 
+		// Check if AI has the tiles needed for this placement
+		const tilesNeeded = this.getTilesNeededForMove(word, { row: startRow, col: startCol }, horizontal);
+		if (!this.canFormWordWithTiles(tilesNeeded.join(''), this.aiRack || [])) {
+			this.logAIValidation(`${word} rejected - AI doesn't have tiles: ${tilesNeeded.join('')}`);
+			return false;
+		}
+
 		if (horizontal) {
 			if (startCol < 0 || startCol + word.length > 15 || startRow < 0 || startRow > 14) {
 				return false;
@@ -5064,533 +4955,23 @@ async executeAIPlay(play) {
 	}
 
 	isAbbreviation(word) {
-		// Official two-letter words allowed in Scrabble/Word games
-		const validTwoLetterWords = new Set([
-			"AA",
-			"AB",
-			"AD",
-			"AE",
-			"AG",
-			"AH",
-			"AI",
-			"AL",
-			"AM",
-			"AN",
-			"AR",
-			"AS",
-			"AT",
-			"AW",
-			"AX",
-			"AY",
-			"BA",
-			"BE",
-			"BI",
-			"BO",
-			"BY",
-			"DA",
-			"DE",
-			"DI",
-			"DO",
-			"EA",
-			"ED",
-			"EE",
-			"EF",
-			"EH",
-			"EL",
-			"EM",
-			"EN",
-			"ER",
-			"ES",
-			"ET",
-			"EW",
-			"EX",
-			"FA",
-			"FE",
-			"FY",
-			"GI",
-			"GU",
-			"HA",
-			"HE",
-			"HI",
-			"HM",
-			"HO",
-			"ID",
-			"IF",
-			"IN",
-			"IO",
-			"IS",
-			"IT",
-			"JA",
-			"JO",
-			"KA",
-			"KI",
-			"KO",
-			"KY",
-			"LA",
-			"LI",
-			"LO",
-			"MA",
-			"ME",
-			"MI",
-			"MM",
-			"MO",
-			"MU",
-			"MY",
-			"NA",
-			"NE",
-			"NO",
-			"NU",
-			"NY",
-			"OB",
-			"OD",
-			"OE",
-			"OM",
-			"OP",
-			"OS",
-			"OX",
-			"OY",
-			"PA",
-			"PE",
-			"PI",
-			"PO",
-			"QI",
-			"RA",
-			"RE",
-			"RO",
-			"SH",
-			"SI",
-			"SO",
-			"TA",
-			"TE",
-			"TI",
-			"TO",
-			"UG",
-			"UH",
-			"UM",
-			"UN",
-			"UP",
-			"UR",
-			"US",
-			"UT",
-			"WE",
-			"WO",
-			"XI",
-			"XU",
-			"YA",
-			"YE",
-			"YO",
-			"YU",
-			"ZA",
-			"ZE",
-			"ZO",
-			"AO",
-			"AP",
-			"BA",
-			"BE",
-			"BI",
-			"BU",
-			"CU",
-			"DA",
-			"DU",
-			"EO",
-			"EU",
-			"FO",
-			"FU",
-			"GA",
-			"GE",
-			"HU",
-			"IQ",
-			"JE",
-			"KE",
-			"KU",
-			"LE",
-			"LU",
-			"ME",
-			"MU",
-			"NI",
-			"NU",
-			"OC",
-			"OO",
-			"OU",
-			"PU",
-			"QA",
-			"RI",
-			"RU",
-			"SA",
-			"SE",
-			"SI",
-			"SU",
-			"TU",
-			"UI",
-			"VA",
-			"WA",
-			"WU",
-			"YI",
-			"ZI",
-			"ZO",
-			"PI",
-			"NP",
-			"ET",
-			"ZO",
-		]);
+		if (!word) return false;
 
-		// Common three-letter abbreviations to reject
-		const commonAbbreviations = new Set([
-			// Corporate & Business
-			"CEO",
-			"CFO",
-			"CTO",
-			"COO",
-			"CAO",
-			"CDO",
-			"CHRO",
-			"CMO",
-			"CRO",
-			"CSO",
-			"B2B",
-			"B2C",
-			"C2C",
-			"ROI",
-			"KPI",
-			"CRM",
-			"ERP",
-			"SWOT",
-			"PESTEL",
-			"ROE",
-			"CAGR",
-			"EBIT",
-			"GAAP",
-			"IPO",
-			"M&A",
-			"P&L",
-			"Q1",
-			"Q2",
-			"Q3",
-			"Q4",
+		const up = String(word).toUpperCase();
 
-			// Technology & Computing
-			"CPU",
-			"GPU",
-			"RAM",
-			"ROM",
-			"SSD",
-			"HDD",
-			"USB",
-			"HDMI",
-			"VGA",
-			"DVI",
-			"API",
-			"SDK",
-			"SQL",
-			"NoSQL",
-			"CSS",
-			"HTML",
-			"PHP",
-			"XML",
-			"JSON",
-			"YAML",
-			"IDE",
-			"CLI",
-			"GUI",
-			"HTTP",
-			"HTTPS",
-			"FTP",
-			"SSH",
-			"VPN",
-			"LAN",
-			"WAN",
-			"DNS",
-			"URL",
-			"URI",
-			"TCP",
-			"IP",
-			"IoT",
-			"AI",
-			"ML",
-			"VR",
-			"AR",
-			"DIF",
+		// If the word exists in the active dictionary, it's not an abbreviation
+		if (this.dictionaryHas(up)) return false;
 
-			// Government & Military
-			"CIA",
-			"FBI",
-			"NSA",
-			"DOD",
-			"EPA",
-			"FDA",
-			"DHS",
-			"DOJ",
-			"IRS",
-			"ICE",
-			"NATO",
-			"SEAL",
-			"POTUS",
-			"SCOTUS",
-			"DOE",
-			"HUD",
-			"FEMA",
-			"DEA",
-			"ATF",
-			"SSA",
-
-			// Educational
-			"PhD",
-			"MBA",
-			"BSc",
-			"BA",
-			"MSc",
-			"MA",
-			"JD",
-			"MD",
-			"EdD",
-			"GPA",
-			"SAT",
-			"ACT",
-			"GRE",
-			"GMAT",
-			"MCAT",
-			"LSAT",
-			"TOEFL",
-			"IELTS",
-			"ESL",
-			"STEM",
-
-			// Medical
-			"ICU",
-			"ER",
-			"ECG",
-			"EKG",
-			"MRI",
-			"CT",
-			"BP",
-			"HIV",
-			"DNA",
-			"RNA",
-			"ADHD",
-			"OCD",
-			"PTSD",
-			"ADD",
-			"CDC",
-			"WHO",
-			"RBC",
-			"WBC",
-			"BMI",
-			"ICU",
-
-			// Media & Entertainment
-			"BBC",
-			"CNN",
-			"PBS",
-			"ABC",
-			"NBC",
-			"CBS",
-			"HBO",
-			"MTV",
-			"ESPN",
-			"FIFA",
-			"NBA",
-			"NFL",
-			"NHL",
-			"MLB",
-			"UFC",
-			"WWE",
-			"IMDb",
-			"AMPAS",
-			"BAFTA",
-			"Grammy",
-
-			// Countries & Organizations
-			"USA",
-			"UK",
-			"UAE",
-			"UN",
-			"EU",
-			"NATO",
-			"ASEAN",
-			"NAFTA",
-			"WHO",
-			"UNICEF",
-			"UNESCO",
-			"OPEC",
-			"IMF",
-			"WTO",
-			"ICC",
-			"IAEA",
-			"APEC",
-			"BRICS",
-			"G7",
-			"G20",
-
-			// Common Communication
-			"ASAP",
-			"FYI",
-			"TBA",
-			"TBD",
-			"FAQ",
-			"AKA",
-			"PS",
-			"NB",
-			"RE",
-			"CC",
-			"BCC",
-			"IMO",
-			"IMHO",
-			"BTW",
-			"TBH",
-			"IDK",
-			"IRL",
-			"AFAIK",
-			"DIY",
-			"FOMO",
-
-			// Technology Companies
-			"IBM",
-			"AMD",
-			"HP",
-			"AWS",
-			"MS",
-			"FAANG",
-			"GAFA",
-			"SAP",
-			"VMware",
-			"TSMC",
-
-			// File Formats & Standards
-			"PDF",
-			"PNG",
-			"JPG",
-			"JPEG",
-			"GIF",
-			"MP3",
-			"MP4",
-			"WAV",
-			"AVI",
-			"MPEG",
-			"DOC",
-			"DOCX",
-			"XLS",
-			"XLSX",
-			"PPT",
-			"PPTX",
-			"TXT",
-			"CSV",
-			"ZIP",
-			"RAR",
-
-			// Telecommunications
-			"SMS",
-			"MMS",
-			"GSM",
-			"SIM",
-			"ISP",
-			"5G",
-			"4G",
-			"LTE",
-			"CDMA",
-			"VOIP",
-
-			// Time Zones & Measurements
-			"GMT",
-			"EST",
-			"PST",
-			"UTC",
-			"CST",
-			"MST",
-			"IST",
-			"JST",
-			"BST",
-			"CET",
-
-			// Transportation
-			"BMW",
-			"SUV",
-			"MPV",
-			"EV",
-			"GPS",
-			"MPG",
-			"MPH",
-			"KPH",
-			"ABS",
-			"ESP",
-
-			// Financial
-			"ATM",
-			"PIN",
-			"APR",
-			"APY",
-			"ETF",
-			"IRA",
-			"HSA",
-			"FSA",
-			"CD",
-			"ARM",
-
-			// Miscellaneous
-			"UFO",
-			"VIP",
-			"RIP",
-			"POV",
-			"DOB",
-			"SSN",
-			"PTO",
-			"EOD",
-			"COB",
-			"ETA",
-			"RSVP",
-			"BYOB",
-			"MVP",
-			"SOS",
-			"MIA",
-			"ETC",
-			"VS",
-			"AKA",
-			"NYC",
-			"LA",
-		]);
-
-		// If it's a two-letter word, check against valid list
-		if (word.length === 2) {
-			if (!validTwoLetterWords.has(word.toUpperCase())) {
-				console.log(`${word} is not a valid two-letter word - rejecting`);
-				return true;
-			}
-			return false; // It's a valid two-letter word
-		}
-
-		// Check for three-letter abbreviations
-		if (word.length === 3) {
-			// Check if it's in our common abbreviations list
-			if (commonAbbreviations.has(word.toUpperCase())) {
-				console.log(`${word} is a known abbreviation - rejecting`);
-				return true;
-			}
-
-			// Check if it's all caps and contains no vowels (likely an abbreviation)
-			if (word === word.toUpperCase() && !/[AEIOU]/.test(word)) {
-				console.log(
-					`${word} appears to be a three-letter abbreviation - rejecting`,
-				);
-				return true;
-			}
-		}
-
-		// Check for roman numerals
-		const romanNumeralPattern =
-			/^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
-		if (romanNumeralPattern.test(word.toUpperCase())) {
+		// Check for roman numerals (considered abbreviations here)
+		const romanNumeralPattern = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+		if (romanNumeralPattern.test(up)) {
 			console.log(`${word} appears to be a roman numeral - rejecting`);
 			return true;
 		}
 
-		// Check for repeated letters that aren't in validTwoLetterWords
-		if (
-			word.length === 2 &&
-			word[0] === word[1] &&
-			!validTwoLetterWords.has(word.toUpperCase())
-		) {
-			console.log(
-				`${word} appears to be a repeated letter abbreviation - rejecting`,
-			);
+		// Short unknown tokens (<=3 letters) that are not in the dictionary are likely abbreviations
+		if (up.length <= 3) {
+			console.log(`${word} not found in dictionary and short - treating as abbreviation`);
 			return true;
 		}
 
@@ -7309,30 +6690,12 @@ formedWords.forEach((wordInfo) => {
 				console.error("API dictionary loading also failed:", apiError);
 			}
 
-			// Minimal fallback Spanish words - only essential words to reduce bundle size
-			// The game tries to load comprehensive dictionaries from external sources first
-			const fallback = [
-				// Essential 2-3 letter words for Scrabble playability
-				"el", "la", "de", "en", "un", "es", "se", "no", "lo", "si", "me", "te", "le", "mi", "tu", "su", "al", "del", "y", "o", "a", "con", "por", "sin", "sobre", "tras", "durante", "desde", "hasta", "entre", "contra", "hacia", "para",
-				// Common short words
-				"casa", "agua", "gato", "perro", "libro", "día", "amor", "vida", "sol", "luna", "mano", "ojo", "pie", "cara", "mesa", "silla", "puerta", "ventana", "comida", "dinero", "trabajo", "amigo", "familia", "hombre", "mujer", "niño", "padre", "madre", "hermano", "hijo",
-				// Essential adjectives
-				"bueno", "malo", "grande", "pequeño", "alto", "bajo", "rojo", "azul", "verde", "negro", "blanco", "feliz", "triste", "rápido", "lento", "caliente", "frío", "fácil", "difícil", "hermoso", "feo",
-				// Essential verbs (base forms)
-				"ser", "estar", "tener", "hacer", "ir", "ver", "dar", "saber", "querer", "llegar", "pasar", "poner", "hablar", "dejar", "venir", "pensar", "salir", "volver", "tomar", "vivir", "sentir", "mirar", "trabajar", "escribir", "leer", "comer", "beber", "dormir", "correr", "jugar"
-			];
+			// Dictionary loading failed completely - this should not happen for English play
+			console.error("All Spanish dictionary sources failed - this indicates a serious issue");
 			this.spanishDictionary = new Set();
 			this.spanishDictionaryNormalized = new Set();
 			this.spanishNormalizedMap = {};
-			for (const w of fallback) {
-				const norm = normalizeWordForDict(w);
-				if (norm) {
-					this.spanishDictionary.add(w);
-					this.spanishDictionaryNormalized.add(norm.toLowerCase());
-					this.spanishNormalizedMap[norm.toUpperCase()] = w;
-				}
-			}
-			console.warn("Using fallback Spanish dictionary with limited words");
+			// Don't use fallback words - proper dictionary loading should work
 		}
 	}
 
@@ -7341,21 +6704,16 @@ formedWords.forEach((wordInfo) => {
 		const translatedWords = [];
 
 		try {
-			// Common English Scrabble words that often have good Spanish translations
-			const commonEnglishWords = [
-				// High-frequency Scrabble words that translate well
-				"play", "game", "word", "time", "day", "night", "love", "life", "world", "hand", "eye", "head", "face", "door", "window", "food", "work", "friend", "family", "man", "woman", "child", "father", "mother", "brother", "son", "good", "bad", "big", "small", "high", "low", "red", "blue", "green", "black", "white", "happy", "sad", "fast", "slow", "hot", "cold", "easy", "hard", "beautiful", "ugly",
-				// More Scrabble words
-				"home", "house", "water", "fire", "earth", "air", "light", "dark", "new", "old", "young", "rich", "poor", "strong", "weak", "long", "short", "right", "left", "first", "last", "best", "worst", "more", "less", "many", "few", "all", "some", "none", "here", "there", "now", "then", "yes", "no",
-				// Action words
-				"run", "walk", "eat", "drink", "sleep", "see", "hear", "speak", "read", "write", "sing", "dance", "work", "play", "stop", "go", "come", "open", "close", "begin", "end", "win", "lose", "find", "lose", "give", "take", "make", "do", "say", "tell", "ask", "answer", "help", "hurt", "live", "die", "kill", "save", "build", "break", "buy", "sell", "pay", "cost", "start", "finish"
-			];
+			// Get common words from the actual English dictionary instead of hardcoded list
+			const englishWords = Array.from(this.dictionary || []).filter(word =>
+				word.length >= 3 && word.length <= 8 && // Focus on common word lengths
+				/^[a-z]+$/i.test(word) // Only basic English letters
+			);
 
-			// Filter out words we already have
+			// Filter out words we already have in Spanish
 			const existingSet = new Set(existingWords.map(w => w.toLowerCase()));
-			const wordsToTranslate = commonEnglishWords.filter(word =>
-				!existingSet.has(word.toLowerCase()) &&
-				word.length >= 2 && word.length <= 15
+			const wordsToTranslate = englishWords.slice(0, 100).filter(word => // Limit to first 100 for API efficiency
+				!existingSet.has(word.toLowerCase())
 			);
 
 			// Translate in batches to avoid API limits
@@ -8229,26 +7587,28 @@ formedWords.forEach((wordInfo) => {
                     apiConfidence = basicValid ? 60 : 0;
                 }
             } else if (lang === 'en') {
-                // For English, use Google Translate API validation like Spanish
-                const validationPromise = this.validateEnglishWordWithGoogle(upperWord);
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Validation timeout')), 5000)
-                );
+                // For English, prioritize speed - check dictionary first, then API
+                if (this.activeDictionary.has(word)) {
+                    // Word is in dictionary - high confidence, skip slow API validation
+                    apiValid = true;
+                    apiConfidence = 95; // Very high confidence for dictionary match
+                } else {
+                    // Word not in dictionary - use API validation with shorter timeout
+                    const validationPromise = this.validateEnglishWordWithGoogle(upperWord);
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Validation timeout')), 2000) // Reduced timeout
+                    );
 
-                try {
-                    const result = await Promise.race([validationPromise, timeoutPromise]);
-                    apiValid = result.isValid;
-                    apiConfidence = result.confidence;
-                } catch (timeoutError) {
-                    // Timeout - fallback to local dictionary + basic validation
-                    if (this.showAIDebug) console.warn(`English validation timeout for ${word}, using fallback`);
-                    if (this.activeDictionary.has(word)) {
-                        apiValid = true;
-                        apiConfidence = 80; // High confidence for dictionary match
-                    } else {
+                    try {
+                        const result = await Promise.race([validationPromise, timeoutPromise]);
+                        apiValid = result.isValid;
+                        apiConfidence = result.confidence;
+                    } catch (timeoutError) {
+                        // Timeout - fallback to basic validation only
+                        if (this.showAIDebug) console.warn(`English validation timeout for ${word}, using basic fallback`);
                         const basicValid = this.isBasicValidForLanguage(upperWord, lang);
                         apiValid = basicValid;
-                        apiConfidence = basicValid ? 60 : 0;
+                        apiConfidence = basicValid ? 40 : 0; // Lower confidence for fallback
                     }
                 }
             } else {
@@ -9170,74 +8530,96 @@ calculateScore() {
 		if (!word) return false;
 
 		const upperWord = word.toUpperCase();
+		const lang = this.preferredLang || 'en';
 
 		// Debug: log words being checked (only in debug mode)
 		if (this.showAIDebug && (upperWord.includes('SOSEDAD') || Math.random() < 0.01)) {
-			console.log(`[AI Word Check] Evaluating: ${upperWord}`);
+			console.log(`[AI Word Check] Evaluating: ${upperWord} in ${lang}`);
 		}
 
-		// Check for suspicious word patterns that indicate invalid or inappropriate words
-		// This uses intelligent pattern matching instead of a hardcoded list
-
-		// 1. Letter repetition patterns (too many of the same letter)
-		const letterCounts = {};
-		for (const letter of upperWord) {
-			letterCounts[letter] = (letterCounts[letter] || 0) + 1;
-		}
-		const maxSameLetter = Math.max(...Object.values(letterCounts));
-		if (maxSameLetter > 4 && upperWord.length > 6) {
-			return false; // Too many repeated letters for reasonable words
-		}
-
-		// 2. Check for words that are too obscure or unlikely to be real
-		// Words with unusual letter combinations or patterns
-		const suspiciousPatterns = [
-			/(.)\1{3,}/, // Four or more identical letters in a row
-			/^[AEIOU]{4,}/, // Starts with 4+ vowels (very rare in Spanish)
-			/(.)(.)\1\2/, // ABAB pattern (often indicates made-up words like SAUSA)
-			/^[Q][^U]/, // Q not followed by U (invalid in Spanish except some exceptions)
-			/[WX]/, // W or X in Spanish words (extremely rare, mostly foreign words)
-			/(.)(.)(.)\1\2\3/, // ABCABC pattern (very suspicious)
-			/^[AEIOU][AEIOU][AEIOU]/, // Three vowels in a row at start
-			/[AEIOU]{4}/, // Four vowels anywhere (very rare)
-		];
-
-		for (const pattern of suspiciousPatterns) {
-			if (pattern.test(upperWord)) {
+		// Language-specific validation
+		if (lang === 'en') {
+			// English Scrabble validation - more permissive
+			// 1. Basic checks
+			if (upperWord.length < 2 || upperWord.length > 15) {
 				return false;
 			}
-		}
 
-		// 3. Length and complexity checks
-		// Reject extremely short words that are too simple or long words that are too complex
-		if (upperWord.length < 2 || upperWord.length > 15) {
-			return false;
-		}
+			// 2. Must contain at least one vowel (English words requirement)
+			if (!/[AEIOU]/.test(upperWord)) {
+				return false;
+			}
 
-		// 4. Vowel/consonant ratio check (Spanish words should have reasonable balance)
-		const vowels = upperWord.match(/[AEIOUÁÉÍÓÚÜ]/g) || [];
-		const consonants = upperWord.match(/[BCDFGHJKLMNÑPQRSTVWXYZ]/g) || [];
-		const vowelRatio = vowels.length / upperWord.length;
+			// 3. Q must be followed by U (with rare exceptions)
+			if (/Q[^U]/.test(upperWord)) {
+				// Allow some exceptions like QI, but reject most
+				if (!/^QI/.test(upperWord)) {
+					return false;
+				}
+			}
 
-		// Reject words with too few vowels (makes them hard to pronounce) or too many
-		if (vowelRatio < 0.15 || vowelRatio > 0.7) {
-			return false;
-		}
+			// 4. Dictionary check - primary validation for English
+			const inDict = this.dictionaryHas(word);
+			if (!inDict) {
+				if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in English dictionary`);
+				return false;
+			}
 
-		// 5. Dictionary validation - final check against known words
-		// Even if a word passes all pattern checks, it must exist in our dictionary
-		const inDict = this.dictionaryHas(word);
-		if (!inDict) {
-			if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in dictionary`);
-			return false; // Reject words not in dictionary, regardless of patterns
-		}
-		if (this.showAIDebug && (upperWord.includes('SOSEDAD') || Math.random() < 0.01)) {
-			console.log(`[AI Word Check] Accepted ${upperWord}: in dictionary`);
-		}
+			return true;
+		} else {
+			// Spanish validation (existing logic)
+			// 1. Letter repetition patterns (too many of the same letter)
+			const letterCounts = {};
+			for (const letter of upperWord) {
+				letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+			}
+			const maxSameLetter = Math.max(...Object.values(letterCounts));
+			if (maxSameLetter > 4 && upperWord.length > 6) {
+				return false; // Too many repeated letters for reasonable words
+			}
 
-		// 6. API-based validation for words that pass basic checks
-		// This could be expanded to call an external API for word validation
-		// For now, we rely on dictionary + pattern-based filtering
+			// 2. Check for words that are too obscure or unlikely to be real
+			const suspiciousPatterns = [
+				/(.)\1{3,}/, // Four or more identical letters in a row
+				/^[AEIOU]{4,}/, // Starts with 4+ vowels (very rare in Spanish)
+				/(.)(.)\1\2/, // ABAB pattern (often indicates made-up words like SAUSA)
+				/^[Q][^U]/, // Q not followed by U (invalid in Spanish except some exceptions)
+				/[WX]/, // W or X in Spanish words (extremely rare, mostly foreign words)
+				/(.)(.)(.)\1\2\3/, // ABCABC pattern (very suspicious)
+				/^[AEIOU][AEIOU][AEIOU]/, // Three vowels in a row at start
+				/[AEIOU]{4}/, // Four vowels anywhere (very rare)
+			];
+
+			for (const pattern of suspiciousPatterns) {
+				if (pattern.test(upperWord)) {
+					return false;
+				}
+			}
+
+			// 3. Length and complexity checks
+			if (upperWord.length < 2 || upperWord.length > 15) {
+				return false;
+			}
+
+			// 4. Vowel/consonant ratio check (Spanish words should have reasonable balance)
+			const vowels = upperWord.match(/[AEIOUÁÉÍÓÚÜ]/g) || [];
+			const consonants = upperWord.match(/[BCDFGHJKLMNÑPQRSTVWXYZ]/g) || [];
+			const vowelRatio = vowels.length / upperWord.length;
+
+			// Reject words with too few vowels (makes them hard to pronounce) or too many
+			if (vowelRatio < 0.15 || vowelRatio > 0.7) {
+				return false;
+			}
+
+			// 5. Dictionary validation - final check against known words
+			const inDict = this.dictionaryHas(word);
+			if (!inDict) {
+				if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in Spanish dictionary`);
+				return false;
+			}
+
+			return true;
+		}
 
 		return true; // Allow if in dictionary and passes all intelligent checks
 	}
@@ -9483,24 +8865,33 @@ calculateScore() {
 		if (!word || !rack) return false;
 
 		const tileCounts = {};
+		let blankCount = 0;
 
-		// Count available tiles (normalize accented characters)
+		// Count available tiles (normalize accented characters) and blanks
 		rack.forEach(tile => {
+			const letter = (tile && tile.letter) ? String(tile.letter) : '';
+			if (letter === '*' || tile.isBlank) {
+				blankCount++;
+				return;
+			}
 			// Normalize accented characters: Á→A, É→E, Í→I, Ó→O, Ú→U, Ñ→N
-			const normalized = normalizeWordForDict(tile.letter).toUpperCase();
+			const normalized = normalizeWordForDict(letter).toUpperCase();
+			if (!normalized) return;
 			tileCounts[normalized] = (tileCounts[normalized] || 0) + 1;
 		});
 
 		// Normalize the word to match tiles (Café → CAFE)
 		const normalizedWord = normalizeWordForDict(word).toUpperCase();
 
-		// Check each letter in normalized word
+		// Check each letter in normalized word, allowing blanks to substitute
 		for (let i = 0; i < normalizedWord.length; i++) {
 			const neededChar = normalizedWord[i];
 			if (tileCounts[neededChar] > 0) {
 				tileCounts[neededChar]--;
+			} else if (blankCount > 0) {
+				blankCount--;
 			} else {
-				return false; // Cannot form this letter
+				return false; // Cannot form this letter even with blanks
 			}
 		}
 
