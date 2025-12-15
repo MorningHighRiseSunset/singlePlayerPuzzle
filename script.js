@@ -823,6 +823,7 @@ class ScrabbleGame {
 		}
 
 		this.lastAIGhostPlays = filteredPlays; // Store for rotating display
+	console.log("AI found", filteredPlays.length, "possible moves for ghost display:", filteredPlays.map(p => `${p.word}(${p.score})`));
 	if (this.showAIDebug) console.log("AI ghost possible plays:", filteredPlays);
 
 		if (aiPlays && aiPlays.length > 0) {
@@ -6455,10 +6456,40 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		this.updateLoadingProgress('Loading English dictionary...');
 		try {
-			// Use a working SOWPODS mirror (English dictionary)
-			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-			let text = await response.text();
-			// SOWPODS is all uppercase, one word per line
+			// Try multiple backup dictionary sources
+			const backupUrls = [
+				"https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt",
+				"https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words_alpha.txt",
+				"https://raw.githubusercontent.com/first20hours/google-10000-english/refs/heads/master/google-10000-english-no-swears.txt",
+				"https://raw.githubusercontent.com/first20hours/google-10000-english/refs/heads/master/google-10000-english-usa-no-swears-long.txt"
+			];
+
+			let loaded = false;
+			let text = '';
+
+			for (const url of backupUrls) {
+				try {
+					this.updateLoadingProgress(`Loading dictionary from ${url.split('/').pop()}...`);
+					const response = await fetch(url, { cache: 'no-store' });
+
+					if (response.ok) {
+						text = await response.text();
+						console.log(`Dictionary loaded from ${url.split('/').pop()}`);
+						loaded = true;
+						break;
+					} else {
+						console.warn(`Failed to load from ${url}: ${response.status}`);
+					}
+				} catch (e) {
+					console.warn(`Error loading from ${url}:`, e.message);
+				}
+			}
+
+			if (!loaded) {
+				throw new Error("All dictionary sources failed to load");
+			}
+
+			// Process the dictionary text
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
@@ -7046,6 +7077,7 @@ formedWords.forEach((wordInfo) => {
 		}
 
 		console.log(`Language set to ${lang}. Dictionary size: ${this.activeDictionary.size}`);
+		this.updateLoadingProgress(`Language set to ${langNames[lang] || 'English'}. Dictionary ready.`);
 
 		// Regenerate tile bag with correct letter distribution for the language
 		this.generateTileBag();
@@ -9631,12 +9663,12 @@ calculateScore() {
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
 				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
-					// Silently handle TTS failures - don't log or show errors for expected API issues
+					// Completely silent - no logging for TTS failures
 				});
-				console.log('[Speech] speakBingo invoked for', source);
+				// Remove console logging to reduce noise
 				try { this.appendConsoleMessage('speakBingo invoked for '+source); } catch(e){}
 			} catch (e) {
-				// Silently handle TTS setup failures
+				// Completely silent TTS setup failures
 			}
 
 			// Always trigger visual celebration for bingo (player only)
