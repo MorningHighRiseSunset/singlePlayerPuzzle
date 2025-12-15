@@ -13236,3 +13236,5 @@ window.setupBingoRack = function setupBingoRack(word = 'PUZZLES') {
 };
 
 window.setupbingrack = window.setupBingoRack;
+
+// sigh
