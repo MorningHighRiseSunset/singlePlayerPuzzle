@@ -518,6 +518,8 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
+		// Temporarily store rejected AI plays to avoid immediate retries
+		this.aiRejectedPlays = new Set();
 		// Set to true to enable verbose AI validation logging (off by default)
 		this.showAIDebug = false;
 		// preferred language short code (e.g. 'en','es','zh','fr') persisted to localStorage
@@ -1425,6 +1427,17 @@ class ScrabbleGame {
 		try {
 			// --- Use ghost move if available and valid ---
 			if (this.ghostAIMove) {
+				// If this ghost move was recently rejected, skip it to avoid loops
+				try {
+					const { word: _gWord, startPos: _gStart, isHorizontal: _gHoriz } = this.ghostAIMove;
+					const _ghostKey = `${_gWord}:${_gStart.row}:${_gStart.col}:${_gHoriz}`;
+					if (this.aiRejectedPlays && this.aiRejectedPlays.has(_ghostKey)) {
+						if (this.showAIDebug) console.log("Skipping previously rejected ghost move:", _ghostKey);
+						this.ghostAIMove = null;
+					}
+				} catch (e) {
+					// ignore
+				}
 				// Only use the ghost move if the AI's rack and board have not changed since the ghost was shown
 				const { word, startPos, isHorizontal, rackSnapshot, boardSnapshot } = this.ghostAIMove;
 				const currentRack = this.aiRack.map(t => t.letter).sort().join('');
@@ -2310,7 +2323,17 @@ class ScrabbleGame {
 			}
 
 			// Use strategic scoring for much smarter AI decisions
-			const sortedPlays = possiblePlays
+			// Filter out recently rejected plays to avoid immediate reselection
+			const filteredPlays = possiblePlays.filter(play => {
+				try {
+					const key = `${play.word}:${play.startPos.row}:${play.startPos.col}:${play.isHorizontal}`;
+					return !(this.aiRejectedPlays && this.aiRejectedPlays.has(key));
+				} catch (e) {
+					return true;
+				}
+			});
+
+			const sortedPlays = filteredPlays
 				.map(play => ({
 					...play,
 					strategicScore: this.calculateStrategicScore(play.word, play.startPos.row, play.startPos.col, play.isHorizontal)
@@ -4206,12 +4229,19 @@ async executeAIPlay(play) {
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
     const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
     if (!validity.valid) {
-        this.showAINotification(
-            `❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
-        );
-        console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords);
-        setTimeout(() => this.aiTurn(), 1000);
-        return;
+		const rejKey = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
+		// Mark this exact placement as rejected for a short time to avoid retry loops
+		try {
+			this.aiRejectedPlays.add(rejKey);
+			// Remove rejection after short delay so AI can reconsider later
+			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
+		} catch (e) {/* ignore */}
+		this.showAINotification(
+			`❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
+		);
+		console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords, "key:", rejKey);
+		setTimeout(() => this.aiTurn(), 1000);
+		return;
     }
 
     // --- GHOST CHECK: Simulate placing the word and check all words formed ---
@@ -4265,12 +4295,17 @@ async executeAIPlay(play) {
     }
 
     if (!allWordsValid) {
-        this.showAINotification(
-            `🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
-        );
-	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
-        setTimeout(() => this.aiTurn(), 1000);
-        return;
+		const rejKey = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
+		try {
+			this.aiRejectedPlays.add(rejKey);
+			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
+		} catch (e) {}
+		this.showAINotification(
+			`🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
+		);
+	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords, 'key:', rejKey);
+		setTimeout(() => this.aiTurn(), 1000);
+		return;
     }
 
     // --- If all words valid, proceed as normal ---
