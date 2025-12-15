@@ -563,8 +563,16 @@ class ScrabbleGame {
 		}
 
 		// Always check local dictionary first
-		if (this.activeDictionary.has(wordLower)) {
-			return true;
+		// For Spanish, normalize accented characters (Café → cafe) to match normalized dictionary
+		if (lang === 'es') {
+			const normalized = normalizeWordForDict(wordLower).toLowerCase();
+			if (this.activeDictionary.has(normalized)) {
+				return true;
+			}
+		} else {
+			if (this.activeDictionary.has(wordLower)) {
+				return true;
+			}
 		}
 
 		// For non-English languages, use API validation
@@ -3718,7 +3726,6 @@ class ScrabbleGame {
 		let validWords = [];
 		let totalConfidence = 0;
 		let wordCount = 0;
-		let transformationsNeeded = []; // Track tile transformations AI would need
 
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
@@ -3741,9 +3748,6 @@ class ScrabbleGame {
 							totalConfidence += validation.confidence;
 							wordCount++;
 
-							// Track transformations needed
-							const transforms = this.getTransformedTilesForWord(mainWord);
-							transformationsNeeded.push(...transforms);
 						} else {
 							invalidWords.push(`${mainWord} (insufficient tiles)`);
 						}
@@ -3769,9 +3773,6 @@ class ScrabbleGame {
 						totalConfidence += validation.confidence;
 						wordCount++;
 
-						// Track transformations needed for cross-words too
-						const transforms = this.getTransformedTilesForWord(crossWord);
-						transformationsNeeded.push(...transforms);
 					} else {
 						invalidWords.push(`${crossWord} (insufficient tiles)`);
 					}
@@ -3790,7 +3791,6 @@ class ScrabbleGame {
 				valid: true,
 				confidence: avgConfidence,
 				validWords: validWords,
-				transformationsNeeded: transformationsNeeded,
 				aiRecommendation: avgConfidence >= 85 ? 'excellent' : avgConfidence >= 70 ? 'good' : 'acceptable'
 			};
 		} else {
@@ -3799,7 +3799,6 @@ class ScrabbleGame {
 				invalidWords: invalidWords,
 				validWords: validWords,
 				confidence: avgConfidence,
-				transformationsNeeded: transformationsNeeded,
 				reason: `Invalid words: ${invalidWords.join(', ')}`
 			};
 		}
@@ -3809,19 +3808,6 @@ async executeAIPlay(play) {
     const { word, startPos, isHorizontal, score } = play;
 	if (this.showAIDebug) console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
 
-    // --- TILE TRANSFORMATION: AI transforms tiles as needed ---
-    const transformations = this.getTransformedTilesForWord(word);
-    if (transformations.length > 0) {
-        console.log(`🔄 AI transforming tiles for "${word}":`, transformations);
-        // Apply transformations to AI's rack
-        transformations.forEach(transform => {
-            const tileIndex = this.aiRack.findIndex(tile => tile.letter === transform.from);
-            if (tileIndex !== -1) {
-                this.aiRack[tileIndex].letter = transform.to;
-                console.log(`AI transformed: ${transform.from} → ${transform.to}`);
-            }
-        });
-    }
 
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
     const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
@@ -6535,20 +6521,12 @@ formedWords.forEach((wordInfo) => {
 			console.debug = originalConsoleDebug;
 			window.fetch = originalFetch;
 
-			// If we couldn't load from any source, use English fallback
+			// If we couldn't load from any source, use Spanish fallback words (not English!)
 			if (!loadedFromSource || allSpanishWords.size < 1000) {
-				console.log("Spanish dictionary sources failed, using English dictionary as fallback");
-				this.spanishDictionary = new Set(this.dictionary);
-				this.spanishDictionaryNormalized = new Set([...this.dictionary].map(word => normalizeWordForDict(word)));
-				this.spanishNormalizedMap = {};
-				for (const word of this.dictionary) {
-					const norm = normalizeWordForDict(word);
-					if (norm) {
-						this.spanishNormalizedMap[norm.toUpperCase()] = word;
-					}
-				}
-				console.log("Spanish dictionary loaded successfully. Word count (English fallback):", this.spanishDictionary.size, this.spanishDictionaryNormalized.size);
-				return;
+				console.log("Spanish dictionary sources failed, using Spanish fallback words");
+				// Use the Spanish fallback words defined below instead of English dictionary
+				// This will be handled by the catch block below
+				throw new Error("Spanish dictionary sources failed");
 			}
 
 			// Convert set to array for processing
@@ -6993,200 +6971,16 @@ formedWords.forEach((wordInfo) => {
 		tileElement.dataset.index = index;
 		tileElement.dataset.id = tile.id;
 
-		// TILE TRANSFORMATION SYSTEM
-		const canTransform = this.canTransformTile(tile.letter);
-		const reverseTransforms = this.getReverseTransformations();
-		const isTransformed = reverseTransforms[tile.letter] !== undefined;
-		// Show ⚡ indicator for any tile that can be transformed/reversed
-		const transformIndicator = canTransform ? '<span class="transform-indicator">⚡</span>' : '';
-		
-		// Debug: Log if indicator should show for transformed tiles
-		if (isTransformed && !canTransform) {
-			console.warn(`[Tile] Transformed tile ${tile.letter} cannot transform - this shouldn't happen!`);
-		}
-
 		tileElement.innerHTML = `
                     ${tile.letter}
                     <span class="points">${tile.value}</span>
                     ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                    ${transformIndicator}
                 `;
-
-		// Add transformation functionality for Spanish mode
-		if (canTransform && this.preferredLang === 'es') {
-			// DESKTOP: Double-click to transform
-			tileElement.addEventListener('dblclick', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				this.transformTileElement(tileElement, tile);
-			});
-
-			// MOBILE: Double-tap to transform
-			let lastTapTime = 0;
-			let lastTapPosition = null;
-			let tapTimeout;
-			const doubleTapDelay = 400; // ms between taps
-			const doubleTapMaxDistance = 20; // pixels - max movement between taps
-
-			tileElement.addEventListener('touchend', (e) => {
-				const currentTime = Date.now();
-				const currentPosition = {
-					x: e.changedTouches[0].clientX,
-					y: e.changedTouches[0].clientY
-				};
-
-				if (lastTapTime > 0 && lastTapPosition) {
-					const timeSinceLastTap = currentTime - lastTapTime;
-					const distance = Math.sqrt(
-						Math.pow(currentPosition.x - lastTapPosition.x, 2) +
-						Math.pow(currentPosition.y - lastTapPosition.y, 2)
-					);
-
-					if (timeSinceLastTap < doubleTapDelay && distance < doubleTapMaxDistance) {
-						// Double tap detected - transform tile
-						e.preventDefault();
-						e.stopPropagation();
-						clearTimeout(tapTimeout);
-						this.transformTileElement(tileElement, tile);
-						lastTapTime = 0;
-						lastTapPosition = null;
-						return;
-					}
-				}
-
-				// First tap - record time and position
-				lastTapTime = currentTime;
-				lastTapPosition = currentPosition;
-				clearTimeout(tapTimeout);
-				tapTimeout = setTimeout(() => {
-					lastTapTime = 0;
-					lastTapPosition = null;
-				}, doubleTapDelay);
-			});
-
-			// Enhanced tooltip for both desktop and mobile - show correct direction
-			const nextLetter = this.transformTile(tile.letter);
-			if (isTransformed) {
-				tileElement.title = `Double-click (PC) or double-tap (mobile) to reverse ${tile.letter} → ${nextLetter}`;
-			} else {
-				tileElement.title = `Double-click (PC) or double-tap (mobile) to transform ${tile.letter} → ${nextLetter}`;
-			}
-		}
 
 		return tileElement;
 	}
 
-	showTransformationMenu(event, tileElement, tile) {
-		// Remove any existing menus
-		document.querySelectorAll('.transformation-menu').forEach(menu => menu.remove());
 
-		const menu = document.createElement('div');
-		menu.className = 'transformation-menu';
-		menu.style.position = 'absolute';
-		menu.style.left = `${event.pageX}px`;
-		menu.style.top = `${event.pageY}px`;
-		menu.style.background = 'white';
-		menu.style.border = '2px solid #0288d1';
-		menu.style.borderRadius = '8px';
-		menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-		menu.style.zIndex = '10000';
-		menu.style.padding = '8px';
-		menu.style.minWidth = '120px';
-
-		const currentLetter = tile.letter;
-		const transformedLetter = this.transformTile(currentLetter);
-
-		// Create menu items with proper event handlers
-		const titleDiv = document.createElement('div');
-		titleDiv.style.fontWeight = 'bold';
-		titleDiv.style.marginBottom = '8px';
-		titleDiv.style.color = '#0288d1';
-		titleDiv.textContent = 'Transform Tile';
-
-		const transformDiv = document.createElement('div');
-		transformDiv.style.padding = '4px 8px';
-		transformDiv.style.cursor = 'pointer';
-		transformDiv.style.borderRadius = '4px';
-		transformDiv.style.marginBottom = '4px';
-		transformDiv.textContent = `${currentLetter} → ${transformedLetter}`;
-		transformDiv.onmouseover = () => transformDiv.style.background = '#e3f2fd';
-		transformDiv.onmouseout = () => transformDiv.style.background = 'transparent';
-		transformDiv.onclick = () => {
-			this.transformTileElement(tileElement, tile);
-			menu.remove();
-		};
-
-		const cancelDiv = document.createElement('div');
-		cancelDiv.style.padding = '4px 8px';
-		cancelDiv.style.cursor = 'pointer';
-		cancelDiv.style.borderRadius = '4px';
-		cancelDiv.style.fontSize = '12px';
-		cancelDiv.style.color = '#666';
-		cancelDiv.textContent = 'Cancel';
-		cancelDiv.onclick = () => menu.remove();
-
-		menu.appendChild(titleDiv);
-		menu.appendChild(transformDiv);
-		menu.appendChild(cancelDiv);
-
-		document.body.appendChild(menu);
-
-		// Close menu when clicking outside
-		const closeMenu = (e) => {
-			if (!menu.contains(e.target)) {
-				menu.remove();
-				document.removeEventListener('click', closeMenu);
-			}
-		};
-		setTimeout(() => document.addEventListener('click', closeMenu), 10);
-	}
-
-	transformTileElement(tileElement, tile) {
-		const currentLetter = tile.letter;
-		const newLetter = this.transformTile(currentLetter);
-
-		if (currentLetter === newLetter) return; // No transformation available
-		
-		// Update tile data FIRST - this is critical for renderRack() to work correctly
-		// Find the tile in playerRack and update it directly to ensure the reference is correct
-		const rackIndex = this.playerRack.findIndex(t => t.id === tile.id);
-		if (rackIndex !== -1) {
-			this.playerRack[rackIndex].letter = newLetter;
-		}
-		// Also update the passed tile object
-		tile.letter = newLetter;
-		
-		// Check if this is a reverse transformation (transformed back to base)
-		const reverseTransforms = this.getReverseTransformations();
-		const isReversed = reverseTransforms[currentLetter] !== undefined;
-		
-		// Verify the new letter can be transformed/reversed (should always be true for our tiles)
-		const canStillTransform = this.canTransformTile(newLetter);
-		if (!canStillTransform) {
-			console.error(`[Transform] ERROR: Transformed tile ${newLetter} cannot be transformed/reversed! This is a bug.`);
-		}
-		
-		// Update rack display - this will recreate tiles with the updated letter
-		// and createTileElement will show the ⚡ indicator for transformed tiles
-		this.renderRack();
-		
-		// Verify the indicator is showing after render
-		setTimeout(() => {
-			const rack = document.getElementById("tile-rack");
-			const transformedTileElement = Array.from(rack.children).find(el => {
-				const idx = parseInt(el.dataset.index);
-				return idx === rackIndex && this.playerRack[idx]?.letter === newLetter;
-			});
-			if (transformedTileElement) {
-				const hasIndicator = transformedTileElement.querySelector('.transform-indicator');
-				if (!hasIndicator && canStillTransform) {
-					console.warn(`[Transform] Indicator missing for transformed tile ${newLetter}!`);
-				}
-			}
-		}, 100);
-		
-		console.log(`🔄 Tile ${isReversed ? 'reversed' : 'transformed'}: ${currentLetter} → ${newLetter} (can reverse: ${canStillTransform})`);
-	}
 
 	isValidPlacement(row, col, tile) {
 		console.log("Checking placement validity:", {
@@ -7642,7 +7436,16 @@ formedWords.forEach((wordInfo) => {
         }
 
         // Layer 2: Local dictionary check
-        if (this.activeDictionary.has(word)) {
+        let foundInDictionary = false;
+        if (this.preferredLang === 'es') {
+            // For Spanish, normalize accented characters to match normalized dictionary
+            const normalized = normalizeWordForDict(word).toLowerCase();
+            foundInDictionary = this.activeDictionary.has(normalized);
+        } else {
+            foundInDictionary = this.activeDictionary.has(word);
+        }
+
+        if (foundInDictionary) {
             const result = { isValid: true, confidence: 95, reason: 'Found in local dictionary', layer: 'local' };
             // Cache positive results
             if (!this.validationCache) this.validationCache = {};
@@ -8827,102 +8630,29 @@ calculateScore() {
 
 	// TILE TRANSFORMATION SYSTEM
 	// Players can transform tiles to create Spanish characters
-	getTileTransformations() {
-		return {
-			// Base tile → Transformed tile
-			'N': 'Ñ',
-			'A': 'Á',
-			'E': 'É',
-			'I': 'Í',
-			'O': 'Ó',
-			'U': 'Ú', // Can also be Ü in some contexts
-		};
-	}
-
-	getReverseTransformations() {
-		return {
-			// Transformed tile → Base tile
-			'Ñ': 'N',
-			'Á': 'A',
-			'É': 'E',
-			'Í': 'I',
-			'Ó': 'O',
-			'Ú': 'U',
-			'Ü': 'U', // Ü also maps back to U
-		};
-	}
-
-	canTransformTile(tileLetter) {
-		const transforms = this.getTileTransformations();
-		const reverseTransforms = this.getReverseTransformations();
-		// Can transform if it's a base letter OR if it's already transformed (can reverse)
-		return transforms[tileLetter] !== undefined || reverseTransforms[tileLetter] !== undefined;
-	}
-
-	transformTile(tileLetter) {
-		const transforms = this.getTileTransformations();
-		const reverseTransforms = this.getReverseTransformations();
-		// If it's already transformed, reverse it; otherwise transform forward
-		if (reverseTransforms[tileLetter]) {
-			return reverseTransforms[tileLetter];
-		}
-		return transforms[tileLetter] || tileLetter;
-	}
-
-	getTransformedTilesForWord(word) {
-		// Calculate which tiles need to be transformed to form this word
-		const transforms = this.getTileTransformations();
-		const neededTransforms = [];
-
-		for (let i = 0; i < word.length; i++) {
-			const char = word[i].toUpperCase();
-			// Find if this character requires transformation
-			const baseTile = Object.keys(transforms).find(base => transforms[base] === char);
-			if (baseTile) {
-				neededTransforms.push({
-					position: i,
-					from: baseTile,
-					to: char,
-					available: this.playerRack.some(tile => tile.letter === baseTile)
-				});
-			}
-		}
-
-		return neededTransforms;
-	}
 
 	// Check if player has tiles to form word (considering transformations)
 	canFormWordWithTiles(word, rack = this.playerRack) {
 		if (!word || !rack) return false;
 
 		const tileCounts = {};
-		const transforms = this.getTileTransformations();
 
-		// Count available tiles
+		// Count available tiles (normalize accented characters)
 		rack.forEach(tile => {
-			const letter = tile.letter.toUpperCase();
-			tileCounts[letter] = (tileCounts[letter] || 0) + 1;
+			// Normalize accented characters: Á→A, É→E, Í→I, Ó→O, Ú→U, Ñ→N
+			const normalized = normalizeWordForDict(tile.letter).toUpperCase();
+			tileCounts[normalized] = (tileCounts[normalized] || 0) + 1;
 		});
 
-		// Check each letter in word
-		for (let i = 0; i < word.length; i++) {
-			const neededChar = word[i].toUpperCase();
-			let tileFound = false;
+		// Normalize the word to match tiles (Café → CAFE)
+		const normalizedWord = normalizeWordForDict(word).toUpperCase();
 
-			// Try exact match first
+		// Check each letter in normalized word
+		for (let i = 0; i < normalizedWord.length; i++) {
+			const neededChar = normalizedWord[i];
 			if (tileCounts[neededChar] > 0) {
 				tileCounts[neededChar]--;
-				tileFound = true;
 			} else {
-				// Try transformation (e.g., Ñ needs N, Á needs A)
-				const baseTile = Object.keys(transforms).find(base => transforms[base] === neededChar);
-				if (baseTile && tileCounts[baseTile] > 0) {
-					tileCounts[baseTile]--;
-					tileFound = true;
-				}
-			}
-
-			if (!tileFound) {
 				return false; // Cannot form this letter
 			}
 		}
