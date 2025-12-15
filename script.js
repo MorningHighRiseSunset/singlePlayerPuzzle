@@ -1459,9 +1459,11 @@ class ScrabbleGame {
 
 				const possiblePlays = this.findAIPossiblePlays(minWordLength, maxWordLength);
 				if (possiblePlays && possiblePlays.length > 0) {
-					// Sort by word length (desc), then score (desc)
+					// Sort by strategic score (includes length, premium squares, cross-words), then regular score
 					possiblePlays.sort((a, b) => {
-						if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+						const aStrategic = a.strategicScore || a.score;
+						const bStrategic = b.strategicScore || b.score;
+						if (bStrategic !== aStrategic) return bStrategic - aStrategic;
 						return b.score - a.score;
 					});
 
