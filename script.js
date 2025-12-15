@@ -1046,37 +1046,23 @@ class ScrabbleGame {
 		return blockingMoves;
 	}
 
-	// Analyze entire board to find repositioning opportunities for better scoring
-	analyzeBoardForRepositioning() {
-		const repositioningMoves = [];
-		const existingWords = this.getExistingWords();
+	// Analyze board for strategic opportunities (not repositioning existing words)
+	analyzeBoardForStrategicOpportunities() {
+		const strategicMoves = [];
 
-		// For each existing word, check if repositioning it would give higher score
-		for (const wordInfo of existingWords) {
-			const { word, startPos, direction } = wordInfo;
-			const isHorizontal = direction === 'horizontal';
-
-			// Try to find better positions for this word
-			const currentScore = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
-
-			// Look for alternative positions that might score higher
-			for (let row = 0; row < 15; row++) {
-				for (let col = 0; col < 15; col++) {
-					if (row === startPos.row && col === startPos.col) continue;
-
-					// Check if we can place this word at the new position
-					if (this.isValidAIPlacement(word, row, col, isHorizontal)) {
-						const newScore = this.calculatePotentialScore(word, row, col, isHorizontal);
-
-						// If significantly better score and the word fits
-						if (newScore > currentScore * 1.5) { // At least 50% better
-							repositioningMoves.push({
-								word,
-								startPos: { row, col },
-								isHorizontal,
-								score: newScore,
-								strategicScore: newScore + 100, // Bonus for repositioning
-								type: 'repositioning'
+		// Look for premium squares that are still available and adjacent to existing tiles
+		for (let row = 0; row < 15; row++) {
+			for (let col = 0; col < 15; col++) {
+				if (!this.board[row][col]) {
+					const premiumType = this.getPremiumSquareType(row, col);
+					if (premiumType) {
+						// Check if this premium square is adjacent to existing tiles
+						const isAdjacent = this.isAdjacentToExistingTiles(row, col);
+						if (isAdjacent) {
+							strategicMoves.push({
+								position: { row, col },
+								premiumType,
+								strategicValue: premiumType === 'tw' ? 100 : premiumType === 'dw' ? 50 : 25
 							});
 						}
 					}
@@ -1084,7 +1070,22 @@ class ScrabbleGame {
 			}
 		}
 
-		return repositioningMoves.slice(0, 2); // Top 2 repositioning opportunities
+		return strategicMoves.sort((a, b) => b.strategicValue - a.strategicValue);
+	}
+
+	isAdjacentToExistingTiles(row, col) {
+		const directions = [
+			[-1, 0], [1, 0], [0, -1], [0, 1]
+		];
+
+		for (const [dr, dc] of directions) {
+			const newRow = row + dr;
+			const newCol = col + dc;
+			if (this.isValidPosition(newRow, newCol) && this.board[newRow][newCol]) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// Stop ghost thinking (call when game ends or AI turn starts)
@@ -2275,10 +2276,14 @@ class ScrabbleGame {
 				}
 			}
 
-			// Include repositioning moves when board has words and AI has good tiles
-			if (!this.isFirstMove && this.aiRack.length >= 5) {
-				const repositioningMoves = this.analyzeBoardForRepositioning();
-				possiblePlays.push(...repositioningMoves);
+			// Include strategic opportunity analysis
+			if (!this.isFirstMove) {
+				const strategicOpportunities = this.analyzeBoardForStrategicOpportunities();
+				// This information can be used to prioritize moves that use premium squares
+				// For now, just log it for debugging
+				if (strategicOpportunities.length > 0) {
+					console.debug("Strategic opportunities:", strategicOpportunities.slice(0, 3));
+				}
 			}
 
 			// Fallback: if no anchor plays, try first move logic (center square)
@@ -5589,6 +5594,73 @@ async executeAIPlay(play) {
 	const existingWords = Array.from(words);
 	console.debug("Existing words on board:", existingWords);
 	return existingWords;
+	}
+
+	getExistingWordsWithPositions() {
+		const words = [];
+
+		// Check horizontal words
+		for (let row = 0; row < 15; row++) {
+			let word = "";
+			let startCol = 0;
+			for (let col = 0; col < 15; col++) {
+				if (this.board[row][col]) {
+					if (word === "") startCol = col; // Start of word
+					word += this.board[row][col].letter;
+				} else if (word.length > 1) {
+					// End of word
+					words.push({
+						word: word,
+						startPos: { row: row, col: startCol },
+						direction: 'horizontal'
+					});
+					word = "";
+				} else {
+					word = "";
+				}
+			}
+			if (word.length > 1) {
+				// End of word at board edge
+				words.push({
+					word: word,
+					startPos: { row: row, col: startCol },
+					direction: 'horizontal'
+				});
+			}
+		}
+
+		// Check vertical words
+		for (let col = 0; col < 15; col++) {
+			let word = "";
+			let startRow = 0;
+			for (let row = 0; row < 15; row++) {
+				if (this.board[row][col]) {
+					if (word === "") startRow = row; // Start of word
+					word += this.board[row][col].letter;
+				} else if (word.length > 1) {
+					// End of word
+					words.push({
+						word: word,
+						startPos: { row: startRow, col: col },
+						direction: 'vertical'
+					});
+					word = "";
+				} else {
+					word = "";
+				}
+			}
+			if (word.length > 1) {
+				// End of word at board edge
+				words.push({
+					word: word,
+					startPos: { row: startRow, col: col },
+					direction: 'vertical'
+				});
+			}
+		}
+
+		console.debug("Existing words with positions:", words);
+		return words;
 	}
 
 	calculatePotentialScore(word, startRow, startCol, horizontal) {
