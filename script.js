@@ -581,7 +581,9 @@ class ScrabbleGame {
 			return this.validateWordForLanguageSync(word, lang);
 		}
 
-		// For English, if not in local dictionary, fall back to basic validity
+		// For English, if not in local dictionary, reject the word
+		console.log(`Word "${word}" not found in English dictionary (size: ${this.activeDictionary?.size || 0})`);
+		return false;
 		return this.isBasicValidForLanguage(String(word).toUpperCase(), 'en');
 	}
 
@@ -2202,14 +2204,20 @@ class ScrabbleGame {
 					maxLen = Math.min(maxLen, maxWordLength);
 
 					// Use Trie to generate only words that fit prefix/suffix and rack
-					let candidateWords = this.trie.findWordsFromRack(
+					let rawCandidates = this.trie.findWordsFromRack(
 						rack.concat(prefix.split("")).concat(suffix.split("")),
 						minLen,
 						maxLen
-					).filter(word =>
+					);
+
+					let candidateWords = rawCandidates.filter(word =>
 						word.startsWith(prefix) && word.endsWith(suffix) &&
 						this.isScrabbleAppropriate(word)
 					);
+
+					if (this.showAIDebug && rawCandidates.length > 0) {
+						console.log(`Trie found ${rawCandidates.length} raw candidates, ${candidateWords.length} passed filters for anchor ${anchor.row},${anchor.col}`);
+					}
 
 					// Performance limit: stop if taking too long
 					if (Date.now() - startTime > maxSearchTime) {
@@ -2682,11 +2690,18 @@ class ScrabbleGame {
 		// Enable strict mode if near endgame
 		const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
 
+		console.log(`AI evaluating ${plays.length} potential moves...`);
+
 		const validPlays = plays.filter(play => {
 			if (!play || !play.word) return false;
 
 			// Always check main word
-			if (!this.dictionaryHas(play.word)) return false;
+			if (!this.dictionaryHas(play.word)) {
+				console.log(`AI rejected "${play.word}" (${play.word.length} letters) - not in dictionary`);
+				return false;
+			} else {
+				console.log(`AI accepted "${play.word}" - found in dictionary`);
+			}
 
 			// Always check cross-words
 			const crossWords = this.getAllCrossWords(
@@ -2709,6 +2724,8 @@ class ScrabbleGame {
 				return validCount === crossWords.length;
 			}
 		});
+
+		console.log(`AI found ${validPlays.length} valid moves out of ${plays.length} candidates`);
 
 		if (validPlays.length === 0) return null;
 
@@ -6489,8 +6506,18 @@ formedWords.forEach((wordInfo) => {
 				throw new Error("All dictionary sources failed to load");
 			}
 
-			// Process the dictionary text
-			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
+			// Process the dictionary text - be more strict about word validation
+			let rawWords = text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean);
+			let validWords = rawWords.filter(word => {
+				// Basic validation: only letters, reasonable length, contains vowels
+				return /^[a-z]+$/.test(word) &&
+					   word.length >= 2 &&
+					   word.length <= 15 &&
+					   /[aeiou]/.test(word); // Must contain at least one vowel
+			});
+
+			console.log(`Filtered dictionary: ${rawWords.length} raw words -> ${validWords.length} valid words`);
+			this.dictionary = new Set(validWords);
 
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
