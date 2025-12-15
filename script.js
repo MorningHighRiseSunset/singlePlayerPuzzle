@@ -1161,6 +1161,19 @@ class ScrabbleGame {
 	showAINotification(message, type = 'default') {
 		// Don't show anything if there's no message
 		if (!message) return;
+		// Throttle/dedupe identical notifications for a short period to avoid spam
+		try {
+			// Global dedupe per exact message
+			if (shownBlunders.has(message)) return; // already shown recently
+			// Aggressive throttle for generic AI blunder messages
+			if (message && message.includes('AI made a blunder')) {
+				const last = this._lastBlunderTime || 0;
+				if (Date.now() - last < 10000) return; // limit blunder notices to once per 10s
+				this._lastBlunderTime = Date.now();
+			}
+			shownBlunders.add(message);
+			setTimeout(() => shownBlunders.delete(message), 5000); // 5s cooldown for specific messages
+		} catch (e) {}
 
 		// Remove any existing notification
 		let existing = document.querySelector('.ai-blunder-notification');
@@ -2210,6 +2223,52 @@ class ScrabbleGame {
 	findAIPossiblePlays(minWordLength = 2, maxWordLength = 15) {
 		try {
 			const possiblePlays = [];
+			// Quick heuristic: look for single-tile additions to form 2-letter words (covers cases like adding 'H' to form 'HI')
+			if (minWordLength <= 2) {
+				const seenQuick = new Set();
+				for (let r = 0; r < 15; r++) {
+					for (let c = 0; c < 15; c++) {
+						const cell = this.board[r] && this.board[r][c];
+						const existingLetter = cell ? (cell.letter || String(cell).toUpperCase()) : null;
+						if (!existingLetter) continue;
+						// four directions where we can add one tile
+						const dirs = [ [0,1,'H', r, c], [0,-1,'H', r, c], [1,0,'V', r, c], [-1,0,'V', r, c] ];
+						for (const [dr, dc, dir, er, ec] of dirs) {
+							const nr = er + dr;
+							const nc = ec + dc;
+							if (!this.isValidPosition(nr, nc) || this.board[nr][nc]) continue;
+							for (const tile of this.aiRack) {
+								const letter = (tile.letter || tile).toUpperCase();
+								let candidate = '';
+								let startRow = er;
+								let startCol = ec;
+								let isHorizontal = dir === 'H';
+								if (dr === -1 || dc === -1) {
+									// candidate letter goes before existing
+									candidate = letter + existingLetter;
+									startRow = nr;
+									startCol = nc;
+								} else {
+									candidate = existingLetter + letter;
+								}
+								if (candidate.length >= minWordLength && this.dictionaryHas(candidate.toLowerCase())) {
+									const key = `${candidate}:${startRow}:${startCol}:${isHorizontal}`;
+									if (!seenQuick.has(key)) {
+										seenQuick.add(key);
+										possiblePlays.push({
+											word: candidate,
+											startPos: { row: startRow, col: startCol },
+											isHorizontal,
+											score: this.calculatePotentialScore ? this.calculatePotentialScore(candidate, startRow, startCol, isHorizontal) : 0,
+											quality: 50
+										});
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 			const rack = this.aiRack.map(tile => tile.letter);
 			if (this.showAIDebug) console.log("AI finding moves with rack:", rack, "minLength:", minWordLength, "maxLength:", maxWordLength);
 
@@ -6535,23 +6594,23 @@ formedWords.forEach((wordInfo) => {
 			];
 
 			let loaded = false;
-			let text = '';
+			let allTexts = [];
 
 			for (const url of backupUrls) {
 				try {
 					this.updateLoadingProgress(`Loading dictionary from ${url.split('/').pop()}...`);
 					const response = await fetch(url, { cache: 'no-store' });
 
-					if (response.ok) {
-						text = await response.text();
-						console.log(`Dictionary loaded from ${url.split('/').pop()}`);
+					if (response && response.ok) {
+						const t = await response.text();
+						allTexts.push(t);
 						loaded = true;
-						break;
+						if (this.showAIDebug) console.log(`Dictionary loaded from ${url.split('/').pop()} (size ~${t.length} chars)`);
 					} else {
-						console.warn(`Failed to load from ${url}: ${response.status}`);
+						if (this.showAIDebug) console.warn(`Failed to load from ${url}: ${response && response.status}`);
 					}
 				} catch (e) {
-					console.warn(`Error loading from ${url}:`, e.message);
+					if (this.showAIDebug) console.warn(`Error loading from ${url}:`, e && e.message);
 				}
 			}
 
@@ -6559,8 +6618,19 @@ formedWords.forEach((wordInfo) => {
 				throw new Error("All dictionary sources failed to load");
 			}
 
-			// Process the dictionary text - be more strict about word validation
-			let rawWords = text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean);
+			// Process the concatenated dictionary texts - aggregate unique words from all sources
+			let rawWords = [];
+			const seenWords = new Set();
+			for (const t of allTexts) {
+				if (!t) continue;
+				for (const line of t.split('\n')) {
+					const w = (line || '').trim().toLowerCase();
+					if (w && !seenWords.has(w)) {
+						seenWords.add(w);
+						rawWords.push(w);
+					}
+				}
+			}
 			let validWords = rawWords.filter(word => {
 				// Basic validation: only letters, reasonable length, contains vowels
 				return /^[a-z]+$/.test(word) &&
@@ -6571,8 +6641,9 @@ formedWords.forEach((wordInfo) => {
 
 			console.log(`Filtered dictionary: ${rawWords.length} raw words -> ${validWords.length} valid words`);
 			this.dictionary = new Set(validWords);
-
-			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
+			// Keep a backupDictionary set containing all source words (unfiltered raw union)
+			this.backupDictionary = new Set(Array.from(seenWords || []));
+			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			// Comprehensive fallback dictionary for Scrabble gameplay
