@@ -1088,6 +1088,19 @@ class ScrabbleGame {
 		return false;
 	}
 
+	getTilesNeededForMove(word, startPos, isHorizontal) {
+		const tilesNeeded = [];
+		for (let i = 0; i < word.length; i++) {
+			const row = isHorizontal ? startPos.row : startPos.row + i;
+			const col = isHorizontal ? startPos.col + i : startPos.col;
+			// Only include tiles that aren't already on the board
+			if (!this.board[row] || !this.board[row][col]) {
+				tilesNeeded.push(word[i]);
+			}
+		}
+		return tilesNeeded;
+	}
+
 	// Stop ghost thinking (call when game ends or AI turn starts)
 	stopGhostThinking() {
 		if (this.ghostThinkingTimer) {
@@ -2255,6 +2268,12 @@ class ScrabbleGame {
 			const possiblePlays = [];
 			const rack = this.aiRack.map(tile => tile.letter);
 			if (this.showAIDebug) console.log("AI finding moves with rack:", rack, "minLength:", minWordLength, "maxLength:", maxWordLength);
+
+			// Performance optimization: limit search time and candidates
+			const startTime = Date.now();
+			const maxSearchTime = 2000; // 2 seconds max
+			let candidatesFound = 0;
+			const maxCandidates = 100; // Limit candidates to prevent slowdown
 			const anchors = this.findAnchors();
 
 			// Use a Set to avoid duplicate plays
@@ -2272,7 +2291,7 @@ class ScrabbleGame {
 					maxLen = Math.min(maxLen, maxWordLength);
 
 					// Use Trie to generate only words that fit prefix/suffix and rack
-					const candidateWords = this.trie.findWordsFromRack(
+					let candidateWords = this.trie.findWordsFromRack(
 						rack.concat(prefix.split("")).concat(suffix.split("")),
 						minLen,
 						maxLen
@@ -2281,7 +2300,16 @@ class ScrabbleGame {
 						this.isScrabbleAppropriate(word)
 					);
 
+					// Performance limit: stop if taking too long
+					if (Date.now() - startTime > maxSearchTime) {
+						console.warn("AI search timeout, using partial results");
+						break;
+					}
+
 					for (const word of candidateWords) {
+						// Performance limit: stop if we have too many candidates
+						if (candidatesFound >= maxCandidates) break;
+
 						// Calculate start position
 						const startRow = isHorizontal ? anchor.row : anchor.row - prefix.length;
 						const startCol = isHorizontal ? anchor.col - prefix.length : anchor.col;
@@ -2306,6 +2334,13 @@ class ScrabbleGame {
 									score,
 									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
 								});
+								candidatesFound++;
+
+								// Early exit if we find a very good move
+								if (score > 50 && possiblePlays.length >= 5) {
+									if (this.showAIDebug) console.log("Found good moves early, stopping search");
+									break;
+								}
 							}
 						}
 					}
@@ -3972,8 +4007,9 @@ class ScrabbleGame {
 					const validation = await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true);
 
 					if (validation.isValid && !excludedVariants.has(mainWord.toLowerCase())) {
-						// Check if AI can form this word with available tiles (considering transformations)
-						const canForm = this.canFormWordWithTiles(mainWord, this.aiRack || []);
+						// Check if AI can provide the tiles it needs to place (not already on board)
+						const tilesToPlace = this.getTilesNeededForMove(word, startPos, isHorizontal);
+						const canForm = this.canFormWordWithTiles(tilesToPlace.join(''), this.aiRack || []);
 						if (canForm) {
 							validWords.push({ word: mainWord, confidence: validation.confidence, isMain: true });
 							totalConfidence += validation.confidence;
@@ -3997,16 +4033,10 @@ class ScrabbleGame {
 				const validation = await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false);
 
 				if (validation.isValid && !excludedVariants.has(crossWord.toLowerCase())) {
-					// Check if AI can form this cross-word
-					const canForm = this.canFormWordWithTiles(crossWord, this.aiRack || []);
-					if (canForm) {
-						validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
-						totalConfidence += validation.confidence;
-						wordCount++;
-
-					} else {
-						invalidWords.push(`${crossWord} (insufficient tiles)`);
-					}
+					// Cross words are formed by intersection - no additional tiles needed from rack
+					validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
+					totalConfidence += validation.confidence;
+					wordCount++;
 				} else {
 					invalidWords.push(crossWord);
 				}
@@ -8199,25 +8229,26 @@ formedWords.forEach((wordInfo) => {
                     apiConfidence = basicValid ? 60 : 0;
                 }
             } else if (lang === 'en') {
-                // For English, check against local dictionary first, then basic validation
-                if (this.activeDictionary.has(word)) {
-                    apiValid = true;
-                    apiConfidence = 85; // High confidence for dictionary match
-                } else {
-                    // Fallback to basic validation with timeout
-                    const basicValidationPromise = Promise.resolve(this.isBasicValidForLanguage(upperWord, lang));
-                    const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Basic validation timeout')), 3000)
-                    );
+                // For English, use Google Translate API validation like Spanish
+                const validationPromise = this.validateEnglishWordWithGoogle(upperWord);
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Validation timeout')), 5000)
+                );
 
-                    try {
-                        const basicValid = await Promise.race([basicValidationPromise, timeoutPromise]);
+                try {
+                    const result = await Promise.race([validationPromise, timeoutPromise]);
+                    apiValid = result.isValid;
+                    apiConfidence = result.confidence;
+                } catch (timeoutError) {
+                    // Timeout - fallback to local dictionary + basic validation
+                    if (this.showAIDebug) console.warn(`English validation timeout for ${word}, using fallback`);
+                    if (this.activeDictionary.has(word)) {
+                        apiValid = true;
+                        apiConfidence = 80; // High confidence for dictionary match
+                    } else {
+                        const basicValid = this.isBasicValidForLanguage(upperWord, lang);
                         apiValid = basicValid;
-                        apiConfidence = basicValid ? 70 : 0;
-                    } catch (timeoutError) {
-                        // Timeout - assume valid for English basic patterns
-                        apiValid = this.isBasicValidForLanguage(upperWord, lang);
-                        apiConfidence = apiValid ? 60 : 0;
+                        apiConfidence = basicValid ? 60 : 0;
                     }
                 }
             } else {
@@ -9368,6 +9399,79 @@ calculateScore() {
 			if (!this.validationCache) this.validationCache = {};
 			this.validationCache[cacheKey] = false;
 			return false;
+		}
+	}
+
+	async validateEnglishWordWithGoogle(word) {
+		try {
+			// Check cache first to avoid duplicate API calls
+			const cacheKey = `english_api_${word.toLowerCase()}`;
+			if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
+				const cached = this.validationCache[cacheKey];
+				return {
+					isValid: cached.isValid,
+					confidence: cached.confidence
+				};
+			}
+
+			// Use Google Translate round-trip validation for English
+			// Translate English -> Spanish -> English
+			const spanishTranslation = await this._translateViaAPI(word, 'en', 'es');
+
+			// If no translation or too generic, word might not exist
+			if (!spanishTranslation ||
+				spanishTranslation.trim() === '' ||
+				spanishTranslation.toLowerCase().includes('translation') ||
+				spanishTranslation.toLowerCase().includes('english')) {
+				return { isValid: false, confidence: 0 };
+			}
+
+			// Translate back to English
+			const englishTranslation = await this._translateViaAPI(spanishTranslation, 'es', 'en');
+
+			if (!englishTranslation || englishTranslation.trim() === '') {
+				return { isValid: false, confidence: 0 };
+			}
+
+			// Compare normalized versions
+			const inputNormalized = word.toLowerCase();
+			const googleNormalized = englishTranslation.toLowerCase();
+
+			// Exact match
+			const exactMatch = inputNormalized === englishTranslation.toLowerCase();
+
+			// Similarity score
+			const similarity = this.calculateWordSimilarity(inputNormalized, googleNormalized);
+
+			// Confidence scoring for English
+			let confidence = 0;
+			if (exactMatch) confidence = 100;  // Perfect match
+			else if (similarity >= 0.9) confidence = 90;  // Very similar
+			else if (similarity >= 0.8) confidence = 75;  // Similar
+			else confidence = similarity * 100;  // Raw similarity
+
+			// For English, be more lenient than Spanish since English has fewer accent issues
+			const isValid = confidence >= 70;  // Accept if 70%+ confidence
+
+			// Enhanced logging
+			if (this.showAIDebug) {
+				console.log(`English validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
+				console.log(`  Google response: "${englishTranslation}", valid: ${isValid}`);
+			}
+
+			// Cache result
+			if (!this.validationCache) this.validationCache = {};
+			this.validationCache[cacheKey] = { isValid, confidence };
+
+			return { isValid, confidence };
+
+		} catch (error) {
+			if (this.showAIDebug) console.warn('English Google validation failed:', error);
+			// Cache negative result on error
+			const cacheKey = `english_api_${word.toLowerCase()}`;
+			if (!this.validationCache) this.validationCache = {};
+			this.validationCache[cacheKey] = { isValid: false, confidence: 0 };
+			return { isValid: false, confidence: 0 };
 		}
 	}
 
