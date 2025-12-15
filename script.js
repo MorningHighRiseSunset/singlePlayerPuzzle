@@ -913,25 +913,25 @@ class ScrabbleGame {
 				this.showStrategicGhostMove(this.lastAIGhostPlays[0]);
 			}
 		} else if (this.ghostDisplayMode % 4 === 1) {
-			// Show top 3 highest-scoring moves
+			// Show top 6 highest-scoring moves (increased from 3)
 			const topScoring = this.lastAIGhostPlays
 				.sort((a, b) => (b.strategicScore || b.score) - (a.strategicScore || a.score))
-				.slice(0, 3);
+				.slice(0, 6);
 			this.showRotatingGhostMoves(topScoring, 'gold');
 		} else if (this.ghostDisplayMode % 4 === 2) {
-			// Show longest word moves
+			// Show longest word moves (increased from 2)
 			const longestWords = this.lastAIGhostPlays
 				.sort((a, b) => b.word.length - a.word.length)
-				.slice(0, 2);
+				.slice(0, 4);
 			this.showRotatingGhostMoves(longestWords, 'blue');
 		} else {
-			// Show blocking/defensive moves
+			// Show blocking/defensive moves or fallback to more regular moves
 			const defensiveMoves = this.findDefensiveMoves();
 			if (defensiveMoves.length > 0) {
-				this.showRotatingGhostMoves(defensiveMoves, 'red');
+				this.showRotatingGhostMoves(defensiveMoves.slice(0, 6), 'red');
 			} else {
-				// Fallback to regular moves
-				this.showRotatingGhostMoves(this.lastAIGhostPlays.slice(0, 3));
+				// Fallback to regular moves (increased from 3 to 8)
+				this.showRotatingGhostMoves(this.lastAIGhostPlays.slice(0, 8));
 			}
 		}
 	}
@@ -2712,33 +2712,35 @@ class ScrabbleGame {
 		if (validPlays.length === 0) return null;
 
 		return validPlays.sort((a, b) => {
-			// Enhanced sorting with strategic priorities
+			// Balanced sorting that prioritizes score but considers strategy
 
-			// 1. Strategic score (includes all strategic factors)
-			const strategicDiff = b.strategicScore - a.strategicScore;
-			if (Math.abs(strategicDiff) > 20) return strategicDiff;
-
-			// 2. Quality score (comprehensive evaluation)
-			const qualityDiff = (b.quality || 0) - (a.quality || 0);
-			if (Math.abs(qualityDiff) > 15) return qualityDiff;
-
-			// 3. Length preference (especially for bingos)
-			if (b.word.length >= 7 && a.word.length < 7) return 1;
-			if (a.word.length >= 7 && b.word.length < 7) return -1;
-			const lengthDiff = (Math.pow(b.word.length, 2) - Math.pow(a.word.length, 2)) * 3;
-			if (Math.abs(lengthDiff) > 5) return lengthDiff;
-
-			// 4. Score difference
+			// 1. High score priority - if one move scores significantly more, prefer it
 			const scoreDiff = b.score - a.score;
-			if (Math.abs(scoreDiff) > 15) return scoreDiff;
+			if (scoreDiff > 25) return 1; // Strong preference for much higher scoring moves
+			if (scoreDiff < -25) return -1;
 
-			// 5. Future tile management (prefer moves that leave better tiles)
-			const tileManagementDiff = this.evaluateTileManagement(a) - this.evaluateTileManagement(b);
-			if (Math.abs(tileManagementDiff) > 10) return tileManagementDiff;
+			// 2. Strategic score for close scores (within 25 points)
+			if (Math.abs(scoreDiff) <= 25) {
+				const strategicDiff = (b.strategicScore || 0) - (a.strategicScore || 0);
+				if (Math.abs(strategicDiff) > 30) return strategicDiff > 0 ? 1 : -1;
+			}
 
-			// 6. Complexity bonus for interesting plays
-			const complexityDiff = this.calculateWordComplexity(b.word) - this.calculateWordComplexity(a.word);
-			return complexityDiff;
+			// 3. Quality score for very close matches
+			const qualityDiff = (b.quality || 0) - (a.quality || 0);
+			if (Math.abs(qualityDiff) > 20 && Math.abs(scoreDiff) <= 15) return qualityDiff > 0 ? 1 : -1;
+
+			// 4. Length preference (especially for bingos) - but not at expense of score
+			if (b.word.length >= 7 && a.word.length < 7 && scoreDiff >= -10) return 1;
+			if (a.word.length >= 7 && b.word.length < 7 && scoreDiff <= 10) return -1;
+
+			// 5. For equal or very close scores, prefer better tile management
+			if (Math.abs(scoreDiff) <= 10) {
+				const tileManagementDiff = this.evaluateTileManagement(a) - this.evaluateTileManagement(b);
+				if (Math.abs(tileManagementDiff) > 15) return tileManagementDiff < 0 ? 1 : -1;
+			}
+
+			// 6. Final tiebreaker: score difference
+			return scoreDiff;
 		})[0];
 	}
 
@@ -9629,14 +9631,12 @@ calculateScore() {
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
 				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
-					console.warn('speakBingo TTS path failed', e);
-					try { this.appendConsoleMessage('speakBingo TTS failed'); } catch(e){}
+					// Silently handle TTS failures - don't log or show errors for expected API issues
 				});
 				console.log('[Speech] speakBingo invoked for', source);
 				try { this.appendConsoleMessage('speakBingo invoked for '+source); } catch(e){}
 			} catch (e) {
-				console.warn('speakBingo TTS attempt failed', e);
-				try { this.appendConsoleMessage('speakBingo TTS attempt failed'); } catch(e){}
+				// Silently handle TTS setup failures
 			}
 
 			// Always trigger visual celebration for bingo (player only)
@@ -9832,7 +9832,8 @@ calculateScore() {
 					window.fetch = originalFetch;
 
 					if (!resp.ok) {
-						// Silently skip TTS API failures (403, 429, etc.) - fallback to browser TTS
+						// Silently skip ALL TTS API failures (403, 429, 500, etc.) - fallback to browser TTS
+						// Don't log these errors as they're expected when API is unavailable
 						return false;
 					}
 					const j = await resp.json();
@@ -9840,15 +9841,19 @@ calculateScore() {
 						try {
 							await this._playAudioBase64(j.audioContent);
 							return true;
-						} catch (e) { return false; }
+						} catch (e) {
+							// Silently handle audio playback errors too
+							return false;
+						}
 					}
 				} catch (e) {
-					// Restore console and fetch on error
+					// Restore console and fetch on error - but don't log TTS network errors
 					console.error = originalConsoleError;
 					console.warn = originalConsoleWarn;
 					console.debug = originalConsoleDebug;
 					console.log = originalConsoleLog;
 					window.fetch = originalFetch;
+					// Don't throw or log TTS connection errors - just return false for fallback
 				}
 				return false;
 			};
