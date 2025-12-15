@@ -584,7 +584,7 @@ class ScrabbleGame {
 		}
 
 		// For English, if not in local dictionary, reject the word
-		console.log(`Word "${word}" not found in English dictionary (size: ${this.activeDictionary?.size || 0})`);
+		if (this.showAIDebug) console.log(`Word "${word}" not found in English dictionary (size: ${this.activeDictionary?.size || 0})`);
 		return false;
 		return this.isBasicValidForLanguage(String(word).toUpperCase(), 'en');
 	}
@@ -679,12 +679,13 @@ class ScrabbleGame {
 					${word[i]}
 					<span class="points">${this.tileValues[word[i]] || 0}</span>
 				`;
-				ghost.style.opacity = '0';
-				ghost.style.visibility = 'hidden';
+				// Show ghost tiles subtly (low opacity so they're less distracting)
+				ghost.style.opacity = '0.18';
+				ghost.style.visibility = 'visible';
 				ghost.style.pointerEvents = 'none';
-				ghost.style.background = '#b3e5fc';
+				ghost.style.background = '#eaf6fb';
 				ghost.style.color = '#222';
-				ghost.style.border = '2px dashed #0288d1';
+				ghost.style.border = '1px dashed rgba(2,136,209,0.6)';
 				cell.appendChild(ghost);
 			}
 		}
@@ -773,11 +774,13 @@ class ScrabbleGame {
 						${scoreIndicator}
 					`;
 
+					// Make ghost tiles subtle: low opacity, lighter borders
+					ghost.style.opacity = '0.18';
 					ghost.style.visibility = 'visible';
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = enhancedColorScheme.bg;
 					ghost.style.color = enhancedColorScheme.text;
-					ghost.style.border = `2px dashed ${enhancedColorScheme.border}`;
+					ghost.style.border = `1px dashed ${enhancedColorScheme.border}`;
 					ghost.style.zIndex = 10 + moveIndex; // Stack them properly
 					// Enhanced tooltip with detailed move information
 					let tooltip = `${moveIndex === 0 ? '★ ' : ''}${word}`;
@@ -827,8 +830,17 @@ class ScrabbleGame {
 		}
 
 		this.lastAIGhostPlays = filteredPlays; // Store for rotating display
-	console.log("AI found", filteredPlays.length, "possible moves for ghost display:", filteredPlays.map(p => `${p.word}(${p.score})`));
-	if (this.showAIDebug) console.log("AI ghost possible plays:", filteredPlays);
+		if (this.showAIDebug) {
+			console.log("AI found", filteredPlays.length, "possible moves for ghost display:", filteredPlays.map(p => `${p.word}(${p.score})`));
+			console.log("AI ghost possible plays:", filteredPlays);
+		}
+
+		// Minimal summary for English mode: total, main and backup counts
+		if (lang === 'en') {
+			const mainCount = filteredPlays.filter(p => p.isMain).length || 0;
+			const backupCount = filteredPlays.length - mainCount;
+			console.log(`AI moves available: ${filteredPlays.length} (main: ${mainCount}, backup: ${backupCount})`);
+		}
 
 		if (aiPlays && aiPlays.length > 0) {
 			// Increment valid words counter
@@ -966,10 +978,14 @@ class ScrabbleGame {
 				ghost.style.opacity = '0';
 				ghost.style.visibility = 'hidden';
 				ghost.style.pointerEvents = 'none';
-				ghost.style.background = 'linear-gradient(45deg, #FFD700, #FFA500)';
+				// Subtle strategic ghost: low opacity, gentle glow
+				ghost.style.opacity = '0.18';
+				ghost.style.visibility = 'visible';
+				ghost.style.pointerEvents = 'none';
+				ghost.style.background = 'linear-gradient(45deg, rgba(255,215,0,0.12), rgba(255,165,0,0.12))';
 				ghost.style.color = '#000';
-				ghost.style.border = '3px solid #FF4500';
-				ghost.style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.6)';
+				ghost.style.border = '1px solid rgba(255,69,0,0.5)';
+				ghost.style.boxShadow = '0 0 6px rgba(255, 69, 0, 0.2)';
 				ghost.style.animation = 'strategicPulse 1.5s infinite';
 				cell.appendChild(ghost);
 			}
@@ -978,7 +994,8 @@ class ScrabbleGame {
 		// Fade in with delay
 		setTimeout(() => {
 			document.querySelectorAll('.strategic-ghost').forEach(ghost => {
-				ghost.style.opacity = '0.9';
+				// Keep strategic ghost subtle
+				ghost.style.opacity = '0.25';
 				ghost.style.visibility = 'visible';
 			});
 		}, 200);
@@ -1573,7 +1590,7 @@ class ScrabbleGame {
 				try {
 					// Skip the full validation, just check basic placement
 					if (this.isValidAIPlacement(candidate.word, candidate.startPos.row, candidate.startPos.col, candidate.isHorizontal)) {
-						console.log("AI using last resort move:", candidate);
+									if (this.showAIDebug) console.log("AI using last resort move:", candidate);
 						bestPlay = candidate;
 						break;
 					}
@@ -2713,17 +2730,17 @@ class ScrabbleGame {
 		// Enable strict mode if near endgame
 		const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
 
-		console.log(`AI evaluating ${plays.length} potential moves...`);
+		if (this.showAIDebug) console.log(`AI evaluating ${plays.length} potential moves...`);
 
 		const validPlays = plays.filter(play => {
 			if (!play || !play.word) return false;
 
 			// Always check main word
 			if (!this.dictionaryHas(play.word)) {
-				console.log(`AI rejected "${play.word}" (${play.word.length} letters) - not in dictionary`);
+				if (this.showAIDebug) console.log(`AI rejected "${play.word}" (${play.word.length} letters) - not in dictionary`);
 				return false;
 			} else {
-				console.log(`AI accepted "${play.word}" - found in dictionary`);
+				if (this.showAIDebug) console.log(`AI accepted "${play.word}" - found in dictionary`);
 			}
 
 			// Always check cross-words
@@ -2748,7 +2765,7 @@ class ScrabbleGame {
 			}
 		});
 
-		console.log(`AI found ${validPlays.length} valid moves out of ${plays.length} candidates`);
+		if (this.showAIDebug) console.log(`AI found ${validPlays.length} valid moves out of ${plays.length} candidates`);
 
 		if (validPlays.length === 0) return null;
 
@@ -3237,7 +3254,7 @@ class ScrabbleGame {
 
 				if (tempBoard[row][col]) {
 					if (tempBoard[row][col].letter !== word[i]) {
-						console.log(`Letter mismatch at position [${row},${col}]`);
+						if (this.showAIDebug) console.log(`Letter mismatch at position [${row},${col}]`);
 						return false;
 					}
 					hasValidIntersection = true;
@@ -3253,7 +3270,7 @@ class ScrabbleGame {
 
 				if (crossWord && crossWord.length > 1) {
 					if (!this.dictionaryHas(crossWord)) {
-						console.log(`Invalid cross word formed: ${crossWord}`);
+						if (this.showAIDebug) console.log(`Invalid cross word formed: ${crossWord}`);
 						return false;
 					}
 					hasValidIntersection = true;
