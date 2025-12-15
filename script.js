@@ -1527,8 +1527,41 @@ class ScrabbleGame {
 				return;
 			}
 
-			// ABSOLUTE LAST RESORT: Force a pass (should theoretically never happen)
+			// LAST RESORT ATTEMPT: Try with very lenient settings
+			console.warn("AI trying last resort with lenient validation");
+			const lastResortPlays = this.findAIPossiblePlays(2, 15); // Try any length
+
+			for (const candidate of lastResortPlays.slice(0, 5)) { // Just check first 5
+				try {
+					// Skip the full validation, just check basic placement
+					if (this.isValidAIPlacement(candidate.word, candidate.startPos.row, candidate.startPos.col, candidate.isHorizontal)) {
+						console.log("AI using last resort move:", candidate);
+						bestPlay = candidate;
+						break;
+					}
+				} catch (error) {
+					console.warn("Error in last resort validation:", error);
+				}
+			}
+
+			if (bestPlay) {
+				updateThinkingText(getTranslation('aiFoundMove', _aiLang));
+				setTimeout(() => {
+					thinkingMessage.style.opacity = "0";
+					setTimeout(() => {
+						thinkingMessage.remove();
+						this.unblockHintBox();
+						this.executeAIPlay(bestPlay);
+					}, 300);
+				}, 800);
+				return;
+			}
+
+			// ABSOLUTE LAST RESORT: Force a pass
 			console.warn("AI forced to pass - this indicates a serious issue");
+			console.warn("AI rack when forced to pass:", this.aiRack.map(t => t.letter));
+			console.warn("Current board state (first move):", this.isFirstMove);
+			console.warn("Available anchors:", this.findAnchors().length);
 			this.showAINotification("🤖 AI was forced to pass - dictionary may be incomplete");
 			setTimeout(() => {
 				thinkingMessage.style.opacity = "0";
@@ -2221,6 +2254,7 @@ class ScrabbleGame {
 		try {
 			const possiblePlays = [];
 			const rack = this.aiRack.map(tile => tile.letter);
+			if (this.showAIDebug) console.log("AI finding moves with rack:", rack, "minLength:", minWordLength, "maxLength:", maxWordLength);
 			const anchors = this.findAnchors();
 
 			// Use a Set to avoid duplicate plays
@@ -2322,7 +2356,7 @@ class ScrabbleGame {
 			}
 
 			// Use strategic scoring for much smarter AI decisions
-			return possiblePlays
+			const sortedPlays = possiblePlays
 				.map(play => ({
 					...play,
 					strategicScore: this.calculateStrategicScore(play.word, play.startPos.row, play.startPos.col, play.isHorizontal)
@@ -2335,6 +2369,9 @@ class ScrabbleGame {
 					// Then word length
 					return b.word.length - a.word.length;
 				});
+
+			if (this.showAIDebug) console.log(`AI found ${sortedPlays.length} possible plays, top 3:`, sortedPlays.slice(0, 3).map(p => `${p.word}(${p.score})`));
+			return sortedPlays;
 		} catch (error) {
 			console.error("Error in findAIPossiblePlays:", error);
 			return [];
