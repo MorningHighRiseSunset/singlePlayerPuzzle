@@ -693,35 +693,48 @@ class ScrabbleGame {
 
 		if (!plays || plays.length === 0) return;
 
-		// Limit to top 5 moves to avoid clutter
-		const topMoves = plays.slice(0, 5);
+		// Show up to 10 moves with better organization
+		const maxMoves = 10;
+		const topMoves = plays.slice(0, Math.min(maxMoves, plays.length));
 
-		// Colors for different ghost moves
+		// Enhanced color schemes for different move qualities
 		const ghostColors = [
-			{ bg: '#b3e5fc', border: '#0288d1', text: '#01579b' }, // Blue
-			{ bg: '#c8e6c9', border: '#2e7d32', text: '#1b5e20' }, // Green
-			{ bg: '#ffcdd2', border: '#c62828', text: '#b71c1c' }, // Red
-			{ bg: '#fff3e0', border: '#ef6c00', text: '#e65100' }, // Orange
-			{ bg: '#e1bee7', border: '#6a1b9a', text: '#4a148c' }  // Purple
+			{ bg: '#c8e6c9', border: '#2e7d32', text: '#1b5e20', name: 'Best' },     // Light Green - Best move
+			{ bg: '#b3e5fc', border: '#0288d1', text: '#01579b', name: 'Strong' },  // Blue - Strong move
+			{ bg: '#fff3e0', border: '#ef6c00', text: '#e65100', name: 'Good' },    // Orange - Good move
+			{ bg: '#ffcdd2', border: '#c62828', text: '#b71c1c', name: 'Risky' },  // Red - Risky move
+			{ bg: '#e1bee7', border: '#6a1b9a', text: '#4a148c', name: 'Defensive' }, // Purple - Defensive
+			{ bg: '#f3e5f5', border: '#7b1fa2', text: '#4a148c', name: 'Setup' },   // Light Purple
+			{ bg: '#e8f5e8', border: '#388e3c', text: '#1b5e20', name: 'Premium' }, // Very Light Green
+			{ bg: '#fff8e1', border: '#f57c00', text: '#e65100', name: 'Long' },   // Light Orange
+			{ bg: '#fce4ec', border: '#c2185b', text: '#880e4f', name: 'Cross' },  // Pink
+			{ bg: '#f1f8e9', border: '#689f38', text: '#33691e', name: 'Backup' }  // Very Light Green
 		];
 
 		topMoves.forEach((play, moveIndex) => {
-			const { word, startPos, isHorizontal, confidence, score } = play;
-			const colorScheme = ghostColors[moveIndex % ghostColors.length];
+			const { word, startPos, isHorizontal, confidence, score, quality } = play;
+			const baseColorScheme = ghostColors[moveIndex % ghostColors.length];
 
-			// Enhanced color scheme based on confidence
-			let enhancedColorScheme = { ...colorScheme };
-			if (confidence !== undefined) {
-				if (confidence >= 90) {
-					enhancedColorScheme.bg = '#c8e6c9'; // Light green for high confidence
-					enhancedColorScheme.border = '#2e7d32';
-				} else if (confidence >= 70) {
-					enhancedColorScheme.bg = '#fff3e0'; // Light orange for medium confidence
-					enhancedColorScheme.border = '#ef6c00';
-				} else {
-					enhancedColorScheme.bg = '#ffcdd2'; // Light red for low confidence
-					enhancedColorScheme.border = '#c62828';
-				}
+			// Enhanced color scheme based on move ranking and quality
+			let enhancedColorScheme = { ...baseColorScheme };
+			let moveRank = '';
+
+			// Top move gets special highlighting
+			if (moveIndex === 0) {
+				enhancedColorScheme.bg = '#fff9c4'; // Light yellow for best move
+				enhancedColorScheme.border = '#f57f17';
+				enhancedColorScheme.text = '#e65100';
+				moveRank = '★';
+			} else if (quality && quality > 80) {
+				// High quality moves get enhanced colors
+				enhancedColorScheme.bg = '#c8e6c9'; // Light green
+				enhancedColorScheme.border = '#2e7d32';
+				moveRank = '●';
+			} else if (score && score > 30) {
+				// High scoring moves
+				enhancedColorScheme.bg = '#fff3e0'; // Light orange
+				enhancedColorScheme.border = '#ef6c00';
+				moveRank = '○';
 			}
 
 			for (let i = 0; i < word.length; i++) {
@@ -739,14 +752,21 @@ class ScrabbleGame {
 					ghost.className = 'tile ghost-tile';
 					ghost.dataset.moveIndex = moveIndex;
 
-					// Enhanced ghost tile with confidence indicator
-					const confidenceIndicator = confidence !== undefined ?
-						`<span class="confidence" style="font-size: 8px; position: absolute; top: -2px; right: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 50%; width: 12px; height: 12px; display: flex; align-items: center; justify-content: center;">${Math.round(confidence / 10)}</span>` : '';
+					// Enhanced ghost tile with multiple indicators
+					const rankIndicator = moveRank ? `<span class="rank" style="position: absolute; top: -3px; left: -3px; background: ${enhancedColorScheme.border}; color: white; border-radius: 50%; width: 10px; height: 10px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: bold;">${moveIndex + 1}</span>` : '';
+
+					const qualityIndicator = quality !== undefined ?
+						`<span class="quality" style="position: absolute; bottom: -2px; left: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 2px; padding: 1px 2px; font-size: 6px;">${Math.round(quality / 10)}</span>` : '';
+
+					const scoreIndicator = score !== undefined ?
+						`<span class="score-mini" style="position: absolute; top: -2px; right: -2px; background: #fff; color: ${enhancedColorScheme.text}; border-radius: 2px; padding: 1px 2px; font-size: 6px; font-weight: bold; border: 1px solid ${enhancedColorScheme.border};">${score}</span>` : '';
 
 					ghost.innerHTML = `
 						${word[i]}
 						<span class="points">${this.tileValues[word[i]] || 0}</span>
-						${confidenceIndicator}
+						${rankIndicator}
+						${qualityIndicator}
+						${scoreIndicator}
 					`;
 
 					ghost.style.visibility = 'visible';
@@ -755,9 +775,15 @@ class ScrabbleGame {
 					ghost.style.color = enhancedColorScheme.text;
 					ghost.style.border = `2px dashed ${enhancedColorScheme.border}`;
 					ghost.style.zIndex = 10 + moveIndex; // Stack them properly
-					ghost.title = confidence !== undefined ?
-						`${word} (Score: ${score || '?'}, Confidence: ${confidence}%)` :
-						`${word} (Score: ${score || '?'})`;
+					// Enhanced tooltip with detailed move information
+					let tooltip = `${moveIndex === 0 ? '★ ' : ''}${word}`;
+					if (score !== undefined) tooltip += ` | Score: ${score}`;
+					if (quality !== undefined) tooltip += ` | Quality: ${quality}`;
+					if (confidence !== undefined) tooltip += ` | Confidence: ${confidence}%`;
+					tooltip += ` | ${isHorizontal ? 'Horizontal' : 'Vertical'}`;
+					tooltip += ` | Rank: #${moveIndex + 1}`;
+
+					ghost.title = tooltip;
 					cell.appendChild(ghost);
 				}
 			}
@@ -803,18 +829,18 @@ class ScrabbleGame {
 			// Increment valid words counter
 			this.validWordsFound += aiPlays.length;
 
-			// Limit to top 3 moves for cleaner display
-			const topMoves = aiPlays.slice(0, Math.min(3, aiPlays.length)); // Show top 3 moves
+			// Limit to top 10 moves for better AI preview
+			const topMoves = aiPlays.slice(0, Math.min(10, aiPlays.length)); // Show top 10 moves
 			this.showRotatingGhostMoves(topMoves);
 
-			// Hide ghost tiles after 3 seconds to avoid distraction
+			// Hide ghost tiles after 6 seconds to allow better preview (increased for more moves)
 			setTimeout(() => {
 				document.querySelectorAll('.ghost-tile').forEach(tile => {
-					tile.style.transition = 'opacity 0.5s ease-out';
+					tile.style.transition = 'opacity 1s ease-out';
 					tile.style.opacity = '0';
-					setTimeout(() => tile.remove(), 500); // Remove after fade out
+					setTimeout(() => tile.remove(), 1000); // Remove after fade out
 				});
-			}, 3000);
+			}, 6000);
 
 			// Store the best move for when AI actually plays
 			this.ghostAIMove = {
@@ -823,8 +849,8 @@ class ScrabbleGame {
 				boardSnapshot: JSON.stringify(this.board)
 			};
 
-			// Stop ghost thinking after finding 5 valid words
-			if (this.validWordsFound >= 5) {
+			// Stop ghost thinking after finding 15 valid words (increased for better AI preview)
+			if (this.validWordsFound >= 15) {
 				this.stopGhostThinking();
 				return;
 			}
@@ -2155,9 +2181,9 @@ class ScrabbleGame {
 
 			// Performance optimization: limit search time and candidates
 			const startTime = Date.now();
-			const maxSearchTime = 2000; // 2 seconds max
+			const maxSearchTime = 3000; // 3 seconds max for deeper search
 			let candidatesFound = 0;
-			const maxCandidates = 100; // Limit candidates to prevent slowdown
+			const maxCandidates = 150; // More candidates for better evaluation
 			const anchors = this.findAnchors();
 
 			// Use a Set to avoid duplicate plays
@@ -2220,10 +2246,10 @@ class ScrabbleGame {
 								});
 								candidatesFound++;
 
-								// Early exit if we find a very good move
-								if (score > 50 && possiblePlays.length >= 5) {
-									if (this.showAIDebug) console.log("Found good moves early, stopping search");
-									break;
+								// Early exit only for exceptional moves (higher threshold for deeper search)
+								if (score > 80 && possiblePlays.length >= 8) {
+									if (this.showAIDebug) console.log("Found exceptional moves early, continuing search for better options");
+									// Don't break - continue searching for even better moves
 								}
 							}
 						}
@@ -2425,22 +2451,31 @@ class ScrabbleGame {
 	calculateStrategicScore(word, row, col, isHorizontal) {
 		let score = this.calculatePotentialScore(word, row, col, isHorizontal);
 
-		// Bonus for word length
-		score += Math.pow(word.length, 2) * 10;
+		// Enhanced strategic evaluation using comprehensive quality score
+		const quality = this.evaluateWordQuality(word, row, col, isHorizontal);
+		score += quality * 2; // Quality score includes all strategic factors
 
-		// Bonus for using premium squares
-		const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
-		score += premiumSquares * 25;
+		// Defensive bonus - blocking opponent premium squares
+		const defensiveBonus = this.evaluateDefensiveValue(word, row, col, isHorizontal);
+		score += defensiveBonus;
 
-		// Bonus for creating multiple words
-		const crossWords = this.countIntersections(row, col, isHorizontal, word);
-		score += crossWords * 30;
+		// Endgame consideration - be more aggressive when few tiles remain
+		const tilesRemaining = (this.playerRack?.length || 0) + (this.aiRack?.length || 0) + this.tiles.length;
+		if (tilesRemaining < 20) {
+			// Endgame: prioritize high-scoring moves and tile efficiency
+			const endgameBonus = word.length >= 6 ? 50 : word.length >= 4 ? 25 : 0;
+			score += endgameBonus;
+		}
 
-		// Bonus for complex letters
-		const complexityScore = this.calculateWordComplexity(word);
-		score += complexityScore * 15;
+		// Rack balance consideration - avoid keeping difficult letters
+		const rackBalanceBonus = this.evaluateRackBalanceAfterMove(word);
+		score += rackBalanceBonus;
 
-		return score;
+		// Position control - prefer moves that control board areas
+		const positionControl = this.evaluatePositionControl(word, row, col, isHorizontal);
+		score += positionControl;
+
+		return Math.max(0, score);
 	}
 
 	calculateWordComplexity(word) {
@@ -2464,6 +2499,182 @@ class ScrabbleGame {
 		return word.split('').reduce((score, letter) => {
 			return score + (letterValues[letter] || 1);
 		}, 0);
+	}
+
+	evaluateDefensiveValue(word, row, col, isHorizontal) {
+		let defensiveScore = 0;
+
+		// Check if this move blocks opponent access to premium squares
+		for (let i = 0; i < word.length; i++) {
+			const currentRow = isHorizontal ? row : row + i;
+			const currentCol = isHorizontal ? col + i : col;
+
+			// Check adjacent squares for premium squares that would be blocked
+			const adjacentSquares = [
+				[currentRow - 1, currentCol],
+				[currentRow + 1, currentCol],
+				[currentRow, currentCol - 1],
+				[currentRow, currentCol + 1]
+			];
+
+			for (const [adjRow, adjCol] of adjacentSquares) {
+				if (this.isValidPosition(adjRow, adjCol) && !this.board[adjRow][adjCol]) {
+					const premium = this.getPremiumSquareType(adjRow, adjCol);
+					if (premium === 'tw') {
+						defensiveScore += 40; // Block triple word score
+					} else if (premium === 'dw') {
+						defensiveScore += 25; // Block double word score
+					} else if (premium === 'tl') {
+						defensiveScore += 15; // Block triple letter score
+					} else if (premium === 'dl') {
+						defensiveScore += 8; // Block double letter score
+					}
+				}
+			}
+		}
+
+		return defensiveScore;
+	}
+
+	evaluateRackBalanceAfterMove(word) {
+		if (!this.aiRack) return 0;
+
+		let balanceScore = 0;
+
+		// Simulate rack after this move
+		const remainingRack = [...this.aiRack];
+		const tilesUsed = [];
+
+		// Find which tiles are used for this word
+		const wordLetters = word.split('');
+		for (const letter of wordLetters) {
+			const tileIndex = remainingRack.findIndex(tile =>
+				tile.letter === letter || tile.isBlank
+			);
+			if (tileIndex !== -1) {
+				tilesUsed.push(remainingRack[tileIndex]);
+				remainingRack.splice(tileIndex, 1);
+			}
+		}
+
+		// Evaluate remaining rack quality
+		const remainingLetters = remainingRack.map(tile => tile.letter);
+		const difficultLetters = ['Q', 'Z', 'J', 'X', 'V', 'W', 'K'];
+		const remainingDifficult = remainingLetters.filter(l => difficultLetters.includes(l)).length;
+
+		// Bonus for getting rid of difficult letters
+		const difficultUsed = tilesUsed.filter(tile => difficultLetters.includes(tile.letter)).length;
+		balanceScore += difficultUsed * 20;
+
+		// Penalty for keeping difficult letters
+		balanceScore -= remainingDifficult * 15;
+
+		// Bonus for having balanced remaining rack
+		const vowels = remainingLetters.filter(l => 'AEIOU'.includes(l)).length;
+		const totalRemaining = remainingLetters.length;
+		if (totalRemaining > 0) {
+			const vowelRatio = vowels / totalRemaining;
+			if (vowelRatio >= 0.3 && vowelRatio <= 0.6) {
+				balanceScore += 10;
+			}
+		}
+
+		return balanceScore;
+	}
+
+	evaluatePositionControl(word, row, col, isHorizontal) {
+		let controlScore = 0;
+
+		// Prefer moves that control multiple rows/columns
+		const startRow = row;
+		const startCol = col;
+		const endRow = isHorizontal ? row : row + word.length - 1;
+		const endCol = isHorizontal ? col + word.length - 1 : col;
+
+		// Center control
+		const centerProximity = Math.max(
+			0,
+			7 - Math.abs(startRow - 7),
+			0,
+			7 - Math.abs(startCol - 7),
+			0,
+			7 - Math.abs(endRow - 7),
+			0,
+			7 - Math.abs(endCol - 7)
+		);
+		controlScore += centerProximity * 3;
+
+		// Board balance - avoid over-concentration in one area
+		const quadrant = (startRow < 8 ? 0 : 1) * 2 + (startCol < 8 ? 0 : 1);
+		// This would benefit from tracking moves per quadrant, but for now just basic scoring
+
+		// Long moves get position control bonus
+		if (word.length >= 6) {
+			controlScore += 15;
+		} else if (word.length >= 4) {
+			controlScore += 8;
+		}
+
+		return controlScore;
+	}
+
+	evaluateTileManagement(play) {
+		if (!play || !this.aiRack) return 0;
+
+		let managementScore = 0;
+		const word = play.word;
+
+		// Simulate remaining rack after this move
+		const remainingRack = [...this.aiRack];
+		const tilesNeeded = this.getTilesNeededForMove(word, play.startPos, play.isHorizontal);
+
+		// Remove used tiles from simulated rack
+		for (const neededLetter of tilesNeeded) {
+			const tileIndex = remainingRack.findIndex(tile => tile.letter === neededLetter || tile.isBlank);
+			if (tileIndex !== -1) {
+				remainingRack.splice(tileIndex, 1);
+			}
+		}
+
+		const remainingLetters = remainingRack.map(tile => tile.letter);
+
+		// Evaluate remaining rack quality
+		const difficultLetters = ['Q', 'Z', 'J', 'X', 'V', 'W', 'K'];
+		const remainingDifficult = remainingLetters.filter(l => difficultLetters.includes(l)).length;
+
+		// Heavy penalty for keeping difficult letters
+		managementScore -= remainingDifficult * 25;
+
+		// Bonus for getting rid of difficult letters
+		const difficultUsed = tilesNeeded.filter(l => difficultLetters.includes(l)).length;
+		managementScore += difficultUsed * 30;
+
+		// Evaluate vowel/consonant balance of remaining rack
+		const vowels = remainingLetters.filter(l => 'AEIOU'.includes(l)).length;
+		const totalRemaining = remainingLetters.length;
+
+		if (totalRemaining > 0) {
+			const vowelRatio = vowels / totalRemaining;
+			if (vowelRatio >= 0.25 && vowelRatio <= 0.6) {
+				managementScore += 15; // Good balance
+			} else if (vowelRatio < 0.2 || vowelRatio > 0.7) {
+				managementScore -= 20; // Poor balance
+			}
+		}
+
+		// Bonus for keeping S for plural potential
+		if (remainingLetters.includes('S') && remainingRack.length > 2) {
+			managementScore += 8;
+		}
+
+		// Consider endgame - if few tiles left, prioritize using them efficiently
+		const totalTilesLeft = remainingRack.length + this.tiles.length;
+		if (totalTilesLeft < 10) {
+			// Endgame: prefer moves that use more tiles
+			managementScore += tilesNeeded.length * 5;
+		}
+
+		return managementScore;
 	}
 
 	selectBestPlay(plays) {
@@ -2501,14 +2712,32 @@ class ScrabbleGame {
 		if (validPlays.length === 0) return null;
 
 		return validPlays.sort((a, b) => {
-			// Prefer longer words, then score, then complexity
-			const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
-			if (Math.abs(lengthDiff) > 0) return lengthDiff;
+			// Enhanced sorting with strategic priorities
+
+			// 1. Strategic score (includes all strategic factors)
+			const strategicDiff = b.strategicScore - a.strategicScore;
+			if (Math.abs(strategicDiff) > 20) return strategicDiff;
+
+			// 2. Quality score (comprehensive evaluation)
+			const qualityDiff = (b.quality || 0) - (a.quality || 0);
+			if (Math.abs(qualityDiff) > 15) return qualityDiff;
+
+			// 3. Length preference (especially for bingos)
+			if (b.word.length >= 7 && a.word.length < 7) return 1;
+			if (a.word.length >= 7 && b.word.length < 7) return -1;
+			const lengthDiff = (Math.pow(b.word.length, 2) - Math.pow(a.word.length, 2)) * 3;
+			if (Math.abs(lengthDiff) > 5) return lengthDiff;
+
+			// 4. Score difference
 			const scoreDiff = b.score - a.score;
-			if (Math.abs(scoreDiff) > 10) return scoreDiff;
-			const complexityDiff =
-				this.calculateWordComplexity(b.word) -
-				this.calculateWordComplexity(a.word);
+			if (Math.abs(scoreDiff) > 15) return scoreDiff;
+
+			// 5. Future tile management (prefer moves that leave better tiles)
+			const tileManagementDiff = this.evaluateTileManagement(a) - this.evaluateTileManagement(b);
+			if (Math.abs(tileManagementDiff) > 10) return tileManagementDiff;
+
+			// 6. Complexity bonus for interesting plays
+			const complexityDiff = this.calculateWordComplexity(b.word) - this.calculateWordComplexity(a.word);
 			return complexityDiff;
 		})[0];
 	}
@@ -4095,34 +4324,31 @@ async executeAIPlay(play) {
                     );
                     const targetRect = targetCell.getBoundingClientRect();
 
-                    // Animation setup
+                    // Animation setup - much faster and simpler
                     animatedTile.style.cssText = `
                       position: fixed;
-                      top: -50px;
+                      top: ${targetRect.top - 40}px;
                       left: ${targetRect.left}px;
-                      transform: rotate(-180deg);
-                      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                      transform: scale(0.8);
+                      opacity: 0.7;
+                      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                       z-index: 1000;
                   `;
 
                     document.body.appendChild(animatedTile);
 
-                    // Animate tile placement
+                    // Animate tile placement - much faster
                     await new Promise((resolve) => {
                         setTimeout(() => {
                             animatedTile.style.top = `${targetRect.top}px`;
-                            animatedTile.style.transform = "rotate(0deg)";
+                            animatedTile.style.transform = "scale(1.1)";
+                            animatedTile.style.opacity = "1";
 
                             setTimeout(() => {
-                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
+                                animatedTile.style.transform = "scale(1)";
                                 setTimeout(() => {
-                                    animatedTile.style.transform = "rotate(0deg) scale(1)";
-                                }, 100);
-                            }, 800);
-
-                            setTimeout(() => {
-                                targetCell.classList.add("tile-placed");
-                                animatedTile.remove();
+                                    targetCell.classList.add("tile-placed");
+                                    animatedTile.remove();
 
                                 this.aiRack.splice(tileIndex, 1);
                                 this.board[row][col] = tile;
@@ -4155,7 +4381,7 @@ async executeAIPlay(play) {
                         }, 200);
                     });
 
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    await new Promise((resolve) => setTimeout(resolve, 80)); // Much faster tile placement
                 }
             }
         }
@@ -8431,27 +8657,56 @@ calculateScore() {
 	evaluateWordQuality(word, row, col, horizontal) {
 		let quality = 0;
 
-		// Base points for word length
-		quality += word.length * 10;
+		// Base points for word length (with diminishing returns for very long words)
+		const lengthBonus = word.length <= 7 ? word.length * 12 : 7 * 12 + (word.length - 7) * 6;
+		quality += lengthBonus;
 
-		// Check premium square utilization
-		const premiumSquares = this.countPremiumSquaresUsed(
-			row,
-			col,
-			horizontal,
-			word,
-		);
-		quality += premiumSquares * 15;
+		// Enhanced premium square utilization with multipliers
+		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
+		let premiumBonus = 0;
+		if (premiumSquares >= 3) {
+			premiumBonus = premiumSquares * 25; // Triple word score opportunity
+		} else if (premiumSquares >= 2) {
+			premiumBonus = premiumSquares * 20; // Double word score opportunity
+		} else if (premiumSquares >= 1) {
+			premiumBonus = premiumSquares * 15; // Single premium square
+		}
+		quality += premiumBonus;
 
-		// Check for cross-words
+		// Enhanced cross-word evaluation (more intersections = more strategic)
 		const crossWords = this.countIntersections(row, col, horizontal, word);
-		quality += crossWords * 20;
+		let crossBonus = 0;
+		if (crossWords >= 4) {
+			crossBonus = crossWords * 30; // Excellent cross-word potential
+		} else if (crossWords >= 2) {
+			crossBonus = crossWords * 25; // Good cross-word potential
+		} else if (crossWords >= 1) {
+			crossBonus = crossWords * 20; // Basic cross-word
+		}
+		quality += crossBonus;
 
-		// Check for balanced letter usage
+		// Strategic position evaluation (center control, board balance)
+		const positionBonus = this.evaluateBoardPosition(row, col, horizontal, word);
+		quality += positionBonus;
+
+		// Future opportunity evaluation (opens up good spots for next moves)
+		const futureBonus = this.evaluateFutureOpportunities(row, col, horizontal, word);
+		quality += futureBonus * 8;
+
+		// Tile efficiency (using high-value letters effectively)
+		const tileEfficiency = this.evaluateTileEfficiency(word);
+		quality += tileEfficiency * 5;
+
+		// Balanced letter usage bonus
 		const letterBalance = this.evaluateLetterBalance(word);
-		quality += letterBalance * 10;
+		quality += letterBalance * 12;
 
-		return quality;
+		// Bingo potential (using all 7 tiles)
+		if (this.aiRack && this.aiRack.length >= 7 && word.length >= 7) {
+			quality += 40; // Significant bonus for bingo
+		}
+
+		return Math.max(0, quality); // Ensure non-negative quality
 	}
 
 	evaluateLetterBalance(word) {
@@ -8461,7 +8716,82 @@ calculateScore() {
 
 		// Ideal ratio is around 40% vowels
 		const vowelRatio = vowelCount / word.length;
-		return vowelRatio >= 0.3 && vowelRatio <= 0.5 ? 2 : 0;
+		return vowelRatio >= 0.3 && vowelRatio <= 0.5 ? 3 : vowelRatio >= 0.2 && vowelRatio <= 0.6 ? 1 : 0;
+	}
+
+	evaluateBoardPosition(row, col, horizontal, word) {
+		let positionBonus = 0;
+
+		// Center control bonus
+		const centerRow = 7, centerCol = 7;
+		const startDistance = Math.abs(row - centerRow) + Math.abs(col - centerCol);
+		const endDistance = horizontal ?
+			Math.abs(row - centerRow) + Math.abs(col + word.length - 1 - centerCol) :
+			Math.abs(row + word.length - 1 - centerRow) + Math.abs(col - centerCol);
+
+		const minDistance = Math.min(startDistance, endDistance);
+		if (minDistance <= 2) positionBonus += 15; // Near center
+		else if (minDistance <= 4) positionBonus += 8; // Moderately central
+
+		// Board balance - avoid clustering in corners
+		const quadrant = (row < 7 ? 0 : 1) + (col < 7 ? 0 : 2);
+		// Prefer moves that balance board coverage (implementation would need board state analysis)
+
+		return positionBonus;
+	}
+
+	evaluateFutureOpportunities(row, col, horizontal, word) {
+		let opportunities = 0;
+
+		// Check if this move opens up premium squares for future moves
+		for (let i = 0; i < word.length; i++) {
+			const currentRow = horizontal ? row : row + i;
+			const currentCol = horizontal ? col + i : col;
+
+			// Check adjacent squares for premium opportunities
+			const adjacentSquares = [
+				[currentRow - 1, currentCol],
+				[currentRow + 1, currentCol],
+				[currentRow, currentCol - 1],
+				[currentRow, currentCol + 1]
+			];
+
+			for (const [adjRow, adjCol] of adjacentSquares) {
+				if (this.isValidPosition(adjRow, adjCol) && !this.board[adjRow][adjCol]) {
+					const premium = this.getPremiumSquareType(adjRow, adjCol);
+					if (['tw', 'dw', 'tl'].includes(premium)) {
+						opportunities += premium === 'tw' ? 3 : premium === 'dw' ? 2 : 1;
+					}
+				}
+			}
+		}
+
+		// Bonus for moves that create multiple parallel opportunities
+		if (opportunities >= 5) return 8;
+		else if (opportunities >= 3) return 5;
+		else if (opportunities >= 1) return 2;
+		return 0;
+	}
+
+	evaluateTileEfficiency(word) {
+		let efficiency = 0;
+
+		// Bonus for using high-value letters (Q, Z, J, X) effectively
+		const highValueLetters = ['Q', 'Z', 'J', 'X'];
+		const usedHighValue = word.split('').filter(c => highValueLetters.includes(c)).length;
+		efficiency += usedHighValue * 2;
+
+		// Penalty for wasting blanks on common letters
+		const commonLetters = ['E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S', 'U'];
+		const wastedBlanks = word.split('').filter(c => commonLetters.includes(c) && this.tileValues[c] <= 1).length;
+		efficiency -= wastedBlanks;
+
+		// Bonus for efficient use of all rack tiles
+		if (this.aiRack && word.length >= 6) {
+			efficiency += Math.min(word.length, 3); // Up to 3 bonus points for using many tiles
+		}
+
+		return Math.max(0, efficiency);
 	}
 
 	speakWord(word) {

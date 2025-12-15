@@ -88,7 +88,7 @@ body {
   font-weight: bold !important;
   color: #222 !important;
   border-radius: 4px !important;
-  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
   position: relative !important;
   aspect-ratio: 1 !important;
   object-fit: contain !important;
@@ -162,7 +162,7 @@ body {
   justify-content: center;
   font-weight: bold;
   font-size: 0.9em; /* Reduced from 1em */
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: background 0.1s, box-shadow 0.1s;
   position: relative;
   min-width: 36px; /* Reduced from 40px */
   min-height: 36px; /* Reduced from 40px */
@@ -358,7 +358,7 @@ body {
   font-weight: bold;
   cursor: grab;
   box-shadow: var(--tile-shadow), 0 2px 8px rgba(0,0,0,0.08);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.1s, box-shadow 0.1s;
   user-select: none !important;
   touch-action: none !important;
   -webkit-user-drag: none !important;
