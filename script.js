@@ -835,11 +835,12 @@ class ScrabbleGame {
 			console.log("AI ghost possible plays:", filteredPlays);
 		}
 
-		// Minimal summary for English mode: total, main and backup counts
+		// Minimal summary for English mode: total moves and combined dictionary word count
 		if (lang === 'en') {
-			const mainCount = filteredPlays.filter(p => p.isMain).length || 0;
-			const backupCount = filteredPlays.length - mainCount;
-			console.log(`AI moves available: ${filteredPlays.length} (main: ${mainCount}, backup: ${backupCount})`);
+			const dictMain = this.dictionary ? this.dictionary.size : 0;
+			const dictBackup = this.backupDictionary ? this.backupDictionary.size : 0;
+			const combinedDictTotal = dictMain + dictBackup;
+			console.log(`AI moves available: ${filteredPlays.length}; dictionaries total words: ${combinedDictTotal}`);
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
@@ -9741,7 +9742,8 @@ calculateScore() {
 			if (typeof window === 'undefined') return;
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
-				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4 }).catch(e => {
+				// Force local browser TTS for bingo to avoid noisy remote 403 errors
+				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4, forceLocal: true }).catch(e => {
 					// Completely silent - no logging for TTS failures
 				});
 				// Remove console logging to reduce noise
@@ -9892,6 +9894,7 @@ calculateScore() {
 		return new Promise(async (resolve, reject) => {
 			if (typeof window === 'undefined') return resolve();
 			const finalLang = opts.forceEnglishVoice ? 'en-US' : (opts.lang || this._getPreferredLangCode());
+			const forceLocal = !!opts.forceLocal;
 			// First try remote Netlify Google TTS function (server-side, uses GOOGLE_API_KEY)
 			const tryRemote = async () => {
 				if (!window.fetch) return false;
@@ -9944,7 +9947,8 @@ calculateScore() {
 
 					if (!resp.ok) {
 						// Silently skip ALL TTS API failures (403, 429, 500, etc.) - fallback to browser TTS
-						// Don't log these errors as they're expected when API is unavailable
+						// Optionally warn in debug mode
+						if (this.showAIDebug) console.warn('Remote TTS failed with status', resp.status);
 						return false;
 					}
 					const j = await resp.json();
@@ -9968,11 +9972,13 @@ calculateScore() {
 				}
 				return false;
 			};
-			// If remote succeeded, resolve early
-			try {
-				const ok = await tryRemote();
-				if (ok) return resolve();
-			} catch (e) { /* ignore */ }
+			// If not forcing local, try remote first; else skip to local TTS
+			if (!forceLocal) {
+				try {
+					const ok = await tryRemote();
+					if (ok) return resolve();
+				} catch (e) { /* ignore */ }
+			}
 			// Fallback to in-browser SpeechSynthesis
 			if (!('speechSynthesis' in window) || !text) return resolve();
 			let tried = 0;
