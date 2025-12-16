@@ -553,14 +553,15 @@ class ScrabbleGame {
 
 		const wordLower = String(word).toLowerCase();
 
-		// Stricter validation for Spanish: Reject 2-letter words (they're often just syllables)
-		// In Spanish Scrabble, 2-letter words like "NI", "DE", "EL" are technically valid
-		// but can make the game too easy. Require 3+ letters for better gameplay.
+		// Developer note: DO NOT use hard-coded two-letter or small-word allowlists.
+		// Hard-coded lists are brittle and lead to invalid plays (e.g. 'av', 'tu').
+		// Instead consult the loaded `dictionary` and `backupDictionary` sources.
+		// For Spanish two-letter words, require presence in the active/backup dictionaries.
 		if (lang === 'es' && word.length === 2) {
-			// Only allow common 2-letter Spanish words that are actual words, not just syllables
-			const allowedTwoLetterWords = new Set(['el', 'la', 'un', 'de', 'en', 'es', 'se', 'le', 'te', 'me', 'lo', 'al', 'si', 'no', 'ya']);
-			if (!allowedTwoLetterWords.has(wordLower)) {
-				return false; // Reject uncommon 2-letter words
+			const normalized = normalizeWordForDict(wordLower).toLowerCase();
+			if (!(this.activeDictionary && this.activeDictionary.has(normalized)) &&
+				!(this.backupDictionary && this.backupDictionary.has(normalized))) {
+				return false; // Reject uncommon two-letter Spanish entries not present in dictionaries
 			}
 		}
 
@@ -576,6 +577,20 @@ class ScrabbleGame {
 
 		if (foundInDictionary) {
 			return true;
+		}
+
+		// Quick synchronous check against main/backups (avoid slow API calls when possible)
+		try {
+			if (lang === 'es') {
+				const normalized = normalizeWordForDict(wordLower).toLowerCase();
+				if (this.dictionary && this.dictionary.has(normalized)) return true;
+				if (this.backupDictionary && this.backupDictionary.has(normalized)) return true;
+			} else {
+				if (this.dictionary && this.dictionary.has(wordLower)) return true;
+				if (this.backupDictionary && this.backupDictionary.has(wordLower)) return true;
+			}
+		} catch (e) {
+			// ignore and continue to API/fallback
 		}
 
 		// If not in local dictionary, use API validation for non-English languages
@@ -746,10 +761,8 @@ class ScrabbleGame {
 				const row = isHorizontal ? startPos.row : startPos.row + i;
 				const col = isHorizontal ? startPos.col + i : startPos.col;
 				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-
-				// Only add ghost if cell is empty or only contains the center star
-				if (cell && !cell.querySelector('.tile')) {
-					// Remove center star if present (ghost overlays it)
+				if (cell) {
+					// Overlay ghost even if cell already has a tile; render above existing tile with subtle style
 					const star = cell.querySelector('.center-star');
 					if (star) star.style.opacity = '0.2';
 
@@ -757,14 +770,13 @@ class ScrabbleGame {
 					ghost.className = 'tile ghost-tile';
 					ghost.dataset.moveIndex = moveIndex;
 
-					// Enhanced ghost tile with multiple indicators
+					// If there's an existing tile, render ghost as overlay with even lower opacity
+					const existingTile = cell.querySelector('.tile');
+					const isOverlay = !!existingTile;
+
 					const rankIndicator = moveRank ? `<span class="rank" style="position: absolute; top: -3px; left: -3px; background: ${enhancedColorScheme.border}; color: white; border-radius: 50%; width: 10px; height: 10px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: bold;">${moveIndex + 1}</span>` : '';
-
-					const qualityIndicator = quality !== undefined ?
-						`<span class="quality" style="position: absolute; bottom: -2px; left: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 2px; padding: 1px 2px; font-size: 6px;">${Math.round(quality / 10)}</span>` : '';
-
-					const scoreIndicator = score !== undefined ?
-						`<span class="score-mini" style="position: absolute; top: -2px; right: -2px; background: #fff; color: ${enhancedColorScheme.text}; border-radius: 2px; padding: 1px 2px; font-size: 6px; font-weight: bold; border: 1px solid ${enhancedColorScheme.border};">${score}</span>` : '';
+					const qualityIndicator = quality !== undefined ? `<span class="quality" style="position: absolute; bottom: -2px; left: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 2px; padding: 1px 2px; font-size: 6px;">${Math.round(quality / 10)}</span>` : '';
+					const scoreIndicator = score !== undefined ? `<span class="score-mini" style="position: absolute; top: -2px; right: -2px; background: #fff; color: ${enhancedColorScheme.text}; border-radius: 2px; padding: 1px 2px; font-size: 6px; font-weight: bold; border: 1px solid ${enhancedColorScheme.border};">${score}</span>` : '';
 
 					ghost.innerHTML = `
 						${word[i]}
@@ -774,15 +786,15 @@ class ScrabbleGame {
 						${scoreIndicator}
 					`;
 
-					// Make ghost tiles subtle: low opacity, lighter borders
-					ghost.style.opacity = '0.18';
 					ghost.style.visibility = 'visible';
 					ghost.style.pointerEvents = 'none';
 					ghost.style.background = enhancedColorScheme.bg;
 					ghost.style.color = enhancedColorScheme.text;
 					ghost.style.border = `1px dashed ${enhancedColorScheme.border}`;
-					ghost.style.zIndex = 10 + moveIndex; // Stack them properly
-					// Enhanced tooltip with detailed move information
+					ghost.style.zIndex = 100 + moveIndex; // Ensure overlay
+					ghost.style.position = 'relative';
+					ghost.style.opacity = isOverlay ? '0.12' : '0.18';
+
 					let tooltip = `${moveIndex === 0 ? '★ ' : ''}${word}`;
 					if (score !== undefined) tooltip += ` | Score: ${score}`;
 					if (quality !== undefined) tooltip += ` | Quality: ${quality}`;
@@ -807,67 +819,67 @@ class ScrabbleGame {
 		// Don't temporarily place tiles for AI move finding - it causes validation inconsistencies
 		const aiPlays = this.findAIPossiblePlays();
 
-		// Filter out invalid Spanish words when in Spanish mode
-		let filteredPlays = aiPlays;
+		// Determine language
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-		if (lang === 'es') {
-			filteredPlays = [];
+
+		// First, prefer plays that are in our dictionaries (fast, synchronous)
+		let filteredPlays = aiPlays.filter(p => this.dictionaryHas(p.word));
+
+		// For Spanish, attempt bounded API validation for plays not in local dict
+		if (lang === 'es' && aiPlays.length > 0) {
+			const extraValid = [];
 			for (const play of aiPlays) {
+				if (filteredPlays.some(fp => fp.word === play.word)) continue; // already accepted
 				try {
-					const isValidWord = await this.validateSpanishWordWithAPI(play.word);
-					if (isValidWord) {
-						filteredPlays.push(play);
+					// Bounded API validation: give API 600ms, then fall back to local dictionary
+					const apiPromise = this.validateSpanishWordWithAPI(play.word).catch(() => false);
+					const timeout = new Promise(resolve => setTimeout(() => resolve('timeout'), 600));
+					const res = await Promise.race([apiPromise, timeout]);
+					let isValid = false;
+					if (res === 'timeout') {
+						isValid = this.dictionaryHas(play.word); // fallback
 					} else {
-						if (this.showAIDebug) console.log(`Filtered out invalid Spanish word: ${play.word}`);
+						isValid = !!res;
 					}
+					if (isValid) extraValid.push(play);
 				} catch (e) {
-					// If API validation fails, include the word anyway (fallback to local validation)
-					if (this.dictionaryHas(play.word)) {
-						filteredPlays.push(play);
-					}
+					if (this.dictionaryHas(play.word)) extraValid.push(play);
 				}
 			}
+
+			if (extraValid.length > 0) filteredPlays = filteredPlays.concat(extraValid);
 		}
 
-		this.lastAIGhostPlays = filteredPlays; // Store for rotating display
+		// If nothing passed fast validation, fallback to showing top raw plays
+		let playsToDisplay = (filteredPlays && filteredPlays.length > 0) ? filteredPlays.slice() : aiPlays.slice();
+
+		// Sort plays by quality/strategicScore/score and take top 10
+		playsToDisplay.sort((a, b) => (b.quality || b.strategicScore || b.score || 0) - (a.quality || a.strategicScore || a.score || 0));
+		const topMoves = playsToDisplay.slice(0, Math.min(10, playsToDisplay.length));
+
+		this.lastAIGhostPlays = playsToDisplay;
 		if (this.showAIDebug) {
-			console.log("AI found", filteredPlays.length, "possible moves for ghost display:", filteredPlays.map(p => `${p.word}(${p.score})`));
-			console.log("AI ghost possible plays:", filteredPlays);
+			console.log("AI ghost possible plays:", playsToDisplay.slice(0, 12).map(p => `${p.word}(${p.score})`));
 		}
 
-		// Minimal summary for English mode: total moves and combined dictionary word count
-		if (lang === 'en') {
-			const dictMain = this.dictionary ? this.dictionary.size : 0;
-			const dictBackup = this.backupDictionary ? this.backupDictionary.size : 0;
-			const combinedDictTotal = dictMain + dictBackup;
-			console.log(`AI moves available: ${filteredPlays.length}; dictionaries total words: ${combinedDictTotal}`);
-		}
-
-		if (aiPlays && aiPlays.length > 0) {
-			// Increment valid words counter
-			this.validWordsFound += aiPlays.length;
-
-			// Limit to top 10 moves for better AI preview
-			const topMoves = aiPlays.slice(0, Math.min(10, aiPlays.length)); // Show top 10 moves
+		if (topMoves.length > 0) {
+			this.validWordsFound += topMoves.length;
 			this.showRotatingGhostMoves(topMoves);
 
-			// Hide ghost tiles after 6 seconds to allow better preview (increased for more moves)
 			setTimeout(() => {
 				document.querySelectorAll('.ghost-tile').forEach(tile => {
 					tile.style.transition = 'opacity 1s ease-out';
 					tile.style.opacity = '0';
-					setTimeout(() => tile.remove(), 1000); // Remove after fade out
+					setTimeout(() => tile.remove(), 1000);
 				});
 			}, 6000);
 
-			// Store the best move for when AI actually plays
-			this.ghostAIMove = {
-				...aiPlays[0],
+			this.ghostAIMove = topMoves[0] ? {
+				...topMoves[0],
 				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
 				boardSnapshot: JSON.stringify(this.board)
-			};
+			} : null;
 
-			// Stop ghost thinking after finding 15 valid words (increased for better AI preview)
 			if (this.validWordsFound >= 15) {
 				this.stopGhostThinking();
 				return;
@@ -1482,7 +1494,8 @@ class ScrabbleGame {
 						this.getSuffix(startPos, isHorizontal),
 						this.aiRack.map(t => t.letter)
 					);
-					if (validity.valid && canForm) {
+					// Only accept ghost move if it's validated by dictionary and cross-word checks
+					if (this.dictionaryHas(word) && validity.valid && canForm) {
 						if (this.showAIDebug) console.log("AI using ghost move:", this.ghostAIMove);
 						updateThinkingText(getTranslation('aiPlayingPreview', _aiLang));
 						setTimeout(() => {
@@ -1528,6 +1541,9 @@ class ScrabbleGame {
 
 				const possiblePlays = this.findAIPossiblePlays(minWordLength, maxWordLength);
 				if (possiblePlays && possiblePlays.length > 0) {
+					// Prefer plays that exist in dictionaries first to avoid relying on lenient ghost-only plays
+					const locallyValid = possiblePlays.filter(p => this.dictionaryHas(p.word));
+					const candidatePlays = locallyValid.length > 0 ? locallyValid : possiblePlays;
 					// Sort by strategic score (includes length, premium squares, cross-words), then regular score
 					possiblePlays.sort((a, b) => {
 						const aStrategic = a.strategicScore || a.score;
@@ -1536,7 +1552,7 @@ class ScrabbleGame {
 						return b.score - a.score;
 					});
 
-					for (const candidate of possiblePlays) {
+					for (const candidate of candidatePlays) {
 						// If over 1 minute total, just play the first valid move we can find
 						if (Date.now() - startTime > 60000) {
 							const quickValidity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
