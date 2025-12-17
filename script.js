@@ -499,6 +499,7 @@ class ScrabbleGame {
 		this.playerScore = 0;
 		this.aiScore = 0;
 		this.dictionary = new Set();
+		this.coreValidDictionary = new Set(); // Tier 1: 100% valid common words
 		this.spanishDictionary = new Set();
 		this.spanishDictionaryNormalized = new Set();
 		this.spanishNormalizedMap = {}; // normalized -> original
@@ -551,6 +552,12 @@ class ScrabbleGame {
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
 		const wordLower = String(word).toLowerCase();
 
+		// TIER 1: Check core valid dictionary FIRST (instant validation for common words)
+		if (lang === 'en' && this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) {
+			return true;
+		}
+
+		// TIER 2: Check main dictionaries
 		// ENHANCEMENT: Stricter validation for 2-letter words (highest false-positive rate)
 		if (word.length === 2) {
 			if (lang === 'es') {
@@ -581,7 +588,7 @@ class ScrabbleGame {
 
 		if (foundInDictionary) return true;
 
-		// For non-English, try API validation
+		// TIER 3: For non-English, try API validation
 		if (lang !== 'en') {
 			return this.validateWordForLanguageSync(word, lang);
 		}
@@ -6334,6 +6341,19 @@ formedWords.forEach((wordInfo) => {
 			this.dictionary = new Set(validWords);
 			// Keep a backupDictionary set containing all source words (unfiltered raw union)
 			this.backupDictionary = new Set(Array.from(seenWords || []));
+			
+			// BUILD TIER 1: Core valid dictionary (most common, guaranteed valid English words)
+			// This creates a fast-check set of absolutely valid words
+			const coreWords = [
+				// Common 2-3 letter words
+				"a", "i", "the", "and", "or", "is", "it", "as", "at", "by", "do", "go", "he", "hi", "if", "in", "me", "my", "no", "of", "on", "so", "to", "up", "us", "we", "yes", "you",
+				// Common 4-5 letter words
+				"able", "about", "also", "back", "been", "best", "both", "call", "came", "come", "could", "days", "did", "does", "done", "down", "each", "even", "ever", "find", "first", "form", "four", "from", "gave", "give", "goes", "good", "hand", "have", "here", "high", "home", "into", "just", "keep", "kind", "know", "last", "left", "life", "like", "line", "live", "long", "look", "made", "make", "many", "more", "most", "move", "must", "name", "need", "never", "next", "only", "open", "other", "over", "part", "people", "place", "play", "said", "same", "seem", "set", "show", "side", "some", "such", "take", "tell", "than", "that", "them", "then", "there", "these", "they", "this", "time", "told", "took", "turn", "used", "very", "want", "was", "well", "were", "what", "when", "where", "which", "while", "who", "why", "will", "with", "word", "work", "world", "would", "write", "year",
+				// Common longer words
+				"about", "after", "again", "another", "because", "before", "between", "before", "different", "example", "family", "father", "follow", "friend", "getting", "getting", "important", "interest", "language", "learning", "morning", "nothing", "number", "picture", "problem", "process", "school", "should", "sister", "something", "special", "student", "subject", "system", "through", "together", "understand", "water", "welcome", "without", "working", "writing"
+			];
+			this.coreValidDictionary = new Set(coreWords.map(w => w.toLowerCase()));
+			console.log(`Core valid dictionary built: ${this.coreValidDictionary.size} absolutely valid words (Tier 1)`);
 			
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
