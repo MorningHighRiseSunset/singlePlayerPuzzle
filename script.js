@@ -3313,90 +3313,7 @@ class ScrabbleGame {
 		return false;
 	}
 
-	evaluateWordQuality(word, row, col, horizontal) {
-		let quality = 0;
 
-		// Give massive bonus for longer words
-		quality += Math.pow(word.length, 3) * 10; // Cubic scaling for length
-
-		// Bonus for using premium squares
-		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
-		quality += premiumSquares * 15;
-
-		// Small bonus for cross-words (but less important than length)
-		const crossWords = this.countIntersections(row, col, horizontal, word);
-		quality += crossWords * 10;
-
-		// Minor bonus for balanced letter usage
-		const letterBalance = this.evaluateLetterBalance(word);
-		quality += letterBalance * 5;
-
-		return quality;
-	}
-
-	evaluateCrossWordPotential(word, row, col, horizontal) {
-		let potential = 0;
-		const commonLetters = "AEIOURST";
-
-		for (let i = 0; i < word.length; i++) {
-			const row = horizontal ? startRow : startRow + i;
-			const col = horizontal ? startCol + i : startCol;
-
-				if (tempBoard[row][col]) {
-					if (tempBoard[row][col].letter !== word[i]) {
-						if (this.showAIDebug) console.log(`Letter mismatch at position [${row},${col}]`);
-						return false;
-					}
-					hasValidIntersection = true;
-				} else {
-				tempBoard[row][col] = {
-					letter: word[i]
-				};
-
-				// Always check the perpendicular word for every new tile placed
-				const crossWord = horizontal ?
-					this.getVerticalWordAt(row, col, tempBoard) :
-					this.getHorizontalWordAt(row, col, tempBoard);
-
-				if (crossWord && crossWord.length > 1) {
-					if (!this.dictionaryHas(crossWord)) {
-						if (this.showAIDebug) console.log(`Invalid cross word formed: ${crossWord}`);
-						return false;
-					}
-					hasValidIntersection = true;
-				}
-			}
-		}
-
-		return potential;
-	}
-
-	evaluatePositionalValue(row, col, horizontal, word) {
-		let value = 0;
-		const centerRow = 7,
-			centerCol = 7;
-
-		// Distance from center
-		const distanceFromCenter =
-			Math.abs(row - centerRow) + Math.abs(col - centerCol);
-		value -= distanceFromCenter * 2; // Slight penalty for distance from center
-
-		// Check if move creates a balanced board
-		const boardBalance = this.evaluateBoardBalance(row, col, horizontal, word);
-		value += boardBalance;
-
-		// Bonus for moves that don't crowd the board
-		if (!this.isBoardCrowded(row, col, horizontal, word)) {
-			value += 15;
-		}
-
-		// Consider edge proximity
-		if (this.isNearEdge(row, col, horizontal, word)) {
-			value -= 10; // Penalty for being too close to edge
-		}
-
-		return value;
-	}
 
 	hasAdjacentSpace(row, col, vertical) {
 		if (vertical) {
@@ -12447,6 +12364,45 @@ calculateScore() {
 
 				// Trigger game over animation
 				this.announceWinner();
+			});
+		}
+
+
+		// Copy move history button (mobile)
+		const copyHistoryBtnMobile = document.getElementById("copy-move-history-mobile");
+		if (copyHistoryBtnMobile) {
+			copyHistoryBtnMobile.addEventListener("click", () => {
+				const historyContent = document.getElementById("move-history").innerText;
+				if (historyContent && historyContent.trim()) {
+					navigator.clipboard.writeText(historyContent).then(() => {
+						copyHistoryBtnMobile.textContent = "✓ Copied!";
+						setTimeout(() => { copyHistoryBtnMobile.textContent = "📋 Copy"; }, 2000);
+					}).catch(err => {
+						console.error("Failed to copy:", err);
+						alert("Failed to copy to clipboard");
+					});
+				} else {
+					alert("No move history to copy");
+				}
+			});
+		}
+
+		// Copy move history button (desktop)
+		const copyHistoryBtnDesktop = document.getElementById("copy-move-history-desktop");
+		if (copyHistoryBtnDesktop) {
+			copyHistoryBtnDesktop.addEventListener("click", () => {
+				const historyContent = document.getElementById("move-history-desktop").innerText;
+				if (historyContent && historyContent.trim()) {
+					navigator.clipboard.writeText(historyContent).then(() => {
+						copyHistoryBtnDesktop.textContent = "✓ Copied!";
+						setTimeout(() => { copyHistoryBtnDesktop.textContent = "📋 Copy"; }, 2000);
+					}).catch(err => {
+						console.error("Failed to copy:", err);
+						alert("Failed to copy to clipboard");
+					});
+				} else {
+					alert("No move history to copy");
+				}
 			});
 		}
 

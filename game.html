@@ -353,7 +353,10 @@
       <div class="drawer-content">
         <!-- Definitions/Move History - FIRST so it's visible -->
         <div id="move-history-container" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:150px; overflow-y:auto;">
-          <h3 style="margin-top:0; margin-bottom:6px; font-size:1em; color:#1a237e;" data-translate="moveHistory">Move History</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h3 style="margin:0; font-size:1em; color:#1a237e;" data-translate="moveHistory">Move History</h3>
+            <button id="copy-move-history-mobile" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
+          </div>
           <div id="move-history" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
         </div>
         <!-- Definitions history will be created dynamically and placed near instructions -->
@@ -423,7 +426,10 @@
       <div class="drawer-content">
         <!-- Definitions/Move History - FIRST so it's visible -->
         <div id="move-history-container-desktop" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:180px; overflow-y:auto;">
-          <h3 style="margin-top:0; margin-bottom:6px; font-size:1em; color:#1a237e;">Move History</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h3 style="margin:0; font-size:1em; color:#1a237e;">Move History</h3>
+            <button id="copy-move-history-desktop" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
+          </div>
           <div id="move-history-desktop" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
         </div>
         <!-- Definitions history inside desktop drawer removed; history will be shown near instructions -->
