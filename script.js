@@ -845,6 +845,43 @@ class ScrabbleGame {
 		}
 	}
 
+	// Clear all ghost tiles from the board
+	clearGhostTiles() {
+		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+	}
+
+	// Simple strategic board analysis - just find premium squares next to existing tiles
+	analyzeBoardForStrategicOpportunities() {
+		const opportunities = [];
+		for (let row = 0; row < 15; row++) {
+			for (let col = 0; col < 15; col++) {
+				if (this.board[row][col]) continue; // Skip occupied cells
+				
+				// Check if adjacent to any existing tile
+				if (this.isAdjacentToExistingTiles(row, col)) {
+					const premium = this.getPremiumSquareType(row, col);
+					if (premium) {
+						opportunities.push({
+							row, col, premium,
+							value: premium === 'tw' ? 100 : premium === 'dw' ? 50 : 25
+						});
+					}
+				}
+			}
+		}
+		return opportunities;
+	}
+
+	// Check if a position is adjacent to any existing tiles
+	isAdjacentToExistingTiles(row, col) {
+		const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+		for (const [dr, dc] of dirs) {
+			const r = row + dr, c = col + dc;
+			if (this.isValidPosition(r, c) && this.board[r][c]) return true;
+		}
+		return false;
+	}
+
 	// Get tiles needed to place a word at a position (tiles not already on board)
 	getTilesNeededForMove(word, startPos, isHorizontal) {
 		const tilesNeeded = [];
