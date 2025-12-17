@@ -565,34 +565,32 @@ class ScrabbleGame {
 			}
 		}
 
-		// --- OPTIMIZED ENGLISH PATH: For English AI, check dictionaries only (no API calls) ---
-		// This is critical for AI performance - avoiding network calls during move selection
+		// Always check local dictionary first
+		// For Spanish, normalize accented characters (Café → cafe) to match normalized dictionary
 		let foundInDictionary = false;
 		if (lang === 'es') {
 			const normalized = normalizeWordForDict(wordLower).toLowerCase();
-			foundInDictionary = this.activeDictionary && this.activeDictionary.has(normalized);
+			foundInDictionary = this.activeDictionary.has(normalized);
 		} else {
-			// English: Check active dictionary first (fastest)
-			foundInDictionary = this.activeDictionary && this.activeDictionary.has(wordLower);
+			foundInDictionary = this.activeDictionary.has(wordLower);
 		}
 
 		if (foundInDictionary) {
 			return true;
 		}
 
-		// Quick check against backup dictionaries (still fast, no network)
+		// Quick synchronous check against main/backups (avoid slow API calls when possible)
 		try {
 			if (lang === 'es') {
 				const normalized = normalizeWordForDict(wordLower).toLowerCase();
 				if (this.dictionary && this.dictionary.has(normalized)) return true;
 				if (this.backupDictionary && this.backupDictionary.has(normalized)) return true;
 			} else {
-				// English priority: Check all local dictionaries before rejecting
 				if (this.dictionary && this.dictionary.has(wordLower)) return true;
 				if (this.backupDictionary && this.backupDictionary.has(wordLower)) return true;
 			}
 		} catch (e) {
-			// ignore and continue
+			// ignore and continue to API/fallback
 		}
 
 		// If not in local dictionary, use API validation for non-English languages
@@ -600,9 +598,10 @@ class ScrabbleGame {
 			return this.validateWordForLanguageSync(word, lang);
 		}
 
-		// For English, if not in any dictionary, REJECT immediately without API calls
-		// This ensures fast, reliable AI decision-making without network delays
+		// For English, if not in local dictionary, reject the word
+		if (this.showAIDebug) console.log(`Word "${word}" not found in English dictionary (size: ${this.activeDictionary?.size || 0})`);
 		return false;
+		return this.isBasicValidForLanguage(String(word).toUpperCase(), 'en');
 	}
 
 	// Synchronous wrapper for language validation with caching
@@ -1565,19 +1564,6 @@ class ScrabbleGame {
 							continue;
 						}
 
-						// --- OPTIMIZATION: Skip full validation for pre-confirmed dictionary words ---
-						if (candidate.dictionaryConfirmed) {
-							// Fast path: only validate cross-words (main word already confirmed)
-							const fastValidity = await this.checkAIMoveValidityCrossWordsOnly(candidate.word, candidate.startPos, candidate.isHorizontal);
-							if (fastValidity.valid) {
-								bestPlay = candidate;
-								updateThinkingText(getTranslation('aiFoundMove', _aiLang));
-								break;
-							}
-							continue;
-						}
-
-						// Full validation for other moves
 						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
 						if (validity.valid) {
 							bestPlay = candidate;
@@ -2349,12 +2335,6 @@ class ScrabbleGame {
 						// Performance limit: stop if we have too many candidates
 						if (candidatesFound >= maxCandidates) break;
 
-						// --- EARLY FILTER: Quick dictionary check before expensive validation ---
-						// This eliminates 80%+ of invalid words before we compute scores
-						if (!this.dictionaryHas(word)) {
-							continue; // Skip this word entirely
-						}
-
 						// Calculate start position
 						const startRow = isHorizontal ? anchor.row : anchor.row - prefix.length;
 						const startCol = isHorizontal ? anchor.col - prefix.length : anchor.col;
@@ -2377,8 +2357,7 @@ class ScrabbleGame {
 									startPos: { row: startRow, col: startCol },
 									isHorizontal,
 									score,
-									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal),
-									dictionaryConfirmed: true // Pre-validated as in dictionary
+									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
 								});
 								candidatesFound++;
 
@@ -4260,54 +4239,6 @@ class ScrabbleGame {
 		};
 	}
 
-	// --- FAST PATH VALIDATION FOR AI ---
-	// Only validate cross-words (main word pre-confirmed in dictionary)
-	async checkAIMoveValidityCrossWordsOnly(word, startPos, isHorizontal) {
-		const excludedVariants = new Set([
-			"atropin", // German spelling, not valid in English Scrabble
-		]);
-
-		let tempBoard = JSON.parse(JSON.stringify(this.board));
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startPos.row : startPos.row + i;
-			const col = isHorizontal ? startPos.col + i : startPos.col;
-			if (!tempBoard[row][col]) {
-				tempBoard[row][col] = { letter: word[i] };
-			}
-		}
-
-		let invalidWords = [];
-		let validWords = [{ word, confidence: 95, isMain: true }]; // Pre-confirmed main word
-
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startPos.row : startPos.row + i;
-			const col = isHorizontal ? startPos.col + i : startPos.col;
-
-			// Only check cross-words for new tiles
-			const crossWord = isHorizontal ?
-				this.getVerticalWordAt(row, col, tempBoard) :
-				this.getHorizontalWordAt(row, col, tempBoard);
-
-			if (crossWord && crossWord.length > 1 && !validWords.some(v => v.word === crossWord)) {
-				if (!this.dictionaryHas(crossWord)) {
-					if (!excludedVariants.has(crossWord.toLowerCase())) {
-						invalidWords.push(crossWord);
-					}
-				} else {
-					validWords.push({ word: crossWord, confidence: 95, isMain: false });
-				}
-			}
-		}
-
-		return {
-			valid: invalidWords.length === 0,
-			confidence: 95,
-			validWords: validWords,
-			invalidWords: invalidWords,
-			reason: invalidWords.length > 0 ? `Invalid cross-words: ${invalidWords.join(', ')}` : 'Valid'
-		};
-	}
-
 	// Place this inside your ScrabbleGame class
 
 	async checkAIMoveValidity(word, startPos, isHorizontal) {
@@ -4339,25 +4270,22 @@ class ScrabbleGame {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 
-			// Main word validation - OPTIMIZED FOR ENGLISH
+			// Main word validation with confidence scoring
 			if (i === 0) {
 				const mainWord = isHorizontal ?
 					this.getHorizontalWordAt(row, col, tempBoard) :
 					this.getVerticalWordAt(row, col, tempBoard);
 
 				if (mainWord && mainWord.length > 1) {
-					// For English, use dictionaryHas (instant) instead of validateWordInContext (slow API calls)
-					const isValid = (lang === 'en') ? 
-						this.dictionaryHas(mainWord.toLowerCase()) :
-						(await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true)).isValid;
+					const validation = await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true);
 
-					if (isValid && !excludedVariants.has(mainWord.toLowerCase())) {
+					if (validation.isValid && !excludedVariants.has(mainWord.toLowerCase())) {
 						// Check if AI can provide the tiles it needs to place (not already on board)
 						const tilesToPlace = this.getTilesNeededForMove(word, startPos, isHorizontal);
 						const canForm = this.canFormWordWithTiles(tilesToPlace.join(''), this.aiRack || []);
 						if (canForm) {
-							validWords.push({ word: mainWord, confidence: 95, isMain: true });
-							totalConfidence += 95;
+							validWords.push({ word: mainWord, confidence: validation.confidence, isMain: true });
+							totalConfidence += validation.confidence;
 							wordCount++;
 
 						} else {
@@ -4369,21 +4297,18 @@ class ScrabbleGame {
 				}
 			}
 
-			// Crosswords validation - OPTIMIZED FOR ENGLISH
+			// Crosswords validation with confidence scoring
 			const crossWord = isHorizontal ?
 				this.getVerticalWordAt(row, col, tempBoard) :
 				this.getHorizontalWordAt(row, col, tempBoard);
 
 			if (crossWord && crossWord.length > 1 && !validWords.some(v => v.word === crossWord)) {
-				// For English, use dictionaryHas (instant) instead of validateWordInContext (slow)
-				const isValid = (lang === 'en') ?
-					this.dictionaryHas(crossWord.toLowerCase()) :
-					(await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false)).isValid;
+				const validation = await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false);
 
-				if (isValid && !excludedVariants.has(crossWord.toLowerCase())) {
+				if (validation.isValid && !excludedVariants.has(crossWord.toLowerCase())) {
 					// Cross words are formed by intersection - no additional tiles needed from rack
-					validWords.push({ word: crossWord, confidence: 95, isMain: false });
-					totalConfidence += 95;
+					validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
+					totalConfidence += validation.confidence;
 					wordCount++;
 				} else {
 					invalidWords.push(crossWord);
@@ -9308,7 +9233,7 @@ calculateScore() {
 
 			case 'zh': // Chinese (simplified for Scrabble context)
 				// For Chinese, we'll rely more on API validation
-				return word.length >= 2;
+				return word.length >= 1;
 
 			default: // English and others
 				return /^[A-Z]+$/.test(word) &&
@@ -9873,9 +9798,6 @@ calculateScore() {
 	couldBeValidSpanishWord(word) {
 		// Basic Spanish word validation heuristics
 		if (!word) return false;
-
-		// Must be at least 2 characters long
-		if (word.length < 2) return false;
 
 		// Must contain only valid Spanish letters
 		if (!/^[A-ZÑ]+$/.test(word)) return false;
