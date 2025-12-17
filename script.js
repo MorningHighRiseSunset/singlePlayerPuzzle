@@ -795,344 +795,50 @@ class ScrabbleGame {
 		});
 	}
 
-	async showAIGhostIfPlayerMoveValid() {
-		if (this.currentTurn !== "player") {
-			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
-			this.ghostAIMove = null;
+	// Update ghost move preview - simple and clean
+	async updateGhostPreview() {
+		if (this.currentTurn !== "player" || this.isGameEnded) {
+			this.clearGhostTiles();
 			return;
 		}
 
-		// Don't temporarily place tiles for AI move finding - it causes validation inconsistencies
-		const aiPlays = this.findAIPossiblePlays();
-
-		// Determine language
-		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-
-		// First, prefer plays that are in our dictionaries (fast, synchronous)
-		let filteredPlays = aiPlays.filter(p => this.dictionaryHas(p.word));
-
-		// For Spanish, attempt bounded API validation for plays not in local dict
-		if (lang === 'es' && aiPlays.length > 0) {
-			const extraValid = [];
-			for (const play of aiPlays) {
-				if (filteredPlays.some(fp => fp.word === play.word)) continue; // already accepted
-				try {
-					// Bounded API validation: give API 600ms, then fall back to local dictionary
-					const apiPromise = this.validateSpanishWordWithAPI(play.word).catch(() => false);
-					const timeout = new Promise(resolve => setTimeout(() => resolve('timeout'), 600));
-					const res = await Promise.race([apiPromise, timeout]);
-					let isValid = false;
-					if (res === 'timeout') {
-						isValid = this.dictionaryHas(play.word); // fallback
-					} else {
-						isValid = !!res;
-					}
-					if (isValid) extraValid.push(play);
-				} catch (e) {
-					if (this.dictionaryHas(play.word)) extraValid.push(play);
-				}
-			}
-
-			if (extraValid.length > 0) filteredPlays = filteredPlays.concat(extraValid);
-		}
-
-		// If nothing passed fast validation, fallback to showing top raw plays
-		let playsToDisplay = (filteredPlays && filteredPlays.length > 0) ? filteredPlays.slice() : aiPlays.slice();
-
-		// Sort plays by quality/strategicScore/score and take top 10
-		playsToDisplay.sort((a, b) => (b.quality || b.strategicScore || b.score || 0) - (a.quality || a.strategicScore || a.score || 0));
-		const topMoves = playsToDisplay.slice(0, Math.min(10, playsToDisplay.length));
-
-		this.lastAIGhostPlays = playsToDisplay;
-		if (this.showAIDebug) {
-			console.log("AI ghost possible plays:", playsToDisplay.slice(0, 12).map(p => `${p.word}(${p.score})`));
-		}
-
-		if (topMoves.length > 0) {
-			this.validWordsFound += topMoves.length;
-			this.showRotatingGhostMoves(topMoves);
-
-			setTimeout(() => {
-				document.querySelectorAll('.ghost-tile').forEach(tile => {
-					tile.style.transition = 'opacity 1s ease-out';
-					tile.style.opacity = '0';
-					setTimeout(() => tile.remove(), 1000);
-				});
-			}, 6000);
-
-			this.ghostAIMove = topMoves[0] ? {
-				...topMoves[0],
-				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
-				boardSnapshot: JSON.stringify(this.board)
-			} : null;
-
-			if (this.validWordsFound >= 15) {
-				this.stopGhostThinking();
+		try {
+			const aiPlays = this.findAIPossiblePlays();
+			if (!aiPlays || aiPlays.length === 0) {
+				this.clearGhostTiles();
 				return;
 			}
-		} else {
-			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
-			this.ghostAIMove = null;
-		}
 
-		// Set up continuous ghost thinking for better AI preview
-		this.startGhostThinking();
+			let validPlays = aiPlays.filter(p => this.dictionaryHas(p.word));
+			if (validPlays.length === 0) {
+				this.clearGhostTiles();
+				return;
+			}
+
+			validPlays.sort((a, b) => (b.score || 0) - (a.score || 0));
+			const topMove = validPlays[0];
+			if (topMove) {
+				this.displayGhostMove(topMove);
+				this.ghostAIMove = { ...topMove };
+			}
+		} catch (error) {
+			console.debug('Ghost preview error:', error);
+			this.clearGhostTiles();
+		}
 	}
 
-	// Start continuous ghost move calculation for better user experience
-	startGhostThinking() {
-		// Clear any existing ghost thinking timer
-		if (this.ghostThinkingTimer) {
-			clearInterval(this.ghostThinkingTimer);
-		}
-
-		// Reset valid words counter when starting ghost thinking
-		this.validWordsFound = 0;
-
-		// Update ghost move every 3 seconds when it's the player's turn
-		this.ghostThinkingTimer = setInterval(async () => {
+	// Schedule periodic ghost tile updates
+	scheduleGhostUpdates() {
+		if (this.ghostThinkingTimer) clearInterval(this.ghostThinkingTimer);
+		this.ghostThinkingTimer = setInterval(() => {
 			if (this.currentTurn === "player" && !this.isGameEnded) {
-				try {
-					// Only recalculate if the board state has changed
-					const currentBoardState = JSON.stringify(this.board);
-					const currentRackState = this.aiRack.map(t => t.letter).sort().join('');
-
-					if (currentBoardState !== this.lastGhostBoardState ||
-						currentRackState !== this.lastGhostRackState) {
-
-						this.lastGhostBoardState = currentBoardState;
-						this.lastGhostRackState = currentRackState;
-
-						await this.showAIGhostIfPlayerMoveValid();
-					} else {
-						// If board hasn't changed, cycle through different ghost move displays
-						this.rotateGhostDisplay();
-					}
-				} catch (e) {
-					// Silently handle errors to avoid disrupting gameplay
-					console.debug('Ghost thinking update failed:', e);
-				}
+				this.updateGhostPreview();
 			}
-		}, 3000); // Update every 3 seconds
+		}, 2000);
 	}
 
-	// Rotate through different ghost move displays to show AI's various options
-	rotateGhostDisplay() {
-		if (!this.lastAIGhostPlays || this.lastAIGhostPlays.length <= 1) return;
-
-		// Cycle through different display modes
-		this.ghostDisplayMode = (this.ghostDisplayMode || 0) + 1;
-
-		if (this.ghostDisplayMode % 4 === 0) {
-			// Show the BEST strategic move with special highlighting
-			if (this.lastAIGhostPlays.length > 0) {
-				this.showStrategicGhostMove(this.lastAIGhostPlays[0]);
-			}
-		} else if (this.ghostDisplayMode % 4 === 1) {
-			// Show top 6 highest-scoring moves (increased from 3)
-			const topScoring = this.lastAIGhostPlays
-				.sort((a, b) => (b.strategicScore || b.score) - (a.strategicScore || a.score))
-				.slice(0, 6);
-			this.showRotatingGhostMoves(topScoring, 'gold');
-		} else if (this.ghostDisplayMode % 4 === 2) {
-			// Show longest word moves (increased from 2)
-			const longestWords = this.lastAIGhostPlays
-				.sort((a, b) => b.word.length - a.word.length)
-				.slice(0, 4);
-			this.showRotatingGhostMoves(longestWords, 'blue');
-		} else {
-			// Show blocking/defensive moves or fallback to more regular moves
-			const defensiveMoves = this.findDefensiveMoves();
-			if (defensiveMoves.length > 0) {
-				this.showRotatingGhostMoves(defensiveMoves.slice(0, 6), 'red');
-			} else {
-				// Fallback to regular moves (increased from 3 to 8)
-				this.showRotatingGhostMoves(this.lastAIGhostPlays.slice(0, 8));
-			}
-		}
-	}
-
-	// Show the best strategic move with enhanced visual effects
-	showStrategicGhostMove(play) {
-		// Remove any existing ghost tiles
-		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
-
-		const { word, startPos, isHorizontal } = play;
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startPos.row : startPos.row + i;
-			const col = isHorizontal ? startPos.col + i : startPos.col;
-			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-			// Only add ghost if cell is empty or only contains the center star
-			if (cell && !cell.querySelector('.tile')) {
-				// Remove center star if present (ghost overlays it)
-				const star = cell.querySelector('.center-star');
-				if (star) star.style.opacity = '0.2';
-
-				const ghost = document.createElement('div');
-				ghost.className = 'tile ghost-tile strategic-ghost';
-				ghost.innerHTML = `
-					${word[i]}
-					<span class="points">${this.tileValues[word[i]] || 0}</span>
-				`;
-				ghost.style.opacity = '0';
-				ghost.style.visibility = 'hidden';
-				ghost.style.pointerEvents = 'none';
-				// Subtle strategic ghost: low opacity, gentle glow
-				ghost.style.opacity = '0.18';
-				ghost.style.visibility = 'visible';
-				ghost.style.pointerEvents = 'none';
-				ghost.style.background = 'linear-gradient(45deg, rgba(255,215,0,0.12), rgba(255,165,0,0.12))';
-				ghost.style.color = '#000';
-				ghost.style.border = '1px solid rgba(255,69,0,0.5)';
-				ghost.style.boxShadow = '0 0 6px rgba(255, 69, 0, 0.2)';
-				ghost.style.animation = 'strategicPulse 1.5s infinite';
-				cell.appendChild(ghost);
-			}
-		}
-
-		// Fade in with delay
-		setTimeout(() => {
-			document.querySelectorAll('.strategic-ghost').forEach(ghost => {
-				// Keep strategic ghost subtle
-				ghost.style.opacity = '0.25';
-				ghost.style.visibility = 'visible';
-			});
-		}, 200);
-	}
-
-	// Find defensive/blocking moves that prevent opponent from getting high scores
-	findDefensiveMoves() {
-		const defensiveMoves = [];
-		const opponentRack = this.playerRack; // Assume we can see player's rack
-
-		// Look for positions that would create high-scoring opportunities for opponent
-		for (let row = 0; row < 15; row++) {
-			for (let col = 0; col < 15; col++) {
-				if (!this.board[row][col]) {
-					// Check if this position could lead to premium square usage
-					const adjacentPremiums = this.getAdjacentPremiumSquares(row, col);
-					if (adjacentPremiums.length > 0) {
-						// Find words that would block this position
-						const blockingWords = this.findBlockingWords(row, col, opponentRack);
-						defensiveMoves.push(...blockingWords);
-					}
-				}
-			}
-		}
-
-		return defensiveMoves.slice(0, 3); // Return top 3 defensive moves
-	}
-
-	findBlockingWords(targetRow, targetCol, opponentRack) {
-		const blockingMoves = [];
-		const anchors = this.findAnchors();
-
-		// Look for words that would occupy or block the premium area
-		for (const anchor of anchors) {
-			const rack = opponentRack.map(tile => tile.letter);
-			const prefix = this.getPrefix(anchor, true);
-			const suffix = this.getSuffix(anchor, true);
-
-			const candidateWords = this.trie.findWordsFromRack(
-				rack.concat(prefix.split("")).concat(suffix.split("")),
-				3, 8 // Medium length words for blocking
-			).filter(word =>
-				word.startsWith(prefix) && word.endsWith(suffix) &&
-				this.isScrabbleAppropriate(word)
-			);
-
-			for (const word of candidateWords) {
-				const startRow = anchor.row;
-				const startCol = anchor.col - prefix.length;
-
-				if (this.isValidPosition(startRow, startCol) &&
-					this.isValidAIPlacement(word, startRow, startCol, true)) {
-
-					// Check if this word blocks the premium position
-					let blocksPremium = false;
-					for (let i = 0; i < word.length; i++) {
-						const checkRow = startRow;
-						const checkCol = startCol + i;
-						if (Math.abs(checkRow - targetRow) <= 1 && Math.abs(checkCol - targetCol) <= 1) {
-							blocksPremium = true;
-							break;
-						}
-					}
-
-					if (blocksPremium) {
-						const score = this.calculatePotentialScore(word, startRow, startCol, true);
-						blockingMoves.push({
-							word,
-							startPos: { row: startRow, col: startCol },
-							isHorizontal: true,
-							score,
-							strategicScore: score + 50 // Bonus for defensive play
-						});
-					}
-				}
-			}
-		}
-
-		return blockingMoves;
-	}
-
-	// Analyze board for strategic opportunities (not repositioning existing words)
-	analyzeBoardForStrategicOpportunities() {
-		const strategicMoves = [];
-
-		// Look for premium squares that are still available and adjacent to existing tiles
-		for (let row = 0; row < 15; row++) {
-			for (let col = 0; col < 15; col++) {
-				if (!this.board[row][col]) {
-					const premiumType = this.getPremiumSquareType(row, col);
-					if (premiumType) {
-						// Check if this premium square is adjacent to existing tiles
-						const isAdjacent = this.isAdjacentToExistingTiles(row, col);
-						if (isAdjacent) {
-							strategicMoves.push({
-								position: { row, col },
-								premiumType,
-								strategicValue: premiumType === 'tw' ? 100 : premiumType === 'dw' ? 50 : 25
-							});
-						}
-					}
-				}
-			}
-		}
-
-		return strategicMoves.sort((a, b) => b.strategicValue - a.strategicValue);
-	}
-
-	isAdjacentToExistingTiles(row, col) {
-		const directions = [
-			[-1, 0], [1, 0], [0, -1], [0, 1]
-		];
-
-		for (const [dr, dc] of directions) {
-			const newRow = row + dr;
-			const newCol = col + dc;
-			if (this.isValidPosition(newRow, newCol) && this.board[newRow][newCol]) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	getTilesNeededForMove(word, startPos, isHorizontal) {
-		const tilesNeeded = [];
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startPos.row : startPos.row + i;
-			const col = isHorizontal ? startPos.col + i : startPos.col;
-			// Only include tiles that aren't already on the board
-			if (!this.board[row] || !this.board[row][col]) {
-				tilesNeeded.push(word[i]);
-			}
-		}
-		return tilesNeeded;
-	}
-
-	// Stop ghost thinking (call when game ends or AI turn starts)
-	stopGhostThinking() {
+	// Stop ghost tile updates
+	stopGhostUpdates() {
 		if (this.ghostThinkingTimer) {
 			clearInterval(this.ghostThinkingTimer);
 			this.ghostThinkingTimer = null;
@@ -1321,7 +1027,7 @@ class ScrabbleGame {
 					this.placeTile(tile, row, col);
 
 					// Redo ghost preview after placement
-					this.showAIGhostIfPlayerMoveValid();
+					this.updateGhostPreview();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
@@ -1388,7 +1094,7 @@ class ScrabbleGame {
 	async aiTurn() {
 		this.aiValidationLogSet = new Set();
 		// Stop ghost thinking during AI turn
-		this.stopGhostThinking();
+		this.stopGhostUpdates();
 	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
@@ -4523,7 +4229,7 @@ async executeAIPlay(play) {
 				// Refill racks and update display
 				this.fillRacks();
 				this.renderRack(); // Ensure draggable state is updated
-				this.showAIGhostIfPlayerMoveValid();
+				this.updateGhostPreview();
 				this.updateGameState();
 
 				// --- AI auto-speech disabled by user request ---
@@ -4540,7 +4246,7 @@ async executeAIPlay(play) {
 				// Refill racks and update display
 				this.fillRacks();
 				this.renderRack(); // Ensure draggable state is updated
-				this.showAIGhostIfPlayerMoveValid();
+				this.updateGhostPreview();
 				this.updateGameState();
 			});
 
@@ -4563,7 +4269,7 @@ async executeAIPlay(play) {
 				// Refill racks and update display
 				this.fillRacks();
 				this.renderRack(); // Ensure draggable state is updated
-				this.showAIGhostIfPlayerMoveValid();
+				this.updateGhostPreview();
 				this.updateGameState();
 
 				// If AI scored a bingo, trigger the same bingo visuals and speech as the player (ONLY ONCE)
@@ -7731,7 +7437,7 @@ formedWords.forEach((wordInfo) => {
 					this.highlightValidPlacements();
 
 					// --- Show live AI ghost move if valid ---
-					await this.showAIGhostIfPlayerMoveValid();
+					await this.updateGhostPreview();
 				});
 			});
 		} else {
@@ -7776,7 +7482,7 @@ formedWords.forEach((wordInfo) => {
 
 			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
 		}
-		await this.showAIGhostIfPlayerMoveValid();
+		await this.updateGhostPreview();
 	}
 
 	areTilesConnected() {
@@ -7863,7 +7569,7 @@ formedWords.forEach((wordInfo) => {
         this.renderRack();
 
         // Remove ghost tiles when resetting
-        await this.showAIGhostIfPlayerMoveValid();
+        await this.updateGhostPreview();
     }
 
     // Context-aware word validation with detailed results
@@ -10389,7 +10095,7 @@ calculateScore() {
 				this.fillRacks();
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
-				await this.showAIGhostIfPlayerMoveValid();
+				await this.updateGhostPreview();
 
 				// Pass structured wordDescriptions (array of {word,score}) so move history shows per-word scores
 				this.addToMoveHistory("Player", wordDescriptions, totalScore);
@@ -10597,7 +10303,7 @@ calculateScore() {
 
 	announceWinner() {
 		// Stop ghost thinking when game ends
-		this.stopGhostThinking();
+		this.stopGhostUpdates();
 
 		// --- 1. Sum up points from move history for each player ---
 		let playerScore = 0;

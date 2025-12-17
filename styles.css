@@ -715,16 +715,80 @@ button:active,
   .mobile-menu-toggle, .mobile-drawer { display: none !important; }
 }
 
+/* Ghost Tiles - AI Move Preview */
 .ghost-tile {
-    opacity: 0.7 !important;
-    background: rgba(179, 229, 252, 0.8) !important;
-    color: #01579b !important;
-    border: 2px dashed #0288d1 !important;
-    pointer-events: none !important;
-    box-shadow: 0 0 8px rgba(2, 136, 209, 0.3) !important;
-    z-index: 10;
-    pointer-events: none !important;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8em;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 8;
+  gap: 2px;
+  opacity: 0;
+  animation: ghostAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+.ghost-letter {
+  font-size: 1.4em;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: #0277bd;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.ghost-points {
+  font-size: 0.65em;
+  color: #0277bd;
+  font-weight: bold;
+  opacity: 0.8;
+}
+
+/* Smooth fade-in animation */
+@keyframes ghostAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-4px);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Background gradient for ghost tile */
+.ghost-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(3, 155, 229, 0.08), rgba(0, 150, 136, 0.06));
+  border-radius: 2px;
+  border: 1px solid rgba(2, 136, 209, 0.25);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Pulse effect when showing */
+@keyframes ghostPulse {
+  0%, 100% {
+    opacity: 0.35;
+    box-shadow: 0 0 0 0 rgba(2, 136, 209, 0.4);
+  }
+  50% {
+    opacity: 0.45;
+    box-shadow: 0 0 0 4px rgba(2, 136, 209, 0);
+  }
+}
+
+.ghost-tile.pulse {
+  animation: ghostPulse 2s ease-in-out infinite;
+}
+
+
 
 .overlay-close-btn {
   position: absolute;
