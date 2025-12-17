@@ -6482,38 +6482,74 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		this.updateLoadingProgress('Loading English dictionary...');
 		try {
-			// Try multiple backup dictionary sources
-			const backupUrls = [
-				"https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt",
+			// Try multiple backup dictionary sources (online + local)
+			const onlineUrls = [
 				"https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words_alpha.txt",
-				"https://raw.githubusercontent.com/first20hours/google-10000-english/refs/heads/master/google-10000-english-no-swears.txt",
+				"https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt",
 				"https://raw.githubusercontent.com/first20hours/google-10000-english/refs/heads/master/google-10000-english-usa-no-swears-long.txt"
 			];
 
 			let loaded = false;
 			let allTexts = [];
 
-			for (const url of backupUrls) {
-				try {
-					this.updateLoadingProgress(`Loading dictionary from ${url.split('/').pop()}...`);
-					const response = await fetch(url, { cache: 'no-store' });
+			// Load all sources IN PARALLEL for speed
+			const fetchPromises = [];
 
-					if (response && response.ok) {
-						const t = await response.text();
-						allTexts.push(t);
-						loaded = true;
-						if (this.showAIDebug) console.log(`Dictionary loaded from ${url.split('/').pop()} (size ~${t.length} chars)`);
-					} else {
-						if (this.showAIDebug) console.warn(`Failed to load from ${url}: ${response && response.status}`);
-					}
-				} catch (e) {
-					if (this.showAIDebug) console.warn(`Error loading from ${url}:`, e && e.message);
-				}
+			// Fetch online sources
+			for (const url of onlineUrls) {
+				fetchPromises.push(
+					fetch(url, { cache: 'no-store' })
+						.then(response => {
+							if (response && response.ok) {
+								return response.text().then(t => {
+									if (this.showAIDebug) console.log(`✓ Online dict: ${url.split('/').pop()} loaded`);
+									return t;
+								});
+							}
+							return null;
+						})
+						.catch(e => {
+							if (this.showAIDebug) console.warn(`✗ Failed to load ${url}:`, e.message);
+							return null;
+						})
+				);
 			}
 
-			if (!loaded) {
+			// Fetch local files in parallel
+			const localFiles = [
+				'/SOWPODS.txt',
+				'/backupwordlist.txt', 
+				'/anotherbackupwordlist.txt'
+			];
+
+			for (const file of localFiles) {
+				fetchPromises.push(
+					fetch(file, { cache: 'no-store' })
+						.then(response => {
+							if (response && response.ok) {
+								return response.text().then(t => {
+									if (this.showAIDebug) console.log(`✓ Local dict: ${file} loaded`);
+									return t;
+								});
+							}
+							return null;
+						})
+						.catch(e => {
+							if (this.showAIDebug) console.warn(`✗ Failed to load ${file}`);
+							return null;
+						})
+				);
+			}
+
+			// Wait for ALL sources to load in parallel
+			const results = await Promise.all(fetchPromises);
+			allTexts = results.filter(t => t && t.length > 0);
+
+			if (allTexts.length === 0) {
 				throw new Error("All dictionary sources failed to load");
 			}
+
+			this.updateLoadingProgress(`Processing ${allTexts.length} dictionary sources...`);
 
 			// Process the concatenated dictionary texts - aggregate unique words from all sources
 			let rawWords = [];
@@ -6528,34 +6564,26 @@ formedWords.forEach((wordInfo) => {
 					}
 				}
 			}
+
+			// Validate words: only letters, reasonable length (NO vowel requirement - keeps "by", "my", "gym", etc)
 			let validWords = rawWords.filter(word => {
-				// Basic validation: only letters, reasonable length, contains vowels
 				return /^[a-z]+$/.test(word) &&
 					   word.length >= 2 &&
-					   word.length <= 15 &&
-					   /[aeiou]/.test(word); // Must contain at least one vowel
+					   word.length <= 15;
+				// REMOVED vowel requirement - was eliminating valid Scrabble words like "by", "my", "gym", "fly", "sky", "cwm"
 			});
 
 			console.log(`Filtered dictionary: ${rawWords.length} raw words -> ${validWords.length} valid words`);
 			this.dictionary = new Set(validWords);
 			// Keep a backupDictionary set containing all source words (unfiltered raw union)
 			this.backupDictionary = new Set(Array.from(seenWords || []));
-			// Optionally remove known CSW-only / non-US words when running English (US) mode
-			if ((this.preferredLang || 'en') === 'en') {
-				const cswBlocked = [
-					'etwas','razour','odah','aln','enoil','caid','lav','ios'
-				];
-				for (const w of cswBlocked) {
-					if (this.dictionary.has(w)) this.dictionary.delete(w);
-					if (this.backupDictionary && this.backupDictionary.has(w)) this.backupDictionary.delete(w);
-				}
-			}
+			
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			// Comprehensive fallback dictionary for Scrabble gameplay
 			this.dictionary = new Set([
-				// 2-letter words
+				// 2-letter words (including consonant-only like "by", "my", "hmm", "shh")
 				"aa", "ab", "ad", "ae", "ag", "ah", "ai", "al", "am", "an", "ar", "as", "at", "aw", "ax", "ay",
 				"ba", "be", "bi", "bo", "by", "da", "de", "do", "ed", "ef", "eh", "el", "em", "en", "er", "es",
 				"et", "ex", "fa", "fe", "go", "ha", "he", "hi", "hm", "ho", "id", "if", "in", "is", "it", "jo",
