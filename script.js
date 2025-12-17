@@ -670,149 +670,203 @@ class ScrabbleGame {
 	}
 
 	showAIGhostMove(play) {
-		// Remove any existing ghost tiles
-		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+		// Remove any existing ghost overlays/tiles
+		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
 
 		const { word, startPos, isHorizontal } = play;
+		const boardElem = document.getElementById('scrabble-board');
+		if (!boardElem) return;
+		const boardRect = boardElem.getBoundingClientRect();
+		const cellSample = boardElem.querySelector('.board-cell');
+		const cellRect = cellSample ? cellSample.getBoundingClientRect() : { width: 36, height: 36 };
+
+		const startCell = document.querySelector(`[data-row="${startPos.row}"][data-col="${startPos.col}"]`);
+		if (!startCell) return;
+		const startRect = startCell.getBoundingClientRect();
+
+		// Create per-cell ghost tiles (append to cells) so they line up exactly with placed tiles
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-			// Only add ghost if cell is empty or only contains the center star
-			if (cell && !cell.querySelector('.tile')) {
-				// Remove center star if present (ghost overlays it)
-				const star = cell.querySelector('.center-star');
-				if (star) star.style.opacity = '0.2';
+			if (!cell) continue;
 
-				const ghost = document.createElement('div');
-				ghost.className = 'tile ghost-tile';
-				ghost.innerHTML = `
-					${word[i]}
-					<span class="points">${this.tileValues[word[i]] || 0}</span>
-				`;
-				// Show ghost tiles subtly (low opacity so they're less distracting)
-				ghost.style.opacity = '0.18';
-				ghost.style.visibility = 'visible';
-				ghost.style.pointerEvents = 'none';
-				ghost.style.background = '#eaf6fb';
-				ghost.style.color = '#222';
-				ghost.style.border = '1px dashed rgba(2,136,209,0.6)';
-				cell.appendChild(ghost);
+			// If there's already a permanent tile on the board at this position, skip creating a ghost
+			if (this.board[row] && this.board[row][col]) continue;
+			// Also skip if cell contains a non-ghost tile element
+			if (cell.querySelector('.tile') && !cell.querySelector('.tile').classList.contains('ghost-tile')) continue;
+
+			const ghost = document.createElement('div');
+			ghost.className = 'tile ghost-tile';
+			ghost.style.pointerEvents = 'none';
+			ghost.style.opacity = '0.72';
+			ghost.style.border = '1px dashed rgba(2,136,209,0.6)';
+			ghost.style.background = 'linear-gradient(145deg, #eaf6fb, #f4fbff)';
+			ghost.style.color = '#111';
+			ghost.style.display = 'flex';
+			ghost.style.alignItems = 'center';
+			ghost.style.justifyContent = 'center';
+			ghost.style.fontWeight = '800';
+			ghost.innerHTML = `${word[i]}<span class="points" style="opacity:0.9;">${this.tileValues[word[i]] || 0}</span>`;
+
+			// Append into cell so it matches existing placed tile layout
+			cell.appendChild(ghost);
+		}
+
+		// Prevent 'stacking bricks' placements: don't place a horizontal word directly above/below
+		// another full horizontal word (and vice-versa for vertical). This often creates many
+		// short crosswords (especially 2-letter) that are invalid or undesirable.
+		if (horizontal) {
+			const startC = startCol;
+			const endC = startCol + word.length - 1;
+			for (const r of [startRow - 1, startRow + 1]) {
+				if (r >= 0 && r < 15) {
+					let fullRowOccupied = true;
+					for (let c = startC; c <= endC; c++) {
+						if (!this.board[r][c]) { fullRowOccupied = false; break; }
+					}
+					if (fullRowOccupied) {
+						this.logAIValidation('Rejecting placement: would stack on top of another horizontal word');
+						return false;
+					}
+				}
+			}
+		} else {
+			const startR = startRow;
+			const endR = startRow + word.length - 1;
+			for (const c of [startCol - 1, startCol + 1]) {
+				if (c >= 0 && c < 15) {
+					let fullColOccupied = true;
+					for (let r = startR; r <= endR; r++) {
+						if (!this.board[r][c]) { fullColOccupied = false; break; }
+					}
+					if (fullColOccupied) {
+						this.logAIValidation('Rejecting placement: would stack on top of another vertical word');
+						return false;
+					}
+				}
 			}
 		}
 	}
 
 	// Show multiple rotating ghost moves with different colors
 	showRotatingGhostMoves(plays) {
-		// Remove any existing ghost tiles
-		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+		// Remove any existing ghost overlays/tiles
+		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
 
 		if (!plays || plays.length === 0) return;
 
-		// Show top 5 moves (user's request)
 		const maxMoves = 5;
-		const topMoves = plays.slice(0, Math.min(maxMoves, plays.length));
+		// Prefer non-overlapping plays: select up to `maxMoves` plays that do not share board cells
+		const topCandidates = plays.slice(0, Math.min(15, plays.length)); // look ahead a bit to find non-overlapping
+		const topMoves = [];
+		const usedCells = new Set();
+		for (const p of topCandidates) {
+			if (topMoves.length >= maxMoves) break;
+			const { startPos, isHorizontal, word } = p;
+			// Determine which cells this play WOULD PLACE NEW TILES into (ignore already-occupied board cells)
+			const newPositions = [];
+			let outOfBounds = false;
+			for (let i = 0; i < word.length; i++) {
+				const r = isHorizontal ? startPos.row : startPos.row + i;
+				const c = isHorizontal ? startPos.col + i : startPos.col;
+				if (!this.isValidPosition(r, c)) { outOfBounds = true; break; }
+				if (!(this.board[r] && this.board[r][c])) {
+					newPositions.push(`${r},${c}`);
+				}
+			}
+			if (outOfBounds) continue;
 
-		// Log which ghost tiles are active with all 5 words
+			// If this play doesn't place any new tiles (unlikely), skip it
+			if (newPositions.length === 0) continue;
+
+			// Conflict only matters on newly-placed cells — allow sharing existing tiles
+			let conflict = false;
+			for (const key of newPositions) {
+				if (usedCells.has(key)) { conflict = true; break; }
+			}
+			if (!conflict) {
+				topMoves.push(p);
+				for (const key of newPositions) usedCells.add(key);
+			}
+		}
+
+		// Log which ghost tiles are active with all 5 words (log once per distinct set)
 		const ghostWords = topMoves.map((p, i) => `#${i + 1}: ${p.word} (${p.score}pts)`).join(', ');
-		console.log(`🔮 Ghost tiles ACTIVE - Top 5 AI moves: ${ghostWords}`);
+		const now = Date.now();
+		if (!this._lastGhostLogString || this._lastGhostLogString !== ghostWords) {
+			console.log(`🔮 Ghost tiles ACTIVE - Top 5 AI moves: ${ghostWords}`);
+			this._lastGhostLogString = ghostWords;
+			this._lastGhostLogTime = now;
+		}
 
-		// Enhanced color schemes for different move qualities
-		const ghostColors = [
-			{ bg: '#c8e6c9', border: '#2e7d32', text: '#1b5e20', name: 'Best' },     // Light Green - Best move
-			{ bg: '#b3e5fc', border: '#0288d1', text: '#01579b', name: 'Strong' },  // Blue - Strong move
-			{ bg: '#fff3e0', border: '#ef6c00', text: '#e65100', name: 'Good' },    // Orange - Good move
-			{ bg: '#ffcdd2', border: '#c62828', text: '#b71c1c', name: 'Risky' },  // Red - Risky move
-			{ bg: '#e1bee7', border: '#6a1b9a', text: '#4a148c', name: 'Defensive' }, // Purple - Defensive
-			{ bg: '#f3e5f5', border: '#7b1fa2', text: '#4a148c', name: 'Setup' },   // Light Purple
-			{ bg: '#e8f5e8', border: '#388e3c', text: '#1b5e20', name: 'Premium' }, // Very Light Green
-			{ bg: '#fff8e1', border: '#f57c00', text: '#e65100', name: 'Long' },   // Light Orange
-			{ bg: '#fce4ec', border: '#c2185b', text: '#880e4f', name: 'Cross' },  // Pink
-			{ bg: '#f1f8e9', border: '#689f38', text: '#33691e', name: 'Backup' }  // Very Light Green
-		];
+		// Render compact overlays above the board rather than per-cell tiles to avoid clutter
+		const boardElem = document.getElementById('scrabble-board');
+		if (!boardElem) return;
+		const boardRect = boardElem.getBoundingClientRect();
+		const cellSample = boardElem.querySelector('.board-cell');
+		const cellRect = cellSample ? cellSample.getBoundingClientRect() : { width: 36, height: 36 };
 
 		topMoves.forEach((play, moveIndex) => {
-			const { word, startPos, isHorizontal, confidence, score, quality } = play;
-			const baseColorScheme = ghostColors[moveIndex % ghostColors.length];
+			const { word, startPos, isHorizontal } = play;
+			const startCell = document.querySelector(`[data-row="${startPos.row}"][data-col="${startPos.col}"]`);
+			if (!startCell) return;
+			const startRect = startCell.getBoundingClientRect();
 
-			// Enhanced color scheme based on move ranking and quality
-			let enhancedColorScheme = { ...baseColorScheme };
-			let moveRank = '';
-
-			// Top move gets special highlighting
-			if (moveIndex === 0) {
-				enhancedColorScheme.bg = '#fff9c4'; // Light yellow for best move
-				enhancedColorScheme.border = '#f57f17';
-				enhancedColorScheme.text = '#e65100';
-				moveRank = '★';
-			} else if (quality && quality > 80) {
-				// High quality moves get enhanced colors
-				enhancedColorScheme.bg = '#c8e6c9'; // Light green
-				enhancedColorScheme.border = '#2e7d32';
-				moveRank = '●';
-			} else if (score && score > 30) {
-				// High scoring moves
-				enhancedColorScheme.bg = '#fff3e0'; // Light orange
-				enhancedColorScheme.border = '#ef6c00';
-				moveRank = '○';
-			}
-
+			// Create per-cell ghost tiles for this play so they line up exactly with placed tiles
 			for (let i = 0; i < word.length; i++) {
 				const row = isHorizontal ? startPos.row : startPos.row + i;
 				const col = isHorizontal ? startPos.col + i : startPos.col;
 				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-				if (cell) {
-					// Overlay ghost even if cell already has a tile; render above existing tile with subtle style
-					const star = cell.querySelector('.center-star');
-					if (star) star.style.opacity = '0.2';
+				if (!cell) continue;
 
-					const ghost = document.createElement('div');
-					ghost.className = 'tile ghost-tile';
-					ghost.dataset.moveIndex = moveIndex;
+				// Avoid adding ghosts where permanent tiles already exist
+				if (this.board[row] && this.board[row][col]) continue;
+				// Avoid too many ghost tiles stacking in the same cell
+				const existingGhosts = cell.querySelectorAll('.ghost-tile');
+				if (existingGhosts.length >= 3) continue; // limit per-cell clutter
 
-					// If there's an existing tile, render ghost as overlay with even lower opacity
-					const existingTile = cell.querySelector('.tile');
-					const isOverlay = !!existingTile;
+				const ghost = document.createElement('div');
+				ghost.className = `tile ghost-tile ghost-move-${moveIndex}`;
+				ghost.style.pointerEvents = 'none';
+				ghost.style.border = '1px dashed rgba(0,0,0,0.12)';
+				ghost.style.background = 'rgba(234,246,251,0.8)';
+				ghost.style.color = '#111';
+				ghost.style.display = 'flex';
+				ghost.style.alignItems = 'center';
+				ghost.style.justifyContent = 'center';
+				ghost.style.fontWeight = '800';
+				ghost.style.position = 'relative';
+				ghost.style.zIndex = `${200 + moveIndex}`;
+				ghost.innerHTML = `${word[i]}<span class="points" style="opacity:0.9;">${this.tileValues[word[i]] || 0}</span>`;
 
-					const rankIndicator = moveRank ? `<span class="rank" style="position: absolute; top: -3px; left: -3px; background: ${enhancedColorScheme.border}; color: white; border-radius: 50%; width: 10px; height: 10px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: bold;">${moveIndex + 1}</span>` : '';
-					const qualityIndicator = quality !== undefined ? `<span class="quality" style="position: absolute; bottom: -2px; left: -2px; background: ${enhancedColorScheme.border}; color: white; border-radius: 2px; padding: 1px 2px; font-size: 6px;">${Math.round(quality / 10)}</span>` : '';
-					const scoreIndicator = score !== undefined ? `<span class="score-mini" style="position: absolute; top: -2px; right: -2px; background: #fff; color: ${enhancedColorScheme.text}; border-radius: 2px; padding: 1px 2px; font-size: 6px; font-weight: bold; border: 1px solid ${enhancedColorScheme.border};">${score}</span>` : '';
-
-					ghost.innerHTML = `
-						${word[i]}
-						<span class="points">${this.tileValues[word[i]] || 0}</span>
-						${rankIndicator}
-						${qualityIndicator}
-						${scoreIndicator}
-					`;
-
-					ghost.style.visibility = 'visible';
-					ghost.style.pointerEvents = 'none';
-					ghost.style.background = enhancedColorScheme.bg;
-					ghost.style.color = enhancedColorScheme.text;
-					ghost.style.border = `1px dashed ${enhancedColorScheme.border}`;
-					ghost.style.zIndex = 100 + moveIndex; // Ensure overlay
-					ghost.style.position = 'relative';
-					ghost.style.opacity = isOverlay ? '0.12' : '0.18';
-
-					let tooltip = `${moveIndex === 0 ? '★ ' : ''}${word}`;
-					if (score !== undefined) tooltip += ` | Score: ${score}`;
-					if (quality !== undefined) tooltip += ` | Quality: ${quality}`;
-					if (confidence !== undefined) tooltip += ` | Confidence: ${confidence}%`;
-					tooltip += ` | ${isHorizontal ? 'Horizontal' : 'Vertical'}`;
-					tooltip += ` | Rank: #${moveIndex + 1}`;
-
-					ghost.title = tooltip;
-					cell.appendChild(ghost);
+				// Fan-out overlapping ghosts slightly so they are visible
+				const idx = existingGhosts.length + moveIndex;
+				const offset = Math.min(idx, 3) * 6; // px
+				if (isHorizontal) {
+					// stack vertically when the play is horizontal
+					ghost.style.transform = `translateY(${offset}px)`;
+				} else {
+					// stack horizontally when the play is vertical
+					ghost.style.transform = `translateX(${offset}px)`;
 				}
+
+				// Slight opacity variation to hint ranking
+				const baseOpacity = 0.7;
+				ghost.style.opacity = `${Math.max(0.32, baseOpacity - moveIndex * 0.12)}`;
+
+				cell.appendChild(ghost);
 			}
 		});
 	}
 
 	// Update ghost move preview - simple and clean
 	async updateGhostPreview() {
+		if (this._updatingGhostPreview) return; // prevent overlapping runs
+		this._updatingGhostPreview = true;
 		if (this.currentTurn !== "player" || this.isGameEnded) {
 			this.clearGhostTiles();
+			this._updatingGhostPreview = false;
 			return;
 		}
 
@@ -824,19 +878,73 @@ class ScrabbleGame {
 			}
 
 			let validPlays = aiPlays.filter(p => this.dictionaryHas(p.word));
-			if (validPlays.length === 0) {
+			if (!validPlays || validPlays.length === 0) {
 				this.clearGhostTiles();
 				return;
 			}
 
-			validPlays.sort((a, b) => (b.score || 0) - (a.score || 0));
-			const topMove = validPlays[0];
-			if (topMove) {
-				this.displayGhostMove(topMove);
-				this.ghostAIMove = { ...topMove };
+			// Prefer Tier-1 plays (coreValidDictionary). Fill up to 5 options.
+			const tier1Plays = validPlays.filter(p => this.coreValidDictionary && this.coreValidDictionary.has(String(p.word).toLowerCase()));
+			let ghostPlays = [];
+			for (let i = 0; i < tier1Plays.length && ghostPlays.length < 5; i++) ghostPlays.push(tier1Plays[i]);
+			if (ghostPlays.length < 5) {
+				validPlays.sort((a, b) => (b.score || 0) - (a.score || 0));
+				for (const p of validPlays) {
+					if (ghostPlays.length >= 5) break;
+					if (!ghostPlays.some(g => g.word === p.word && g.startPos && p.startPos && g.startPos.row === p.startPos.row && g.startPos.col === p.startPos.col)) {
+						ghostPlays.push(p);
+					}
+				}
 			}
+
+			if (ghostPlays.length === 0) {
+				this.clearGhostTiles();
+				return;
+			}
+
+			this.displayGhostMove(ghostPlays.slice(0, 5));
+			this.ghostAIMove = this.ghostAIMove || { ...ghostPlays[0], rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''), boardSnapshot: JSON.stringify(this.board) };
 		} catch (error) {
 			console.debug('Ghost preview error:', error);
+			this.clearGhostTiles();
+		} finally {
+			this._updatingGhostPreview = false;
+		}
+	}
+
+	// Compatibility wrapper to display a ghost move or multiple ghost moves.
+	// Ensures snapshots used by AI are set and clears previous ghosts safely.
+	displayGhostMove(play) {
+		try {
+			this.clearGhostTiles();
+			if (!play) return;
+
+			// If an array of plays is provided, show rotating ghosts for multiple suggestions
+			if (Array.isArray(play)) {
+				if (play.length === 0) return;
+				if (play.length === 1) play = play[0];
+				else {
+					this.showRotatingGhostMoves(play);
+					// store snapshot based on top move
+					const top = play[0];
+					this.ghostAIMove = {
+						...top,
+						rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''),
+						boardSnapshot: JSON.stringify(this.board)
+					};
+					return;
+				}
+			}
+
+			// Single play: show a subtle overlay preview
+			this.ghostAIMove = {
+				...play,
+				rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''),
+				boardSnapshot: JSON.stringify(this.board)
+			};
+			this.showAIGhostMove(play);
+		} catch (err) {
+			console.debug('displayGhostMove error:', err);
 			this.clearGhostTiles();
 		}
 	}
@@ -861,7 +969,7 @@ class ScrabbleGame {
 
 	// Clear all ghost tiles from the board
 	clearGhostTiles() {
-		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
 	}
 
 	// Toggle ghost tiles visibility: 5 seconds show, 60 seconds hide, repeat
@@ -3960,6 +4068,17 @@ class ScrabbleGame {
 					const validation = await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true);
 
 					if (validation.isValid && !excludedVariants.has(mainWord.toLowerCase())) {
+
+						// Extra guard for 2-letter main words: require high-confidence or presence in loaded dictionaries
+						if (mainWord.length === 2) {
+							const lw = mainWord.toLowerCase();
+							const inTier1 = this.coreValidDictionary && this.coreValidDictionary.has(lw);
+							const inAnyDict = (this.dictionary && this.dictionary.has(lw)) || (this.backupDictionary && this.backupDictionary.has(lw));
+							if (!inTier1 && !inAnyDict) {
+								invalidWords.push(mainWord);
+								continue;
+							}
+						}
 						// Check if AI can provide the tiles it needs to place (not already on board)
 						const tilesToPlace = this.getTilesNeededForMove(word, startPos, isHorizontal);
 						const canForm = this.canFormWordWithTiles(tilesToPlace.join(''), this.aiRack || []);
@@ -3986,6 +4105,11 @@ class ScrabbleGame {
 				const validation = await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false);
 
 				if (validation.isValid && !excludedVariants.has(crossWord.toLowerCase())) {
+					// Reject any 2-letter crosswords outright to avoid obscure/abbreviations
+					if (crossWord.length === 2) {
+						invalidWords.push(crossWord);
+						continue;
+					}
 					// Cross words are formed by intersection - no additional tiles needed from rack
 					validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
 					totalConfidence += validation.confidence;
@@ -4836,13 +4960,18 @@ async executeAIPlay(play) {
 						this.getVerticalWordAt(row, col, tempBoard) :
 						this.getHorizontalWordAt(row, col, tempBoard);
 
-					if (crossWord && crossWord.length > 1) {
-						if (!this.dictionaryHas(crossWord)) {
-							this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
-							return false;
+						if (crossWord && crossWord.length > 1) {
+							// Disallow any 2-letter crosswords to avoid obscure/invalid cross words
+							if (crossWord.length === 2) {
+								this.logAIValidation(`Rejecting placement: would create 2-letter cross word: ${crossWord}`);
+								return false;
+							}
+							if (!this.dictionaryHas(crossWord)) {
+								this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
+								return false;
+							}
+							hasValidIntersection = true;
 						}
-						hasValidIntersection = true;
-					}
 				}
 			}
 		}
@@ -6312,8 +6441,9 @@ formedWords.forEach((wordInfo) => {
 			let loaded = false;
 			let allTexts = [];
 
-			// Load all sources IN PARALLEL for speed
+			// Load all sources IN PARALLEL for speed, and track their source names in the same order
 			const fetchPromises = [];
+			const fetchSources = [];
 
 			// Fetch online sources
 			for (const url of onlineUrls) {
@@ -6333,6 +6463,7 @@ formedWords.forEach((wordInfo) => {
 							return null;
 						})
 				);
+				fetchSources.push(url.split('/').pop());
 			}
 
 			// Fetch local files in parallel
@@ -6359,6 +6490,7 @@ formedWords.forEach((wordInfo) => {
 							return null;
 						})
 				);
+				fetchSources.push(file);
 			}
 
 			// Wait for ALL sources to load in parallel
@@ -6379,7 +6511,7 @@ formedWords.forEach((wordInfo) => {
 			
 			for (let sourceIdx = 0; sourceIdx < allTexts.length; sourceIdx++) {
 				const t = allTexts[sourceIdx];
-				const file = localFiles[sourceIdx];
+				const file = fetchSources[sourceIdx] || 'unknown_source';
 				if (!t) continue;
 				for (const line of t.split('\n')) {
 					const w = (line || '').trim().toLowerCase();
@@ -6452,8 +6584,17 @@ formedWords.forEach((wordInfo) => {
 		
 		// Priority 2: Words that appear in MULTIPLE sources (cross-validated = high confidence)
 		for (const word of validWords) {
-			const sources = wordSources[word];
-			if (sources && Array.isArray(sources) && sources.length >= 2) {
+			const sources = wordSources[word] || [];
+			// For two-letter words we must be stricter to avoid abbreviations slipping in.
+			// Require either SOWPODS (authoritative) or presence in at least 3 independent sources.
+			if (word.length === 2) {
+				if (Array.isArray(sources) && (sources.includes('/SOWPODS.txt') || sources.length >= 3)) {
+					tier1.add(word.toLowerCase());
+				}
+				continue;
+			}
+			// For longer words, two sources is sufficient for cross-validation
+			if (Array.isArray(sources) && sources.length >= 2) {
 				tier1.add(word.toLowerCase());
 			}
 		}
