@@ -548,60 +548,46 @@ class ScrabbleGame {
 	// Centralized dictionary lookup that handles normalization (diacritics)
 	dictionaryHas(word) {
 		if (!word) return false;
-		// Preferred language may affect lookup strategy
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-
 		const wordLower = String(word).toLowerCase();
 
-		// Developer note: DO NOT use hard-coded two-letter or small-word allowlists.
-		// Hard-coded lists are brittle and lead to invalid plays (e.g. 'av', 'tu').
-		// Instead consult the loaded `dictionary` and `backupDictionary` sources.
-		// For Spanish two-letter words, require presence in the active/backup dictionaries.
-		if (lang === 'es' && word.length === 2) {
-			const normalized = normalizeWordForDict(wordLower).toLowerCase();
-			if (!(this.activeDictionary && this.activeDictionary.has(normalized)) &&
-				!(this.backupDictionary && this.backupDictionary.has(normalized))) {
-				return false; // Reject uncommon two-letter Spanish entries not present in dictionaries
+		// ENHANCEMENT: Stricter validation for 2-letter words (highest false-positive rate)
+		if (word.length === 2) {
+			if (lang === 'es') {
+				const normalized = normalizeWordForDict(wordLower).toLowerCase();
+				return (this.activeDictionary && this.activeDictionary.has(normalized)) ||
+					(this.dictionary && this.dictionary.has(normalized)) ||
+					(this.backupDictionary && this.backupDictionary.has(normalized));
+			} else {
+				// English 2-letter words must be in dictionary
+				return (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
+					(this.dictionary && this.dictionary.has(wordLower)) ||
+					(this.backupDictionary && this.backupDictionary.has(wordLower));
 			}
 		}
 
-		// Always check local dictionary first
-		// For Spanish, normalize accented characters (Café → cafe) to match normalized dictionary
+		// For longer words, check all local dictionaries
 		let foundInDictionary = false;
 		if (lang === 'es') {
 			const normalized = normalizeWordForDict(wordLower).toLowerCase();
-			foundInDictionary = this.activeDictionary.has(normalized);
+			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(normalized)) ||
+				(this.dictionary && this.dictionary.has(normalized)) ||
+				(this.backupDictionary && this.backupDictionary.has(normalized));
 		} else {
-			foundInDictionary = this.activeDictionary.has(wordLower);
+			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
+				(this.dictionary && this.dictionary.has(wordLower)) ||
+				(this.backupDictionary && this.backupDictionary.has(wordLower));
 		}
 
-		if (foundInDictionary) {
-			return true;
-		}
+		if (foundInDictionary) return true;
 
-		// Quick synchronous check against main/backups (avoid slow API calls when possible)
-		try {
-			if (lang === 'es') {
-				const normalized = normalizeWordForDict(wordLower).toLowerCase();
-				if (this.dictionary && this.dictionary.has(normalized)) return true;
-				if (this.backupDictionary && this.backupDictionary.has(normalized)) return true;
-			} else {
-				if (this.dictionary && this.dictionary.has(wordLower)) return true;
-				if (this.backupDictionary && this.backupDictionary.has(wordLower)) return true;
-			}
-		} catch (e) {
-			// ignore and continue to API/fallback
-		}
-
-		// If not in local dictionary, use API validation for non-English languages
+		// For non-English, try API validation
 		if (lang !== 'en') {
 			return this.validateWordForLanguageSync(word, lang);
 		}
 
-		// For English, if not in local dictionary, reject the word
-		if (this.showAIDebug) console.log(`Word "${word}" not found in English dictionary (size: ${this.activeDictionary?.size || 0})`);
+		// For English: only accept words in local dictionaries
 		return false;
-		return this.isBasicValidForLanguage(String(word).toUpperCase(), 'en');
 	}
 
 	// Synchronous wrapper for language validation with caching
@@ -2316,10 +2302,14 @@ class ScrabbleGame {
 						maxLen
 					);
 
-					let candidateWords = rawCandidates.filter(word =>
-						word.startsWith(prefix) && word.endsWith(suffix) &&
-						this.isScrabbleAppropriate(word)
-					);
+// ENHANCEMENT: Pre-filter by dictionary to reject invalid words before scoring
+				let candidateWords = rawCandidates.filter(word => {
+					if (!word.startsWith(prefix) || !word.endsWith(suffix)) return false;
+					if (!this.isScrabbleAppropriate(word)) return false;
+					// CRITICAL: Dictionary check early prevents "TEKEDYE" type nonsense
+					if (!this.dictionaryHas(word)) return false;
+					return true;
+				});
 
 					if (this.showAIDebug && rawCandidates.length > 0) {
 						console.log(`Trie found ${rawCandidates.length} raw candidates, ${candidateWords.length} passed filters for anchor ${anchor.row},${anchor.col}`);
@@ -3722,6 +3712,25 @@ class ScrabbleGame {
 		}
 
 		return false;
+	}
+
+	// ENHANCEMENT: Implement missing method to fix undefined method calls
+	// Returns array of adjacent premium squares to a given board position
+	getAdjacentPremiumSquares(row, col) {
+		const adjacentPositions = [
+			[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
+		];
+
+		const premiums = [];
+		for (const [checkRow, checkCol] of adjacentPositions) {
+			if (this.isValidPosition(checkRow, checkCol)) {
+				const premium = this.getPremiumSquareType(checkRow, checkCol);
+				if (premium && premium !== 'none') {
+					premiums.push({ row: checkRow, col: checkCol, type: premium });
+				}
+			}
+		}
+		return premiums;
 	}
 
 	findSimpleWords(letters) {
