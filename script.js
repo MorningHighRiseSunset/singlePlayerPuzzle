@@ -845,6 +845,20 @@ class ScrabbleGame {
 		}
 	}
 
+	// Get tiles needed to place a word at a position (tiles not already on board)
+	getTilesNeededForMove(word, startPos, isHorizontal) {
+		const tilesNeeded = [];
+		for (let i = 0; i < word.length; i++) {
+			const row = isHorizontal ? startPos.row : startPos.row + i;
+			const col = isHorizontal ? startPos.col + i : startPos.col;
+			// Only include tiles that aren't already on the board
+			if (!this.board[row] || !this.board[row][col]) {
+				tilesNeeded.push(word[i]);
+			}
+		}
+		return tilesNeeded;
+	}
+
 	async validatePartialWord() {
 		if (this.placedTiles.length < 2) return false;
 		// Only check if the tiles form a valid dictionary word (ignore adjacency, first move, etc.)
