@@ -537,6 +537,9 @@ class ScrabbleGame {
 		this.ghostThinkingTimer = null;
 		this.lastGhostBoardState = null;
 		this.lastGhostRackState = null;
+		// Ghost tile visibility toggle: 5 sec show, 60 sec hide
+		this.ghostVisibilityTimer = null;
+		this.ghostTilesVisible = true;
 		this.validWordsFound = 0;
 		this.lastAIGhostPlays = null;
 		this.ghostDisplayMode = 0;
@@ -706,9 +709,13 @@ class ScrabbleGame {
 
 		if (!plays || plays.length === 0) return;
 
-		// Show only top 4 moves to avoid scrunching/overlapping (user reported ghost tiles bunched up)
-		const maxMoves = 4;
+		// Show top 5 moves (user's request)
+		const maxMoves = 5;
 		const topMoves = plays.slice(0, Math.min(maxMoves, plays.length));
+
+		// Log which ghost tiles are active with all 5 words
+		const ghostWords = topMoves.map((p, i) => `#${i + 1}: ${p.word} (${p.score}pts)`).join(', ');
+		console.log(`🔮 Ghost tiles ACTIVE - Top 5 AI moves: ${ghostWords}`);
 
 		// Enhanced color schemes for different move qualities
 		const ghostColors = [
@@ -855,6 +862,55 @@ class ScrabbleGame {
 	// Clear all ghost tiles from the board
 	clearGhostTiles() {
 		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+	}
+
+	// Toggle ghost tiles visibility: 5 seconds show, 60 seconds hide, repeat
+	startGhostVisibilityToggle() {
+		if (this.ghostVisibilityTimer) clearInterval(this.ghostVisibilityTimer);
+		
+		this.ghostTilesVisible = true;
+		this.showGhostTiles();
+		
+		// Toggle visibility: 5000ms show, then 60000ms hide, then repeat
+		let showPhase = true;
+		this.ghostVisibilityTimer = setInterval(() => {
+			if (showPhase) {
+				// Switch to hide phase
+				setTimeout(() => {
+					if (this.ghostTilesVisible) {
+						this.hideGhostTiles();
+						this.ghostTilesVisible = false;
+					}
+				}, 5000);
+				showPhase = false;
+			} else {
+				// Switch to show phase
+				if (this.ghostTilesVisible === false) {
+					this.showGhostTiles();
+					this.ghostTilesVisible = true;
+				}
+				showPhase = true;
+			}
+		}, 65000); // Total cycle: 5s show + 60s hide = 65s
+	}
+
+	showGhostTiles() {
+		document.querySelectorAll('.ghost-tile').forEach(e => {
+			e.style.display = 'flex';
+		});
+	}
+
+	hideGhostTiles() {
+		document.querySelectorAll('.ghost-tile').forEach(e => {
+			e.style.display = 'none';
+		});
+	}
+
+	stopGhostVisibilityToggle() {
+		if (this.ghostVisibilityTimer) {
+			clearInterval(this.ghostVisibilityTimer);
+			this.ghostVisibilityTimer = null;
+		}
 	}
 
 	// Simple strategic board analysis - just find premium squares next to existing tiles
@@ -6316,15 +6372,32 @@ formedWords.forEach((wordInfo) => {
 			this.updateLoadingProgress(`Processing ${allTexts.length} dictionary sources...`);
 
 			// Process the concatenated dictionary texts - aggregate unique words from all sources
+			// Also track which source each word comes from
 			let rawWords = [];
 			const seenWords = new Set();
-			for (const t of allTexts) {
+			const allWordSources = {}; // { word: [source filenames] }
+			
+			for (let sourceIdx = 0; sourceIdx < allTexts.length; sourceIdx++) {
+				const t = allTexts[sourceIdx];
+				const file = localFiles[sourceIdx];
 				if (!t) continue;
 				for (const line of t.split('\n')) {
 					const w = (line || '').trim().toLowerCase();
-					if (w && !seenWords.has(w)) {
-						seenWords.add(w);
-						rawWords.push(w);
+					if (w) {
+						// Initialize array if not exists
+						if (typeof allWordSources[w] === 'undefined' || !Array.isArray(allWordSources[w])) {
+							allWordSources[w] = [];
+						}
+						// Track source (as array)
+						if (allWordSources[w].indexOf(file) === -1) {
+							allWordSources[w].push(file);
+						}
+						
+						// Add to raw words only if not seen
+						if (!seenWords.has(w)) {
+							seenWords.add(w);
+							rawWords.push(w);
+						}
 					}
 				}
 			}
@@ -6341,11 +6414,13 @@ formedWords.forEach((wordInfo) => {
 			this.dictionary = new Set(validWords);
 			// Keep a backupDictionary set containing all source words (unfiltered raw union)
 			this.backupDictionary = new Set(Array.from(seenWords || []));
+			// Store word sources for Tier 1 confidence scoring
+			this.wordSources = allWordSources;
 			
-			// BUILD TIER 1: Extract most common words from actual loaded dictionary
-			// Uses word frequency (shorter words = more common in Scrabble)
-			this.coreValidDictionary = this.buildTier1Dictionary(validWords);
-			console.log(`Tier 1 Fast-Path built: ${this.coreValidDictionary.size} most-common words from actual dictionary (instant validation)`);
+			// BUILD TIER 1: Extract high-confidence words from actual loaded dictionary
+			// Prioritizes words from SOWPODS (most authoritative) and cross-validated words
+			this.coreValidDictionary = this.buildTier1Dictionary(validWords, allWordSources);
+			console.log(`Tier 1 Fast-Path built: ${this.coreValidDictionary.size} high-confidence words from actual dictionary (instant validation)`);
 			
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
@@ -6360,46 +6435,26 @@ formedWords.forEach((wordInfo) => {
 		// Spanish dictionary will be loaded only when Spanish language is selected
 	}
 
-	buildTier1Dictionary(validWords) {
-		// Build Tier 1 from actual dictionary by word frequency
-		// Shorter words are more common in Scrabble, so prioritize by length
-		// This extracts the top ~1000 most frequent words for instant lookup
+	buildTier1Dictionary(validWords, wordSources = {}) {
+		// Build Tier 1 with confidence scoring
+		// Only include HIGH-CONFIDENCE words (real, legitimate, Google-able)
+		// Prioritizes SOWPODS (authoritative Scrabble dict) and cross-validated words
 		
 		const tier1 = new Set();
 		
-		// Group words by length
-		const byLength = {};
+		// Priority 1: Words from SOWPODS (most authoritative source)
 		for (const word of validWords) {
-			if (!byLength[word.length]) {
-				byLength[word.length] = [];
-			}
-			byLength[word.length].push(word);
-		}
-		
-		// Add all 2-letter words (Scrabble valid, frequent)
-		if (byLength[2]) {
-			byLength[2].forEach(w => tier1.add(w.toLowerCase()));
-		}
-		
-		// Add most 3-4 letter words (high frequency in Scrabble)
-		for (let len of [3, 4]) {
-			if (byLength[len]) {
-				const words = byLength[len].sort();
-				const count = Math.min(words.length, Math.floor(words.length * 0.7)); // Add 70% of 3-4 letter words
-				for (let i = 0; i < count; i++) {
-					tier1.add(words[i].toLowerCase());
-				}
+			const sources = wordSources[word];
+			if (sources && Array.isArray(sources) && sources.includes('/SOWPODS.txt')) {
+				tier1.add(word.toLowerCase());
 			}
 		}
 		
-		// Add common 5+ letter words (alphabetically sorted, take first 30%)
-		for (let len = 5; len <= 15 && tier1.size < 2000; len++) {
-			if (byLength[len]) {
-				const words = byLength[len].sort();
-				const count = Math.min(words.length, Math.floor(words.length * 0.3)); // Add 30% of longer words
-				for (let i = 0; i < count; i++) {
-					tier1.add(words[i].toLowerCase());
-				}
+		// Priority 2: Words that appear in MULTIPLE sources (cross-validated = high confidence)
+		for (const word of validWords) {
+			const sources = wordSources[word];
+			if (sources && Array.isArray(sources) && sources.length >= 2) {
+				tier1.add(word.toLowerCase());
 			}
 		}
 		
