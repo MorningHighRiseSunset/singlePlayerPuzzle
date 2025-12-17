@@ -699,8 +699,8 @@ class ScrabbleGame {
 
 		if (!plays || plays.length === 0) return;
 
-		// Show up to 10 moves with better organization
-		const maxMoves = 10;
+		// Show only top 4 moves to avoid scrunching/overlapping (user reported ghost tiles bunched up)
+		const maxMoves = 4;
 		const topMoves = plays.slice(0, Math.min(maxMoves, plays.length));
 
 		// Enhanced color schemes for different move qualities
@@ -2495,72 +2495,6 @@ class ScrabbleGame {
 		}
 
 		return true;
-	}
-
-	calculateStrategicScore(word, row, col, isHorizontal) {
-		let score = this.calculatePotentialScore(word, row, col, isHorizontal);
-
-		// Bonus for word length
-		score += Math.pow(word.length, 2) * 10;
-
-		// Bonus for using premium squares
-		const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
-		score += premiumSquares * 25;
-
-		// Bonus for creating multiple words
-		const crossWords = this.countIntersections(row, col, isHorizontal, word);
-		score += crossWords * 30;
-
-		// Bonus for using complex letters
-		score += this.calculateWordComplexity(word) * 15;
-
-		return score;
-	}
-
-	findAdvancedWordCombinations(availableLetters) {
-		const combinations = new Set();
-		const lettersWithBlanks = [...availableLetters];
-		const blankIndices = lettersWithBlanks
-			.map((letter, index) => letter === '*' ? index : -1)
-			.filter(index => index !== -1);
-
-		// Generate all possible letter combinations with blanks
-		const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-		const maxCombinations = Math.pow(26, blankIndices.length);
-
-		for (let i = 0; i < maxCombinations && combinations.size < 100; i++) {
-			const tempLetters = [...lettersWithBlanks];
-
-			// Replace blanks with actual letters
-			blankIndices.forEach((blankIndex, position) => {
-				const letterIndex = Math.floor(i / Math.pow(26, position)) % 26;
-				tempLetters[blankIndex] = alphabet[letterIndex];
-			});
-
-			// Find all possible words using these letters
-			this.findPossibleWordsFromLetters(tempLetters).forEach(word => {
-				if (this.isAdvancedWord(word)) {
-					combinations.add(word);
-				}
-			});
-		}
-
-		return Array.from(combinations).sort((a, b) => b.length - a.length);
-	}
-
-	isAdvancedWord(word) {
-		// Minimum length requirement
-		if (word.length < 4) return false;
-
-		// Check for complexity using letter patterns
-		const complexPatterns = [
-			/[JQXZ]/, // Uncommon letters
-			/[BCDFGHJKLMNPQRSTVWXZ]{3,}/, // Three or more consonants
-			/[AEIOU]{2,}/, // Two or more vowels
-			/.{5,}/ // Words of length 5 or more
-		];
-
-		return complexPatterns.some(pattern => pattern.test(word));
 	}
 
 	calculateStrategicScore(word, row, col, isHorizontal) {
