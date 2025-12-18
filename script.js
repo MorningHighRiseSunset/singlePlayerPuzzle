@@ -1505,22 +1505,26 @@ class ScrabbleGame {
 				updateThinkingText(`${getTranslation('aiThinking', _aiLang)} (${attempts}/${maxAttempts})`);
 
 				// Try different word length preferences based on attempt number
+				// More aggressive long-word priority: 6+, then 5, then 4, then 3, then allow shorter
 				let minWordLength = 2;
 				let maxWordLength = 15;
 
 				if (attempts === 1) {
-					// First try: prefer longer words (4+ letters)
-					minWordLength = 4;
+					// First try: prefer much longer words (6+ letters)
+					minWordLength = 6;
 				} else if (attempts === 2) {
-					// Second try: medium words (3+ letters)
-					minWordLength = 3;
+					// Second try: prefer 5+ letters
+					minWordLength = 5;
 				} else if (attempts === 3) {
-					// Third try: any length, prefer high-scoring
-					minWordLength = 2;
+					// Third try: prefer 4+ letters
+					minWordLength = 4;
+				} else if (attempts === 4) {
+					// Fourth try: 3+ letters
+					minWordLength = 3;
 				} else {
-					// Final attempts: even very short words
+					// Later attempts: allow any length (last-resort)
 					minWordLength = 2;
-					maxWordLength = 8; // Shorter words might be more reliable
+					maxWordLength = 8; // Shorter words might be more reliable late
 				}
 
 				const possiblePlays = this.findAIPossiblePlays(minWordLength, maxWordLength);
@@ -1537,6 +1541,8 @@ class ScrabbleGame {
 					});
 
 					for (const candidate of candidatePlays) {
+						// Avoid very short plays early in attempts (prevent 'IN', 'AN', etc.)
+						if (candidate.word.length < 4 && attempts <= 3) continue;
 						// If over 15 seconds total, consider using a saved shorter candidate if present
 						if (Date.now() - startTime > 15000 && savedShortCandidate) {
 							const quickValidity = await this.checkAIMoveValidity(savedShortCandidate.word, savedShortCandidate.startPos, savedShortCandidate.isHorizontal);
