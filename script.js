@@ -1188,6 +1188,8 @@ class ScrabbleGame {
 
 		this.renderRack();
 		this.highlightValidPlacements();
+			// Restore ghost previews after returning tile
+			if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
 		deselect();
 		return;
 	}
@@ -1197,6 +1199,8 @@ class ScrabbleGame {
         deselect();
         return;
     }
+
+    
     // Deselect if already selected
     if (this.selectedTile === tileElem) {
         deselect();
@@ -1264,6 +1268,8 @@ class ScrabbleGame {
 					}
 					this.renderRack();
 					this.highlightValidPlacements();
+					// Restore ghost previews after returning tile
+					if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
 				}
 				// Always deselect after any placement attempt
 				deselect();
@@ -1290,6 +1296,44 @@ class ScrabbleGame {
 			deselect();
 		});
 
+	}
+
+
+	// Revert any currently placed (but unsubmitted) tiles back to the player's rack
+	revertPlacedTiles() {
+		if (!this.placedTiles || this.placedTiles.length === 0) return;
+		// Return placed tiles back to rack and clear board cells
+		for (const p of Array.from(this.placedTiles)) {
+			try {
+				const { row, col, tile } = p;
+				if (this.board[row] && this.board[row][col]) {
+					this.board[row][col] = null;
+				}
+				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+				if (cell) {
+					cell.innerHTML = '';
+					// Restore center star if needed
+					if (row === 7 && col === 7) {
+						const centerStar = document.createElement('span');
+						centerStar.textContent = '⚜';
+						centerStar.className = 'center-star';
+						cell.appendChild(centerStar);
+					}
+				}
+				if (tile) {
+					if (tile.isBlank || tile.letter === '*') {
+						this.playerRack.push({ letter: '*', value: 0, id: tile.id });
+					} else {
+						this.playerRack.push(tile);
+					}
+				}
+			} catch (e) { /* best-effort revert */ }
+		}
+		this.placedTiles = [];
+		this.renderRack();
+		this.highlightValidPlacements();
+		if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
+		this.updateGameState();
 	}
 
 	selectTile(tileElement) {
@@ -1430,6 +1474,32 @@ class ScrabbleGame {
 			let attempts = 0;
 			const maxAttempts = 10; // Try up to 10 different strategies to find a move
 
+			// Strategy: first try an extended focused search for long words (bingo-focused)
+			let savedShortCandidate = null;
+			try {
+				updateThinkingText(getTranslation('aiSearchingLongWords', _aiLang) || 'AI searching for long words...');
+				const longPlays = this.findAIPossiblePlays(7, 15, { maxSearchTime: 8000, maxCandidates: 400 });
+				if (Array.isArray(longPlays) && longPlays.length > 0) {
+					// Prefer locally valid long words first
+					const validLong = longPlays.filter(p => this.dictionaryHas(p.word));
+					const candidateLongs = validLong.length ? validLong : longPlays;
+					// Keep a short candidate in case we need it later
+					savedShortCandidate = longPlays.find(p => p.word.length <= 5) || savedShortCandidate;
+					// Validate sequentially but prefer highest strategic score
+					for (const candidate of candidateLongs.slice(0, 40)) {
+						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
+						if (validity && validity.valid) {
+							bestPlay = candidate;
+							updateThinkingText(getTranslation('aiFoundLongMove', _aiLang) || 'AI found a long move');
+							break;
+						}
+					}
+				}
+			} catch (e) {
+				// ignore long-search errors and continue to the normal attempts
+				if (this.showAIDebug) console.warn('Long-word focused search failed', e);
+			}
+
 			while (attempts < maxAttempts && !bestPlay) {
 				attempts++;
 				updateThinkingText(`${getTranslation('aiThinking', _aiLang)} (${attempts}/${maxAttempts})`);
@@ -1467,10 +1537,20 @@ class ScrabbleGame {
 					});
 
 					for (const candidate of candidatePlays) {
-						// If over 1 minute total, just play the first valid move we can find
+						// If over 15 seconds total, consider using a saved shorter candidate if present
+						if (Date.now() - startTime > 15000 && savedShortCandidate) {
+							const quickValidity = await this.checkAIMoveValidity(savedShortCandidate.word, savedShortCandidate.startPos, savedShortCandidate.isHorizontal);
+							if (quickValidity && quickValidity.valid) {
+								bestPlay = savedShortCandidate;
+								updateThinkingText(getTranslation('aiUsingFallback', _aiLang) || 'AI falling back to shorter move');
+								break;
+							}
+						}
+
+						// If over 60 seconds total, just play the first valid move we can find
 						if (Date.now() - startTime > 60000) {
 							const quickValidity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-							if (quickValidity.valid) {
+							if (quickValidity && quickValidity.valid) {
 								bestPlay = candidate;
 								updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
 								break;
@@ -1479,7 +1559,7 @@ class ScrabbleGame {
 						}
 
 						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-						if (validity.valid) {
+						if (validity && validity.valid) {
 							bestPlay = candidate;
 							updateThinkingText(getTranslation('aiFoundMove', _aiLang));
 							break;
@@ -2150,7 +2230,8 @@ class ScrabbleGame {
 		this.setupHintSystem();
 	}
 
-	findAIPossiblePlays(minWordLength = 2, maxWordLength = 15) {
+	// Find AI candidate plays. Accepts optional opts: { maxSearchTime, maxCandidates }
+	findAIPossiblePlays(minWordLength = 2, maxWordLength = 15, opts = {}) {
 		try {
 			const possiblePlays = [];
 			// Quick heuristic: look for single-tile additions to form 2-letter words (covers cases like adding 'H' to form 'HI')
@@ -2204,16 +2285,39 @@ class ScrabbleGame {
 
 			// Performance optimization: limit search time and candidates
 			const startTime = Date.now();
-			const maxSearchTime = 3000; // 3 seconds max for deeper search
+			// Default to a faster search (2s) unless overridden by opts
+			const maxSearchTime = typeof opts.maxSearchTime === 'number' ? opts.maxSearchTime : 2000; // ms
 			let candidatesFound = 0;
-			const maxCandidates = 150; // More candidates for better evaluation
+			const maxCandidates = typeof opts.maxCandidates === 'number' ? opts.maxCandidates : 150; // More candidates for better evaluation
 			const anchors = this.findAnchors();
+
+			// Prune anchors: score anchors by nearby activity and premium squares, then limit
+			const scoredAnchors = anchors.map(a => {
+				// Simple anchor score: number of adjacent empty cells + nearby premium squares count
+				let adjEmpty = 0;
+				const neigh = [[-1,0],[1,0],[0,-1],[0,1]];
+				for (const [dr,dc] of neigh) {
+					const r = a.row + dr, c = a.col + dc;
+					if (this.isValidPosition(r,c) && !this.board[r][c]) adjEmpty++;
+				}
+				let premiumNearby = 0;
+				for (let rr = Math.max(0,a.row-2); rr <= Math.min(14,a.row+2); rr++) {
+					for (let cc = Math.max(0,a.col-2); cc <= Math.min(14,a.col+2); cc++) {
+						const cell = document.querySelector(`[data-row="${rr}"][data-col="${cc}"]`);
+						if (cell && (cell.classList.contains('tw') || cell.classList.contains('dw') || cell.classList.contains('tl') || cell.classList.contains('dl'))) premiumNearby++;
+					}
+				}
+				return { anchor: a, score: adjEmpty * 2 + premiumNearby };
+			}).sort((x,y) => y.score - x.score);
+
+			const maxAnchors = typeof opts.maxAnchors === 'number' ? opts.maxAnchors : 40;
+			const topAnchors = scoredAnchors.slice(0, Math.max(1, Math.min(scoredAnchors.length, maxAnchors))).map(s => s.anchor);
 
 			// Use a Set to avoid duplicate plays
 			const seen = new Set();
 
-			// For each anchor, try both directions
-			for (const anchor of anchors) {
+			// For each high-potential anchor, try both directions
+			for (const anchor of topAnchors) {
 				for (const isHorizontal of [true, false]) {
 					const prefix = this.getPrefix(anchor, isHorizontal);
 					const suffix = this.getSuffix(anchor, isHorizontal);
@@ -2230,14 +2334,27 @@ class ScrabbleGame {
 						maxLen
 					);
 
-// ENHANCEMENT: Pre-filter by dictionary to reject invalid words before scoring
-				let candidateWords = rawCandidates.filter(word => {
-					if (!word.startsWith(prefix) || !word.endsWith(suffix)) return false;
-					if (!this.isScrabbleAppropriate(word)) return false;
-					// CRITICAL: Dictionary check early prevents "TEKEDYE" type nonsense
-					if (!this.dictionaryHas(word)) return false;
-					return true;
-				});
+					// ENHANCEMENT: Pre-filter by dictionary to reject invalid words before scoring
+					let candidateWords = rawCandidates.filter(word => {
+						if (!word.startsWith(prefix) || !word.endsWith(suffix)) return false;
+						if (!this.isScrabbleAppropriate(word)) return false;
+						if (!this.dictionaryHas(word)) return false;
+						return true;
+					});
+
+					// Quick heuristic sort: prefer longer words and those with high-value letters
+					const highValue = new Set(['J','Q','X','Z']);
+					const mediumValue = new Set(['B','F','H','M','P','V','W','Y']);
+					candidateWords.sort((a,b) => {
+						if (b.length !== a.length) return b.length - a.length; // longer first
+						const aScore = Array.from(a).reduce((s,ch) => s + (highValue.has(ch)?3: mediumValue.has(ch)?1:0),0);
+						const bScore = Array.from(b).reduce((s,ch) => s + (highValue.has(ch)?3: mediumValue.has(ch)?1:0),0);
+						return bScore - aScore;
+					});
+
+					// Limit per-anchor candidates for performance
+					const perAnchorLimit = typeof opts.maxPerAnchor === 'number' ? opts.maxPerAnchor : 120;
+					if (candidateWords.length > perAnchorLimit) candidateWords = candidateWords.slice(0, perAnchorLimit);
 
 					if (this.showAIDebug && rawCandidates.length > 0) {
 						console.log(`Trie found ${rawCandidates.length} raw candidates, ${candidateWords.length} passed filters for anchor ${anchor.row},${anchor.col}`);
@@ -6260,6 +6377,10 @@ formedWords.forEach((wordInfo) => {
 						// Check if placement is valid
 						if (!this.isValidPlacement(row, col, tile)) return;
 
+						// Remove any existing ghost tile in this cell so placed tile is sole tile
+						const existingGhost = cell.querySelector('.ghost-tile');
+						if (existingGhost) existingGhost.remove();
+
 						// Place the tile
 						this.placeTile(tile, row, col);
 
@@ -6322,6 +6443,10 @@ formedWords.forEach((wordInfo) => {
 							touchTileData = null;
 							return;
 						}
+
+						// Remove any existing ghost tile in this cell so placed tile is sole tile
+						const existingGhostTouch = cell.querySelector('.ghost-tile');
+						if (existingGhostTouch) existingGhostTouch.remove();
 
 						// Place the tile
 						this.placeTile(tile, row, col);
@@ -7611,6 +7736,30 @@ formedWords.forEach((wordInfo) => {
             // Multi-layer validation pipeline
             const validationResult = await this.validateWordInContext(word, wordInfo, isMainWord);
 
+				// Enforce rule for PLAYER moves: if the validationResult came from the
+				// remote API (layer === 'api'), only accept it for player submissions
+				// when the word also appears in a local source (one of the loaded
+				// dictionaries or tracked `wordSources`). This avoids API-only
+				// false-positives while still allowing API+local corroboration.
+				if (validationResult.layer === 'api') {
+					const wordLower = word.toLowerCase();
+					const inAnyLocal = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
+									   (this.dictionary && this.dictionary.has(wordLower)) ||
+									   (this.backupDictionary && this.backupDictionary.has(wordLower)) ||
+									   (this.coreValidDictionary && this.coreValidDictionary.has(wordLower));
+					const inWordSources = this.wordSources && this.wordSources[wordLower] && this.wordSources[wordLower].length > 0;
+
+					if (!(inAnyLocal || inWordSources)) {
+						// Downgrade API-only acceptance for player moves
+						validationResult.isValid = false;
+						validationResult.reason = 'Rejected: API-only result not corroborated by local sources';
+					} else {
+						// API validated and at least one local source references the word
+						validationResult.reason = (validationResult.reason || '') + ' (API + local source)';
+						validationResult.isValid = true;
+					}
+				}
+
             validationResults.push({
                 word: wordInfo.word,
                 ...validationResult
@@ -8840,13 +8989,19 @@ calculateScore() {
 			else if (similarity >= 0.8) confidence = 75;  // Similar
 			else confidence = similarity * 100;  // Raw similarity
 
-			// For English, be more lenient than Spanish since English has fewer accent issues
-			const isValid = confidence >= 70;  // Accept if 70%+ confidence
+			// For English, require higher confidence to accept API-only words
+			// Raise threshold to reduce false positives (e.g., near-miss words like "AHINGED")
+			const acceptanceThreshold = 85; // percent
+			const isValid = confidence >= acceptanceThreshold;
 
 			// Enhanced logging
 			if (this.showAIDebug) {
-				console.log(`English validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
+				console.log(`English validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}% (threshold ${acceptanceThreshold}%)`);
 				console.log(`  Google response: "${englishTranslation}", valid: ${isValid}`);
+			}
+			// If confidence is borderline but still accepted, log a warning for tuning
+			if (isValid && confidence < 90 && this.showAIDebug) {
+				console.warn(`Borderline API acceptance for "${word}" (confidence ${confidence.toFixed(1)}%)`);
 			}
 
 			// Cache result
@@ -9674,6 +9829,7 @@ calculateScore() {
 	// guarding calls to avoid runtime errors.
 
 	async playWord() {
+		console.log('playWord invoked', { placedTiles: this.placedTiles && this.placedTiles.map(p=>({r:p.row,c:p.col,letter:p.tile && p.tile.letter})), currentTurn: this.currentTurn });
 		// Show a spinner or disable the submit button for better UX
 		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
 		if (playWordBtn) {
@@ -9804,6 +9960,8 @@ calculateScore() {
 				return;
 			}
 
+			console.log('areTilesConnected?', this.areTilesConnected());
+
 			if (!this.areTilesConnected()) {
 				alert("Tiles must be connected and in a straight line!");
 				this.resetPlacedTiles();
@@ -9812,6 +9970,7 @@ calculateScore() {
 
 			// Validate the word(s) asynchronously
 			const isValid = await (async () => this.validateWord())();
+			console.log('validateWord result:', isValid);
 			// If validation failed and we had started inline speech, stop it to avoid orphaned audio
 			if (!isValid && this._submitStartedSpeak) {
 				try { window.speechSynthesis && window.speechSynthesis.cancel && window.speechSynthesis.cancel(); } catch(e) {}
@@ -11800,6 +11959,10 @@ calculateScore() {
 		const skipTurnBtn = document.getElementById("skip-turn");
 		if (skipTurnBtn) skipTurnBtn.addEventListener("click", () => {
 			if (this.currentTurn === "player") {
+				// If player has placed tiles but hasn't submitted, revert them before skipping
+				if (this.placedTiles && this.placedTiles.length > 0) {
+					if (typeof this.revertPlacedTiles === 'function') this.revertPlacedTiles();
+				}
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
 				this.addToMoveHistory("Player", "SKIP", 0);
@@ -11815,6 +11978,10 @@ calculateScore() {
 		const skipTurnDesktopBtn = document.getElementById("skip-turn-desktop");
 		if (skipTurnDesktopBtn) skipTurnDesktopBtn.addEventListener("click", () => {
 			if (this.currentTurn === "player") {
+				// If player has placed tiles but hasn't submitted, revert them before skipping
+				if (this.placedTiles && this.placedTiles.length > 0) {
+					if (typeof this.revertPlacedTiles === 'function') this.revertPlacedTiles();
+				}
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
 				this.addToMoveHistory("Player", "SKIP", 0);
