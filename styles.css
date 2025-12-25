@@ -16,13 +16,14 @@
 }
 
 /* --- Layout --- */
-body {
+html, body {
   margin: 0;
   padding: 10px; /* Reduced from 20px */
   background: linear-gradient(145deg, var(--light), #f0f0f0);
   font-family: Arial, sans-serif;
   min-height: 100vh;
   box-sizing: border-box;
+  overflow-x: hidden;
   /* Better touch support */
   -webkit-touch-callout: none;
   -webkit-user-select: none;

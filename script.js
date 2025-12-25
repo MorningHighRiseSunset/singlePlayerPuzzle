@@ -6597,32 +6597,6 @@ formedWords.forEach((wordInfo) => {
 				fetchSources.push(url.split('/').pop());
 			}
 
-			// Fetch local files in parallel
-			const localFiles = [
-				'/SOWPODS.txt',
-				'/backupwordlist.txt', 
-				'/anotherbackupwordlist.txt'
-			];
-
-			for (const file of localFiles) {
-				fetchPromises.push(
-					fetch(file, { cache: 'no-store' })
-						.then(response => {
-							if (response && response.ok) {
-								return response.text().then(t => {
-									if (this.showAIDebug) console.log(`✓ Local dict: ${file} loaded`);
-									return t;
-								});
-							}
-							return null;
-						})
-						.catch(e => {
-							if (this.showAIDebug) console.warn(`✗ Failed to load ${file}`);
-							return null;
-						})
-				);
-				fetchSources.push(file);
-			}
 
 			// Wait for ALL sources to load in parallel
 			const results = await Promise.all(fetchPromises);

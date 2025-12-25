@@ -1,162 +1,61 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Language configuration with flags and labels
-    const languages = [
-        { code: 'en', flag: '🇺🇸', name: 'English', nameNative: 'English', label: 'Puzzle' },
-        { code: 'es', flag: '🇪🇸', name: 'Spanish', nameNative: 'Español', label: 'Rompecabezas' },
-        { code: 'zh', flag: '🇨🇳', name: 'Mandarin', nameNative: '中文', label: '拼图' },
-        { code: 'fr', flag: '🇫🇷', name: 'French', nameNative: 'Français', label: 'Puzzle' },
-        { code: 'hi', flag: '🇮🇳', name: 'Hindi', nameNative: 'हिन्दी', label: 'पहेली' }
-    ];
+    // Create start game button
+    const startButton = document.createElement('button');
+    startButton.className = 'start-game-btn';
+    startButton.textContent = 'Play Puzzle';
+    startButton.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 24px;
+        border: 2px solid #1976d2;
+        border-radius: 8px;
+        background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
+        color: #1976d2;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 16px;
+        font-weight: bold;
+        min-height: 50px;
+        width: 200px;
+    `;
 
-    // Create language buttons
-    const languageButtonsContainer = document.getElementById('language-buttons');
-    let selectedLanguage = null;
-
-    languages.forEach(lang => {
-        const button = document.createElement('button');
-        button.className = 'language-btn';
-        button.dataset.lang = lang.code;
-        button.dataset.label = lang.label;
-        // Get play text entirely in target language
-        const playTexts = {
-            'en': 'Play in English',
-            'es': 'Jugar en Español',
-            'zh': '用中文玩',
-            'fr': 'Jouer en Français',
-            'hi': 'हिन्दी में खेलें'
-        };
-        const playText = playTexts[lang.code] || 'Play in English';
-
-        // Create flag element with proper Unicode
-        const flagSpan = document.createElement('span');
-        flagSpan.className = 'flag-emoji';
-        flagSpan.textContent = lang.flag; // Use textContent to ensure proper emoji rendering
-        flagSpan.setAttribute('aria-label', lang.name);
-        
-        // Create text element
-        const textSpan = document.createElement('span');
-        textSpan.className = 'lang-text';
-        textSpan.textContent = playText;
-        
-        // Clear and append
-        button.innerHTML = '';
-        button.appendChild(flagSpan);
-        button.appendChild(textSpan);
-        button.style.cssText = `
+    // Add button to the page
+    const container = document.querySelector('.home-container');
+    if (container) {
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
             display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 10px;
-            padding: 8px 12px;
-            border: 2px solid #1976d2;
-            border-radius: 8px;
-            background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-            color: #1976d2;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 50px;
-            width: 100%;
-            max-width: 200px;
+            justify-content: center;
+            margin-top: 20px;
         `;
+        buttonContainer.appendChild(startButton);
+        container.appendChild(buttonContainer);
+    }
 
-        // Hover effects
-        button.addEventListener('mouseenter', () => {
-            if (!button.classList.contains('selected')) {
-                button.style.background = 'linear-gradient(145deg, #e3f2fd 0%, #bbdefb 100%)';
-                button.style.transform = 'translateY(-2px)';
-                button.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
-            }
-        });
-
-        button.addEventListener('mouseleave', () => {
-            if (!button.classList.contains('selected')) {
-                button.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
-                button.style.transform = 'translateY(0)';
-                button.style.boxShadow = 'none';
-            }
-        });
-
-        // Click handler
-        button.addEventListener('click', () => {
-            // Remove selection from all buttons
-            document.querySelectorAll('.language-btn').forEach(btn => {
-                btn.classList.remove('selected');
-                btn.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
-                btn.style.borderColor = '#1976d2';
-                btn.style.color = '#1976d2';
-            });
-
-            // Select this button
-            button.classList.add('selected');
-            button.style.background = 'linear-gradient(145deg, #1976d2 0%, #1565c0 100%)';
-            button.style.borderColor = '#0d47a1';
-            button.style.color = '#ffffff';
-            button.style.boxShadow = '0 4px 16px rgba(25, 118, 210, 0.4)';
-
-            selectedLanguage = lang;
-            
-            // Auto-start game after selection
-            setTimeout(() => {
-                startGame(lang);
-            }, 300);
-        });
-
-        languageButtonsContainer.appendChild(button);
+    // Hover effects
+    startButton.addEventListener('mouseenter', () => {
+        startButton.style.background = 'linear-gradient(145deg, #e3f2fd 0%, #bbdefb 100%)';
+        startButton.style.transform = 'translateY(-2px)';
+        startButton.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
     });
 
-    // Flag emoji styling and grid layout
-    const style = document.createElement('style');
-    style.textContent = `
-        #language-buttons {
-            grid-template-columns: 1fr !important;
-            gap: 8px !important;
-            max-width: 220px !important;
-            justify-items: center !important;
-        }
-        .flag-emoji {
-            font-size: 20px !important;
-            line-height: 1 !important;
-            display: inline-block !important;
-            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne", "Segoe UI Symbol", "Noto Emoji", sans-serif !important;
-            -webkit-font-feature-settings: normal !important;
-            font-feature-settings: normal !important;
-            font-style: normal !important;
-            text-rendering: optimizeLegibility !important;
-            -webkit-font-smoothing: antialiased !important;
-            -moz-osx-font-smoothing: grayscale !important;
-            unicode-bidi: normal !important;
-            direction: ltr !important;
-            font-variant-emoji: emoji !important;
-            -webkit-text-size-adjust: 100% !important;
-            flex-shrink: 0 !important;
-        }
-        .lang-text {
-            font-size: 12px !important;
-            text-align: left !important;
-            line-height: 1.3 !important;
-            word-break: break-word !important;
-            font-weight: 600 !important;
-            flex: 1 !important;
-        }
-        @media (max-width: 480px) {
-            #language-buttons {
-                max-width: 100% !important;
-            }
-            .flag-emoji {
-                font-size: 18px !important;
-            }
-            .lang-text {
-                font-size: 11px !important;
-            }
-        }
-    `;
-    document.head.appendChild(style);
+    startButton.addEventListener('mouseleave', () => {
+        startButton.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
+        startButton.style.transform = 'translateY(0)';
+        startButton.style.boxShadow = 'none';
+    });
 
-    function startGame(lang) {
+    // Click handler
+    startButton.addEventListener('click', () => {
+        startGame();
+    });
+
+    function startGame() {
         const board = document.querySelector(".mini-scrabble-board");
         const homeContainer = document.querySelector(".home-container");
-        const selectedButton = document.querySelector(`.language-btn[data-lang="${lang.code}"]`);
+        const selectedButton = startButton;
 
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
@@ -232,23 +131,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1000 + i * 120);
         });
 
-        // --- SPEECH: Enthusiastic "Puzzle!" in selected language ---
+        // --- SPEECH: Enthusiastic "Puzzle!" ---
         window.speechSynthesis.cancel();
-        const label = lang.label || 'Puzzle';
-        const voices = window.speechSynthesis.getVoices();
-        // Try to find a voice matching the selected language
-        let chosenVoice = voices.find(v => v.lang.startsWith(lang.code));
-        // Prefer female voice if available
-        if (chosenVoice && voices.filter(v => v.lang.startsWith(lang.code)).length > 1) {
-            const female = voices.filter(v => v.lang.startsWith(lang.code)).find(v => v.name.toLowerCase().includes('female') || v.gender === 'female');
-            if (female) chosenVoice = female;
-        }
-        const utter = new SpeechSynthesisUtterance(label + '!');
-        utter.lang = lang.code;
+        const utter = new SpeechSynthesisUtterance('Puzzle!');
         utter.rate = 1.25;
         utter.pitch = 1.3;
         utter.volume = 1.0;
-        if (chosenVoice) utter.voice = chosenVoice;
         window.speechSynthesis.speak(utter);
 
         // Fade to white after 4 seconds, then redirect
@@ -268,13 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 fadeDiv.style.opacity = "1";
             }, 10);
             setTimeout(() => {
-                // Use selected language and pass as query param
-                try {
-                    const langCode = lang ? encodeURIComponent(lang.code) : 'en';
-                    window.location.href = "game.html?lang=" + langCode;
-                } catch (e) {
-                    window.location.href = "game.html";
-                }
+                window.location.href = "game.html";
             }, 800);
         }, 4000);
     }
