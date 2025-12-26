@@ -1,61 +1,17 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Create start game button
-    const startButton = document.createElement('button');
-    startButton.className = 'start-game-btn';
-    startButton.textContent = 'Play Puzzle';
-    startButton.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 12px 24px;
-        border: 2px solid #1976d2;
-        border-radius: 8px;
-        background: linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%);
-        color: #1976d2;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 16px;
-        font-weight: bold;
-        min-height: 50px;
-        width: 200px;
-    `;
+    // Handle language button clicks
+    const languageButtons = document.querySelectorAll('.language-btn');
 
-    // Add button to the page
-    const container = document.querySelector('.home-container');
-    if (container) {
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.cssText = `
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        `;
-        buttonContainer.appendChild(startButton);
-        container.appendChild(buttonContainer);
-    }
-
-    // Hover effects
-    startButton.addEventListener('mouseenter', () => {
-        startButton.style.background = 'linear-gradient(145deg, #e3f2fd 0%, #bbdefb 100%)';
-        startButton.style.transform = 'translateY(-2px)';
-        startButton.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.3)';
+    languageButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const lang = button.dataset.lang;
+            startGame(lang, button);
+        });
     });
 
-    startButton.addEventListener('mouseleave', () => {
-        startButton.style.background = 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)';
-        startButton.style.transform = 'translateY(0)';
-        startButton.style.boxShadow = 'none';
-    });
-
-    // Click handler
-    startButton.addEventListener('click', () => {
-        startGame();
-    });
-
-    function startGame() {
+    function startGame(lang, selectedButton) {
         const board = document.querySelector(".mini-scrabble-board");
         const homeContainer = document.querySelector(".home-container");
-        const selectedButton = startButton;
 
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
@@ -131,12 +87,23 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1000 + i * 120);
         });
 
-        // --- SPEECH: Enthusiastic "Puzzle!" ---
+        // --- SPEECH: Enthusiastic "Puzzle!" in the selected language ---
         window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance('Puzzle!');
+
+        // Map language codes to "Puzzle" pronunciation and speech language
+        const puzzleTranslations = {
+            'en': { text: 'Puzzle!', lang: 'en-US' },
+            'es': { text: '¡Puzzle!', lang: 'es-ES' },
+            'fr': { text: 'Puzzle !', lang: 'fr-FR' },
+            'zh': { text: '拼图!', lang: 'zh-CN' }
+        };
+
+        const puzzleData = puzzleTranslations[lang] || puzzleTranslations['en'];
+        const utter = new SpeechSynthesisUtterance(puzzleData.text);
         utter.rate = 1.25;
         utter.pitch = 1.3;
         utter.volume = 1.0;
+        utter.lang = puzzleData.lang; // Set the speech synthesis language
         window.speechSynthesis.speak(utter);
 
         // Fade to white after 4 seconds, then redirect
@@ -156,7 +123,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 fadeDiv.style.opacity = "1";
             }, 10);
             setTimeout(() => {
-                window.location.href = "game.html";
+                // Map language codes to their respective game files
+                const gameFiles = {
+                    'en': 'english.html',
+                    'es': 'spanish.html',
+                    'fr': 'french.html',
+                    'zh': 'mandarin.html'
+                };
+                const gameFile = gameFiles[lang] || 'english.html';
+                window.location.href = gameFile + '?lang=' + lang;
             }, 800);
         }, 4000);
     }
