@@ -90,10 +90,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // --- SPEECH: Enthusiastic "Puzzle!" in the selected language ---
         window.speechSynthesis.cancel();
 
-        // Map language codes to "Puzzle" pronunciation and speech language
+        // Map language codes to "Puzzle" in native language and speech language
         const puzzleTranslations = {
             'en': { text: 'Puzzle!', lang: 'en-US' },
-            'es': { text: '¡Puzzle!', lang: 'es-ES' },
+            'es': { text: '¡Rompecabezas!', lang: 'es-ES' },
             'fr': { text: 'Puzzle !', lang: 'fr-FR' },
             'zh': { text: '拼图!', lang: 'zh-CN' }
         };
