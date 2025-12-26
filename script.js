@@ -6,7 +6,6 @@ const translations = {
 		submit: 'Submit',
 		shuffleRack: 'Shuffle Rack',
 		skipTurn: 'Skip Turn',
-		howToPlay: 'How to Play',
 		quitGame: 'Quit / End Game',
 		gameInfo: 'Game Info',
 		scores: 'Scores',
@@ -976,30 +975,23 @@ class ScrabbleGame {
 	startGhostVisibilityToggle() {
 		if (this.ghostVisibilityTimer) clearInterval(this.ghostVisibilityTimer);
 		
-		this.ghostTilesVisible = true;
-		this.showGhostTiles();
+		const toggleVisibility = () => {
+			// Show for 5 seconds
+			this.showGhostTiles();
+			this.ghostTilesVisible = true;
+			
+			setTimeout(() => {
+				// Hide for 60 seconds
+				this.hideGhostTiles();
+				this.ghostTilesVisible = false;
+				
+				// After 60 seconds, repeat the cycle
+				setTimeout(toggleVisibility, 60000);
+			}, 5000);
+		};
 		
-		// Toggle visibility: 5000ms show, then 60000ms hide, then repeat
-		let showPhase = true;
-		this.ghostVisibilityTimer = setInterval(() => {
-			if (showPhase) {
-				// Switch to hide phase
-				setTimeout(() => {
-					if (this.ghostTilesVisible) {
-						this.hideGhostTiles();
-						this.ghostTilesVisible = false;
-					}
-				}, 5000);
-				showPhase = false;
-			} else {
-				// Switch to show phase
-				if (this.ghostTilesVisible === false) {
-					this.showGhostTiles();
-					this.ghostTilesVisible = true;
-				}
-				showPhase = true;
-			}
-		}, 65000); // Total cycle: 5s show + 60s hide = 65s
+		// Start the cycle
+		toggleVisibility();
 	}
 
 	showGhostTiles() {
@@ -6895,14 +6887,6 @@ formedWords.forEach((wordInfo) => {
 		// Update fixed text headers
 		const gameInfoHeaders = document.querySelectorAll('[id*="info-panel"] h2');
 		gameInfoHeaders.forEach(h => h.textContent = t('gameInfo'));
-		
-		// Update "How to Play" sections
-		const drawerInstructionHeaders = document.querySelectorAll('[id*="drawer-instructions"] h3:first-of-type');
-		drawerInstructionHeaders.forEach(h => {
-			if (h.textContent.includes('How to Play') || h.textContent.includes('Cómo Jugar') || h.textContent.includes('Comment Jouer') || h.textContent.includes('如何玩')) {
-				h.textContent = t('howToPlayTitle');
-			}
-		});
 		
 		// Update notification text
 		const notices = {
