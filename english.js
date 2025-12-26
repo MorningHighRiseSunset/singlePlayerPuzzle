@@ -974,22 +974,22 @@ class ScrabbleGame {
 	// Toggle ghost tiles visibility: 5 seconds show, 60 seconds hide, repeat
 	startGhostVisibilityToggle() {
 		if (this.ghostVisibilityTimer) clearInterval(this.ghostVisibilityTimer);
-		
+
 		const toggleVisibility = () => {
 			// Show for 5 seconds
 			this.showGhostTiles();
 			this.ghostTilesVisible = true;
-			
+
 			setTimeout(() => {
 				// Hide for 60 seconds
 				this.hideGhostTiles();
 				this.ghostTilesVisible = false;
-				
-				// After 60 seconds, repeat the cycle
+
+				// Schedule next cycle after 60 seconds of being hidden
 				setTimeout(toggleVisibility, 60000);
 			}, 5000);
 		};
-		
+
 		// Start the cycle
 		toggleVisibility();
 	}
