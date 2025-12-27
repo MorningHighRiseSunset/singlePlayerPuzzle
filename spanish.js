@@ -503,6 +503,34 @@ class ScrabbleGame {
 		this.spanishDictionary = new Set();
 		this.spanishDictionaryNormalized = new Set();
 		this.spanishNormalizedMap = {}; // normalized -> original
+		// Load Spanish wordlists from both sources and merge
+		if (this.preferredLang === 'es') {
+			const wordlistUrls = [
+				'https://raw.githubusercontent.com/xavier-hernandez/spanish-wordlist/main/text/spanish_words.txt',
+				'https://raw.githubusercontent.com/JorgeDuenasLerin/diccionario-espanol-txt/main/0_palabras_todas.txt'
+			];
+			Promise.all(wordlistUrls.map(url => fetch(url).then(r => r.text()).catch(() => '')))
+				.then(texts => {
+					const allWords = new Set();
+					texts.forEach(text => {
+						text.split('\n').forEach(w => {
+							const word = w.trim();
+							if (word) allWords.add(word);
+						});
+					});
+					for (const word of allWords) {
+						const norm = normalizeWordForDict(word).toLowerCase();
+						this.spanishDictionary.add(word.toUpperCase());
+						this.spanishDictionaryNormalized.add(norm);
+						this.spanishNormalizedMap[norm] = word;
+					}
+					// Use this as the active dictionary for Spanish
+					this.activeDictionary = this.spanishDictionaryNormalized;
+				})
+				.catch(err => {
+					console.error('Failed to load Spanish wordlists:', err);
+				});
+		}
 		this.frenchDictionary = new Set();
 		this.mandarinDictionary = new Set();
 		this.currentTurn = "player";
