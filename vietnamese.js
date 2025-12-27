@@ -6,7 +6,6 @@ const translations = {
 		submit: 'Submit',
 		shuffleRack: 'Shuffle Rack',
 		skipTurn: 'Skip Turn',
-		howToPlay: 'How to Play',
 		quitGame: 'Quit / End Game',
 		gameInfo: 'Game Info',
 		scores: 'Scores',
@@ -503,8 +502,6 @@ class ScrabbleGame {
 		this.spanishDictionary = new Set();
 		this.spanishDictionaryNormalized = new Set();
 		this.spanishNormalizedMap = {}; // normalized -> original
-		this.frenchDictionary = new Set();
-		this.mandarinDictionary = new Set();
 		this.currentTurn = "player";
 		this.placedTiles = [];
 		this.gameEnded = false;
@@ -526,7 +523,7 @@ class ScrabbleGame {
 		// Set to true to enable verbose AI validation logging (off by default)
 		this.showAIDebug = false;
 		// preferred language short code (e.g. 'en','es','zh','fr') persisted to localStorage
-		this.preferredLang = 'zh'; // Mandarin Chinese version
+		this.preferredLang = (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'vi';
 		// Active dictionary for validation and AI word selection
 		this.activeDictionary = new Set();
 
@@ -6067,10 +6064,9 @@ formedWords.forEach((wordInfo) => {
 		this.showLoadingScreen();
 
 		try {
-			// Load French dictionary only for French version
-			this.updateLoadingProgress('Loading French dictionary...');
-			await this.loadFrenchDictionary();
-			this.activeDictionary = new Set(this.frenchDictionary);
+			// Load dictionaries asynchronously but show progress
+			await this.loadDictionary();
+			await this.loadLanguageDictionary(this.preferredLang);
 
 			// Create board and UI elements
 			this.updateLoadingProgress('Creating game board...');
@@ -6556,14 +6552,14 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		this.updateLoadingProgress('Loading Mandarin dictionary...');
+		this.updateLoadingProgress('Loading Vietnamese dictionary...');
 		try {
 			// Try multiple backup dictionary sources (online + local)
-			// Using Mandarin/Chinese word lists for Chinese language version
+			// Using Vietnamese word lists for Vietnamese language version
 			const onlineUrls = [
-				"https://raw.githubusercontent.com/pwxcoo/chinese-xinhua/main/data/词语.txt",
-				"https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/words.txt",
-				"https://raw.githubusercontent.com/Yixuan-Wang/chinese-word-list/main/simplified_chinese_word_list.txt"
+				"https://raw.githubusercontent.com/doanphp/vietnamese-words/refs/heads/main/words.txt",
+				"https://raw.githubusercontent.com/kipalog/vietnamese-stopwords/master/vietnamese-stopwords.txt",
+				"https://raw.githubusercontent.com/viet-git/vietstone/master/dictionary.txt"
 			];
 
 			let loaded = false;
@@ -6667,106 +6663,6 @@ formedWords.forEach((wordInfo) => {
 		}
 
 		// Spanish dictionary will be loaded only when Spanish language is selected
-	}
-
-	async loadSpanishDictionary() {
-		try {
-			this.updateLoadingProgress('Loading Spanish dictionary...');
-			const response = await fetch('./backup_dictionaries/SpanishDictionary/ES-wordlist.txt');
-			if (!response.ok) {
-				throw new Error(`Failed to load Spanish dictionary: ${response.status}`);
-			}
-			const text = await response.text();
-			const words = text.split('\n').map(line => line.trim().toLowerCase()).filter(word => word.length > 0);
-
-			// Filter valid words (only Spanish letters, reasonable length)
-			const validWords = words.filter(word => {
-				return /^[a-zñáéíóúü]+$/i.test(word) &&
-					   word.length >= 2 &&
-					   word.length <= 15;
-			});
-
-			this.spanishDictionary = new Set(validWords);
-
-			// Create normalized versions for matching (remove accents, keep ñ)
-			this.spanishDictionaryNormalized = new Set();
-			this.spanishNormalizedMap = {}; // normalized -> original
-
-			for (const word of validWords) {
-				const normalized = normalizeWordForDict(word);
-				this.spanishDictionaryNormalized.add(normalized.toLowerCase());
-				// Map normalized back to original with accents
-				if (!this.spanishNormalizedMap[normalized.toUpperCase()]) {
-					this.spanishNormalizedMap[normalized.toUpperCase()] = word.toUpperCase();
-				}
-			}
-
-			console.log(`Spanish dictionary loaded: ${this.spanishDictionary.size} words (${this.spanishDictionaryNormalized.size} normalized)`);
-		} catch (error) {
-			console.error("Error loading Spanish dictionary:", error);
-			this.spanishDictionary = new Set();
-			this.spanishDictionaryNormalized = new Set();
-			this.spanishNormalizedMap = {};
-		}
-	}
-
-	async loadFrenchDictionary() {
-		try {
-			this.updateLoadingProgress('Loading French dictionary...');
-			const response = await fetch('./backup_dictionaries/FrenchDictionary/FR-wordlist.txt');
-			if (!response.ok) {
-				throw new Error(`Failed to load French dictionary: ${response.status}`);
-			}
-			const text = await response.text();
-			const words = text.split('\n').map(line => line.trim().toLowerCase()).filter(word => word.length > 0);
-
-			// Filter valid words (French letters including accents, reasonable length)
-			const validWords = words.filter(word => {
-				return /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(word) &&
-					   word.length >= 2 &&
-					   word.length <= 15;
-			});
-
-			this.frenchDictionary = new Set(validWords);
-			console.log(`French dictionary loaded: ${this.frenchDictionary.size} words`);
-		} catch (error) {
-			console.error("Error loading French dictionary:", error);
-			this.frenchDictionary = new Set();
-		}
-	}
-
-	async loadMandarinDictionary() {
-		try {
-			this.updateLoadingProgress('Loading Mandarin dictionary...');
-			const response = await fetch('./backup_dictionaries/MandarinDictionary/ZH-wordlist.txt');
-			if (!response.ok) {
-				throw new Error(`Failed to load Mandarin dictionary: ${response.status}`);
-			}
-			const text = await response.text();
-			const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('#'));
-
-			// Parse CC-CEDICT format: "traditional simplified [pinyin] /definition/"
-			const words = [];
-			for (const line of lines) {
-				const match = line.match(/^([^ ]+) ([^ ]+)/);
-				if (match) {
-					const simplified = match[2]; // Use simplified Chinese
-					// Filter for reasonable length Chinese words
-					if (simplified.length >= 1 && simplified.length <= 8 && /^[\u4e00-\u9fff]+$/.test(simplified)) {
-						words.push(simplified);
-					}
-				}
-			}
-
-			// Limit to reasonable Scrabble dictionary size for Chinese characters
-			const limitedWords = words.slice(0, 30000); // Chinese Scrabble typically has fewer words
-
-			this.mandarinDictionary = new Set(limitedWords);
-			console.log(`Mandarin Scrabble dictionary loaded: ${this.mandarinDictionary.size} words from CC-CEDICT`);
-		} catch (error) {
-			console.error("Error loading Mandarin dictionary:", error);
-			this.mandarinDictionary = new Set();
-		}
 	}
 
 	buildTier1Dictionary(validWords, wordSources = {}) {
@@ -6899,16 +6795,10 @@ formedWords.forEach((wordInfo) => {
 		};
 		this.updateLoadingProgress(`Setting up ${langNames[lang] || 'English'} language...`);
 
-		// Load language-specific dictionaries only when needed
+		// Load Spanish dictionary only when Spanish is selected
 		if (lang === 'es' && (!this.spanishDictionaryNormalized || this.spanishDictionaryNormalized.size === 0)) {
 			this.updateLoadingProgress('Loading Spanish dictionary...');
 			await this.loadSpanishDictionary();
-		} else if (lang === 'fr' && (!this.frenchDictionary || this.frenchDictionary.size === 0)) {
-			this.updateLoadingProgress('Loading French dictionary...');
-			await this.loadFrenchDictionary();
-		} else if (lang === 'zh' && (!this.mandarinDictionary || this.mandarinDictionary.size === 0)) {
-			this.updateLoadingProgress('Loading Mandarin dictionary...');
-			await this.loadMandarinDictionary();
 		}
 
 		// Set activeDictionary to the appropriate language dictionary
@@ -6916,12 +6806,6 @@ formedWords.forEach((wordInfo) => {
 			// For Spanish, use ONLY Spanish dictionary
 			// Use normalized Spanish dictionary for matching (tiles are ASCII letters)
 			this.activeDictionary = new Set(this.spanishDictionaryNormalized);
-		} else if (lang === 'fr') {
-			// For French, use French dictionary
-			this.activeDictionary = new Set(this.frenchDictionary);
-		} else if (lang === 'zh') {
-			// For Mandarin, use Mandarin dictionary
-			this.activeDictionary = new Set(this.mandarinDictionary);
 		} else {
 			// For other languages, use English dictionary (can be extended later)
 			this.activeDictionary = new Set(this.dictionary);
@@ -7004,14 +6888,6 @@ formedWords.forEach((wordInfo) => {
 		// Update fixed text headers
 		const gameInfoHeaders = document.querySelectorAll('[id*="info-panel"] h2');
 		gameInfoHeaders.forEach(h => h.textContent = t('gameInfo'));
-		
-		// Update "How to Play" sections
-		const drawerInstructionHeaders = document.querySelectorAll('[id*="drawer-instructions"] h3:first-of-type');
-		drawerInstructionHeaders.forEach(h => {
-			if (h.textContent.includes('How to Play') || h.textContent.includes('Cómo Jugar') || h.textContent.includes('Comment Jouer') || h.textContent.includes('如何玩')) {
-				h.textContent = t('howToPlayTitle');
-			}
-		});
 		
 		// Update notification text
 		const notices = {
@@ -12938,5 +12814,3 @@ window.setupBingoRack = function setupBingoRack(word = 'PUZZLES') {
 };
 
 window.setupbingrack = window.setupBingoRack;
-
-// sigh

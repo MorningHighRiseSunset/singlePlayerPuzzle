@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const puzzleData = puzzleTranslations[lang] || puzzleTranslations['en'];
         const utter = new SpeechSynthesisUtterance(puzzleData.text);
-        utter.rate = 1.25;
+        utter.rate = 0.8;
         utter.pitch = 1.3;
         utter.volume = 1.0;
         utter.lang = puzzleData.lang; // Set the speech synthesis language

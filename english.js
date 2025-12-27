@@ -9666,7 +9666,7 @@ calculateScore() {
 			let tried = 0;
 			const u = new SpeechSynthesisUtterance(text);
 			u.lang = finalLang || 'en-US';
-			u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
+			u.rate = typeof opts.rate === 'number' ? opts.rate : 0.75;
 			u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
 				try {
 					let voiceToUse = null;
@@ -11790,7 +11790,7 @@ calculateScore() {
 								try {
 									const u = new SpeechSynthesisUtterance(txt);
 									u.lang = inlinePrefLang;
-									u.rate = 0.95;
+									u.rate = 0.75;
 									u.pitch = 1.0;
 									// Try to set a preferred voice synchronously inside the gesture
 									try {
