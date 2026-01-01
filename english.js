@@ -9798,8 +9798,19 @@ calculateScore() {
 			playWordBtn.disabled = true;
 			playWordBtn.textContent = "Checking...";
 		}
-		// Let UI update
-		await new Promise(res => setTimeout(res, 30));
+		
+		// Set a global timeout to ensure button is always re-enabled
+		const playWordTimeoutId = setTimeout(() => {
+			console.error('playWord timeout - forcing button re-enable');
+			if (playWordBtn) {
+				playWordBtn.disabled = false;
+				playWordBtn.textContent = "Submit";
+			}
+		}, 30000); // 30 second failsafe
+		
+		try {
+			// Let UI update
+			await new Promise(res => setTimeout(res, 30));
 
 		// Ensure speech is primed on mobile right after a direct user action (playWord)
 		try {
@@ -10018,7 +10029,16 @@ calculateScore() {
 					console.log('[Speech] About to handle speakSequence for player', {playerWordsToSpeak, bingoBonusAwarded, submitStarted: this._submitStartedSpeak});
 					if (this._submitStartedSpeak) {
 						// inline speak started during the click gesture — wait for it to finish
-						if (this._inlineSpeakPromise) await this._inlineSpeakPromise;
+						if (this._inlineSpeakPromise) {
+							try {
+								await Promise.race([
+									this._inlineSpeakPromise,
+									new Promise((_, reject) => setTimeout(() => reject(new Error('Speech timeout')), 3000))
+								]);
+							} catch (e) {
+								console.warn('Inline speech timeout or failed', e);
+							}
+						}
 						// ensure flags cleared
 						this._submitStartedSpeak = false;
 						this._inlineSpeakPromise = null;
@@ -10027,10 +10047,13 @@ calculateScore() {
 						try { await this.ensureAudioUnlocked(); } catch (e) { /* continue */ }
 						let spoke = false;
 						try {
-							await this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player');
+							await Promise.race([
+								this.speakSequence(playerWordsToSpeak, bingoBonusAwarded, 'player'),
+								new Promise((_, reject) => setTimeout(() => reject(new Error('Speech timeout')), 5000))
+							]);
 							spoke = true;
 						} catch (e) {
-							console.warn('player speakSequence failed', e);
+							console.warn('player speakSequence failed or timed out', e);
 						}
 						// If TTS didn't run (common on some Androids), fallback to a WebAudio beep for bingo
 						if (bingoBonusAwarded && !spoke) {
@@ -10095,6 +10118,9 @@ calculateScore() {
 				this.resetPlacedTiles();
 			}
 		} finally {
+			// Clear the failsafe timeout
+			clearTimeout(playWordTimeoutId);
+			
 			// Restore button state
 			if (playWordBtn) {
 				playWordBtn.disabled = false;
