@@ -9812,12 +9812,12 @@ calculateScore() {
 			// Let UI update
 			await new Promise(res => setTimeout(res, 30));
 
-		// Ensure speech is primed on mobile right after a direct user action (playWord)
-		try {
-			// If player placed 7 or more tiles this move, pre-announce Bingo inside this user gesture
+			// Ensure speech is primed on mobile right after a direct user action (playWord)
 			try {
-				// Detect bingo either by placing 7+ tiles or by forming any word of length >= 7
-				let bingoCandidate = false;
+				// If player placed 7 or more tiles this move, pre-announce Bingo inside this user gesture
+				try {
+					// Detect bingo either by placing 7+ tiles or by forming any word of length >= 7
+					let bingoCandidate = false;
 				try {
 					if (this.currentTurn === 'player') {
 						if (this.placedTiles && this.placedTiles.length >= 7) bingoCandidate = true;
@@ -9923,21 +9923,21 @@ calculateScore() {
 				// Try a robust unlock helper that resumes AudioContext and loads voices where possible
 				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('playWord priming: ensureAudioUnlocked failed', e); }
 			}
-		} catch (e) {
-			console.warn('playWord priming failed', e);
-		}
-
-		try {
-			if (this.placedTiles.length === 0) {
-				alert("Please place some tiles first!");
-				return;
+			} catch (e) {
+				console.warn('playWord priming failed', e);
 			}
 
-			console.log('areTilesConnected?', this.areTilesConnected());
+			try {
+				if (this.placedTiles.length === 0) {
+					alert("Please place some tiles first!");
+					return;
+				}
 
-			if (!this.areTilesConnected()) {
-				alert("Tiles must be connected and in a straight line!");
-				this.resetPlacedTiles();
+				console.log('areTilesConnected?', this.areTilesConnected());
+
+				if (!this.areTilesConnected()) {
+					alert("Tiles must be connected and in a straight line!");
+					this.resetPlacedTiles();
 				return;
 			}
 
@@ -9988,30 +9988,30 @@ calculateScore() {
 					wordDescriptions.push({ word: wordInfo.word, score: scoreForWord });
 				}
 
-		// Add bonus when the player actually used 7 or more newly placed tiles for a word
-		let bingoBonusAwarded = false;
-		let playerBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
-		formedWords.forEach(wordInfo => {
-			const len = wordInfo.word.length;
-			let newlyPlacedCount = 0;
-			for (let k = 0; k < len; k++) {
-				const row = wordInfo.direction === 'horizontal' ? wordInfo.startPos.row : wordInfo.startPos.row + k;
-				const col = wordInfo.direction === 'horizontal' ? wordInfo.startPos.col + k : wordInfo.startPos.col;
-				if (this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
-			}
+				// Add bonus when the player actually used 7 or more newly placed tiles for a word
+				let bingoBonusAwarded = false;
+				let playerBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
+				formedWords.forEach(wordInfo => {
+					const len = wordInfo.word.length;
+					let newlyPlacedCount = 0;
+					for (let k = 0; k < len; k++) {
+						const row = wordInfo.direction === 'horizontal' ? wordInfo.startPos.row : wordInfo.startPos.row + k;
+						const col = wordInfo.direction === 'horizontal' ? wordInfo.startPos.col + k : wordInfo.startPos.col;
+						if (this.placedTiles.some(t => t.row === row && t.col === col)) newlyPlacedCount++;
+					}
 
-			// Check for bingo bonus conditions: 7+ letter word OR score > 50
-			if (wordInfo.word.length >= 7 || wordInfo.score > 50) {
-				wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
-				console.log(`[Player] Added 50 point bonus for ${wordInfo.score > 50 ? 'high scoring' : wordInfo.word.length + '-letter'} word: ${wordInfo.word}`);
-				bingoBonusAwarded = true;
-				// choose variant based on longest bingo word encountered this move
-				if (len >= 9) playerBingoVariant = 'gold';
-				else if (len === 8 && playerBingoVariant !== 'gold') playerBingoVariant = 'silver';
-				console.log('[Player] BINGO DETECTED', { len, playerBingoVariant });
-				console.log('[Debug] wordDescriptions now:', wordDescriptions);
-			}
-		});
+					// Check for bingo bonus conditions: 7+ letter word OR score > 50
+					if (wordInfo.word.length >= 7 || wordInfo.score > 50) {
+						wordDescriptions.push({ word: "BINGO BONUS", score: 50 });
+						console.log(`[Player] Added 50 point bonus for ${wordInfo.score > 50 ? 'high scoring' : wordInfo.word.length + '-letter'} word: ${wordInfo.word}`);
+						bingoBonusAwarded = true;
+						// choose variant based on longest bingo word encountered this move
+						if (len >= 9) playerBingoVariant = 'gold';
+						else if (len === 8 && playerBingoVariant !== 'gold') playerBingoVariant = 'silver';
+						console.log('[Player] BINGO DETECTED', { len, playerBingoVariant });
+						console.log('[Debug] wordDescriptions now:', wordDescriptions);
+					}
+				});
 
 				// Format the move description
 				let moveDescription;
@@ -10116,6 +10116,9 @@ calculateScore() {
 					console.warn('Toast display failed:', e);
 				}
 				this.resetPlacedTiles();
+			}
+			} catch (e) {
+				console.error('playWord main logic error', e);
 			}
 		} finally {
 			// Clear the failsafe timeout
