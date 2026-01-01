@@ -7539,25 +7539,48 @@ formedWords.forEach((wordInfo) => {
 
         // Layer 2: Local dictionary check
         let foundInDictionary = false;
+        const wordLower = word.toLowerCase();
         if (this.preferredLang === 'es') {
             // For Spanish, normalize accented characters to match normalized dictionary
-            const normalized = normalizeWordForDict(word).toLowerCase();
-            foundInDictionary = this.activeDictionary.has(normalized);
+            const normalized = normalizeWordForDict(wordLower).toLowerCase();
+            foundInDictionary = this.activeDictionary.has(normalized) ||
+                                (this.dictionary && this.dictionary.has(normalized)) ||
+                                (this.backupDictionary && this.backupDictionary.has(normalized));
+        } else if (this.preferredLang === 'en') {
+            // For English, check ALL dictionaries (activeDictionary, dictionary, backupDictionary, coreValidDictionary)
+            // ENGLISH MODE: Only accept words from dictionaries, NO Google Translate validation
+            foundInDictionary = (this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) ||
+                                (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
+                                (this.dictionary && this.dictionary.has(wordLower)) ||
+                                (this.backupDictionary && this.backupDictionary.has(wordLower));
         } else {
-            foundInDictionary = this.activeDictionary.has(word);
+            foundInDictionary = this.activeDictionary.has(wordLower);
         }
 
         if (foundInDictionary) {
-            const result = { isValid: true, confidence: 95, reason: 'Found in local dictionary', layer: 'local' };
+            // Higher confidence for Tier 1 (coreValidDictionary) words
+            const confidence = (this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) ? 98 : 95;
+            const result = { isValid: true, confidence: confidence, reason: 'Found in local dictionary', layer: 'local' };
             // Cache positive results
             if (!this.validationCache) this.validationCache = {};
             this.validationCache[cacheKey] = true;
             return result;
         }
 
-        // Layer 3: API validation (slowest, most accurate) - with timeout
+        // Layer 3: API validation (ONLY for non-English languages)
+        // ENGLISH MODE: Reject words not in dictionary - do NOT use Google Translate
+        const lang = this.preferredLang || 'en';
+        if (lang === 'en') {
+            // English words must be in dictionary - reject if not found
+            const result = { isValid: false, confidence: 0, reason: 'Not found in English dictionary', layer: 'dictionary' };
+            // Cache negative results
+            if (!this.validationCache) this.validationCache = {};
+            this.validationCache[cacheKey] = false;
+            return result;
+        }
+
+        // For non-English languages, use API validation
         try {
-            const lang = this.preferredLang || 'en';
             let apiValid = false;
             let apiConfidence = 0;
 
@@ -7578,31 +7601,6 @@ formedWords.forEach((wordInfo) => {
                     const basicValid = this.couldBeValidSpanishWord(upperWord);
                     apiValid = basicValid;
                     apiConfidence = basicValid ? 60 : 0;
-                }
-            } else if (lang === 'en') {
-                // For English, prioritize speed - check dictionary first, then API
-                if (this.activeDictionary.has(word)) {
-                    // Word is in dictionary - high confidence, skip slow API validation
-                    apiValid = true;
-                    apiConfidence = 95; // Very high confidence for dictionary match
-                } else {
-                    // Word not in dictionary - use API validation with shorter timeout
-                    const validationPromise = this.validateEnglishWordWithGoogle(upperWord);
-                    const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Validation timeout')), 2000) // Reduced timeout
-                    );
-
-                    try {
-                        const result = await Promise.race([validationPromise, timeoutPromise]);
-                        apiValid = result.isValid;
-                        apiConfidence = result.confidence;
-                    } catch (timeoutError) {
-                        // Timeout - fallback to basic validation only
-                        if (this.showAIDebug) console.warn(`English validation timeout for ${word}, using basic fallback`);
-                        const basicValid = this.isBasicValidForLanguage(upperWord, lang);
-                        apiValid = basicValid;
-                        apiConfidence = basicValid ? 40 : 0; // Lower confidence for fallback
-                    }
                 }
             } else {
                 // For other languages, use basic validation
@@ -7628,8 +7626,8 @@ formedWords.forEach((wordInfo) => {
 
         } catch (error) {
             if (this.showAIDebug) console.warn(`API validation failed for ${word}:`, error);
-            // Fallback to basic validation
-            const basicValid = this.couldBeValidSpanishWord(upperWord);
+            // Fallback to basic validation (only for non-English)
+            const basicValid = lang === 'es' ? this.couldBeValidSpanishWord(upperWord) : this.isBasicValidForLanguage(upperWord, lang);
             const result = {
                 isValid: basicValid,
                 confidence: basicValid ? 60 : 0,
