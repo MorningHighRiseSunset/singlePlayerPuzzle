@@ -6632,10 +6632,10 @@ formedWords.forEach((wordInfo) => {
 			console.log("Dictionary loaded successfully from nlile. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			// If primary source fails, use empty set - better than hardcoded list
+			// No fallback - game requires nlile dictionary
 			this.dictionary = new Set();
 			this.coreValidDictionary = new Set();
-			console.warn("Using empty fallback dictionary - nlile source unavailable");
+			console.error("CRITICAL: Cannot proceed without nlile dictionary");
 		}
 
 		// Spanish dictionary will be loaded only when Spanish language is selected
