@@ -549,10 +549,51 @@ class ScrabbleGame {
 	}
 
 	// Centralized dictionary lookup that handles normalization (diacritics)
+	isProperNoun(word) {
+		// Filter out proper nouns using heuristics
+		// Proper nouns typically:
+		// 1. Are rarely lowercase in standard English (check if word is significantly longer than typical common words)
+		// 2. Appear rarely across all text (but we can't check this without frequency data)
+		// 3. Have unusual character patterns (multiple capitals, or all caps followed by lowercase)
+		
+		const wordStr = String(word).toLowerCase();
+		
+		// Rule 1: Words that are ALL CAPS in the original (like VIVYAN, KNOWLTON stored as-is in dict)
+		// Check against the original capitalization - if it appears as all uppercase, it's likely a proper noun
+		// We'll mark common proper noun patterns
+		
+		// Rule 2: Check for typical proper noun indicators in lowercase dictionary form
+		// If a word matches typical proper noun patterns, reject it
+		const properNounPatterns = [
+			/^[a-z]{2,}[aeiou]n$/, // Names ending in -an, -en, -in, -on, -un
+			/^[a-z]{2,}[lr]d$/, // Names ending in -ld, -rd
+			/^[a-z]{2,}by$/, // Names ending in -by
+			/^[a-z]{2,}ey$/, // Names ending in -ey  
+			/^[a-z]{2,}ton$/, // Names ending in -ton (like KNOWLTON -> knowlton)
+			/^[a-z]{2,}ham$/, // Names ending in -ham
+			/^[a-z]{2,}ford$/, // Names ending in -ford
+			/^[a-z]{2,}shire$/, // Names ending in -shire
+		];
+		
+		// Check if word matches any proper noun pattern
+		for (const pattern of properNounPatterns) {
+			if (pattern.test(wordStr)) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
 	dictionaryHas(word) {
 		if (!word) return false;
 		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
 		const wordLower = String(word).toLowerCase();
+
+		// Check for proper nouns BEFORE dictionary lookup - reject them immediately
+		if (lang === 'en' && this.isProperNoun(word)) {
+			return false;
+		}
 
 		// TIER 1: Check core valid dictionary FIRST (instant validation for common words)
 		if (lang === 'en' && this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) {
@@ -969,20 +1010,20 @@ class ScrabbleGame {
 
 	// Toggle ghost tiles visibility: 5 seconds show, 60 seconds hide, repeat
 	startGhostVisibilityToggle() {
-		if (this.ghostVisibilityTimer) clearInterval(this.ghostVisibilityTimer);
+		if (this.ghostVisibilityTimer) clearTimeout(this.ghostVisibilityTimer);
 
 		const toggleVisibility = () => {
 			// Show for 5 seconds
 			this.showGhostTiles();
 			this.ghostTilesVisible = true;
 
-			setTimeout(() => {
+			this.ghostVisibilityTimer = setTimeout(() => {
 				// Hide for 60 seconds
 				this.hideGhostTiles();
 				this.ghostTilesVisible = false;
 
 				// Schedule next cycle after 60 seconds of being hidden
-				setTimeout(toggleVisibility, 60000);
+				this.ghostVisibilityTimer = setTimeout(toggleVisibility, 60000);
 			}, 5000);
 		};
 
@@ -1004,7 +1045,7 @@ class ScrabbleGame {
 
 	stopGhostVisibilityToggle() {
 		if (this.ghostVisibilityTimer) {
-			clearInterval(this.ghostVisibilityTimer);
+			clearTimeout(this.ghostVisibilityTimer);
 			this.ghostVisibilityTimer = null;
 		}
 	}
