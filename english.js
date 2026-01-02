@@ -550,39 +550,27 @@ class ScrabbleGame {
 
 	// Centralized dictionary lookup that handles normalization (diacritics)
 	isProperNoun(word) {
-		// Filter out proper nouns using heuristics
-		// Proper nouns typically:
-		// 1. Are rarely lowercase in standard English (check if word is significantly longer than typical common words)
-		// 2. Appear rarely across all text (but we can't check this without frequency data)
-		// 3. Have unusual character patterns (multiple capitals, or all caps followed by lowercase)
+		// Filter out proper nouns - be conservative to avoid removing valid Scrabble words
+		// The nlile dictionary shouldn't contain proper nouns, so we just check for
+		// the most obvious proper noun patterns
 		
 		const wordStr = String(word).toLowerCase();
 		
-		// Rule 1: Words that are ALL CAPS in the original (like VIVYAN, KNOWLTON stored as-is in dict)
-		// Check against the original capitalization - if it appears as all uppercase, it's likely a proper noun
-		// We'll mark common proper noun patterns
+		// Only filter extremely obvious patterns that wouldn't match common words
+		// Avoid patterns like -ton, -ey, -by, -ham, -shire, -land, -ford which match real words
 		
-		// Rule 2: Check for typical proper noun indicators in lowercase dictionary form
-		// If a word matches typical proper noun patterns, reject it
+		// Very specific patterns for obvious names:
 		const properNounPatterns = [
-			/^[a-z]{2,}[aeiou]n$/, // Names ending in -an, -en, -in, -on, -un
-			/^[a-z]{2,}[lr]d$/, // Names ending in -ld, -rd
-			/^[a-z]{2,}by$/, // Names ending in -by
-			/^[a-z]{2,}ey$/, // Names ending in -ey  
-			/^[a-z]{2,}ton$/, // Names ending in -ton (like KNOWLTON -> knowlton)
-			/^[a-z]{2,}ham$/, // Names ending in -ham
-			/^[a-z]{2,}ford$/, // Names ending in -ford
-			/^[a-z]{2,}shire$/, // Names ending in -shire
+			/^[a-z]{6,}d$/, // Very long words ending in -d that could be names (e.g., "richard" -> "richard")
 		];
 		
-		// Check if word matches any proper noun pattern
-		for (const pattern of properNounPatterns) {
-			if (pattern.test(wordStr)) {
-				return true;
-			}
-		}
+		// Better approach: reject words that look like they might be proper nouns
+		// but only if they're uncommon patterns not in standard Scrabble dictionaries
 		
-		return false;
+		// For now, trust the nlile dictionary - it shouldn't have proper nouns anyway
+		// Just filter out extremely obvious cases
+		
+		return false; // Let the dictionary be the authority
 	}
 
 	dictionaryHas(word) {
