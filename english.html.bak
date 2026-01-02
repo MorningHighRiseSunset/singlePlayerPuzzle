@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Puzzle Game - wamerican-large</title>
-    <link rel="stylesheet" href="../styles.css">
+    <title>Puzzle Game</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
       @media (max-width: 768px) {
         #mobile-bottom-bar {
@@ -47,6 +47,7 @@
 
         #play-word-mobile {
           width: 90px;
+          /* Make button wider */
           min-width: 90px;
           max-width: 120px;
           height: 48px;
@@ -54,11 +55,14 @@
           max-height: 48px;
           font-size: 1.1em;
           border-radius: 24px;
+          /* Make it pill-shaped */
           padding: 0 12px;
+          /* Add horizontal padding */
           justify-content: center;
           align-items: center;
           display: flex;
           white-space: nowrap;
+          /* Prevent text wrap */
         }
 
         .moves-panel,
@@ -67,6 +71,7 @@
         }
       }
 
+      /* Desktop Bottom Bar Styles */
       @media (min-width: 769px) {
         #desktop-bottom-bar {
           position: fixed;
@@ -198,6 +203,7 @@
       }
 
       @media (min-width: 769px) {
+
         #mobile-bottom-bar,
         .mobile-drawer {
           display: none !important;
@@ -285,6 +291,7 @@
         padding: 0;
       }
 
+      /* AI Animation Improvements */
       .animated-tile {
         background: linear-gradient(145deg, #f4d03f, #f39c12);
         border: 2px solid #d68910;
@@ -332,6 +339,7 @@
         0% {
           transform: scale(1.2);
         }
+
         100% {
           transform: scale(1);
         }
@@ -343,30 +351,37 @@
     <div id="mobile-drawer" class="mobile-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
+        <!-- Definitions/Move History - FIRST so it's visible -->
         <div id="move-history-container" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:150px; overflow-y:auto;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h3 style="margin:0; font-size:1em; color:#1a237e;">Move History</h3>
+            <h3 style="margin:0; font-size:1em; color:#1a237e;" data-translate="moveHistory">Move History</h3>
             <button id="copy-move-history-mobile" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
           </div>
           <div id="move-history" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
         </div>
+        <!-- Definitions history will be created dynamically and placed near instructions -->
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
             <h3>Scores</h3>
-            <p>Player: <span id="player-score">0</span></p>
-            <p>Computer: <span id="computer-score">0</span></p>
+            <p><span data-translate="player">Player</span>: <span id="player-score">0</span>
+            </p>
+            <p><span data-translate="computer">Computer</span>: <span id="computer-score">0</span>
+            </p>
           </div>
           <div class="tiles-left">
-            <h3>Tiles Remaining: <span id="tiles-count">98</span></h3>
+            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count">98</span>
+            </h3>
           </div>
+          <!-- Exchange portal removed -->
           <nav class="controls">
             <button id="play-word">Submit</button>
             <button id="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn">Skip Turn</button>
             <button id="quit-game" class="quit-button">Quit / End Game</button>
           </nav>
-          <div class="drawer-instructions">
+          <!-- How to Play instructions INSIDE the burger menu drawer -->
+          <div class="drawer-instructions" id="drawer-instructions">
             <h3>How to Play</h3>
             <p>1. Playing Tiles:</p>
             <ul>
@@ -376,27 +391,39 @@
             </ul>
             <p>2. Creating Words:</p>
             <ul>
-              <li>Place tiles horizontally or vertically</li>
+              <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
               <li>First word must cross the center star</li>
-              <li>New words must connect to existing tiles</li>
-              <li>All words formed must be valid</li>
+              <li>New words must connect to existing tiles on the board</li>
+              <li>All words formed must be valid dictionary words</li>
             </ul>
-            <p>3. wamerican Mode:</p>
+            <p>3. Submitting Your Move:</p>
             <ul>
-              <li>This game works completely offline</li>
-              <li>Uses 657,803 word dictionary locally</li>
-              <li>No internet connection required</li>
-              <li>No API calls made</li>
+              <li>After placing your tiles, click the "Submit" button</li>
+              <li>Invalid words will be rejected and tiles returned to your rack</li>
+              <li>Points will be automatically calculated and added to your score</li>
+            </ul>
+            <p>4. Exchanging Tiles:</p>
+            <ul>
+              <li>Click "Activate Exchange Portal" to start an exchange</li>
+              <li>Drag unwanted tiles into the portal</li>
+              <li>You'll receive the same number of new tiles</li>
+              <li>This counts as your turn</li>
+            </ul>
+            <p>5. Skipping and Game End:</p>
+            <ul>
+              <li>Use "Skip Turn" if you can't make a valid move</li>
+              <li>The game ends when all tiles are used or both players skip twice in a row</li>
+              <li>Your score is based on the letter values and bonus squares</li>
             </ul>
           </div>
         </aside>
       </div>
     </div>
-
-    <!-- Desktop Drawer -->
+    <!-- Desktop Drawer (Burger menu content for desktop) -->
     <div id="desktop-drawer" class="desktop-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
+        <!-- Definitions/Move History - FIRST so it's visible -->
         <div id="move-history-container-desktop" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:180px; overflow-y:auto;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <h3 style="margin:0; font-size:1em; color:#1a237e;">Move History</h3>
@@ -404,23 +431,30 @@
           </div>
           <div id="move-history-desktop" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
         </div>
+        <!-- Definitions history inside desktop drawer removed; history will be shown near instructions -->
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
             <h3>Scores</h3>
-            <p>Player: <span id="player-score-desktop-drawer">0</span></p>
-            <p>Computer: <span id="computer-score-desktop-drawer">0</span></p>
+            <p><span data-translate="player">Player</span>: <span id="player-score-desktop-drawer">0</span>
+            </p>
+            <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop-drawer">0</span>
+            </p>
           </div>
           <div class="tiles-left">
-            <h3>Tiles Remaining: <span id="tiles-count-desktop-drawer">98</span></h3>
+            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop-drawer">98</span>
+            </h3>
           </div>
+          <!-- Exchange portal removed -->
           <nav class="controls">
             <button id="play-word-desktop-drawer">Submit</button>
             <button id="shuffle-rack-desktop-drawer">Shuffle Rack</button>
             <button id="skip-turn-desktop-drawer">Skip Turn</button>
             <button id="quit-game-desktop-drawer" class="quit-button">Quit / End Game</button>
           </nav>
-          <div class="drawer-instructions">
+          <!-- Language selector removed (moved to index.html) -->
+          <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
+          <div class="drawer-instructions" id="drawer-instructions-desktop">
             <h3>How to Play</h3>
             <p>1. Playing Tiles:</p>
             <ul>
@@ -430,24 +464,35 @@
             </ul>
             <p>2. Creating Words:</p>
             <ul>
-              <li>Place tiles horizontally or vertically</li>
+              <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
               <li>First word must cross the center star</li>
-              <li>New words must connect to existing tiles</li>
-              <li>All words formed must be valid</li>
+              <li>New words must connect to existing tiles on the board</li>
+              <li>All words formed must be valid dictionary words</li>
             </ul>
-            <p>3. wamerican Mode:</p>
+            <p>3. Submitting Your Move:</p>
             <ul>
-              <li>This game works completely offline</li>
-              <li>Uses 657,803 word dictionary locally</li>
-              <li>No internet connection required</li>
-              <li>No API calls made</li>
+              <li>After placing your tiles, click the "Submit" button</li>
+              <li>Invalid words will be rejected and tiles returned to your rack</li>
+              <li>Points will be automatically calculated and added to your score</li>
+            </ul>
+            <p>4. Exchanging Tiles:</p>
+            <ul>
+              <li>Click "Activate Exchange Portal" to start an exchange</li>
+              <li>Drag unwanted tiles into the portal</li>
+              <li>You'll receive the same number of new tiles</li>
+              <li>This counts as your turn</li>
+            </ul>
+            <p>5. Skipping and Game End:</p>
+            <ul>
+              <li>Use "Skip Turn" if you can't make a valid move</li>
+              <li>The game ends when all tiles are used or both players skip twice in a row</li>
+              <li>Your score is based on the letter values and bonus squares</li>
             </ul>
           </div>
         </aside>
       </div>
     </div>
-
-    <!-- Mobile Notifications -->
+    <!-- Mobile Notifications (always at top, outside .game-container) -->
     <div class="mobile-notifications">
       <div class="mobile-notice landscape-notice">
         <span class="notice-icon">📱</span> For the best experience, please rotate your device to landscape mode <button class="notice-close" aria-label="Close notification">&times;</button>
@@ -459,7 +504,6 @@
         <span class="notice-icon">📖</span> Please read "How to Play" in the menu before starting <button class="notice-close" aria-label="Close notification">&times;</button>
       </div>
     </div>
-
     <div class="game-container">
       <!-- Board Panel -->
       <main class="board-container">
@@ -471,28 +515,33 @@
           <span id="hint-text"></span>
         </div>
       </main>
-
+      <!-- Desktop Definitions/History Panel -->
+        <!-- Desktop definitions/history panel removed — history will appear near instructions -->
       <!-- Desktop Info Panel -->
       <aside class="info-panel">
         <h2>Game Info</h2>
         <div class="score-box">
-          <h3>Scores</h3>
-          <p>Player: <span id="player-score-desktop">0</span></p>
-          <p>Computer: <span id="computer-score-desktop">0</span></p>
+          <h3 data-translate="scores">Scores</h3>
+          <p><span data-translate="player">Player</span>: <span id="player-score-desktop">0</span>
+          </p>
+          <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop">0</span>
+          </p>
         </div>
         <div class="tiles-left">
-          <h3>Tiles Remaining: <span id="tiles-count-desktop">98</span></h3>
+          <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop">98</span>
+          </h3>
         </div>
+        <!-- Exchange portal removed -->
         <nav class="controls">
           <button id="play-word-desktop">Submit</button>
           <button id="shuffle-rack-desktop">Shuffle Rack</button>
           <button id="skip-turn-desktop">Skip Turn</button>
           <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
         </nav>
+        <!-- Language selection moved to index.html -->
       </aside>
     </div>
-
-    <!-- Win/Lose Overlay -->
+    <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
     <div id="win-lose-overlay" class="win-overlay">
       <div class="win-message">
         <button class="overlay-close-btn" aria-label="Close">&times;</button>
@@ -500,7 +549,6 @@
         <p id="win-lose-message"></p>
       </div>
     </div>
-
     <!-- Game Status Modal -->
     <div id="game-status-modal" class="modal">
       <div class="modal-content">
@@ -508,20 +556,16 @@
         <p id="final-scores"></p>
       </div>
     </div>
-
-    <!-- Mobile Bottom Bar -->
+    <!-- Mobile Bottom Bar: Hamburger + Submit (Mobile Only, fixed at bottom, left-aligned, side by side, no white bg) -->
     <div id="mobile-bottom-bar">
       <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Open menu">&#9776;</button>
       <button id="play-word-mobile" class="play-word-mobile" title="Submit Move">Submit</button>
     </div>
-
-    <!-- Desktop Bottom Bar -->
+    <!-- Desktop Bottom Bar: Hamburger + Submit (Desktop Only, fixed at bottom, left-aligned, side by side, no white bg) -->
     <div id="desktop-bottom-bar">
       <button id="desktop-menu-toggle" class="desktop-menu-toggle" aria-label="Open menu">&#9776;</button>
       <button id="play-word-desktop-bottom" class="play-word-desktop-bottom" title="Submit Move">Submit</button>
     </div>
-
-    <script src="dictionary-wamerican.js"></script>
     <script>
       // Hamburger drawer logic
       document.addEventListener('DOMContentLoaded', function() {
@@ -529,47 +573,61 @@
         const mobileDrawer = document.getElementById('mobile-drawer');
         const mobileToggle = document.getElementById('mobile-menu-toggle');
         const mobileCloseBtn = mobileDrawer.querySelector('.drawer-close');
-        
         mobileToggle.addEventListener('click', () => {
+          // Toggle the drawer open/closed
           mobileDrawer.classList.toggle('open');
           document.body.style.overflow = mobileDrawer.classList.contains('open') ? 'hidden' : '';
         });
-        
         mobileCloseBtn.addEventListener('click', () => {
           mobileDrawer.classList.remove('open');
           document.body.style.overflow = '';
         });
-        
+        mobileDrawer.addEventListener('click', (e) => {
+          if (e.target === mobileDrawer) {
+            mobileDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
         // Desktop drawer logic
         const desktopDrawer = document.getElementById('desktop-drawer');
         const desktopToggle = document.getElementById('desktop-menu-toggle');
         const desktopCloseBtn = desktopDrawer.querySelector('.drawer-close');
-        
         desktopToggle.addEventListener('click', () => {
+          // Toggle the drawer open/closed
           desktopDrawer.classList.toggle('open');
           document.body.style.overflow = desktopDrawer.classList.contains('open') ? 'hidden' : '';
         });
-        
         desktopCloseBtn.addEventListener('click', () => {
           desktopDrawer.classList.remove('open');
           document.body.style.overflow = '';
         });
-
+        desktopDrawer.addEventListener('click', (e) => {
+          if (e.target === desktopDrawer) {
+            desktopDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
         // Close mobile notices
         document.querySelectorAll('.notice-close').forEach(btn => {
           btn.addEventListener('click', function() {
             this.parentElement.style.display = 'none';
           });
         });
-
-        // Win/Lose Overlay Close
+        // Language selector placeholder removal (both desktop and mobile)
+        document.querySelectorAll('.language-selector select').forEach(languageSelector => {
+          languageSelector.addEventListener('focus', function() {
+            if (languageSelector.options[0].value === "") {
+              languageSelector.remove(0);
+            }
+          });
+        });
+        // --- Win/Lose Overlay Close Button Logic ---
         const winLoseOverlay = document.getElementById('win-lose-overlay');
         const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
         overlayCloseBtn.addEventListener('click', function() {
           winLoseOverlay.classList.remove('active');
         });
-
-        // Mobile Submit Button
+        // --- Mobile Submit Button Logic ---
         function isMobile() {
           return window.innerWidth <= 768;
         }
@@ -582,26 +640,34 @@
             submitBtn.style.display = 'none';
           }
         }
-        
         updateMobileSubmitVisibility();
         window.addEventListener('resize', updateMobileSubmitVisibility);
-
         // Connect mobile submit to main playWord logic
         const playWordMobile = document.getElementById('play-word-mobile');
         playWordMobile.addEventListener('click', function() {
+          // Try both IDs for desktop/mobile
           let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
           if (playBtn) playBtn.click();
         });
-
-        // Desktop Submit Button
+        // --- Desktop Submit Button Logic ---
         const playWordDesktopBottom = document.getElementById('play-word-desktop-bottom');
         playWordDesktopBottom.addEventListener('click', function() {
+          // Try both IDs for desktop/mobile
           let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
           if (playBtn) playBtn.click();
         });
       });
     </script>
-    <script src="english-wamerican-large.js"></script>
+      <script>
+        // Read language from URL (set by index) and persist before main script loads
+        (function(){
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang');
+            if (lang) localStorage.setItem('preferredLang', lang);
+          } catch (e) { /* ignore */ }
+        })();
+      </script>
+      <script src="english.js"></script>
   </body>
 </html>
-

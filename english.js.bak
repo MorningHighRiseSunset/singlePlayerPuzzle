@@ -565,11 +565,13 @@ class ScrabbleGame {
 			if (lang === 'es') {
 				const normalized = normalizeWordForDict(wordLower).toLowerCase();
 				return (this.activeDictionary && this.activeDictionary.has(normalized)) ||
-					(this.dictionary && this.dictionary.has(normalized));
+					(this.dictionary && this.dictionary.has(normalized)) ||
+					(this.backupDictionary && this.backupDictionary.has(normalized));
 			} else {
 				// English 2-letter words must be in dictionary
 				return (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-					(this.dictionary && this.dictionary.has(wordLower));
+					(this.dictionary && this.dictionary.has(wordLower)) ||
+					(this.backupDictionary && this.backupDictionary.has(wordLower));
 			}
 		}
 
@@ -578,10 +580,12 @@ class ScrabbleGame {
 		if (lang === 'es') {
 			const normalized = normalizeWordForDict(wordLower).toLowerCase();
 			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(normalized)) ||
-				(this.dictionary && this.dictionary.has(normalized));
+				(this.dictionary && this.dictionary.has(normalized)) ||
+				(this.backupDictionary && this.backupDictionary.has(normalized));
 		} else {
 			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-				(this.dictionary && this.dictionary.has(wordLower));
+				(this.dictionary && this.dictionary.has(wordLower)) ||
+				(this.backupDictionary && this.backupDictionary.has(wordLower));
 		}
 
 		if (foundInDictionary) return true;
@@ -4184,7 +4188,7 @@ class ScrabbleGame {
 						if (mainWord.length === 2) {
 							const lw = mainWord.toLowerCase();
 							const inTier1 = this.coreValidDictionary && this.coreValidDictionary.has(lw);
-							const inAnyDict = (this.dictionary && this.dictionary.has(lw));
+							const inAnyDict = (this.dictionary && this.dictionary.has(lw)) || (this.backupDictionary && this.backupDictionary.has(lw));
 							if (!inTier1 && !inAnyDict) {
 								invalidWords.push(mainWord);
 								continue;
@@ -6548,39 +6552,81 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		this.updateLoadingProgress('Loading English dictionary (nlile)...');
+		this.updateLoadingProgress('Loading English dictionary...');
 		try {
-			// Load ONLY the nlile dictionary source
-			const NLILE_URL = "https://raw.githubusercontent.com/nlile/dictionary-word-list/refs/heads/master/word_list_very_common_en_us_spelling_no_diacritic.txt";
+			// Try multiple backup dictionary sources (online + local)
+			const onlineUrls = [
+				"https://raw.githubusercontent.com/dwyl/english-words/refs/heads/master/words_alpha.txt",
+				"https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt",
+				"https://raw.githubusercontent.com/first20hours/google-10000-english/refs/heads/master/google-10000-english-usa-no-swears-long.txt"
+			];
 
-			let dictionaryText = null;
+			let loaded = false;
+			let allTexts = [];
 
-			// Fetch the nlile dictionary
-			const response = await fetch(NLILE_URL, { cache: 'no-store' });
-			if (response && response.ok) {
-				dictionaryText = await response.text();
-				if (this.showAIDebug) console.log(`✓ nlile dictionary loaded`);
-			} else {
-				throw new Error("Failed to load nlile dictionary");
+			// Load all sources IN PARALLEL for speed, and track their source names in the same order
+			const fetchPromises = [];
+			const fetchSources = [];
+
+			// Fetch online sources
+			for (const url of onlineUrls) {
+				fetchPromises.push(
+					fetch(url, { cache: 'no-store' })
+						.then(response => {
+							if (response && response.ok) {
+								return response.text().then(t => {
+									if (this.showAIDebug) console.log(`✓ Online dict: ${url.split('/').pop()} loaded`);
+									return t;
+								});
+							}
+							return null;
+						})
+						.catch(e => {
+							if (this.showAIDebug) console.warn(`✗ Failed to load ${url}:`, e.message);
+							return null;
+						})
+				);
+				fetchSources.push(url.split('/').pop());
 			}
 
-			if (!dictionaryText || dictionaryText.length === 0) {
-				throw new Error("nlile dictionary is empty");
+
+			// Wait for ALL sources to load in parallel
+			const results = await Promise.all(fetchPromises);
+			allTexts = results.filter(t => t && t.length > 0);
+
+			if (allTexts.length === 0) {
+				throw new Error("All dictionary sources failed to load");
 			}
 
-			this.updateLoadingProgress(`Processing nlile dictionary...`);
+			this.updateLoadingProgress(`Processing ${allTexts.length} dictionary sources...`);
 
-			// Process the dictionary text
+			// Process the concatenated dictionary texts - aggregate unique words from all sources
+			// Also track which source each word comes from
 			let rawWords = [];
 			const seenWords = new Set();
+			const allWordSources = {}; // { word: [source filenames] }
 			
-			for (const line of dictionaryText.split('\n')) {
-				const w = (line || '').trim().toLowerCase();
-				if (w) {
-					// Add to raw words only if not seen
-					if (!seenWords.has(w)) {
-						seenWords.add(w);
-						rawWords.push(w);
+			for (let sourceIdx = 0; sourceIdx < allTexts.length; sourceIdx++) {
+				const t = allTexts[sourceIdx];
+				const file = fetchSources[sourceIdx] || 'unknown_source';
+				if (!t) continue;
+				for (const line of t.split('\n')) {
+					const w = (line || '').trim().toLowerCase();
+					if (w) {
+						// Initialize array if not exists
+						if (typeof allWordSources[w] === 'undefined' || !Array.isArray(allWordSources[w])) {
+							allWordSources[w] = [];
+						}
+						// Track source (as array)
+						if (allWordSources[w].indexOf(file) === -1) {
+							allWordSources[w].push(file);
+						}
+						
+						// Add to raw words only if not seen
+						if (!seenWords.has(w)) {
+							seenWords.add(w);
+							rawWords.push(w);
+						}
 					}
 				}
 			}
@@ -6595,18 +6641,24 @@ formedWords.forEach((wordInfo) => {
 
 			console.log(`Filtered dictionary: ${rawWords.length} raw words -> ${validWords.length} valid words`);
 			this.dictionary = new Set(validWords);
+			// Keep a backupDictionary set containing all source words (unfiltered raw union)
+			this.backupDictionary = new Set(Array.from(seenWords || []));
+			// Store word sources for Tier 1 confidence scoring
+			this.wordSources = allWordSources;
 			
 			// BUILD TIER 1: Extract high-confidence words from actual loaded dictionary
-			this.coreValidDictionary = this.buildTier1Dictionary(validWords, {});
-			console.log(`Tier 1 Fast-Path built: ${this.coreValidDictionary.size} high-confidence words from nlile dictionary (instant validation)`);
+			// Prioritizes words from SOWPODS (most authoritative) and cross-validated words
+			this.coreValidDictionary = this.buildTier1Dictionary(validWords, allWordSources);
+			console.log(`Tier 1 Fast-Path built: ${this.coreValidDictionary.size} high-confidence words from actual dictionary (instant validation)`);
 			
-			console.log("Dictionary loaded successfully from nlile. Word count:", this.dictionary.size);
+			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			// If primary source fails, use empty set - better than hardcoded list
+			// If primary sources fail, use empty set - better than hardcoded list
 			this.dictionary = new Set();
+			this.backupDictionary = new Set();
 			this.coreValidDictionary = new Set();
-			console.warn("Using empty fallback dictionary - nlile source unavailable");
+			console.warn("Using empty fallback dictionary - primary sources unavailable");
 		}
 
 		// Spanish dictionary will be loaded only when Spanish language is selected
@@ -7492,13 +7544,15 @@ formedWords.forEach((wordInfo) => {
             // For Spanish, normalize accented characters to match normalized dictionary
             const normalized = normalizeWordForDict(wordLower).toLowerCase();
             foundInDictionary = this.activeDictionary.has(normalized) ||
-                                (this.dictionary && this.dictionary.has(normalized));
+                                (this.dictionary && this.dictionary.has(normalized)) ||
+                                (this.backupDictionary && this.backupDictionary.has(normalized));
         } else if (this.preferredLang === 'en') {
-            // For English, check ALL dictionaries (activeDictionary, dictionary, coreValidDictionary)
+            // For English, check ALL dictionaries (activeDictionary, dictionary, backupDictionary, coreValidDictionary)
             // ENGLISH MODE: Only accept words from dictionaries, NO Google Translate validation
             foundInDictionary = (this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) ||
                                 (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-                                (this.dictionary && this.dictionary.has(wordLower));
+                                (this.dictionary && this.dictionary.has(wordLower)) ||
+                                (this.backupDictionary && this.backupDictionary.has(wordLower));
         } else {
             foundInDictionary = this.activeDictionary.has(wordLower);
         }
@@ -7653,6 +7707,7 @@ formedWords.forEach((wordInfo) => {
 					const wordLower = word.toLowerCase();
 					const inAnyLocal = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
 									   (this.dictionary && this.dictionary.has(wordLower)) ||
+									   (this.backupDictionary && this.backupDictionary.has(wordLower)) ||
 									   (this.coreValidDictionary && this.coreValidDictionary.has(wordLower));
 					const inWordSources = this.wordSources && this.wordSources[wordLower] && this.wordSources[wordLower].length > 0;
 
