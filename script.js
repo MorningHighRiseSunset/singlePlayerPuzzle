@@ -7227,6 +7227,7 @@ calculateScore() {
 		
 		const historyContent = "<h3>Move History</h3>" +
 			this.moveHistory
+			.slice(-50)
 			.map((move) => {
 				// Structured entry with words array
 				if (move.words && Array.isArray(move.words)) {
@@ -7243,8 +7244,14 @@ calculateScore() {
 				}
 
 				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
-				if (move.word === "SKIP" || move.word === "EXCHANGE" || move.word === "QUIT") {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+				if (move.word === "SKIP") {
+					return `<div class="move">${move.player}: "SKIP" for ${move.score} points</div>`;
+				}
+				if (move.word === "EXCHANGE") {
+					return `<div class="move">${move.player}: Exchanged tiles</div>`;
+				}
+				if (move.word === "QUIT") {
+					return `<div class="move">${move.player}: "QUIT" for ${move.score} points</div>`;
 				}
 
 				// Fallback: single word string
@@ -7472,80 +7479,36 @@ calculateScore() {
 		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
 		options = options || {};
 		const variant = options.variant || 'standard';
-		// Staggered orchestrator: run canvas -> DOM -> emoji consecutively to increase
-		// the chance at least one effect shows on flaky browsers.
+		// Just run ONE confetti effect - no staggering or multiple animations
+		// Use DOM confetti as it's the most reliable
 		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
 		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
-		const preferEmoji = isSamsung;
-
-		// Tunable timings (ms) vary slightly by variant
-		const canvasDuration = variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500;
-		const domDuration = variant === 'gold' ? 3000 : variant === 'silver' ? 2600 : 2400;
-		const gapAfterCanvas = 200; // small gap before starting next
-		const gapAfterDOM = 180;
-
-		let triedSomething = false;
 
 		try {
-			// Start canvas first when available and not explicitly preferring emoji
-			if (!preferEmoji && typeof this.createCanvasConfetti === 'function') {
-				try { this.createCanvasConfetti({ duration: canvasDuration, variant }); triedSomething = true; }
-				catch (e) { console.warn('createCanvasConfetti failed', e); }
+			// Use DOM confetti for all cases (simplest and most reliable)
+			if (typeof this.createDOMConfetti === 'function') {
+				const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+				const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
+				this.createDOMConfetti({ count, variant });
+				return;
 			}
 
-			// Schedule DOM confetti: if canvas was started, run after it finishes; otherwise run soon
-			const startDOM = () => {
-				if (typeof this.createDOMConfetti === 'function') {
-					try {
-						const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-						const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-						this.createDOMConfetti({ count, variant }); triedSomething = true;
-					} catch (e) { console.warn('createDOMConfetti failed', e); }
-				}
-			};
-
-			if (this._canvasConfettiActive) {
-				setTimeout(startDOM, canvasDuration + gapAfterCanvas);
-			} else {
-				setTimeout(startDOM, 420); // short fallback if canvas didn't start
+			// Fallback: try emoji confetti if DOM not available
+			if (typeof this.createEmojiConfetti === 'function') {
+				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
+				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
+				return;
 			}
 
-			// Schedule emoji confetti as final step. If DOM started, run after DOM duration; otherwise sooner.
-			const startEmoji = () => {
-				if (typeof this.createEmojiConfetti === 'function') {
-					try {
-						const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
-						this.createEmojiConfetti({ emojis: defaultEmojis, variant }); triedSomething = true;
-					} catch (e) { console.warn('createEmojiConfetti failed', e); }
-				}
-			};
+			// Ultimate fallback: white flash overlay
+			const overlay = document.createElement('div');
+			overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
+			document.body.appendChild(overlay);
+			requestAnimationFrame(() => overlay.style.opacity = '1');
+			setTimeout(() => overlay.style.opacity = '0', 140);
+			setTimeout(() => overlay.remove(), 520);
 
-			// Determine when to run emoji: if DOM will be active, schedule after DOM; otherwise after canvas or short delay
-			if (this._canvasConfettiActive) {
-				setTimeout(() => {
-					if (this._domConfettiActive) setTimeout(startEmoji, domDuration + gapAfterDOM);
-					else startEmoji();
-				}, canvasDuration + gapAfterCanvas + 30);
-			} else {
-				// neither started or canvas didn't start; run emoji after a slightly longer fallback
-				setTimeout(startEmoji, 900);
-			}
-
-		} catch (e) { console.warn('createConfettiEffect orchestrator failed', e); }
-
-		// If nothing started at all, do a tiny overlay flash as ultimate fallback
-		setTimeout(() => {
-			if (!triedSomething) {
-				try {
-					const overlay = document.createElement('div');
-					overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
-					document.body.appendChild(overlay);
-					requestAnimationFrame(() => overlay.style.opacity = '1');
-					setTimeout(() => overlay.style.opacity = '0', 140);
-					setTimeout(() => overlay.remove(), 520);
-				} catch (e) { /* best-effort only */ }
-			}
-		}, 1200);
+		} catch (e) { console.warn('createConfettiEffect failed', e); }
 	}
 
 	// Canvas-based confetti: lightweight particle simulation drawn into a single canvas.
@@ -7924,11 +7887,23 @@ calculateScore() {
 				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
 				const copyBtn = consoleBox.querySelector('.copy-console-btn');
 				if (copyBtn) {
-					copyBtn.addEventListener('click', () => {
+					copyBtn.addEventListener('click', async () => {
 						try {
 							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
-							navigator.clipboard && navigator.clipboard.writeText(entries).then(() => { alert('Console copied'); }, () => { alert('Copy failed'); });
-						} catch (e) { alert('Copy failed'); }
+							if (!entries.trim()) { alert('No console messages to copy'); return; }
+							if (navigator.clipboard && navigator.clipboard.writeText) {
+								await navigator.clipboard.writeText(entries);
+								alert('Console copied to clipboard!');
+							} else {
+								const textArea = document.createElement('textarea');
+								textArea.value = entries;
+								document.body.appendChild(textArea);
+								textArea.select();
+								document.execCommand('copy');
+								document.body.removeChild(textArea);
+								alert('Console copied to clipboard!');
+							}
+						} catch (e) { console.error('Copy failed:', e); alert('Copy failed: ' + e.message); }
 					});
 				}
 				mobileDrawer.appendChild(consoleBox);
@@ -8358,100 +8333,37 @@ calculateScore() {
 			const tileRect = tileElement.getBoundingClientRect();
 			const portalRect = this.exchangePortal.getBoundingClientRect();
 
-			// Create clone for animation
+			// Create clone for smooth animation
 			const clone = tileElement.cloneNode(true);
 			clone.style.position = "fixed";
 			clone.style.left = `${tileRect.left}px`;
 			clone.style.top = `${tileRect.top}px`;
-			clone.style.width = `${tileRect.width}px`;
-			clone.style.height = `${tileRect.height}px`;
-			clone.style.transition = "none";
 			clone.style.zIndex = "1000";
+			clone.style.pointerEvents = "none";
 			document.body.appendChild(clone);
 
-			// Calculate the center of the portal
+			// Get portal center
 			const portalCenterX = portalRect.left + portalRect.width / 2;
 			const portalCenterY = portalRect.top + portalRect.height / 2;
 
-			// Create keyframes for the spiral animation
-			const spiralKeyframes = [];
-			const totalSteps = 50;
-			const totalRotations = 3;
-			const scaleFactor = 0.1;
-
-			for (let i = 0; i <= totalSteps; i++) {
-				const progress = i / totalSteps;
-				const angle = progress * totalRotations * 2 * Math.PI;
-				const radius = (1 - progress) * 100; // Spiral radius decreases as progress increases
-
-				// Calculate position along spiral
-				const x =
-					tileRect.left +
-					(portalCenterX - tileRect.left) * progress +
-					Math.cos(angle) * radius;
-				const y =
-					tileRect.top +
-					(portalCenterY - tileRect.top) * progress +
-					Math.sin(angle) * radius;
-
-				// Calculate scale and rotation
-				const scale = 1 - progress * (1 - scaleFactor);
-				const rotation = progress * 720; // Two full rotations
-
-				spiralKeyframes.push({
-					transform: `translate(${x - tileRect.left}px, ${y - tileRect.top}px) 
-                            rotate(${rotation}deg) 
-                            scale(${scale})`,
-					opacity: 1 - progress * 0.8,
-				});
-			}
-
-			// Add final keyframe for disappearing into portal
-			spiralKeyframes.push({
-				transform: `translate(${portalCenterX - tileRect.left}px, ${portalCenterY - tileRect.top}px) 
-                        rotate(720deg) 
-                        scale(${scaleFactor})`,
-				opacity: 0,
-			});
-
-			// Create and play the animation
-			const animation = clone.animate(spiralKeyframes, {
-				duration: 1500,
-				easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-				fill: "forwards",
-			});
-
-			// Create swirling particle effect
-			const particles = [];
-			const particleCount = 10;
-			for (let i = 0; i < particleCount; i++) {
-				const particle = document.createElement("div");
-				particle.className = "exchange-particle";
-				particle.style.cssText = `
-                  position: fixed;
-                  width: 4px;
-                  height: 4px;
-                  background: ${["#64b5f6", "#2196f3", "#1976d2"][Math.floor(Math.random() * 3)]};
-                  border-radius: 50%;
-                  pointer-events: none;
-                  z-index: 999;
-              `;
-				document.body.appendChild(particle);
-				particles.push(particle);
-
-				const delay = i * (1500 / particleCount);
-				const particleAnimation = particle.animate(spiralKeyframes, {
-					duration: 1500,
-					delay: delay,
-					easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+			// Simple smooth animation: tile floats to portal center and shrinks
+			await new Promise((resolve) => {
+				clone.animate([
+					{
+						transform: "translate(0, 0) scale(1) rotate(0deg)",
+						opacity: 1,
+					},
+					{
+						transform: `translate(${portalCenterX - tileRect.left - tileRect.width / 2}px, ${portalCenterY - tileRect.top - tileRect.height / 2}px) scale(0.3) rotate(360deg)`,
+						opacity: 0,
+					}
+				], {
+					duration: 800,
+					easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
 					fill: "forwards",
-				});
+				}).onfinish = resolve;
+			});
 
-				particleAnimation.onfinish = () => particle.remove();
-			}
-
-			// Wait for animation to complete
-			await animation.finished;
 			clone.remove();
 
 			// Add to exchanging tiles
@@ -8468,7 +8380,7 @@ calculateScore() {
 			this.exchangePortal.classList.add("portal-pulse");
 			setTimeout(() => {
 				this.exchangePortal.classList.remove("portal-pulse");
-			}, 500);
+			}, 400);
 
 			// If player has exchanged enough tiles or rack is empty
 			if (this.exchangingTiles.length >= 7 || this.playerRack.length === 0) {
@@ -9794,20 +9706,24 @@ document.addEventListener("DOMContentLoaded", () => {
 				copyBtn.style.border = 'none';
 				copyBtn.style.background = '#1a237e';
 				copyBtn.style.color = '#fff';
-				copyBtn.addEventListener('click', () => {
-					try {
-						const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
-							.map(n => n.textContent).join('\n');
-						navigator.clipboard.writeText(text);
+			copyBtn.style.cursor = 'pointer';
+			copyBtn.addEventListener('click', async () => {
+				try {
+					const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
+						.map(n => n.textContent).join('\n');
+					if (!text.trim()) { game.appendConsoleMessage('No messages to copy'); return; }
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						await navigator.clipboard.writeText(text);
 						game.appendConsoleMessage('Console copied to clipboard');
-					} catch (err) {
-						game.appendConsoleMessage('Copy failed: ' + (err && err.message));
+					} else {
+						const textArea = document.createElement('textarea');
+						textArea.value = text;
+						document.body.appendChild(textArea);
+						textArea.select();
+						document.execCommand('copy');
+						document.body.removeChild(textArea);
+						game.appendConsoleMessage('Console copied to clipboard');
 					}
-				});
-
-				header.appendChild(title);
-				header.appendChild(copyBtn);
-				consoleContainer.appendChild(header);
 
 				// Add an inner list for messages
 				const list = document.createElement('div');
