@@ -9724,41 +9724,29 @@ document.addEventListener("DOMContentLoaded", () => {
 						document.body.removeChild(textArea);
 						game.appendConsoleMessage('Console copied to clipboard');
 					}
-
-				// Add an inner list for messages
-				const list = document.createElement('div');
-				list.className = 'drawer-console-list';
-				consoleContainer.appendChild(list);
-
-				// insert near the top of drawer content if possible
-				const drawerContent = mobileDrawer.querySelector('.drawer-content');
-				if (drawerContent) drawerContent.insertBefore(consoleContainer, drawerContent.firstChild);
-			}
-
-			// Hook the game's appendConsoleMessage to also write into the drawer list
-			try {
-				const consoleList = mobileDrawer.querySelector('.drawer-console-list');
-				if (consoleList && game && typeof game.appendConsoleMessage === 'function') {
-					const original = game.appendConsoleMessage.bind(game);
-					game.appendConsoleMessage = function (msg) {
-						try {
-							const line = document.createElement('div');
-							line.className = 'console-line';
-							line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-							consoleList.appendChild(line);
-							while (consoleList.childNodes.length > 200) consoleList.removeChild(consoleList.firstChild);
-							consoleList.scrollTop = consoleList.scrollHeight;
-						} catch (_) {}
-						original(msg);
-					};
+				} catch (err) {
+					game.appendConsoleMessage('Copy failed: ' + (err && err.message));
 				}
-			} catch (err) {
-				console.warn('Failed to attach drawer console hook', err);
+			});
+
+			header.appendChild(title);
+			header.appendChild(copyBtn);
+			consoleContainer.appendChild(header);
+
+			// Add an inner list for messages
+			const list = document.createElement('div');
+			list.className = 'drawer-console-list';
+			consoleContainer.appendChild(list);
+
+			// insert near the top of drawer content if possible
+			const drawerContent = mobileDrawer.querySelector('.drawer-content');
+			if (drawerContent) drawerContent.insertBefore(consoleContainer, drawerContent.firstChild);
 			}
 		}
 	} catch (err) {
 		console.warn('Failed to ensure drawer console:', err);
 	}
+
 	// Also ensure desktop drawer has the same console UI for users on larger screens
 	try {
 		const desktopDrawer = document.getElementById('desktop-drawer');
@@ -9785,9 +9773,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		}
 	} catch (err) { console.warn('Failed to ensure desktop drawer console', err); }
-});
 
-document.addEventListener('DOMContentLoaded', function() {
+	// Drawer toggle functionality
 	const drawer = document.getElementById('mobile-drawer');
 	const toggle = document.getElementById('mobile-menu-toggle');
 	const closeBtn = drawer.querySelector('.drawer-close');
