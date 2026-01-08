@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Puzzle Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      @media (max-width: 768px) {
+        #mobile-bottom-bar {
+          position: fixed;
+          left: 0;
+          bottom: 0;
+          width: 100vw;
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 10px;
+          background: none;
+          box-shadow: none;
+          padding: 0 0 12px 10px;
+          z-index: 4000;
+          border: none;
+        }
+
+        #mobile-menu-toggle,
+        #play-word-mobile {
+          width: 48px;
+          height: 48px;
+          min-width: 48px;
+          min-height: 48px;
+          max-width: 48px;
+          max-height: 48px;
+          font-size: 2em;
+          border-radius: 50%;
+          margin: 0;
+          border: none;
+          background: linear-gradient(145deg, #1a237e, #151d69);
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s, transform 0.2s;
+        }
+
+        #play-word-mobile {
+          width: 90px;
+          /* Make button wider */
+          min-width: 90px;
+          max-width: 120px;
+          height: 48px;
+          min-height: 48px;
+          max-height: 48px;
+          font-size: 1.1em;
+          border-radius: 24px;
+          /* Make it pill-shaped */
+          padding: 0 12px;
+          /* Add horizontal padding */
+          justify-content: center;
+          align-items: center;
+          display: flex;
+          white-space: nowrap;
+          /* Prevent text wrap */
+        }
+
+        .moves-panel,
+        .info-panel {
+          display: none !important;
+        }
+      }
+
+      /* Desktop Bottom Bar Styles */
+      @media (min-width: 769px) {
+        #desktop-bottom-bar {
+          position: fixed;
+          left: 0;
+          bottom: 0;
+          width: 100vw;
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 15px;
+          background: none;
+          box-shadow: none;
+          padding: 0 0 20px 20px;
+          z-index: 4000;
+          border: none;
+        }
+
+        #desktop-menu-toggle,
+        #play-word-desktop-bottom {
+          width: 56px;
+          height: 56px;
+          min-width: 56px;
+          min-height: 56px;
+          max-width: 56px;
+          max-height: 56px;
+          font-size: 2.2em;
+          border-radius: 50%;
+          margin: 0;
+          border: none;
+          background: linear-gradient(145deg, #1a237e, #151d69);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s, transform 0.2s;
+          cursor: pointer;
+        }
+
+        #desktop-menu-toggle:hover,
+        #play-word-desktop-bottom:hover {
+          background: linear-gradient(145deg, #151d69, #0d1428);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        #play-word-desktop-bottom {
+          width: 120px;
+          min-width: 120px;
+          max-width: 150px;
+          height: 56px;
+          min-height: 56px;
+          max-height: 56px;
+          font-size: 1.3em;
+          border-radius: 28px;
+          padding: 0 16px;
+          justify-content: center;
+          align-items: center;
+          display: flex;
+          white-space: nowrap;
+        }
+
+        .desktop-drawer {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 400px;
+          max-width: 400px;
+          height: 100vh;
+          background: #fff;
+          box-shadow: 2px 0 24px rgba(0, 0, 0, 0.18);
+          z-index: 3002;
+          transform: translateX(-100%);
+          transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+          overflow-y: auto;
+        }
+
+        .desktop-drawer.open {
+          transform: translateX(0);
+        }
+
+        .desktop-drawer .drawer-close {
+          position: absolute;
+          top: 15px;
+          right: 15px;
+          background: none;
+          border: none;
+          font-size: 2.2em;
+          color: #e53935;
+          cursor: pointer;
+          z-index: 1;
+        }
+
+        .desktop-drawer .drawer-content {
+          padding: 80px 24px 32px 24px;
+        }
+
+        .desktop-drawer .moves-panel,
+        .desktop-drawer .info-panel {
+          width: 100%;
+          min-width: 0;
+          margin-bottom: 32px;
+          box-shadow: none;
+          border-radius: 12px;
+          display: block !important;
+          padding: 20px;
+        }
+
+        .desktop-drawer .drawer-instructions {
+          margin-top: 32px;
+          padding: 20px 16px;
+          background: #f7faff;
+          border-radius: 12px;
+          font-size: 1.1em;
+          color: #222;
+        }
+
+        .desktop-drawer .drawer-instructions h3 {
+          margin-top: 0;
+          font-size: 1.2em;
+          color: #1a237e;
+        }
+
+        .desktop-drawer .drawer-instructions ul {
+          margin: 0 0 12px 20px;
+          padding: 0;
+        }
+      }
+
+      @media (min-width: 769px) {
+
+        #mobile-bottom-bar,
+        .mobile-drawer {
+          display: none !important;
+        }
+
+        .moves-panel,
+        .info-panel {
+          display: none !important;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .mobile-drawer {
+          display: block !important;
+        }
+
+        #desktop-bottom-bar,
+        .desktop-drawer {
+          display: none !important;
+        }
+      }
+
+      .mobile-drawer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 85vw;
+        max-width: 350px;
+        height: 100vh;
+        background: #fff;
+        box-shadow: 2px 0 24px rgba(0, 0, 0, 0.18);
+        z-index: 3002;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+        overflow-y: auto;
+      }
+
+      .mobile-drawer.open {
+        transform: translateX(0);
+      }
+
+      .drawer-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 2em;
+        color: #e53935;
+        cursor: pointer;
+        z-index: 1;
+      }
+
+      .drawer-content {
+        padding: 60px 16px 24px 16px;
+      }
+
+      .mobile-drawer .moves-panel,
+      .mobile-drawer .info-panel {
+        width: 100%;
+        min-width: 0;
+        margin-bottom: 24px;
+        box-shadow: none;
+        border-radius: 8px;
+        display: block !important;
+      }
+
+      .drawer-instructions {
+        margin-top: 24px;
+        padding: 16px 12px;
+        background: #f7faff;
+        border-radius: 8px;
+        font-size: 1em;
+        color: #222;
+      }
+
+      .drawer-instructions h3 {
+        margin-top: 0;
+        font-size: 1.1em;
+        color: #1a237e;
+      }
+
+      .drawer-instructions ul {
+        margin: 0 0 10px 18px;
+        padding: 0;
+      }
+
+      /* AI Animation Improvements */
+      .animated-tile {
+        background: linear-gradient(145deg, #f4d03f, #f39c12);
+        border: 2px solid #d68910;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #000;
+        text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+        border-radius: 4px;
+        transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        position: relative;
+        font-size: inherit;
+      }
+
+      .animated-tile .points {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 0.6em;
+        color: #000;
+        font-weight: bold;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 2px;
+        padding: 1px 2px;
+        line-height: 1;
+      }
+
+      .animated-tile .blank-indicator {
+        position: absolute;
+        bottom: 1px;
+        left: 2px;
+        font-size: 0.5em;
+        color: #666;
+        font-weight: normal;
+      }
+
+      .tile-placed {
+        animation: tilePlace 0.5s ease-out;
+      }
+
+      @keyframes tilePlace {
+        0% {
+          transform: scale(1.2);
+        }
+
+        100% {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Mobile Drawer (Burger menu content) -->
+    <div id="mobile-drawer" class="mobile-drawer">
+      <button class="drawer-close" aria-label="Close menu">&times;</button>
+      <div class="drawer-content">
+        <!-- Definitions/Move History - FIRST so it's visible -->
+        <div id="move-history-container" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:150px; overflow-y:auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h3 style="margin:0; font-size:1em; color:#1a237e;" data-translate="moveHistory">Move History</h3>
+            <button id="copy-move-history-mobile" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
+          </div>
+          <div id="move-history" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
+        </div>
+        <!-- Definitions history will be created dynamically and placed near instructions -->
+        <aside class="info-panel">
+          <h2>Game Info</h2>
+          <div class="score-box">
+            <h3>Scores</h3>
+            <p><span data-translate="player">Player</span>: <span id="player-score">0</span>
+            </p>
+            <p><span data-translate="computer">Computer</span>: <span id="computer-score">0</span>
+            </p>
+          </div>
+          <div class="tiles-left">
+            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count">98</span>
+            </h3>
+          </div>
+          <!-- Exchange portal removed -->
+          <nav class="controls">
+            <button id="play-word">Submit</button>
+            <button id="shuffle-rack">Shuffle Rack</button>
+            <button id="skip-turn">Skip Turn</button>
+            <button id="show-instructions">How to Play</button>
+            <button id="quit-game" class="quit-button">Quit / End Game</button>
+          </nav>
+          <!-- How to Play instructions INSIDE the burger menu drawer -->
+          <div class="drawer-instructions" id="drawer-instructions">
+            <h3>How to Play</h3>
+            <p>1. Playing Tiles:</p>
+            <ul>
+              <li>On desktop: Click and drag tiles from your rack to the board</li>
+              <li>On mobile: Touch and hold a tile for 1 second, then drag to place it</li>
+              <li>To remove a tile, drag it back to your rack</li>
+            </ul>
+            <p>2. Creating Words:</p>
+            <ul>
+              <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
+              <li>First word must cross the center star</li>
+              <li>New words must connect to existing tiles on the board</li>
+              <li>All words formed must be valid dictionary words</li>
+            </ul>
+            <p>3. Submitting Your Move:</p>
+            <ul>
+              <li>After placing your tiles, click the "Submit" button</li>
+              <li>Invalid words will be rejected and tiles returned to your rack</li>
+              <li>Points will be automatically calculated and added to your score</li>
+            </ul>
+            <p>4. Exchanging Tiles:</p>
+            <ul>
+              <li>Click "Activate Exchange Portal" to start an exchange</li>
+              <li>Drag unwanted tiles into the portal</li>
+              <li>You'll receive the same number of new tiles</li>
+              <li>This counts as your turn</li>
+            </ul>
+            <p>5. Skipping and Game End:</p>
+            <ul>
+              <li>Use "Skip Turn" if you can't make a valid move</li>
+              <li>The game ends when all tiles are used or both players skip twice in a row</li>
+              <li>Your score is based on the letter values and bonus squares</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <!-- Desktop Drawer (Burger menu content for desktop) -->
+    <div id="desktop-drawer" class="desktop-drawer">
+      <button class="drawer-close" aria-label="Close menu">&times;</button>
+      <div class="drawer-content">
+        <!-- Definitions/Move History - FIRST so it's visible -->
+        <div id="move-history-container-desktop" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:180px; overflow-y:auto;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h3 style="margin:0; font-size:1em; color:#1a237e;">Move History</h3>
+            <button id="copy-move-history-desktop" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
+          </div>
+          <div id="move-history-desktop" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
+        </div>
+        <!-- Definitions history inside desktop drawer removed; history will be shown near instructions -->
+        <aside class="info-panel">
+          <h2>Game Info</h2>
+          <div class="score-box">
+            <h3>Scores</h3>
+            <p><span data-translate="player">Player</span>: <span id="player-score-desktop-drawer">0</span>
+            </p>
+            <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop-drawer">0</span>
+            </p>
+          </div>
+          <div class="tiles-left">
+            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop-drawer">98</span>
+            </h3>
+          </div>
+          <!-- Exchange portal removed -->
+          <nav class="controls">
+            <button id="play-word-desktop-drawer">Submit</button>
+            <button id="shuffle-rack-desktop-drawer">Shuffle Rack</button>
+            <button id="skip-turn-desktop-drawer">Skip Turn</button>
+            <button id="show-instructions-desktop-drawer">How to Play</button>
+            <button id="quit-game-desktop-drawer" class="quit-button">Quit / End Game</button>
+          </nav>
+          <!-- Language selector removed (moved to index.html) -->
+          <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
+          <div class="drawer-instructions" id="drawer-instructions-desktop">
+            <h3>How to Play</h3>
+            <p>1. Playing Tiles:</p>
+            <ul>
+              <li>On desktop: Click and drag tiles from your rack to the board</li>
+              <li>On mobile: Touch and hold a tile for 1 second, then drag to place it</li>
+              <li>To remove a tile, drag it back to your rack</li>
+            </ul>
+            <p>2. Creating Words:</p>
+            <ul>
+              <li>Place tiles horizontally (left to right) or vertically (top to bottom)</li>
+              <li>First word must cross the center star</li>
+              <li>New words must connect to existing tiles on the board</li>
+              <li>All words formed must be valid dictionary words</li>
+            </ul>
+            <p>3. Submitting Your Move:</p>
+            <ul>
+              <li>After placing your tiles, click the "Submit" button</li>
+              <li>Invalid words will be rejected and tiles returned to your rack</li>
+              <li>Points will be automatically calculated and added to your score</li>
+            </ul>
+            <p>4. Exchanging Tiles:</p>
+            <ul>
+              <li>Click "Activate Exchange Portal" to start an exchange</li>
+              <li>Drag unwanted tiles into the portal</li>
+              <li>You'll receive the same number of new tiles</li>
+              <li>This counts as your turn</li>
+            </ul>
+            <p>5. Skipping and Game End:</p>
+            <ul>
+              <li>Use "Skip Turn" if you can't make a valid move</li>
+              <li>The game ends when all tiles are used or both players skip twice in a row</li>
+              <li>Your score is based on the letter values and bonus squares</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <!-- Mobile Notifications (always at top, outside .game-container) -->
+    <div class="mobile-notifications">
+      <div class="mobile-notice landscape-notice">
+        <span class="notice-icon">📱</span> For the best experience, please rotate your device to landscape mode <button class="notice-close" aria-label="Close notification">&times;</button>
+      </div>
+      <div class="mobile-notice scroll-notice">
+        <span class="notice-icon">👆</span> You can scroll up and down to access your rack, game controls, and move history <button class="notice-close" aria-label="Close notification">&times;</button>
+      </div>
+      <div class="mobile-notice instruction-notice">
+        <span class="notice-icon">📖</span> Please read "How to Play" in the menu before starting <button class="notice-close" aria-label="Close notification">&times;</button>
+      </div>
+    </div>
+    <div class="game-container">
+      <!-- Board Panel -->
+      <main class="board-container">
+        <div id="ai-rack" class="tile-rack ai-rack"></div>
+        <div id="scrabble-board"></div>
+        <div id="tile-rack" class="tile-rack"></div>
+        <div id="hint-box">
+          <span class="hint-icon">💡</span>
+          <span id="hint-text"></span>
+        </div>
+      </main>
+      <!-- Desktop Definitions/History Panel -->
+        <!-- Desktop definitions/history panel removed — history will appear near instructions -->
+      <!-- Desktop Info Panel -->
+      <aside class="info-panel">
+        <h2>Game Info</h2>
+        <div class="score-box">
+          <h3 data-translate="scores">Scores</h3>
+          <p><span data-translate="player">Player</span>: <span id="player-score-desktop">0</span>
+          </p>
+          <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop">0</span>
+          </p>
+        </div>
+        <div class="tiles-left">
+          <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop">98</span>
+          </h3>
+        </div>
+        <!-- Exchange portal removed -->
+        <nav class="controls">
+          <button id="play-word-desktop">Submit</button>
+          <button id="shuffle-rack-desktop">Shuffle Rack</button>
+          <button id="skip-turn-desktop">Skip Turn</button>
+          <button id="show-instructions-desktop">How to Play</button>
+          <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
+        </nav>
+        <!-- Language selection moved to index.html -->
+      </aside>
+    </div>
+    <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
+    <div id="win-lose-overlay" class="win-overlay">
+      <div class="win-message">
+        <button class="overlay-close-btn" aria-label="Close">&times;</button>
+        <h2 id="win-lose-title"></h2>
+        <p id="win-lose-message"></p>
+      </div>
+    </div>
+    <!-- Game Status Modal -->
+    <div id="game-status-modal" class="modal">
+      <div class="modal-content">
+        <h2 id="status-message"></h2>
+        <p id="final-scores"></p>
+      </div>
+    </div>
+    <!-- Mobile Bottom Bar: Hamburger + Submit (Mobile Only, fixed at bottom, left-aligned, side by side, no white bg) -->
+    <div id="mobile-bottom-bar">
+      <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="play-word-mobile" class="play-word-mobile" title="Submit Move">Submit</button>
+    </div>
+    <!-- Desktop Bottom Bar: Hamburger + Submit (Desktop Only, fixed at bottom, left-aligned, side by side, no white bg) -->
+    <div id="desktop-bottom-bar">
+      <button id="desktop-menu-toggle" class="desktop-menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="play-word-desktop-bottom" class="play-word-desktop-bottom" title="Submit Move">Submit</button>
+    </div>
+    <script>
+      // Hamburger drawer logic
+      document.addEventListener('DOMContentLoaded', function() {
+        // Mobile drawer logic
+        const mobileDrawer = document.getElementById('mobile-drawer');
+        const mobileToggle = document.getElementById('mobile-menu-toggle');
+        const mobileCloseBtn = mobileDrawer.querySelector('.drawer-close');
+        mobileToggle.addEventListener('click', () => {
+          // Toggle the drawer open/closed
+          mobileDrawer.classList.toggle('open');
+          document.body.style.overflow = mobileDrawer.classList.contains('open') ? 'hidden' : '';
+        });
+        mobileCloseBtn.addEventListener('click', () => {
+          mobileDrawer.classList.remove('open');
+          document.body.style.overflow = '';
+        });
+        mobileDrawer.addEventListener('click', (e) => {
+          if (e.target === mobileDrawer) {
+            mobileDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
+        // Desktop drawer logic
+        const desktopDrawer = document.getElementById('desktop-drawer');
+        const desktopToggle = document.getElementById('desktop-menu-toggle');
+        const desktopCloseBtn = desktopDrawer.querySelector('.drawer-close');
+        desktopToggle.addEventListener('click', () => {
+          // Toggle the drawer open/closed
+          desktopDrawer.classList.toggle('open');
+          document.body.style.overflow = desktopDrawer.classList.contains('open') ? 'hidden' : '';
+        });
+        desktopCloseBtn.addEventListener('click', () => {
+          desktopDrawer.classList.remove('open');
+          document.body.style.overflow = '';
+        });
+        desktopDrawer.addEventListener('click', (e) => {
+          if (e.target === desktopDrawer) {
+            desktopDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        });
+        // Close mobile notices
+        document.querySelectorAll('.notice-close').forEach(btn => {
+          btn.addEventListener('click', function() {
+            this.parentElement.style.display = 'none';
+          });
+        });
+        // Language selector placeholder removal (both desktop and mobile)
+        document.querySelectorAll('.language-selector select').forEach(languageSelector => {
+          languageSelector.addEventListener('focus', function() {
+            if (languageSelector.options[0].value === "") {
+              languageSelector.remove(0);
+            }
+          });
+        });
+        // --- Win/Lose Overlay Close Button Logic ---
+        const winLoseOverlay = document.getElementById('win-lose-overlay');
+        const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
+        overlayCloseBtn.addEventListener('click', function() {
+          winLoseOverlay.classList.remove('active');
+        });
+        // --- Mobile Submit Button Logic ---
+        function isMobile() {
+          return window.innerWidth <= 768;
+        }
+
+        function updateMobileSubmitVisibility() {
+          const submitBtn = document.getElementById('play-word-mobile');
+          if (isMobile()) {
+            submitBtn.style.display = 'flex';
+          } else {
+            submitBtn.style.display = 'none';
+          }
+        }
+        updateMobileSubmitVisibility();
+        window.addEventListener('resize', updateMobileSubmitVisibility);
+        // Connect mobile submit to main playWord logic
+        const playWordMobile = document.getElementById('play-word-mobile');
+        playWordMobile.addEventListener('click', function() {
+          // Try both IDs for desktop/mobile
+          let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
+          if (playBtn) playBtn.click();
+        });
+        // --- Desktop Submit Button Logic ---
+        const playWordDesktopBottom = document.getElementById('play-word-desktop-bottom');
+        playWordDesktopBottom.addEventListener('click', function() {
+          // Try both IDs for desktop/mobile
+          let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
+          if (playBtn) playBtn.click();
+        });
+      });
+    </script>
+      <script>
+        // Read language from URL (set by index) and persist before main script loads
+        (function(){
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang');
+            if (lang) localStorage.setItem('preferredLang', lang);
+          } catch (e) { /* ignore */ }
+        })();
+      </script>
+      <script src="french.js"></script>
+  </body>
+</html>

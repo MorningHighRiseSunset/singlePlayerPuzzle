@@ -3,6 +3,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const board = document.querySelector(".mini-scrabble-board");
     const homeContainer = document.querySelector(".home-container");
 
+    // Language button mappings
+    const languageMap = {
+        english: "game.html",
+        spanish: "spanish.html",
+        french: "french.html",
+        hindi: "hindi.html",
+        mandarin: "mandarin.html"
+    };
+
+    // Language button click handlers
+    document.querySelectorAll(".lang-btn").forEach(btn => {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
+            const lang = this.dataset.lang;
+            const targetUrl = languageMap[lang];
+            
+            if (targetUrl) {
+                // Fade to white and redirect
+                const fadeDiv = document.createElement("div");
+                fadeDiv.style.position = "fixed";
+                fadeDiv.style.left = 0;
+                fadeDiv.style.top = 0;
+                fadeDiv.style.width = "100vw";
+                fadeDiv.style.height = "100vh";
+                fadeDiv.style.background = "#fff";
+                fadeDiv.style.opacity = "0";
+                fadeDiv.style.zIndex = 10000;
+                fadeDiv.style.transition = "opacity 0.7s";
+                document.body.appendChild(fadeDiv);
+                setTimeout(() => {
+                    fadeDiv.style.opacity = "1";
+                }, 10);
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 800);
+            }
+        });
+    });
+
     playBtn.addEventListener("click", function (e) {
         e.preventDefault();
 
