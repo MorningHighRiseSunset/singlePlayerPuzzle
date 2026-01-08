@@ -1,297 +1,5 @@
 let shownBlunders = new Set();
 
-// Language translations
-const translations = {
-	en: {
-		submit: 'Submit',
-		shuffleRack: 'Shuffle Rack',
-		skipTurn: 'Skip Turn',
-		quitGame: 'Quit / End Game',
-		gameInfo: 'Game Info',
-		scores: 'Scores',
-		player: 'Player',
-		computer: 'Computer',
-		tilesRemaining: 'Tiles Remaining',
-		moveHistory: 'Move History',
-		landscape: 'For the best experience, please rotate your device to landscape mode',
-		scroll: 'You can scroll up and down to access your rack, game controls, and move history',
-		instructions: 'Please read "How to Play" in the menu before starting',
-		bingoBonus: 'Bingo bonus!',
-		skip: 'SKIP',
-		quit: 'QUIT',
-		exchange: 'EXCHANGE',
-		aiExchanged: 'AI exchanged tiles',
-		aiPlayingPreview: 'AI is playing its previewed move!',
-		aiRunningOutOfTime: 'AI is running out of time, playing nearest valid move!',
-		aiFoundMove: 'AI found a move!',
-		aiNoMoveExchange: 'AI is dumbfounded and decides to exchange tiles...',
-		noNewWords: '(No new words scored)',
-		howToPlayTitle: 'How to Play',
-		playingTiles: 'Playing Tiles:',
-		desktopTiles: 'On desktop: Click and drag tiles from your rack to the board',
-		mobileTiles: 'On mobile: Touch and hold a tile for 1 second, then drag to place it',
-		removeTiles: 'To remove a tile, drag it back to your rack',
-		creatingWords: 'Creating Words:',
-		horizontalVertical: 'Place tiles horizontally (left to right) or vertically (top to bottom)',
-		centerStar: 'First word must cross the center star',
-		connectExisting: 'New words must connect to existing tiles on the board',
-		validWords: 'All words formed must be valid dictionary words',
-		submittingMove: 'Submitting Your Move:',
-		afterPlacing: 'After placing your tiles, click the "Submit" button',
-		invalidWords: 'Invalid words will be rejected and tiles returned to your rack',
-		invalidTry: 'Invalid word! Please try again.',
-		pointsCalculated: 'Points will be automatically calculated and added to your score',
-		exchangingTiles: 'Exchanging Tiles:',
-		activateExchange: 'Click "Activate Exchange Portal" to start an exchange',
-		dragUnwanted: 'Drag unwanted tiles into the portal',
-		receiveNewTiles: "You'll receive the same number of new tiles",
-		countsAsTurn: 'This counts as your turn',
-		skippingGameEnd: 'Skipping and Game End:',
-		useSkipTurn: "Use \"Skip Turn\" if you can't make a valid move",
-		gameEnds: 'The game ends when all tiles are used or both players skip twice in a row',
-		scoreBased: 'Your score is based on the letter values and bonus squares',
-		currentTurn: 'Current Turn',
-		yourTurn: 'Your Turn',
-		computerTurn: "Computer's Turn"
-	},
-	es: {
-		submit: 'Enviar',
-		shuffleRack: 'Mezclar Fichas',
-		skipTurn: 'Pasar Turno',
-		howToPlay: 'Cómo Jugar',
-		quitGame: 'Salir / Terminar Juego',
-		gameInfo: 'Información del Juego',
-		scores: 'Puntuaciones',
-		player: 'Jugador',
-		computer: 'Computadora',
-		tilesRemaining: 'Fichas Restantes',
-		moveHistory: 'Historial de Movimientos',
-		landscape: 'Para la mejor experiencia, gira tu dispositivo a modo horizontal',
-		scroll: 'Puedes desplazarte hacia arriba y hacia abajo para acceder a tu estante, controles del juego e historial de movimientos',
-		instructions: 'Por favor, lee "Cómo Jugar" en el menú antes de comenzar',
-		bingoBonus: '¡Bonificación de Bingo!',
-		skip: 'PASAR',
-		quit: 'SALIR',
-		exchange: 'INTERCAMBIAR',
-		aiExchanged: 'La IA intercambió fichas',
-		aiPlayingPreview: 'La IA está jugando su movimiento previsualizado!',
-		aiRunningOutOfTime: 'La IA se está quedando sin tiempo, jugando el movimiento válido más cercano!',
-		aiFoundMove: 'La IA encontró un movimiento!',
-		aiNoMoveExchange: 'La IA está desconcertada y decide intercambiar fichas...',
-		noNewWords: '(Sin palabras nuevas)',
-		howToPlayTitle: 'Cómo Jugar',
-		playingTiles: 'Colocación de Fichas:',
-		desktopTiles: 'En computadora: Haz clic y arrastra fichas desde tu estante al tablero',
-		mobileTiles: 'En móvil: Toca y mantén presionada una ficha durante 1 segundo, luego arrástrala para colocarla',
-		removeTiles: 'Para quitar una ficha, arrástrala de vuelta a tu estante',
-		creatingWords: 'Creando Palabras:',
-		horizontalVertical: 'Coloca fichas horizontalmente (de izquierda a derecha) o verticalmente (de arriba a abajo)',
-		centerStar: 'La primera palabra debe cruzar la estrella central',
-		connectExisting: 'Las palabras nuevas deben conectar con fichas existentes en el tablero',
-		validWords: 'Todas las palabras formadas deben ser palabras válidas del diccionario',
-		submittingMove: 'Enviando Tu Movimiento:',
-		afterPlacing: 'Después de colocar tus fichas, haz clic en el botón "Enviar"',
-		invalidWords: 'Las palabras inválidas serán rechazadas y las fichas se devolverán a tu estante',
-		invalidTry: '¡Palabra inválida! Por favor, inténtalo de nuevo.',
-		pointsCalculated: 'Los puntos se calcularán automáticamente y se sumarán a tu puntuación',
-		exchangingTiles: 'Intercambiando Fichas:',
-		activateExchange: 'Haz clic en "Activar Portal de Intercambio" para iniciar un intercambio',
-		dragUnwanted: 'Arrastra fichas no deseadas al portal',
-		receiveNewTiles: 'Recibirás el mismo número de fichas nuevas',
-		countsAsTurn: 'Esto cuenta como tu turno',
-		skippingGameEnd: 'Pasando y Fin del Juego:',
-		useSkipTurn: 'Usa "Pasar Turno" si no puedes hacer un movimiento válido',
-		gameEnds: 'El juego termina cuando se usan todas las fichas o ambos jugadores pasan dos veces seguidas',
-		scoreBased: 'Tu puntuación se basa en los valores de las letras y los cuadrados de bonificación',
-		currentTurn: 'Turno Actual',
-		yourTurn: 'Tu Turno',
-		computerTurn: 'Turno de la Computadora'
-	},
-	fr: {
-		submit: 'Soumettre',
-		shuffleRack: 'Mélanger le Chevalet',
-		skipTurn: 'Passer le Tour',
-		howToPlay: 'Comment Jouer',
-		quitGame: 'Quitter / Terminer le Jeu',
-		gameInfo: 'Infos du Jeu',
-		scores: 'Scores',
-		player: 'Joueur',
-		computer: 'Ordinateur',
-		tilesRemaining: 'Tuiles Restantes',
-		moveHistory: 'Historique des Mouvements',
-		landscape: 'Pour une meilleure expérience, veuillez orienter votre appareil en mode paysage',
-		scroll: 'Vous pouvez faire défiler vers le haut et vers le bas pour accéder à votre chevalet, aux commandes du jeu et à l\'historique des mouvements',
-		instructions: 'Veuillez lire "Comment Jouer" dans le menu avant de commencer',
-		bingoBonus: 'Bonus Bingo !',
-		skip: 'PASSER',
-		quit: 'QUITTER',
-		exchange: 'ECHANGER',
-		aiExchanged: 'L\'IA a échangé des tuiles',
-		aiPlayingPreview: 'L\'IA joue son coup prévisualisé !',
-		aiRunningOutOfTime: 'L\'IA manque de temps, elle joue le coup valide le plus proche !',
-		aiFoundMove: 'L\'IA a trouvé un coup !',
-		aiNoMoveExchange: 'L\'IA est désemparée et décide d\'échanger des tuiles...',
-		noNewWords: '(Aucun mot nouveau)',
-		howToPlayTitle: 'Comment Jouer',
-		playingTiles: 'Placement des Tuiles:',
-		desktopTiles: 'Sur ordinateur: Cliquez et faites glisser les tuiles de votre chevalet vers le plateau',
-		mobileTiles: 'Sur mobile: Appuyez longuement sur une tuile pendant 1 seconde, puis faites-la glisser pour la placer',
-		removeTiles: 'Pour retirer une tuile, faites-la glisser vers votre chevalet',
-		creatingWords: 'Créer des Mots:',
-		horizontalVertical: 'Placez les tuiles horizontalement (de gauche à droite) ou verticalement (de haut en bas)',
-		centerStar: 'Le premier mot doit traverser l\'étoile centrale',
-		connectExisting: 'Les nouveaux mots doivent se connecter aux tuiles existantes du plateau',
-		validWords: 'Tous les mots formés doivent être des mots valides du dictionnaire',
-		submittingMove: 'Soumettre Votre Coup:',
-		afterPlacing: 'Après avoir placé vos tuiles, cliquez sur le bouton "Soumettre"',
-		invalidWords: 'Les mots invalides seront rejetés et les tuiles retourneront à votre chevalet',
-		invalidTry: 'Mot invalide ! Veuillez réessayer.',
-		pointsCalculated: 'Les points seront calculés automatiquement et ajoutés à votre score',
-		exchangingTiles: 'Échanger des Tuiles:',
-		activateExchange: 'Cliquez sur "Activer le Portail d\'Échange" pour commencer un échange',
-		dragUnwanted: 'Faites glisser les tuiles indésirables dans le portail',
-		receiveNewTiles: 'Vous recevrez le même nombre de nouvelles tuiles',
-		countsAsTurn: 'Cela compte comme votre tour',
-		skippingGameEnd: 'Passer et Fin de Partie:',
-		useSkipTurn: 'Utilisez "Passer le Tour" si vous ne pouvez pas faire un coup valide',
-		gameEnds: 'Le jeu se termine quand toutes les tuiles sont utilisées ou que les deux joueurs passent deux fois de suite',
-		scoreBased: 'Votre score est basé sur les valeurs des lettres et les cases bonus'
-	},
-	zh: {
-		submit: '提交',
-		shuffleRack: '打乱瓷砖',
-		skipTurn: '跳过回合',
-		howToPlay: '如何玩',
-		quitGame: '退出/结束游戏',
-		gameInfo: '游戏信息',
-		scores: '分数',
-		player: '玩家',
-		computer: '计算机',
-		tilesRemaining: '剩余瓷砖',
-		moveHistory: '移动历史',
-		aiExchanged: 'AI 交换了瓷砖',
-		aiPlayingPreview: 'AI 正在播放其预览的移动！',
-		aiRunningOutOfTime: 'AI 即将超时，正在播放最近的有效移动！',
-		aiFoundMove: 'AI 找到了一步！',
-		aiNoMoveExchange: 'AI 感到茫然，决定交换瓷砖...',
-		landscape: '为了获得最佳体验，请将设备旋转至横向模式',
-		scroll: '您可以上下滚动以访问您的架子、游戏控制和移动历史',
-		instructions: '开始前请在菜单中阅读"如何玩"',
-		bingoBonus: '宾果奖金！',
-		skip: '跳过',
-		quit: '退出',
-		exchange: '交换',
-		aiExchanged: 'AI 交换了瓷砖',
-		noNewWords: '(没有新单词)',
-		howToPlayTitle: '如何玩',
-		playingTiles: '放置瓷砖:',
-		desktopTiles: '在桌面上：点击并将瓷砖从您的架子拖到棋盘上',
-		mobileTiles: '在手机上：长按瓷砖1秒钟，然后拖动放置它',
-		removeTiles: '要移除瓷砖，请将其拖回您的架子',
-		creatingWords: '创建单词:',
-		horizontalVertical: '将瓷砖水平放置（从左到右）或垂直放置（从上到下）',
-		centerStar: '第一个词必须穿过中心星',
-		connectExisting: '新词必须连接到棋盘上的现有瓷砖',
-		validWords: '形成的所有词必须是字典中的有效词',
-		submittingMove: '提交您的移动:',
-		afterPlacing: '放置瓷砖后，单击"提交"按钮',
-		invalidWords: '无效的词将被拒绝，瓷砖将返回到您的架子',
-		invalidTry: '无效的单词！请再试一次。',
-		pointsCalculated: '分数将自动计算并添加到您的分数中',
-		exchangingTiles: '交换瓷砖:',
-		activateExchange: '单击"激活交换门户"以开始交换',
-		dragUnwanted: '将不需要的瓷砖拖到门户中',
-		receiveNewTiles: '您将收到相同数量的新瓷砖',
-		countsAsTurn: '这算作您的回合',
-		skippingGameEnd: '跳过和游戏结束:',
-		useSkipTurn: '如果无法进行有效移动，请使用"跳过回合"',
-		gameEnds: '当所有瓷砖都用完或两个玩家连续跳过两次时，游戏结束',
-		scoreBased: '您的分数基于字母值和奖励方块'
-	},
-	hi: {
-		submit: 'जमा करें',
-		shuffleRack: 'टाइल्स मिलाएं',
-		skipTurn: 'टर्न छोड़ें',
-		howToPlay: 'कैसे खेलें',
-		quitGame: 'बाहर निकलें / खेल समाप्त करें',
-		gameInfo: 'खेल की जानकारी',
-		scores: 'स्कोर',
-		player: 'खिलाड़ी',
-		computer: 'कंप्यूटर',
-		tilesRemaining: 'शेष टाइल्स',
-		moveHistory: 'चाल इतिहास',
-		landscape: 'सर्वोत्तम अनुभव के लिए, कृपया अपने डिवाइस को लैंडस्केप मोड में घुमाएं',
-		scroll: 'आप अपने रैक, गेम नियंत्रण और चाल इतिहास तक पहुंचने के लिए ऊपर और नीचे स्क्रॉल कर सकते हैं',
-		instructions: 'कृपया शुरू करने से पहले मेनू में "कैसे खेलें" पढ़ें',
-		bingoBonus: 'बिंगो बोनस!',
-		skip: 'छोड़ें',
-		quit: 'बाहर निकलें',
-		exchange: 'अदला-बदली',
-		aiExchanged: 'AI ने टाइल्स बदली',
-		aiPlayingPreview: 'AI अपनी पूर्वावलोकन चाल खेल रहा है!',
-		aiRunningOutOfTime: 'AI का समय खत्म हो रहा है, निकटतम वैध चाल खेल रहा है!',
-		aiFoundMove: 'AI को एक चाल मिली!',
-		aiNoMoveExchange: 'AI हैरान है और टाइल्स बदलने का फैसला करता है...',
-		noNewWords: '(कोई नए शब्द स्कोर नहीं)',
-		howToPlayTitle: 'कैसे खेलें',
-		playingTiles: 'टाइल्स रखना:',
-		desktopTiles: 'डेस्कटॉप पर: अपने रैक से बोर्ड पर टाइल्स पर क्लिक करें और खींचें',
-		mobileTiles: 'मोबाइल पर: 1 सेकंड के लिए एक टाइल को छूएं और पकड़ें, फिर इसे रखने के लिए खींचें',
-		removeTiles: 'टाइल हटाने के लिए, इसे वापस अपने रैक में खींचें',
-		creatingWords: 'शब्द बनाना:',
-		horizontalVertical: 'टाइल्स को क्षैतिज (बाएं से दाएं) या लंबवत (ऊपर से नीचे) रखें',
-		centerStar: 'पहला शब्द केंद्र सितारे को पार करना चाहिए',
-		connectExisting: 'नए शब्द बोर्ड पर मौजूदा टाइल्स से जुड़े होने चाहिए',
-		validWords: 'बनाए गए सभी शब्द वैध शब्दकोश शब्द होने चाहिए',
-		submittingMove: 'अपनी चाल जमा करना:',
-		afterPlacing: 'अपनी टाइल्स रखने के बाद, "जमा करें" बटन पर क्लिक करें',
-		invalidWords: 'अमान्य शब्द अस्वीकार कर दिए जाएंगे और टाइल्स आपके रैक में वापस आ जाएंगी',
-		invalidTry: 'अमान्य शब्द! कृपया पुनः प्रयास करें।',
-		pointsCalculated: 'अंक स्वचालित रूप से गणना की जाएंगी और आपके स्कोर में जोड़े जाएंगे',
-		exchangingTiles: 'टाइल्स बदलना:',
-		activateExchange: 'एक्सचेंज शुरू करने के लिए "एक्सचेंज पोर्टल सक्रिय करें" पर क्लिक करें',
-		dragUnwanted: 'अवांछित टाइल्स को पोर्टल में खींचें',
-		receiveNewTiles: 'आपको समान संख्या में नई टाइल्स मिलेंगी',
-		countsAsTurn: 'यह आपके टर्न के रूप में गिना जाता है',
-		skippingGameEnd: 'छोड़ना और खेल समाप्त:',
-		useSkipTurn: 'यदि आप एक वैध चाल नहीं बना सकते हैं तो "टर्न छोड़ें" का उपयोग करें',
-		gameEnds: 'खेल तब समाप्त होता है जब सभी टाइल्स उपयोग की जाती हैं या दोनों खिलाड़ी लगातार दो बार छोड़ देते हैं',
-		scoreBased: 'आपका स्कोर अक्षर मानों और बोनस वर्गों पर आधारित है',
-		currentTurn: 'वर्तमान टर्न',
-		yourTurn: 'आपका टर्न',
-		computerTurn: 'कंप्यूटर का टर्न'
-	}
-};
-
-function getTranslation(key, lang = 'en') {
-	if (!lang || !translations[lang]) lang = 'en';
-	return translations[lang][key] || translations['en'][key] || key;
-}
-
-function normalizeWordForDict(word) {
-	if (!word) return '';
-	// Remove diacritics but preserve ñ, return uppercase
-	try {
-		return word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-ZÑ]/gi, '').toUpperCase();
-	} catch (e) {
-		// Fallback: preserve ñ, remove other diacritics
-		return word.replace(/[\u0300-\u036f]/g, '').replace(/[^\wÑ]/gi, '').toUpperCase();
-	}
-}
-
-// English to Spanish word translations for common Scrabble words
-function translateWordForDisplay(word, lang) {
-	if (!word) return word;
-	const up = String(word).toUpperCase();
-	// If Spanish mode and we have a normalized->original map, prefer original with diacritics
-	if (lang === 'es' && typeof this !== 'undefined' && this.spanishNormalizedMap) {
-		const norm = normalizeWordForDict(up).toUpperCase();
-		if (this.spanishNormalizedMap && this.spanishNormalizedMap[norm]) return this.spanishNormalizedMap[norm];
-	}
-	// No hardcoded translations - using API-based translation when needed
-	return word;
-}
-
 function isMobileDevice() {
 	return (
 		window.innerWidth <= 768 ||
@@ -431,65 +139,6 @@ class ScrabbleGame {
 			Z: 1,
 			"*": 4, // Increased from 2 to 4 wild tiles
 		};
-
-		// Spanish tile values and distribution
-		this.spanishTileValues = {
-			A: 1,
-			B: 3,
-			C: 3,
-			D: 2,
-			E: 1,
-			F: 4,
-			G: 2,
-			H: 4,
-			I: 1,
-			J: 8,
-			L: 1,
-			M: 3,
-			N: 1,
-			Ñ: 8,
-			O: 1,
-			P: 3,
-			Q: 5,
-			R: 1,
-			S: 1,
-			T: 1,
-			U: 1,
-			V: 4,
-			X: 8,
-			Y: 4,
-			Z: 10,
-			"*": 0,
-		};
-
-		this.spanishTileDistribution = {
-			A: 12,
-			B: 2,
-			C: 4,
-			D: 5,
-			E: 12,
-			F: 1,
-			G: 2,
-			H: 2,
-			I: 6,
-			J: 1,
-			L: 4,
-			M: 2,
-			N: 5,
-			Ñ: 1,
-			O: 9,
-			P: 2,
-			Q: 1,
-			R: 5,
-			S: 6,
-			T: 4,
-			U: 5,
-			V: 1,
-			X: 1,
-			Y: 1,
-			Z: 1,
-			"*": 2,
-		};
 		this.setupHintSystem();
 		this.previousBoard = null;
 		this.tiles = [];
@@ -498,10 +147,6 @@ class ScrabbleGame {
 		this.playerScore = 0;
 		this.aiScore = 0;
 		this.dictionary = new Set();
-		this.coreValidDictionary = new Set(); // Tier 1: 100% valid common words
-		this.spanishDictionary = new Set();
-		this.spanishDictionaryNormalized = new Set();
-		this.spanishNormalizedMap = {}; // normalized -> original
 		this.currentTurn = "player";
 		this.placedTiles = [];
 		this.gameEnded = false;
@@ -518,135 +163,17 @@ class ScrabbleGame {
 		this.hintBoxTimeout = null;
 		this.hintInterval = null;
 		this.aiValidationLogSet = new Set();
-		// Temporarily store rejected AI plays to avoid immediate retries
-		this.aiRejectedPlays = new Set();
 		// Set to true to enable verbose AI validation logging (off by default)
 		this.showAIDebug = false;
-		// preferred language short code (e.g. 'en','es','zh','fr') persisted to localStorage
-		this.preferredLang = (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'hi';
-		// Active dictionary for validation and AI word selection
-		this.activeDictionary = new Set();
 
 		// When the player clicks Submit/Play, we may start speech inside that gesture
 		this._submitStartedSpeak = false;
 		this._inlineSpeakPromise = null;
 		this.wordsPlayed = new Set();
 
-		// Ghost thinking state
-		this.ghostThinkingTimer = null;
-		this.lastGhostBoardState = null;
-		this.lastGhostRackState = null;
-		// Ghost tile visibility toggle: 5 sec show, 60 sec hide
-		this.ghostVisibilityTimer = null;
-		this.ghostTilesVisible = true;
-		this.validWordsFound = 0;
-		this.lastAIGhostPlays = null;
-		this.ghostDisplayMode = 0;
-
 		document.body.style.overscrollBehavior = 'none';
 		document.documentElement.style.overscrollBehavior = 'none';
 		this.init();
-	}
-
-	// Centralized dictionary lookup that handles normalization (diacritics)
-	dictionaryHas(word) {
-		if (!word) return false;
-		const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-		const wordLower = String(word).toLowerCase();
-
-		// TIER 1: Check core valid dictionary FIRST (instant validation for common words)
-		if (lang === 'en' && this.coreValidDictionary && this.coreValidDictionary.has(wordLower)) {
-			return true;
-		}
-
-		// TIER 2: Check main dictionaries
-		// ENHANCEMENT: Stricter validation for 2-letter words (highest false-positive rate)
-		if (word.length === 2) {
-			if (lang === 'es') {
-				const normalized = normalizeWordForDict(wordLower).toLowerCase();
-				return (this.activeDictionary && this.activeDictionary.has(normalized)) ||
-					(this.dictionary && this.dictionary.has(normalized)) ||
-					(this.backupDictionary && this.backupDictionary.has(normalized));
-			} else {
-				// English 2-letter words must be in dictionary
-				return (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-					(this.dictionary && this.dictionary.has(wordLower)) ||
-					(this.backupDictionary && this.backupDictionary.has(wordLower));
-			}
-		}
-
-		// For longer words, check all local dictionaries
-		let foundInDictionary = false;
-		if (lang === 'es') {
-			const normalized = normalizeWordForDict(wordLower).toLowerCase();
-			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(normalized)) ||
-				(this.dictionary && this.dictionary.has(normalized)) ||
-				(this.backupDictionary && this.backupDictionary.has(normalized));
-		} else {
-			foundInDictionary = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-				(this.dictionary && this.dictionary.has(wordLower)) ||
-				(this.backupDictionary && this.backupDictionary.has(wordLower));
-		}
-
-		if (foundInDictionary) return true;
-
-		// TIER 3: For non-English, try API validation
-		if (lang !== 'en') {
-			return this.validateWordForLanguageSync(word, lang);
-		}
-
-		// For English: only accept words in local dictionaries
-		return false;
-	}
-
-	// Synchronous wrapper for language validation with caching
-	validateWordForLanguageSync(word, lang) {
-		const cacheKey = `${lang}_validation_${word.toLowerCase()}`;
-
-		// Check cache first
-		if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
-			return this.validationCache[cacheKey];
-		}
-
-		// Initialize cache if needed
-		if (!this.validationCache) {
-			this.validationCache = {};
-		}
-
-		// For sync context, use basic validation as fallback
-		const result = this.isBasicValidForLanguage(word.toUpperCase(), lang);
-
-		// Cache result
-		this.validationCache[cacheKey] = result;
-
-		return result;
-	}
-
-	// Synchronous wrapper for Spanish validation with caching
-	validateSpanishWordSync(word) {
-		const cacheKey = `spanish_validation_${word.toLowerCase()}`;
-
-		// Check cache first
-		if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
-			return this.validationCache[cacheKey];
-		}
-
-		// Initialize cache if needed
-		if (!this.validationCache) {
-			this.validationCache = {};
-		}
-
-		// For sync context, use basic validation as fallback
-		// Real API validation will happen in async contexts
-		const upperWord = word.toUpperCase();
-		const isBasicValid = this.couldBeValidSpanishWord(upperWord);
-
-		const result = isBasicValid;
-
-		// Cache result
-		this.validationCache[cacheKey] = result;
-
-		return result;
 	}
 
 	pickNonRepeating(arr, type) {
@@ -669,401 +196,82 @@ class ScrabbleGame {
 	}
 
 	showAIGhostMove(play) {
-		// Remove any existing ghost overlays/tiles
-		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
+		// Remove any existing ghost tiles
+		document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
 
 		const { word, startPos, isHorizontal } = play;
-		const boardElem = document.getElementById('scrabble-board');
-		if (!boardElem) return;
-		const boardRect = boardElem.getBoundingClientRect();
-		const cellSample = boardElem.querySelector('.board-cell');
-		const cellRect = cellSample ? cellSample.getBoundingClientRect() : { width: 36, height: 36 };
-
-		const startCell = document.querySelector(`[data-row="${startPos.row}"][data-col="${startPos.col}"]`);
-		if (!startCell) return;
-		const startRect = startCell.getBoundingClientRect();
-
-		// Create per-cell ghost tiles (append to cells) so they line up exactly with placed tiles
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 			const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-			if (!cell) continue;
-
-			// If there's already a permanent tile on the board at this position, skip creating a ghost
-			if (this.board[row] && this.board[row][col]) continue;
-			// Also skip if cell contains a non-ghost tile element
-			if (cell.querySelector('.tile') && !cell.querySelector('.tile').classList.contains('ghost-tile')) continue;
-
-			const ghost = document.createElement('div');
-			ghost.className = 'tile ghost-tile';
-			ghost.style.pointerEvents = 'none';
-			ghost.style.opacity = '0.72';
-			ghost.style.border = '1px dashed rgba(2,136,209,0.6)';
-			ghost.style.background = 'linear-gradient(145deg, #eaf6fb, #f4fbff)';
-			ghost.style.color = '#111';
-			ghost.style.display = 'flex';
-			ghost.style.alignItems = 'center';
-			ghost.style.justifyContent = 'center';
-			ghost.style.fontWeight = '800';
-			ghost.innerHTML = `${word[i]}<span class="points" style="opacity:0.9;">${this.tileValues[word[i]] || 0}</span>`;
-
-			// Append into cell so it matches existing placed tile layout
-			cell.appendChild(ghost);
-		}
-
-		// Prevent 'stacking bricks' placements: don't place a horizontal word directly above/below
-		// another full horizontal word (and vice-versa for vertical). This often creates many
-		// short crosswords (especially 2-letter) that are invalid or undesirable.
-		if (horizontal) {
-			const startC = startCol;
-			const endC = startCol + word.length - 1;
-			for (const r of [startRow - 1, startRow + 1]) {
-				if (r >= 0 && r < 15) {
-					let fullRowOccupied = true;
-					for (let c = startC; c <= endC; c++) {
-						if (!this.board[r][c]) { fullRowOccupied = false; break; }
-					}
-					if (fullRowOccupied) {
-						this.logAIValidation('Rejecting placement: would stack on top of another horizontal word');
-						return false;
-					}
-				}
-			}
-		} else {
-			const startR = startRow;
-			const endR = startRow + word.length - 1;
-			for (const c of [startCol - 1, startCol + 1]) {
-				if (c >= 0 && c < 15) {
-					let fullColOccupied = true;
-					for (let r = startR; r <= endR; r++) {
-						if (!this.board[r][c]) { fullColOccupied = false; break; }
-					}
-					if (fullColOccupied) {
-						this.logAIValidation('Rejecting placement: would stack on top of another vertical word');
-						return false;
-					}
-				}
-			}
-		}
-	}
-
-	// Show multiple rotating ghost moves with different colors
-	showRotatingGhostMoves(plays) {
-		// Remove any existing ghost overlays/tiles
-		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
-
-		if (!plays || plays.length === 0) return;
-
-		const maxMoves = 5;
-		// Prefer non-overlapping plays: select up to `maxMoves` plays that do not share board cells
-		const topCandidates = plays.slice(0, Math.min(15, plays.length)); // look ahead a bit to find non-overlapping
-		const topMoves = [];
-		const usedCells = new Set();
-		for (const p of topCandidates) {
-			if (topMoves.length >= maxMoves) break;
-			const { startPos, isHorizontal, word } = p;
-			// Determine which cells this play WOULD PLACE NEW TILES into (ignore already-occupied board cells)
-			const newPositions = [];
-			let outOfBounds = false;
-			for (let i = 0; i < word.length; i++) {
-				const r = isHorizontal ? startPos.row : startPos.row + i;
-				const c = isHorizontal ? startPos.col + i : startPos.col;
-				if (!this.isValidPosition(r, c)) { outOfBounds = true; break; }
-				if (!(this.board[r] && this.board[r][c])) {
-					newPositions.push(`${r},${c}`);
-				}
-			}
-			if (outOfBounds) continue;
-
-			// If this play doesn't place any new tiles (unlikely), skip it
-			if (newPositions.length === 0) continue;
-
-			// Conflict only matters on newly-placed cells — allow sharing existing tiles
-			let conflict = false;
-			for (const key of newPositions) {
-				if (usedCells.has(key)) { conflict = true; break; }
-			}
-			if (!conflict) {
-				topMoves.push(p);
-				for (const key of newPositions) usedCells.add(key);
-			}
-		}
-
-		// Log which ghost tiles are active with all 5 words (log once per distinct set)
-		const ghostWords = topMoves.map((p, i) => `#${i + 1}: ${p.word} (${p.score}pts)`).join(', ');
-		const now = Date.now();
-		if (!this._lastGhostLogString || this._lastGhostLogString !== ghostWords) {
-			console.log(`🔮 Ghost tiles ACTIVE - Top 5 AI moves: ${ghostWords}`);
-			this._lastGhostLogString = ghostWords;
-			this._lastGhostLogTime = now;
-		}
-
-		// Render compact overlays above the board rather than per-cell tiles to avoid clutter
-		const boardElem = document.getElementById('scrabble-board');
-		if (!boardElem) return;
-		const boardRect = boardElem.getBoundingClientRect();
-		const cellSample = boardElem.querySelector('.board-cell');
-		const cellRect = cellSample ? cellSample.getBoundingClientRect() : { width: 36, height: 36 };
-
-		topMoves.forEach((play, moveIndex) => {
-			const { word, startPos, isHorizontal } = play;
-			const startCell = document.querySelector(`[data-row="${startPos.row}"][data-col="${startPos.col}"]`);
-			if (!startCell) return;
-			const startRect = startCell.getBoundingClientRect();
-
-			// Create per-cell ghost tiles for this play so they line up exactly with placed tiles
-			for (let i = 0; i < word.length; i++) {
-				const row = isHorizontal ? startPos.row : startPos.row + i;
-				const col = isHorizontal ? startPos.col + i : startPos.col;
-				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-				if (!cell) continue;
-
-				// Avoid adding ghosts where permanent tiles already exist
-				if (this.board[row] && this.board[row][col]) continue;
-				// Avoid too many ghost tiles stacking in the same cell
-				const existingGhosts = cell.querySelectorAll('.ghost-tile');
-				if (existingGhosts.length >= 3) continue; // limit per-cell clutter
+			// Only add ghost if cell is empty or only contains the center star
+			if (cell && !cell.querySelector('.tile')) {
+				// Remove center star if present (ghost overlays it)
+				const star = cell.querySelector('.center-star');
+				if (star) star.style.opacity = '0.2';
 
 				const ghost = document.createElement('div');
-				ghost.className = `tile ghost-tile ghost-move-${moveIndex}`;
+				ghost.className = 'tile ghost-tile';
+				ghost.innerHTML = `
+					${word[i]}
+					<span class="points">${this.tileValues[word[i]] || 0}</span>
+				`;
+				ghost.style.opacity = '0.35';
 				ghost.style.pointerEvents = 'none';
-				ghost.style.border = '1px dashed rgba(0,0,0,0.12)';
-				ghost.style.background = 'rgba(234,246,251,0.8)';
-				ghost.style.color = '#111';
-				ghost.style.display = 'flex';
-				ghost.style.alignItems = 'center';
-				ghost.style.justifyContent = 'center';
-				ghost.style.fontWeight = '800';
-				ghost.style.position = 'relative';
-				ghost.style.zIndex = `${200 + moveIndex}`;
-				ghost.innerHTML = `${word[i]}<span class="points" style="opacity:0.9;">${this.tileValues[word[i]] || 0}</span>`;
-
-				// Fan-out overlapping ghosts slightly so they are visible
-				const idx = existingGhosts.length + moveIndex;
-				const offset = Math.min(idx, 3) * 6; // px
-				if (isHorizontal) {
-					// stack vertically when the play is horizontal
-					ghost.style.transform = `translateY(${offset}px)`;
-				} else {
-					// stack horizontally when the play is vertical
-					ghost.style.transform = `translateX(${offset}px)`;
-				}
-
-				// Slight opacity variation to hint ranking
-				const baseOpacity = 0.7;
-				ghost.style.opacity = `${Math.max(0.32, baseOpacity - moveIndex * 0.12)}`;
-
+				ghost.style.background = '#b3e5fc';
+				ghost.style.color = '#222';
+				ghost.style.border = '2px dashed #0288d1';
 				cell.appendChild(ghost);
 			}
-		});
+		}
 	}
 
-	// Update ghost move preview - simple and clean
-	async updateGhostPreview() {
-		if (this._updatingGhostPreview) return; // prevent overlapping runs
-		this._updatingGhostPreview = true;
-		if (this.currentTurn !== "player" || this.isGameEnded) {
-			this.clearGhostTiles();
-			this._updatingGhostPreview = false;
+	async showAIGhostIfPlayerMoveValid() {
+		if (this.currentTurn !== "player") {
+			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+			this.ghostAIMove = null;
 			return;
 		}
 
-		try {
-			const aiPlays = this.findAIPossiblePlays();
-			if (!aiPlays || aiPlays.length === 0) {
-				this.clearGhostTiles();
-				return;
-			}
-
-			let validPlays = aiPlays.filter(p => this.dictionaryHas(p.word));
-			if (!validPlays || validPlays.length === 0) {
-				this.clearGhostTiles();
-				return;
-			}
-
-			// Prefer Tier-1 plays (coreValidDictionary). Fill up to 5 options.
-			const tier1Plays = validPlays.filter(p => this.coreValidDictionary && this.coreValidDictionary.has(String(p.word).toLowerCase()));
-			let ghostPlays = [];
-			for (let i = 0; i < tier1Plays.length && ghostPlays.length < 5; i++) ghostPlays.push(tier1Plays[i]);
-			if (ghostPlays.length < 5) {
-				validPlays.sort((a, b) => (b.score || 0) - (a.score || 0));
-				for (const p of validPlays) {
-					if (ghostPlays.length >= 5) break;
-					if (!ghostPlays.some(g => g.word === p.word && g.startPos && p.startPos && g.startPos.row === p.startPos.row && g.startPos.col === p.startPos.col)) {
-						ghostPlays.push(p);
-					}
+		// --- TEMPORARILY add placed tiles to board for ghost preview on first move ---
+		let tempPlaced = [];
+		if (this.isFirstMove && this.placedTiles.length > 0) {
+			for (const {tile, row, col} of this.placedTiles) {
+				if (!this.board[row][col]) {
+					this.board[row][col] = tile;
+					tempPlaced.push({row, col});
 				}
 			}
-
-			if (ghostPlays.length === 0) {
-				this.clearGhostTiles();
-				return;
-			}
-
-			this.displayGhostMove(ghostPlays.slice(0, 5));
-			this.ghostAIMove = this.ghostAIMove || { ...ghostPlays[0], rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''), boardSnapshot: JSON.stringify(this.board) };
-		} catch (error) {
-			console.debug('Ghost preview error:', error);
-			this.clearGhostTiles();
-		} finally {
-			this._updatingGhostPreview = false;
 		}
-	}
 
-	// Compatibility wrapper to display a ghost move or multiple ghost moves.
-	// Ensures snapshots used by AI are set and clears previous ghosts safely.
-	displayGhostMove(play) {
-		try {
-			this.clearGhostTiles();
-			if (!play) return;
+		const aiPlays = this.findAIPossiblePlays();
+	if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
 
-			// If an array of plays is provided, show rotating ghosts for multiple suggestions
-			if (Array.isArray(play)) {
-				if (play.length === 0) return;
-				if (play.length === 1) play = play[0];
-				else {
-					this.showRotatingGhostMoves(play);
-					// store snapshot based on top move
-					const top = play[0];
-					this.ghostAIMove = {
-						...top,
-						rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''),
-						boardSnapshot: JSON.stringify(this.board)
-					};
-					return;
-				}
+		// --- REMOVE temp placed tiles after preview ---
+		if (tempPlaced.length > 0) {
+			for (const {row, col} of tempPlaced) {
+				this.board[row][col] = null;
 			}
+		}
 
-			// Single play: show a subtle overlay preview
+		if (aiPlays && aiPlays.length > 0) {
+			this.showAIGhostMove(aiPlays[0]);
 			this.ghostAIMove = {
-				...play,
-				rackSnapshot: (this.aiRack || []).map(t => t.letter).sort().join(''),
+				...aiPlays[0],
+				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
 				boardSnapshot: JSON.stringify(this.board)
 			};
-			this.showAIGhostMove(play);
-		} catch (err) {
-			console.debug('displayGhostMove error:', err);
-			this.clearGhostTiles();
+		} else {
+			document.querySelectorAll('.ghost-tile').forEach(e => e.remove());
+			this.ghostAIMove = null;
 		}
-	}
-
-	// Schedule periodic ghost tile updates
-	scheduleGhostUpdates() {
-		if (this.ghostThinkingTimer) clearInterval(this.ghostThinkingTimer);
-		this.ghostThinkingTimer = setInterval(() => {
-			if (this.currentTurn === "player" && !this.isGameEnded) {
-				this.updateGhostPreview();
-			}
-		}, 2000);
-	}
-
-	// Stop ghost tile updates
-	stopGhostUpdates() {
-		if (this.ghostThinkingTimer) {
-			clearInterval(this.ghostThinkingTimer);
-			this.ghostThinkingTimer = null;
-		}
-	}
-
-	// Clear all ghost tiles from the board
-	clearGhostTiles() {
-		document.querySelectorAll('.ghost-tile, .ghost-move-overlay').forEach(e => e.remove());
-	}
-
-	// Toggle ghost tiles visibility: 5 seconds show, 60 seconds hide, repeat
-	startGhostVisibilityToggle() {
-		if (this.ghostVisibilityTimer) clearInterval(this.ghostVisibilityTimer);
-
-		const toggleVisibility = () => {
-			// Show for 5 seconds
-			this.showGhostTiles();
-			this.ghostTilesVisible = true;
-
-			setTimeout(() => {
-				// Hide for 60 seconds
-				this.hideGhostTiles();
-				this.ghostTilesVisible = false;
-
-				// Schedule next cycle after 60 seconds of being hidden
-				setTimeout(toggleVisibility, 60000);
-			}, 5000);
-		};
-
-		// Start the cycle
-		toggleVisibility();
-	}
-
-	showGhostTiles() {
-		document.querySelectorAll('.ghost-tile').forEach(e => {
-			e.style.display = 'flex';
-		});
-	}
-
-	hideGhostTiles() {
-		document.querySelectorAll('.ghost-tile').forEach(e => {
-			e.style.display = 'none';
-		});
-	}
-
-	stopGhostVisibilityToggle() {
-		if (this.ghostVisibilityTimer) {
-			clearInterval(this.ghostVisibilityTimer);
-			this.ghostVisibilityTimer = null;
-		}
-	}
-
-	// Simple strategic board analysis - just find premium squares next to existing tiles
-	analyzeBoardForStrategicOpportunities() {
-		const opportunities = [];
-		for (let row = 0; row < 15; row++) {
-			for (let col = 0; col < 15; col++) {
-				if (this.board[row][col]) continue; // Skip occupied cells
-				
-				// Check if adjacent to any existing tile
-				if (this.isAdjacentToExistingTiles(row, col)) {
-					const premium = this.getPremiumSquareType(row, col);
-					if (premium) {
-						opportunities.push({
-							row, col, premium,
-							value: premium === 'tw' ? 100 : premium === 'dw' ? 50 : 25
-						});
-					}
-				}
-			}
-		}
-		return opportunities;
-	}
-
-	// Check if a position is adjacent to any existing tiles
-	isAdjacentToExistingTiles(row, col) {
-		const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-		for (const [dr, dc] of dirs) {
-			const r = row + dr, c = col + dc;
-			if (this.isValidPosition(r, c) && this.board[r][c]) return true;
-		}
-		return false;
-	}
-
-	// Get tiles needed to place a word at a position (tiles not already on board)
-	getTilesNeededForMove(word, startPos, isHorizontal) {
-		const tilesNeeded = [];
-		for (let i = 0; i < word.length; i++) {
-			const row = isHorizontal ? startPos.row : startPos.row + i;
-			const col = isHorizontal ? startPos.col + i : startPos.col;
-			// Only include tiles that aren't already on the board
-			if (!this.board[row] || !this.board[row][col]) {
-				tilesNeeded.push(word[i]);
-			}
-		}
-		return tilesNeeded;
 	}
 
 	async validatePartialWord() {
 		if (this.placedTiles.length < 2) return false;
 		// Only check if the tiles form a valid dictionary word (ignore adjacency, first move, etc.)
 		const mainWord = this.getMainWord();
-		return this.dictionaryHas(mainWord);
+		return this.dictionary.has(mainWord.toLowerCase());
 	}
 
 	// Helper to block/unblock the hint box
@@ -1076,33 +284,15 @@ class ScrabbleGame {
 		this.hintBoxBlocked = false;
 	}
 
-	showAINotification(message, type = 'default') {
+	showAINotification(message) {
 		// Don't show anything if there's no message
 		if (!message) return;
-		// Throttle/dedupe identical notifications for a short period to avoid spam
-		try {
-			// Global dedupe per exact message
-			if (shownBlunders.has(message)) return; // already shown recently
-			// Aggressive throttle for generic AI blunder messages
-			if (message && message.includes('AI made a blunder')) {
-				const last = this._lastBlunderTime || 0;
-				if (Date.now() - last < 10000) return; // limit blunder notices to once per 10s
-				this._lastBlunderTime = Date.now();
-			}
-			shownBlunders.add(message);
-			setTimeout(() => shownBlunders.delete(message), 5000); // 5s cooldown for specific messages
-		} catch (e) {}
 
 		// Remove any existing notification
 		let existing = document.querySelector('.ai-blunder-notification');
 		if (existing) existing.remove();
 
-		// Default emoji if no type specified
-		let emoji = '🤖';
-
 		// More expressive faces for each type
-		const praiseEmojis = ['🎉', '🏆', '🌟', '💫', '✨'];
-		const smugEmojis = ['😏', '🧐', '🤓', '🧠', '💡'];
 
 		if (type === "praise") emoji = praiseEmojis[Math.floor(Math.random() * praiseEmojis.length)];
 		if (type === "smug") emoji = smugEmojis[Math.floor(Math.random() * smugEmojis.length)];
@@ -1133,7 +323,7 @@ class ScrabbleGame {
 		}, 3700);
 	}
 
-	async setupTapPlacement() {
+	setupTapPlacement() {
 		// Helper to clear selection
 		const deselect = () => {
 			if (this.selectedTile) this.selectedTile.classList.remove("selected");
@@ -1180,8 +370,6 @@ class ScrabbleGame {
 
 		this.renderRack();
 		this.highlightValidPlacements();
-			// Restore ghost previews after returning tile
-			if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
 		deselect();
 		return;
 	}
@@ -1191,8 +379,6 @@ class ScrabbleGame {
         deselect();
         return;
     }
-
-    
     // Deselect if already selected
     if (this.selectedTile === tileElem) {
         deselect();
@@ -1245,7 +431,7 @@ class ScrabbleGame {
 					this.placeTile(tile, row, col);
 
 					// Redo ghost preview after placement
-					this.updateGhostPreview();
+					this.showAIGhostIfPlayerMoveValid();
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
@@ -1260,8 +446,6 @@ class ScrabbleGame {
 					}
 					this.renderRack();
 					this.highlightValidPlacements();
-					// Restore ghost previews after returning tile
-					if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
 				}
 				// Always deselect after any placement attempt
 				deselect();
@@ -1290,44 +474,6 @@ class ScrabbleGame {
 
 	}
 
-
-	// Revert any currently placed (but unsubmitted) tiles back to the player's rack
-	revertPlacedTiles() {
-		if (!this.placedTiles || this.placedTiles.length === 0) return;
-		// Return placed tiles back to rack and clear board cells
-		for (const p of Array.from(this.placedTiles)) {
-			try {
-				const { row, col, tile } = p;
-				if (this.board[row] && this.board[row][col]) {
-					this.board[row][col] = null;
-				}
-				const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-				if (cell) {
-					cell.innerHTML = '';
-					// Restore center star if needed
-					if (row === 7 && col === 7) {
-						const centerStar = document.createElement('span');
-						centerStar.textContent = '⚜';
-						centerStar.className = 'center-star';
-						cell.appendChild(centerStar);
-					}
-				}
-				if (tile) {
-					if (tile.isBlank || tile.letter === '*') {
-						this.playerRack.push({ letter: '*', value: 0, id: tile.id });
-					} else {
-						this.playerRack.push(tile);
-					}
-				}
-			} catch (e) { /* best-effort revert */ }
-		}
-		this.placedTiles = [];
-		this.renderRack();
-		this.highlightValidPlacements();
-		if (typeof this.updateGhostPreview === 'function') this.updateGhostPreview();
-		this.updateGameState();
-	}
-
 	selectTile(tileElement) {
 		// Deselect previously selected tile
 		if (this.selectedTile) {
@@ -1351,8 +497,6 @@ class ScrabbleGame {
 
 	async aiTurn() {
 		this.aiValidationLogSet = new Set();
-		// Stop ghost thinking during AI turn
-		this.stopGhostUpdates();
 	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
@@ -1414,40 +558,25 @@ class ScrabbleGame {
 			thinkingMessage.querySelector('.ai-thinking-text').textContent = msg;
 		}
 
-		// Preferred language for AI thinking messages
-		const _aiLang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-
 		try {
 			// --- Use ghost move if available and valid ---
 			if (this.ghostAIMove) {
-				// If this ghost move was recently rejected, skip it to avoid loops
-				try {
-					const { word: _gWord, startPos: _gStart, isHorizontal: _gHoriz } = this.ghostAIMove;
-					const _ghostKey = `${_gWord}:${_gStart.row}:${_gStart.col}:${_gHoriz}`;
-					if (this.aiRejectedPlays && this.aiRejectedPlays.has(_ghostKey)) {
-						if (this.showAIDebug) console.log("Skipping previously rejected ghost move:", _ghostKey);
-						this.ghostAIMove = null;
-					}
-				} catch (e) {
-					// ignore
-				}
 				// Only use the ghost move if the AI's rack and board have not changed since the ghost was shown
 				const { word, startPos, isHorizontal, rackSnapshot, boardSnapshot } = this.ghostAIMove;
 				const currentRack = this.aiRack.map(t => t.letter).sort().join('');
 				const currentBoard = JSON.stringify(this.board);
 
 				if (rackSnapshot === currentRack && boardSnapshot === currentBoard) {
-					const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
+					const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
 					const canForm = this.canFormWord(
 						word,
 						this.getPrefix(startPos, isHorizontal),
 						this.getSuffix(startPos, isHorizontal),
 						this.aiRack.map(t => t.letter)
 					);
-					// Only accept ghost move if it's validated by dictionary and cross-word checks
-					if (this.dictionaryHas(word) && validity.valid && canForm) {
+					if (validity.valid && canForm) {
 						if (this.showAIDebug) console.log("AI using ghost move:", this.ghostAIMove);
-						updateThinkingText(getTranslation('aiPlayingPreview', _aiLang));
+						updateThinkingText("AI is playing its previewed move!");
 						setTimeout(() => {
 							thinkingMessage.style.opacity = "0";
 							setTimeout(() => {
@@ -1462,198 +591,75 @@ class ScrabbleGame {
 				}
 			}
 
-			// --- AI should NEVER exchange tiles or skip - keep trying until valid move found ---
-			let attempts = 0;
-			const maxAttempts = 10; // Try up to 10 different strategies to find a move
-
-			// Strategy: first try an extended focused search for long words (bingo-focused)
-			let savedShortCandidate = null;
-			try {
-				updateThinkingText(getTranslation('aiSearchingLongWords', _aiLang) || 'AI searching for long words...');
-				const longPlays = this.findAIPossiblePlays(7, 15, { maxSearchTime: 8000, maxCandidates: 400 });
-				if (Array.isArray(longPlays) && longPlays.length > 0) {
-					// Prefer locally valid long words first
-					const validLong = longPlays.filter(p => this.dictionaryHas(p.word));
-					const candidateLongs = validLong.length ? validLong : longPlays;
-					// Keep a short candidate in case we need it later
-					savedShortCandidate = longPlays.find(p => p.word.length <= 5) || savedShortCandidate;
-					// Validate sequentially but prefer highest strategic score
-					for (const candidate of candidateLongs.slice(0, 40)) {
-						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-						if (validity && validity.valid) {
-							bestPlay = candidate;
-							updateThinkingText(getTranslation('aiFoundLongMove', _aiLang) || 'AI found a long move');
-							break;
-						}
-					}
-				}
-			} catch (e) {
-				// ignore long-search errors and continue to the normal attempts
-				if (this.showAIDebug) console.warn('Long-word focused search failed', e);
+			const shouldExchange = this.shouldExchangeTiles();
+			if (shouldExchange && this.tiles.length >= 5) {
+				setTimeout(() => {
+					thinkingMessage.style.opacity = "0";
+					setTimeout(() => {
+						thinkingMessage.remove();
+						this.unblockHintBox();
+						this.handleAIExchange();
+					}, 300);
+				}, 1000);
+				return;
 			}
 
-			while (attempts < maxAttempts && !bestPlay) {
-				attempts++;
-				updateThinkingText(`${getTranslation('aiThinking', _aiLang)} (${attempts}/${maxAttempts})`);
+			// --- Prefer longer words, fallback to 2-letter if needed, timeout after 1 min ---
+			const possiblePlays = this.findAIPossiblePlays();
+			if (possiblePlays && possiblePlays.length > 0) {
+				// Sort by word length (desc), then score (desc)
+				possiblePlays.sort((a, b) => {
+					if (b.word.length !== a.word.length) return b.word.length - a.word.length;
+					return b.score - a.score;
+				});
 
-				// Try different word length preferences based on attempt number
-				// More aggressive long-word priority: 6+, then 5, then 4, then 3, then allow shorter
-				let minWordLength = 2;
-				let maxWordLength = 15;
-
-				if (attempts === 1) {
-					// First try: prefer much longer words (6+ letters)
-					minWordLength = 6;
-				} else if (attempts === 2) {
-					// Second try: prefer 5+ letters
-					minWordLength = 5;
-				} else if (attempts === 3) {
-					// Third try: prefer 4+ letters
-					minWordLength = 4;
-				} else if (attempts === 4) {
-					// Fourth try: 3+ letters
-					minWordLength = 3;
-				} else {
-					// Later attempts: allow any length (last-resort)
-					minWordLength = 2;
-					maxWordLength = 8; // Shorter words might be more reliable late
-				}
-
-				const possiblePlays = this.findAIPossiblePlays(minWordLength, maxWordLength);
-				if (possiblePlays && possiblePlays.length > 0) {
-					// Prefer plays that exist in dictionaries first to avoid relying on lenient ghost-only plays
-					const locallyValid = possiblePlays.filter(p => this.dictionaryHas(p.word));
-					const candidatePlays = locallyValid.length > 0 ? locallyValid : possiblePlays;
-					// Sort by strategic score (includes length, premium squares, cross-words), then regular score
-					possiblePlays.sort((a, b) => {
-						const aStrategic = a.strategicScore || a.score;
-						const bStrategic = b.strategicScore || b.score;
-						if (bStrategic !== aStrategic) return bStrategic - aStrategic;
-						return b.score - a.score;
-					});
-
-					for (const candidate of candidatePlays) {
-						// Avoid very short plays early in attempts (prevent 'IN', 'AN', etc.)
-						if (candidate.word.length < 4 && attempts <= 3) continue;
-						// If over 15 seconds total, consider using a saved shorter candidate if present
-						if (Date.now() - startTime > 15000 && savedShortCandidate) {
-							const quickValidity = await this.checkAIMoveValidity(savedShortCandidate.word, savedShortCandidate.startPos, savedShortCandidate.isHorizontal);
-							if (quickValidity && quickValidity.valid) {
-								bestPlay = savedShortCandidate;
-								updateThinkingText(getTranslation('aiUsingFallback', _aiLang) || 'AI falling back to shorter move');
-								break;
-							}
-						}
-
-						// If over 60 seconds total, just play the first valid move we can find
-						if (Date.now() - startTime > 60000) {
-							const quickValidity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-							if (quickValidity && quickValidity.valid) {
-								bestPlay = candidate;
-								updateThinkingText(getTranslation('aiRunningOutOfTime', _aiLang));
-								break;
-							}
-							continue;
-						}
-
-						const validity = await this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
-						if (validity && validity.valid) {
-							bestPlay = candidate;
-							updateThinkingText(getTranslation('aiFoundMove', _aiLang));
-							break;
-						}
+				for (const candidate of possiblePlays) {
+					// If over 1 minute, just play the first valid move
+					if (Date.now() - startTime > 60000) {
+						bestPlay = candidate;
+						updateThinkingText("AI is running out of time, playing nearest valid move!");
+						setTimeout(() => {
+							thinkingMessage.style.opacity = "0";
+							setTimeout(() => {
+								thinkingMessage.remove();
+								this.unblockHintBox();
+								this.executeAIPlay(bestPlay);
+							}, 300);
+						}, 800);
+						return;
 					}
-				}
-
-				// If we found a valid play, break out of the attempt loop
-				if (bestPlay) break;
-
-				// Wait a bit between attempts to avoid overwhelming
-				if (attempts < maxAttempts) {
-					await new Promise(resolve => setTimeout(resolve, 500));
-				}
-			}
-
-			// If still no valid play found after all attempts, keep trying with increasingly desperate measures
-			if (!bestPlay) {
-				updateThinkingText("AI is desperately searching...");
-				await new Promise(res => setTimeout(res, 1000));
-
-				// Try one final comprehensive search
-				const desperatePlays = this.findAIPossiblePlays(2, 15);
-				for (const candidate of desperatePlays) {
 					const validity = this.checkAIMoveValidity(candidate.word, candidate.startPos, candidate.isHorizontal);
 					if (validity.valid) {
 						bestPlay = candidate;
-						updateThinkingText("AI finally found a move!");
-						break;
+						updateThinkingText("AI found a move!");
+						setTimeout(() => {
+							thinkingMessage.style.opacity = "0";
+							setTimeout(() => {
+								thinkingMessage.remove();
+								this.unblockHintBox();
+								this.executeAIPlay(bestPlay);
+							}, 300);
+						}, 800);
+						return;
 					}
 				}
 			}
 
-			// If we found a move, play it
-			if (bestPlay) {
-				setTimeout(() => {
-					thinkingMessage.style.opacity = "0";
-					setTimeout(() => {
-						thinkingMessage.remove();
-						this.unblockHintBox();
-						this.executeAIPlay(bestPlay);
-					}, 300);
-				}, 800);
-				return;
-			}
-
-			// LAST RESORT ATTEMPT: Try with very lenient settings
-			console.warn("AI trying last resort with lenient validation");
-			const lastResortPlays = this.findAIPossiblePlays(2, 15); // Try any length
-
-			for (const candidate of lastResortPlays.slice(0, 5)) { // Just check first 5
-				try {
-					// Skip the full validation, just check basic placement
-					if (this.isValidAIPlacement(candidate.word, candidate.startPos.row, candidate.startPos.col, candidate.isHorizontal)) {
-									if (this.showAIDebug) console.log("AI using last resort move:", candidate);
-						bestPlay = candidate;
-						break;
-					}
-				} catch (error) {
-					console.warn("Error in last resort validation:", error);
-				}
-			}
-
-			if (bestPlay) {
-				updateThinkingText(getTranslation('aiFoundMove', _aiLang));
-				setTimeout(() => {
-					thinkingMessage.style.opacity = "0";
-					setTimeout(() => {
-						thinkingMessage.remove();
-						this.unblockHintBox();
-						this.executeAIPlay(bestPlay);
-					}, 300);
-				}, 800);
-				return;
-			}
-
-			// ABSOLUTE LAST RESORT: Force a pass
-			console.warn("AI forced to pass - this indicates a serious issue");
-			console.warn("AI rack when forced to pass:", this.aiRack.map(t => t.letter));
-			console.warn("Current board state (first move):", this.isFirstMove);
-			console.warn("Available anchors:", this.findAnchors().length);
-			if (this.showAIDebug) this.showAINotification("🤖 AI was forced to pass - dictionary may be incomplete");
+			// If no valid play found, exchange tiles
+			updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
+			await new Promise(res => setTimeout(res, 1500));
+			thinkingMessage.style.opacity = "0";
 			setTimeout(() => {
-				thinkingMessage.style.opacity = "0";
-				setTimeout(() => {
-					thinkingMessage.remove();
-					this.unblockHintBox();
-					this.aiPass();
-				}, 300);
-			}, 1000);
+				thinkingMessage.remove();
+				this.unblockHintBox();
+				this.handleAIExchange();
+			}, 600);
 
 		} catch (error) {
 			console.error("Error in AI turn:", error);
 			thinkingMessage.remove();
 			this.unblockHintBox();
-			this.aiPass();
+			this.handleAIExchange();
 		}
 
 		this.aiValidationLogSet = new Set();
@@ -1663,19 +669,6 @@ class ScrabbleGame {
 		// Only exchange if there are truly no valid moves
 		const plays = this.findAIPossiblePlays();
 		return plays.length === 0;
-	}
-
-	aiPass() {
-		// AI is forced to pass (should theoretically never happen)
-		this.consecutiveSkips++;
-		this.currentTurn = "player";
-		this.addToMoveHistory("computer", "SKIP", 0);
-		this.updateGameState();
-		this.renderRack(); // Update draggable state
-		this.highlightValidPlacements();
-		if (!this.checkGameEnd()) {
-			// Game continues, player's turn now
-		}
 	}
 
 	evaluatePositionStrategy(play) {
@@ -1904,12 +897,111 @@ class ScrabbleGame {
 	}
 
 	findTwoLetterPlay() {
-		// Use active dictionary for two-letter validity instead of hard-coded lists
-		const validTwoLetterWords = new Set(
-			Array.from(this.activeDictionary)
-				.filter(w => w && w.length === 2)
-				.map(w => w.toUpperCase())
-		);
+		const validTwoLetterWords = new Set([
+			"AA",
+			"AB",
+			"AD",
+			"AE",
+			"AG",
+			"AH",
+			"AI",
+			"AL",
+			"AM",
+			"AN",
+			"AR",
+			"AS",
+			"AT",
+			"AW",
+			"AX",
+			"AY",
+			"BA",
+			"BE",
+			"BI",
+			"BO",
+			"BY",
+			"DE",
+			"DO",
+			"ED",
+			"EF",
+			"EH",
+			"EL",
+			"EM",
+			"EN",
+			"ER",
+			"ES",
+			"ET",
+			"EX",
+			"FA",
+			"FE",
+			"GO",
+			"HA",
+			"HE",
+			"HI",
+			"HM",
+			"HO",
+			"ID",
+			"IF",
+			"IN",
+			"IS",
+			"IT",
+			"JO",
+			"KA",
+			"LA",
+			"LI",
+			"LO",
+			"MA",
+			"ME",
+			"MI",
+			"MM",
+			"MO",
+			"MU",
+			"MY",
+			"NA",
+			"NE",
+			"NO",
+			"NU",
+			"OD",
+			"OE",
+			"OF",
+			"OH",
+			"OI",
+			"OK",
+			"OM",
+			"ON",
+			"OP",
+			"OR",
+			"OS",
+			"OW",
+			"OX",
+			"OY",
+			"PA",
+			"PE",
+			"PI",
+			"PO",
+			"QI",
+			"RE",
+			"SH",
+			"SI",
+			"SO",
+			"TA",
+			"TE",
+			"TI",
+			"TO",
+			"UH",
+			"UM",
+			"UN",
+			"UP",
+			"US",
+			"UT",
+			"WE",
+			"WO",
+			"XI",
+			"XU",
+			"YA",
+			"YE",
+			"YO",
+			"ZA",
+		]);
 
 		const rack = this.aiRack.map((t) => t.letter);
 
@@ -2036,7 +1128,7 @@ class ScrabbleGame {
 				for (const letter2 of availableLetters) {
 					if (letter1 === letter2) continue;
 					const word = letter1 + letter2;
-					if (this.dictionaryHas(word)) {
+					if (this.dictionary.has(word.toLowerCase())) {
 						const startPos = this.findValidPositionForWord(word);
 						if (startPos) {
 							const play = {
@@ -2095,7 +1187,7 @@ class ScrabbleGame {
 	}
 
 	setupHintSystem() {
-		const englishHints = [
+		const hints = [
 			"Triple Word Score (TW) squares multiply the entire word score by 3!",
 			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
 			"Double Word Score (DW) squares double your entire word score.",
@@ -2128,39 +1220,6 @@ class ScrabbleGame {
 			"Good luck and have fun!"
 		];
 
-		const spanishHints = [
-			"¡Los cuadrados de Triple Palabra (TW) multiplican toda la palabra por 3!",
-			"¡Los cuadrados de Triple Letra (TL) multiplican solo esa letra por 3!",
-			"Los cuadrados de Doble Palabra (DW) duplican tu puntuación total.",
-			"Los cuadrados de Doble Letra (DL) duplican el valor de una sola letra.",
-			"¡Usa las 7 fichas en un turno para un bono BINGO de 50 puntos!",
-			"Puedes intercambiar fichas si no te gusta tu estante.",
-			"Palabras cortas como 'QI', 'ZA' y 'JO' son válidas y útiles.",
-			"Las jugadas paralelas pueden puntuar mucho formando múltiples palabras.",
-			"Intenta bloquear a tu oponente de los cuadrados premium.",
-			"Guarda letras de alto valor como Q, Z, X, y J para cuadrados premium.",
-			"No olvides: la primera palabra debe cubrir la estrella central.",
-			"Puedes mezclar tu estante para obtener una nueva perspectiva.",
-			"Usa fichas blancas (*) como cualquier letra, pero puntúan cero.",
-			"Mantén un buen equilibrio de vocales y consonantes en tu estante.",
-			"Agregar una 'S' puede pluralizar y crear nuevas palabras por puntos extra.",
-			"Busca ganchos: agregar una letra a una palabra existente para formar una nueva.",
-			"Intenta construir sobre palabras existentes para más oportunidades de puntuación.",
-			"Si estás atascado, intercambia algunas fichas o salta tu turno.",
-			"El juego termina cuando se usan todas las fichas o ambos pasan 2 veces.",
-			"Puedes imprimir el historial de movimientos y definiciones después del juego.",
-			"Pasa el cursor sobre una ficha para ver su valor en puntos.",
-			"Puedes deshacer tu movimiento antes de enviarlo si te equivocas.",
-			"Usa el portal de intercambio para cambiar fichas no deseadas.",
-			"¡Planifica con anticipación: no abras cuadrados de triple palabra para tu oponente!",
-			"Intenta formar dos o más palabras en un movimiento por puntos extra.",
-			"¡La IA se vuelve más inteligente a medida que avanza el juego—cuidado!",
-			"Puedes hacer clic en 'Simular Final' para probar la IA.",
-			"Las palabras deben conectarse a fichas existentes después del primer movimiento.",
-			"Usa el botón 'Pasar Turno' si no puedes jugar.",
-			"¡Buena suerte y diviértete!"
-		];
-
 		let currentHintIndex = 0;
 		const hintBox = document.getElementById("hint-box");
 		const hintText = document.getElementById("hint-text");
@@ -2174,8 +1233,6 @@ class ScrabbleGame {
 			return array;
 		};
 
-		// Use appropriate hints based on language
-		const hints = (this.preferredLang === 'es') ? spanishHints : englishHints;
 		let shuffledHints = shuffleArray([...hints]);
 
 		// Show a hint, but only if not blocked
@@ -2217,157 +1274,36 @@ class ScrabbleGame {
 		this.showNextHint = showNextHint;
 	}
 
-	initializeHints() {
-		// Clear existing hint system
-		if (this.hintInterval) {
-			clearInterval(this.hintInterval);
-			this.hintInterval = null;
-		}
-
-		// Reinitialize with current language
-		this.setupHintSystem();
-	}
-
-	// Find AI candidate plays. Accepts optional opts: { maxSearchTime, maxCandidates }
-	findAIPossiblePlays(minWordLength = 2, maxWordLength = 15, opts = {}) {
+	findAIPossiblePlays() {
 		try {
 			const possiblePlays = [];
-			// Quick heuristic: look for single-tile additions to form 2-letter words (covers cases like adding 'H' to form 'HI')
-			if (minWordLength <= 2) {
-				const seenQuick = new Set();
-				for (let r = 0; r < 15; r++) {
-					for (let c = 0; c < 15; c++) {
-						const cell = this.board[r] && this.board[r][c];
-						const existingLetter = cell ? (cell.letter || String(cell).toUpperCase()) : null;
-						if (!existingLetter) continue;
-						// four directions where we can add one tile
-						const dirs = [ [0,1,'H', r, c], [0,-1,'H', r, c], [1,0,'V', r, c], [-1,0,'V', r, c] ];
-						for (const [dr, dc, dir, er, ec] of dirs) {
-							const nr = er + dr;
-							const nc = ec + dc;
-							if (!this.isValidPosition(nr, nc) || this.board[nr][nc]) continue;
-							for (const tile of this.aiRack) {
-								const letter = (tile.letter || tile).toUpperCase();
-								let candidate = '';
-								let startRow = er;
-								let startCol = ec;
-								let isHorizontal = dir === 'H';
-								if (dr === -1 || dc === -1) {
-									// candidate letter goes before existing
-									candidate = letter + existingLetter;
-									startRow = nr;
-									startCol = nc;
-								} else {
-									candidate = existingLetter + letter;
-								}
-								if (candidate.length >= minWordLength && this.dictionaryHas(candidate.toLowerCase())) {
-									const key = `${candidate}:${startRow}:${startCol}:${isHorizontal}`;
-									if (!seenQuick.has(key)) {
-										seenQuick.add(key);
-										possiblePlays.push({
-											word: candidate,
-											startPos: { row: startRow, col: startCol },
-											isHorizontal,
-											score: this.calculatePotentialScore ? this.calculatePotentialScore(candidate, startRow, startCol, isHorizontal) : 0,
-											quality: 50
-										});
-									}
-								}
-							}
-						}
-					}
-				}
-			}
 			const rack = this.aiRack.map(tile => tile.letter);
-			if (this.showAIDebug) console.log("AI finding moves with rack:", rack, "minLength:", minWordLength, "maxLength:", maxWordLength);
-
-			// Performance optimization: limit search time and candidates
-			const startTime = Date.now();
-			// Default to a faster search (2s) unless overridden by opts
-			const maxSearchTime = typeof opts.maxSearchTime === 'number' ? opts.maxSearchTime : 2000; // ms
-			let candidatesFound = 0;
-			const maxCandidates = typeof opts.maxCandidates === 'number' ? opts.maxCandidates : 150; // More candidates for better evaluation
 			const anchors = this.findAnchors();
-
-			// Prune anchors: score anchors by nearby activity and premium squares, then limit
-			const scoredAnchors = anchors.map(a => {
-				// Simple anchor score: number of adjacent empty cells + nearby premium squares count
-				let adjEmpty = 0;
-				const neigh = [[-1,0],[1,0],[0,-1],[0,1]];
-				for (const [dr,dc] of neigh) {
-					const r = a.row + dr, c = a.col + dc;
-					if (this.isValidPosition(r,c) && !this.board[r][c]) adjEmpty++;
-				}
-				let premiumNearby = 0;
-				for (let rr = Math.max(0,a.row-2); rr <= Math.min(14,a.row+2); rr++) {
-					for (let cc = Math.max(0,a.col-2); cc <= Math.min(14,a.col+2); cc++) {
-						const cell = document.querySelector(`[data-row="${rr}"][data-col="${cc}"]`);
-						if (cell && (cell.classList.contains('tw') || cell.classList.contains('dw') || cell.classList.contains('tl') || cell.classList.contains('dl'))) premiumNearby++;
-					}
-				}
-				return { anchor: a, score: adjEmpty * 2 + premiumNearby };
-			}).sort((x,y) => y.score - x.score);
-
-			const maxAnchors = typeof opts.maxAnchors === 'number' ? opts.maxAnchors : 40;
-			const topAnchors = scoredAnchors.slice(0, Math.max(1, Math.min(scoredAnchors.length, maxAnchors))).map(s => s.anchor);
 
 			// Use a Set to avoid duplicate plays
 			const seen = new Set();
 
-			// For each high-potential anchor, try both directions
-			for (const anchor of topAnchors) {
+			// For each anchor, try both directions
+			for (const anchor of anchors) {
 				for (const isHorizontal of [true, false]) {
 					const prefix = this.getPrefix(anchor, isHorizontal);
 					const suffix = this.getSuffix(anchor, isHorizontal);
 
 					// Only consider word lengths that fit the available space
 					let maxLen = 1 + prefix.length + suffix.length + rack.length;
-					let minLen = Math.max(minWordLength, prefix.length + suffix.length + 1);
-					maxLen = Math.min(maxLen, maxWordLength);
+					let minLen = Math.max(2, prefix.length + suffix.length + 1);
+					maxLen = Math.min(maxLen, 15);
 
 					// Use Trie to generate only words that fit prefix/suffix and rack
-					let rawCandidates = this.trie.findWordsFromRack(
+					const candidateWords = this.trie.findWordsFromRack(
 						rack.concat(prefix.split("")).concat(suffix.split("")),
 						minLen,
 						maxLen
+					).filter(word =>
+						word.startsWith(prefix) && word.endsWith(suffix)
 					);
 
-					// ENHANCEMENT: Pre-filter by dictionary to reject invalid words before scoring
-					let candidateWords = rawCandidates.filter(word => {
-						if (!word.startsWith(prefix) || !word.endsWith(suffix)) return false;
-						if (!this.isScrabbleAppropriate(word)) return false;
-						if (!this.dictionaryHas(word)) return false;
-						return true;
-					});
-
-					// Quick heuristic sort: prefer longer words and those with high-value letters
-					const highValue = new Set(['J','Q','X','Z']);
-					const mediumValue = new Set(['B','F','H','M','P','V','W','Y']);
-					candidateWords.sort((a,b) => {
-						if (b.length !== a.length) return b.length - a.length; // longer first
-						const aScore = Array.from(a).reduce((s,ch) => s + (highValue.has(ch)?3: mediumValue.has(ch)?1:0),0);
-						const bScore = Array.from(b).reduce((s,ch) => s + (highValue.has(ch)?3: mediumValue.has(ch)?1:0),0);
-						return bScore - aScore;
-					});
-
-					// Limit per-anchor candidates for performance
-					const perAnchorLimit = typeof opts.maxPerAnchor === 'number' ? opts.maxPerAnchor : 120;
-					if (candidateWords.length > perAnchorLimit) candidateWords = candidateWords.slice(0, perAnchorLimit);
-
-					if (this.showAIDebug && rawCandidates.length > 0) {
-						console.log(`Trie found ${rawCandidates.length} raw candidates, ${candidateWords.length} passed filters for anchor ${anchor.row},${anchor.col}`);
-					}
-
-					// Performance limit: stop if taking too long
-					if (Date.now() - startTime > maxSearchTime) {
-						console.warn("AI search timeout, using partial results");
-						break;
-					}
-
 					for (const word of candidateWords) {
-						// Performance limit: stop if we have too many candidates
-						if (candidatesFound >= maxCandidates) break;
-
 						// Calculate start position
 						const startRow = isHorizontal ? anchor.row : anchor.row - prefix.length;
 						const startCol = isHorizontal ? anchor.col - prefix.length : anchor.col;
@@ -2392,26 +1328,9 @@ class ScrabbleGame {
 									score,
 									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
 								});
-								candidatesFound++;
-
-								// Early exit only for exceptional moves (higher threshold for deeper search)
-								if (score > 80 && possiblePlays.length >= 8) {
-									if (this.showAIDebug) console.log("Found exceptional moves early, continuing search for better options");
-									// Don't break - continue searching for even better moves
-								}
 							}
 						}
 					}
-				}
-			}
-
-			// Include strategic opportunity analysis
-			if (!this.isFirstMove) {
-				const strategicOpportunities = this.analyzeBoardForStrategicOpportunities();
-				// This information can be used to prioritize moves that use premium squares
-				// For now, just log it for debugging
-				if (strategicOpportunities.length > 0) {
-					console.debug("Strategic opportunities:", strategicOpportunities.slice(0, 3));
 				}
 			}
 
@@ -2448,33 +1367,13 @@ class ScrabbleGame {
 				}
 			}
 
-			// Use strategic scoring for much smarter AI decisions
-			// Filter out recently rejected plays to avoid immediate reselection
-			const filteredPlays = possiblePlays.filter(play => {
-				try {
-					const key = `${play.word}:${play.startPos.row}:${play.startPos.col}:${play.isHorizontal}`;
-					return !(this.aiRejectedPlays && this.aiRejectedPlays.has(key));
-				} catch (e) {
-					return true;
-				}
-			});
-
-			const sortedPlays = filteredPlays
-				.map(play => ({
-					...play,
-					strategicScore: this.calculateStrategicScore(play.word, play.startPos.row, play.startPos.col, play.isHorizontal)
-				}))
+			// Sort by: score, then word quality, then word length (all descending)
+			return possiblePlays
 				.sort((a, b) => {
-					// Prioritize strategic score (includes length, premium squares, cross-words)
-					if (b.strategicScore !== a.strategicScore) return b.strategicScore - a.strategicScore;
-					// Then regular score
 					if (b.score !== a.score) return b.score - a.score;
-					// Then word length
+					if (b.quality !== a.quality) return b.quality - a.quality;
 					return b.word.length - a.word.length;
 				});
-
-			if (this.showAIDebug) console.log(`AI found ${sortedPlays.length} possible plays, top 3:`, sortedPlays.slice(0, 3).map(p => `${p.word}(${p.score})`));
-			return sortedPlays;
 		} catch (error) {
 			console.error("Error in findAIPossiblePlays:", error);
 			return [];
@@ -2496,7 +1395,7 @@ class ScrabbleGame {
 		});
 
 		// Check dictionary for potential words
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			// Skip words that are too short
 			if (word.length < 4) continue;
 
@@ -2543,31 +1442,88 @@ class ScrabbleGame {
 	calculateStrategicScore(word, row, col, isHorizontal) {
 		let score = this.calculatePotentialScore(word, row, col, isHorizontal);
 
-		// Enhanced strategic evaluation using comprehensive quality score
-		const quality = this.evaluateWordQuality(word, row, col, isHorizontal);
-		score += quality * 2; // Quality score includes all strategic factors
+		// Bonus for word length
+		score += Math.pow(word.length, 2) * 10;
 
-		// Defensive bonus - blocking opponent premium squares
-		const defensiveBonus = this.evaluateDefensiveValue(word, row, col, isHorizontal);
-		score += defensiveBonus;
+		// Bonus for using premium squares
+		const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
+		score += premiumSquares * 25;
 
-		// Endgame consideration - be more aggressive when few tiles remain
-		const tilesRemaining = (this.playerRack?.length || 0) + (this.aiRack?.length || 0) + this.tiles.length;
-		if (tilesRemaining < 20) {
-			// Endgame: prioritize high-scoring moves and tile efficiency
-			const endgameBonus = word.length >= 6 ? 50 : word.length >= 4 ? 25 : 0;
-			score += endgameBonus;
+		// Bonus for creating multiple words
+		const crossWords = this.countIntersections(row, col, isHorizontal, word);
+		score += crossWords * 30;
+
+		// Bonus for using complex letters
+		score += this.calculateWordComplexity(word) * 15;
+
+		return score;
+	}
+
+	findAdvancedWordCombinations(availableLetters) {
+		const combinations = new Set();
+		const lettersWithBlanks = [...availableLetters];
+		const blankIndices = lettersWithBlanks
+			.map((letter, index) => letter === '*' ? index : -1)
+			.filter(index => index !== -1);
+
+		// Generate all possible letter combinations with blanks
+		const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		const maxCombinations = Math.pow(26, blankIndices.length);
+
+		for (let i = 0; i < maxCombinations && combinations.size < 100; i++) {
+			const tempLetters = [...lettersWithBlanks];
+
+			// Replace blanks with actual letters
+			blankIndices.forEach((blankIndex, position) => {
+				const letterIndex = Math.floor(i / Math.pow(26, position)) % 26;
+				tempLetters[blankIndex] = alphabet[letterIndex];
+			});
+
+			// Find all possible words using these letters
+			this.findPossibleWordsFromLetters(tempLetters).forEach(word => {
+				if (this.isAdvancedWord(word)) {
+					combinations.add(word);
+				}
+			});
 		}
 
-		// Rack balance consideration - avoid keeping difficult letters
-		const rackBalanceBonus = this.evaluateRackBalanceAfterMove(word);
-		score += rackBalanceBonus;
+		return Array.from(combinations).sort((a, b) => b.length - a.length);
+	}
 
-		// Position control - prefer moves that control board areas
-		const positionControl = this.evaluatePositionControl(word, row, col, isHorizontal);
-		score += positionControl;
+	isAdvancedWord(word) {
+		// Minimum length requirement
+		if (word.length < 4) return false;
 
-		return Math.max(0, score);
+		// Check for complexity using letter patterns
+		const complexPatterns = [
+			/[JQXZ]/, // Uncommon letters
+			/[BCDFGHJKLMNPQRSTVWXZ]{3,}/, // Three or more consonants
+			/[AEIOU]{2,}/, // Two or more vowels
+			/.{5,}/ // Words of length 5 or more
+		];
+
+		return complexPatterns.some(pattern => pattern.test(word));
+	}
+
+	calculateStrategicScore(word, row, col, isHorizontal) {
+		let score = this.calculatePotentialScore(word, row, col, isHorizontal);
+
+		// Bonus for word length
+		score += Math.pow(word.length, 2) * 10;
+
+		// Bonus for using premium squares
+		const premiumSquares = this.countPremiumSquaresUsed(row, col, isHorizontal, word);
+		score += premiumSquares * 25;
+
+		// Bonus for creating multiple words
+		const crossWords = this.countIntersections(row, col, isHorizontal, word);
+		score += crossWords * 30;
+
+		// Bonus for complex letters
+		const complexityScore = this.calculateWordComplexity(word);
+		score += complexityScore * 15;
+
+		return score;
 	}
 
 	calculateWordComplexity(word) {
@@ -2593,198 +1549,15 @@ class ScrabbleGame {
 		}, 0);
 	}
 
-	evaluateDefensiveValue(word, row, col, isHorizontal) {
-		let defensiveScore = 0;
-
-		// Check if this move blocks opponent access to premium squares
-		for (let i = 0; i < word.length; i++) {
-			const currentRow = isHorizontal ? row : row + i;
-			const currentCol = isHorizontal ? col + i : col;
-
-			// Check adjacent squares for premium squares that would be blocked
-			const adjacentSquares = [
-				[currentRow - 1, currentCol],
-				[currentRow + 1, currentCol],
-				[currentRow, currentCol - 1],
-				[currentRow, currentCol + 1]
-			];
-
-			for (const [adjRow, adjCol] of adjacentSquares) {
-				if (this.isValidPosition(adjRow, adjCol) && !this.board[adjRow][adjCol]) {
-					const premium = this.getPremiumSquareType(adjRow, adjCol);
-					if (premium === 'tw') {
-						defensiveScore += 40; // Block triple word score
-					} else if (premium === 'dw') {
-						defensiveScore += 25; // Block double word score
-					} else if (premium === 'tl') {
-						defensiveScore += 15; // Block triple letter score
-					} else if (premium === 'dl') {
-						defensiveScore += 8; // Block double letter score
-					}
-				}
-			}
-		}
-
-		return defensiveScore;
-	}
-
-	evaluateRackBalanceAfterMove(word) {
-		if (!this.aiRack) return 0;
-
-		let balanceScore = 0;
-
-		// Simulate rack after this move
-		const remainingRack = [...this.aiRack];
-		const tilesUsed = [];
-
-		// Find which tiles are used for this word
-		const wordLetters = word.split('');
-		for (const letter of wordLetters) {
-			const tileIndex = remainingRack.findIndex(tile =>
-				tile.letter === letter || tile.isBlank
-			);
-			if (tileIndex !== -1) {
-				tilesUsed.push(remainingRack[tileIndex]);
-				remainingRack.splice(tileIndex, 1);
-			}
-		}
-
-		// Evaluate remaining rack quality
-		const remainingLetters = remainingRack.map(tile => tile.letter);
-		const difficultLetters = ['Q', 'Z', 'J', 'X', 'V', 'W', 'K'];
-		const remainingDifficult = remainingLetters.filter(l => difficultLetters.includes(l)).length;
-
-		// Bonus for getting rid of difficult letters
-		const difficultUsed = tilesUsed.filter(tile => difficultLetters.includes(tile.letter)).length;
-		balanceScore += difficultUsed * 20;
-
-		// Penalty for keeping difficult letters
-		balanceScore -= remainingDifficult * 15;
-
-		// Bonus for having balanced remaining rack
-		const vowels = remainingLetters.filter(l => 'AEIOU'.includes(l)).length;
-		const totalRemaining = remainingLetters.length;
-		if (totalRemaining > 0) {
-			const vowelRatio = vowels / totalRemaining;
-			if (vowelRatio >= 0.3 && vowelRatio <= 0.6) {
-				balanceScore += 10;
-			}
-		}
-
-		return balanceScore;
-	}
-
-	evaluatePositionControl(word, row, col, isHorizontal) {
-		let controlScore = 0;
-
-		// Prefer moves that control multiple rows/columns
-		const startRow = row;
-		const startCol = col;
-		const endRow = isHorizontal ? row : row + word.length - 1;
-		const endCol = isHorizontal ? col + word.length - 1 : col;
-
-		// Center control
-		const centerProximity = Math.max(
-			0,
-			7 - Math.abs(startRow - 7),
-			0,
-			7 - Math.abs(startCol - 7),
-			0,
-			7 - Math.abs(endRow - 7),
-			0,
-			7 - Math.abs(endCol - 7)
-		);
-		controlScore += centerProximity * 3;
-
-		// Board balance - avoid over-concentration in one area
-		const quadrant = (startRow < 8 ? 0 : 1) * 2 + (startCol < 8 ? 0 : 1);
-		// This would benefit from tracking moves per quadrant, but for now just basic scoring
-
-		// Long moves get position control bonus
-		if (word.length >= 6) {
-			controlScore += 15;
-		} else if (word.length >= 4) {
-			controlScore += 8;
-		}
-
-		return controlScore;
-	}
-
-	evaluateTileManagement(play) {
-		if (!play || !this.aiRack) return 0;
-
-		let managementScore = 0;
-		const word = play.word;
-
-		// Simulate remaining rack after this move
-		const remainingRack = [...this.aiRack];
-		const tilesNeeded = this.getTilesNeededForMove(word, play.startPos, play.isHorizontal);
-
-		// Remove used tiles from simulated rack
-		for (const neededLetter of tilesNeeded) {
-			const tileIndex = remainingRack.findIndex(tile => tile.letter === neededLetter || tile.isBlank);
-			if (tileIndex !== -1) {
-				remainingRack.splice(tileIndex, 1);
-			}
-		}
-
-		const remainingLetters = remainingRack.map(tile => tile.letter);
-
-		// Evaluate remaining rack quality
-		const difficultLetters = ['Q', 'Z', 'J', 'X', 'V', 'W', 'K'];
-		const remainingDifficult = remainingLetters.filter(l => difficultLetters.includes(l)).length;
-
-		// Heavy penalty for keeping difficult letters
-		managementScore -= remainingDifficult * 25;
-
-		// Bonus for getting rid of difficult letters
-		const difficultUsed = tilesNeeded.filter(l => difficultLetters.includes(l)).length;
-		managementScore += difficultUsed * 30;
-
-		// Evaluate vowel/consonant balance of remaining rack
-		const vowels = remainingLetters.filter(l => 'AEIOU'.includes(l)).length;
-		const totalRemaining = remainingLetters.length;
-
-		if (totalRemaining > 0) {
-			const vowelRatio = vowels / totalRemaining;
-			if (vowelRatio >= 0.25 && vowelRatio <= 0.6) {
-				managementScore += 15; // Good balance
-			} else if (vowelRatio < 0.2 || vowelRatio > 0.7) {
-				managementScore -= 20; // Poor balance
-			}
-		}
-
-		// Bonus for keeping S for plural potential
-		if (remainingLetters.includes('S') && remainingRack.length > 2) {
-			managementScore += 8;
-		}
-
-		// Consider endgame - if few tiles left, prioritize using them efficiently
-		const totalTilesLeft = remainingRack.length + this.tiles.length;
-		if (totalTilesLeft < 10) {
-			// Endgame: prefer moves that use more tiles
-			managementScore += tilesNeeded.length * 5;
-		}
-
-		return managementScore;
-	}
-
 	selectBestPlay(plays) {
 		// Enable strict mode if near endgame
 		const strictMode = this.tiles.length < 10 || this.aiRack.length <= 3;
-
-		if (this.showAIDebug) console.log(`AI evaluating ${plays.length} potential moves...`);
 
 		const validPlays = plays.filter(play => {
 			if (!play || !play.word) return false;
 
 			// Always check main word
-			if (!this.dictionaryHas(play.word)) {
-				if (this.showAIDebug) console.log(`AI rejected "${play.word}" (${play.word.length} letters) - not in dictionary`);
-				return false;
-			} else {
-				if (this.showAIDebug) console.log(`AI accepted "${play.word}" - found in dictionary`);
-			}
+			if (!this.dictionary.has(play.word.toLowerCase())) return false;
 
 			// Always check cross-words
 			const crossWords = this.getAllCrossWords(
@@ -2797,75 +1570,29 @@ class ScrabbleGame {
 			// In strict mode, ALL cross-words must be valid and >1 letter
 			if (strictMode) {
 				return crossWords.every(word =>
-					this.dictionaryHas(word) && word.length > 1
+					this.dictionary.has(word.toLowerCase()) && word.length > 1
 				);
 			} else {
 				// In normal mode, allow if most cross-words are valid
 				const validCount = crossWords.filter(word =>
-					this.dictionaryHas(word) && word.length > 1
+					this.dictionary.has(word.toLowerCase()) && word.length > 1
 				).length;
 				return validCount === crossWords.length;
 			}
 		});
 
-		if (this.showAIDebug) console.log(`AI found ${validPlays.length} valid moves out of ${plays.length} candidates`);
-
-		if (validPlays.length === 0) {
-			// Lenient fallback: pick the smallest valid placement if strict checks fail.
-			try {
-				const lenientCandidates = plays.filter(p => p && p.word && p.startPos && this.isValidAIPlacement(p.word, p.startPos.row, p.startPos.col, p.isHorizontal));
-				if (lenientCandidates.length > 0) {
-					// sort by shortest word first, then highest score
-					lenientCandidates.sort((a, b) => a.word.length - b.word.length || (b.score - a.score));
-					for (const cand of lenientCandidates) {
-						// Avoid recently rejected exact placements
-						const rejKey = `${cand.word}:${cand.startPos.row}:${cand.startPos.col}:${cand.isHorizontal}`;
-						if (this.aiRejectedPlays && this.aiRejectedPlays.has(rejKey)) continue;
-
-						// Ensure cross words are not blatantly invalid (allow single letters)
-						const crossWords = this.getAllCrossWords(cand.startPos.row, cand.startPos.col, cand.isHorizontal, cand.word) || [];
-						const badCross = crossWords.some(w => w && w.length > 1 && !this.dictionaryHas(w));
-						if (!badCross) return cand;
-					}
-					// As a final fallback, return the absolute smallest candidate (may be risky)
-					return lenientCandidates[0];
-				}
-			} catch (e) {
-				if (this.showAIDebug) console.warn('Lenient fallback in selectBestPlay failed', e);
-			}
-			return null;
-		}
+		if (validPlays.length === 0) return null;
 
 		return validPlays.sort((a, b) => {
-			// Balanced sorting that prioritizes score but considers strategy
-
-			// 1. High score priority - if one move scores significantly more, prefer it
+			// Prefer longer words, then score, then complexity
+			const lengthDiff = (Math.pow(b.word.length, 3) - Math.pow(a.word.length, 3)) * 5;
+			if (Math.abs(lengthDiff) > 0) return lengthDiff;
 			const scoreDiff = b.score - a.score;
-			if (scoreDiff > 25) return 1; // Strong preference for much higher scoring moves
-			if (scoreDiff < -25) return -1;
-
-			// 2. Strategic score for close scores (within 25 points)
-			if (Math.abs(scoreDiff) <= 25) {
-				const strategicDiff = (b.strategicScore || 0) - (a.strategicScore || 0);
-				if (Math.abs(strategicDiff) > 30) return strategicDiff > 0 ? 1 : -1;
-			}
-
-			// 3. Quality score for very close matches
-			const qualityDiff = (b.quality || 0) - (a.quality || 0);
-			if (Math.abs(qualityDiff) > 20 && Math.abs(scoreDiff) <= 15) return qualityDiff > 0 ? 1 : -1;
-
-			// 4. Length preference (especially for bingos) - but not at expense of score
-			if (b.word.length >= 7 && a.word.length < 7 && scoreDiff >= -10) return 1;
-			if (a.word.length >= 7 && b.word.length < 7 && scoreDiff <= 10) return -1;
-
-			// 5. For equal or very close scores, prefer better tile management
-			if (Math.abs(scoreDiff) <= 10) {
-				const tileManagementDiff = this.evaluateTileManagement(a) - this.evaluateTileManagement(b);
-				if (Math.abs(tileManagementDiff) > 15) return tileManagementDiff < 0 ? 1 : -1;
-			}
-
-			// 6. Final tiebreaker: score difference
-			return scoreDiff;
+			if (Math.abs(scoreDiff) > 10) return scoreDiff;
+			const complexityDiff =
+				this.calculateWordComplexity(b.word) -
+				this.calculateWordComplexity(a.word);
+			return complexityDiff;
 		})[0];
 	}
 
@@ -3151,7 +1878,7 @@ class ScrabbleGame {
 		});
 
 		// Check dictionary for words that can be formed
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (word.length >= 2) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -3192,7 +1919,7 @@ class ScrabbleGame {
 			const word = prefix + combination + suffix;
 			if (
 				word.length >= 2 &&
-				this.dictionaryHas(word) &&
+				this.dictionary.has(word.toLowerCase()) &&
 				pattern.test(word)
 			) {
 				words.add(word);
@@ -3261,7 +1988,7 @@ class ScrabbleGame {
 		});
 
 		// Search dictionary for longer words
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (word.length >= minLength && word.length <= maxLength) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -3290,7 +2017,90 @@ class ScrabbleGame {
 		return false;
 	}
 
+	evaluateWordQuality(word, row, col, horizontal) {
+		let quality = 0;
 
+		// Give massive bonus for longer words
+		quality += Math.pow(word.length, 3) * 10; // Cubic scaling for length
+
+		// Bonus for using premium squares
+		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
+		quality += premiumSquares * 15;
+
+		// Small bonus for cross-words (but less important than length)
+		const crossWords = this.countIntersections(row, col, horizontal, word);
+		quality += crossWords * 10;
+
+		// Minor bonus for balanced letter usage
+		const letterBalance = this.evaluateLetterBalance(word);
+		quality += letterBalance * 5;
+
+		return quality;
+	}
+
+	evaluateCrossWordPotential(word, row, col, horizontal) {
+		let potential = 0;
+		const commonLetters = "AEIOURST";
+
+		for (let i = 0; i < word.length; i++) {
+			const row = horizontal ? startRow : startRow + i;
+			const col = horizontal ? startCol + i : startCol;
+
+				if (tempBoard[row][col]) {
+					if (tempBoard[row][col].letter !== word[i]) {
+						console.log(`Letter mismatch at position [${row},${col}]`);
+						return false;
+					}
+					hasValidIntersection = true;
+				} else {
+				tempBoard[row][col] = {
+					letter: word[i]
+				};
+
+				// Always check the perpendicular word for every new tile placed
+				const crossWord = horizontal ?
+					this.getVerticalWordAt(row, col, tempBoard) :
+					this.getHorizontalWordAt(row, col, tempBoard);
+
+				if (crossWord && crossWord.length > 1) {
+					if (!this.dictionary.has(crossWord.toLowerCase())) {
+						console.log(`Invalid cross word formed: ${crossWord}`);
+						return false;
+					}
+					hasValidIntersection = true;
+				}
+			}
+		}
+
+		return potential;
+	}
+
+	evaluatePositionalValue(row, col, horizontal, word) {
+		let value = 0;
+		const centerRow = 7,
+			centerCol = 7;
+
+		// Distance from center
+		const distanceFromCenter =
+			Math.abs(row - centerRow) + Math.abs(col - centerCol);
+		value -= distanceFromCenter * 2; // Slight penalty for distance from center
+
+		// Check if move creates a balanced board
+		const boardBalance = this.evaluateBoardBalance(row, col, horizontal, word);
+		value += boardBalance;
+
+		// Bonus for moves that don't crowd the board
+		if (!this.isBoardCrowded(row, col, horizontal, word)) {
+			value += 15;
+		}
+
+		// Consider edge proximity
+		if (this.isNearEdge(row, col, horizontal, word)) {
+			value -= 10; // Penalty for being too close to edge
+		}
+
+		return value;
+	}
 
 	hasAdjacentSpace(row, col, vertical) {
 		if (vertical) {
@@ -3608,25 +2418,6 @@ class ScrabbleGame {
 		return false;
 	}
 
-	// ENHANCEMENT: Implement missing method to fix undefined method calls
-	// Returns array of adjacent premium squares to a given board position
-	getAdjacentPremiumSquares(row, col) {
-		const adjacentPositions = [
-			[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
-		];
-
-		const premiums = [];
-		for (const [checkRow, checkCol] of adjacentPositions) {
-			if (this.isValidPosition(checkRow, checkCol)) {
-				const premium = this.getPremiumSquareType(checkRow, checkCol);
-				if (premium && premium !== 'none') {
-					premiums.push({ row: checkRow, col: checkCol, type: premium });
-				}
-			}
-		}
-		return premiums;
-	}
-
 	findSimpleWords(letters) {
 		const words = new Set();
 		const letterCount = {};
@@ -3637,7 +2428,7 @@ class ScrabbleGame {
 		});
 
 		// Check each word in dictionary
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (word.length >= 2 && word.length <= letters.length) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -3714,7 +2505,7 @@ class ScrabbleGame {
 
 		// Get all possible words from dictionary that can be formed
 		// with available letters and must connect with existing tiles
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (this.canFormWord(word, prefix, suffix, availableLetters)) {
 				const play = this.createPlay(
 					word,
@@ -4017,7 +2808,7 @@ class ScrabbleGame {
 		}
 
 		// Check each word in dictionary
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			// Allow shorter words (2-3 letters) for more possibilities
 			if (
 				word.length >= 2 &&
@@ -4041,7 +2832,7 @@ class ScrabbleGame {
 		});
 
 		// Check each word in dictionary
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (word.length >= 2 && word.length <= letters.length) {
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -4144,11 +2935,11 @@ class ScrabbleGame {
 
 	// Place this inside your ScrabbleGame class
 
-	async checkAIMoveValidity(word, startPos, isHorizontal) {
-		// Enhanced AI validation with confidence scoring
-		const lang = this.preferredLang || 'en';
+	checkAIMoveValidity(word, startPos, isHorizontal) {
+		// List of variant spellings or non-Hindi words to exclude
 		const excludedVariants = new Set([
-			"atropin", // German spelling, not valid in English Scrabble
+			"atropin", // German spelling, not valid in Hindi Scrabble
+			// Add more known variants as needed
 		]);
 
 		// Simulate the move on a temporary board
@@ -4163,119 +2954,69 @@ class ScrabbleGame {
 			}
 		}
 
-		// Collect all words formed with confidence scores
+		// Collect all words formed (main and crosswords)
 		let invalidWords = [];
-		let validWords = [];
-		let totalConfidence = 0;
-		let wordCount = 0;
+		let checkedWords = new Set();
 
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startPos.row : startPos.row + i;
 			const col = isHorizontal ? startPos.col + i : startPos.col;
 
-			// Main word validation with confidence scoring
+			// Main word (only check once)
 			if (i === 0) {
 				const mainWord = isHorizontal ?
 					this.getHorizontalWordAt(row, col, tempBoard) :
 					this.getVerticalWordAt(row, col, tempBoard);
-
-				if (mainWord && mainWord.length > 1) {
-					const validation = await this.validateWordInContext(mainWord.toLowerCase(), { word: mainWord }, true);
-
-					if (validation.isValid && !excludedVariants.has(mainWord.toLowerCase())) {
-
-						// Extra guard for 2-letter main words: require high-confidence or presence in loaded dictionaries
-						if (mainWord.length === 2) {
-							const lw = mainWord.toLowerCase();
-							const inTier1 = this.coreValidDictionary && this.coreValidDictionary.has(lw);
-							const inAnyDict = (this.dictionary && this.dictionary.has(lw)) || (this.backupDictionary && this.backupDictionary.has(lw));
-							if (!inTier1 && !inAnyDict) {
-								invalidWords.push(mainWord);
-								continue;
-							}
-						}
-						// Check if AI can provide the tiles it needs to place (not already on board)
-						const tilesToPlace = this.getTilesNeededForMove(word, startPos, isHorizontal);
-						const canForm = this.canFormWordWithTiles(tilesToPlace.join(''), this.aiRack || []);
-						if (canForm) {
-							validWords.push({ word: mainWord, confidence: validation.confidence, isMain: true });
-							totalConfidence += validation.confidence;
-							wordCount++;
-
-						} else {
-							invalidWords.push(`${mainWord} (insufficient tiles)`);
-						}
-					} else {
-						invalidWords.push(mainWord);
-					}
+				if (
+					mainWord &&
+					mainWord.length > 1 &&
+					(!this.dictionary.has(mainWord.toLowerCase()) ||
+					excludedVariants.has(mainWord.toLowerCase()))
+				) {
+					invalidWords.push(mainWord);
+				} else if (mainWord && mainWord.length > 1) {
+					checkedWords.add(mainWord);
 				}
 			}
 
-			// Crosswords validation with confidence scoring
+			// Crosswords for each new tile
 			const crossWord = isHorizontal ?
 				this.getVerticalWordAt(row, col, tempBoard) :
 				this.getHorizontalWordAt(row, col, tempBoard);
-
-			if (crossWord && crossWord.length > 1 && !validWords.some(v => v.word === crossWord)) {
-				const validation = await this.validateWordInContext(crossWord.toLowerCase(), { word: crossWord }, false);
-
-				if (validation.isValid && !excludedVariants.has(crossWord.toLowerCase())) {
-					// Reject any 2-letter crosswords outright to avoid obscure/abbreviations
-					if (crossWord.length === 2) {
-						invalidWords.push(crossWord);
-						continue;
-					}
-					// Cross words are formed by intersection - no additional tiles needed from rack
-					validWords.push({ word: crossWord, confidence: validation.confidence, isMain: false });
-					totalConfidence += validation.confidence;
-					wordCount++;
-				} else {
+			if (
+				crossWord &&
+				crossWord.length > 1 &&
+				!checkedWords.has(crossWord)
+			) {
+				if (
+					!this.dictionary.has(crossWord.toLowerCase()) ||
+					excludedVariants.has(crossWord.toLowerCase())
+				) {
 					invalidWords.push(crossWord);
+				} else {
+					checkedWords.add(crossWord);
 				}
 			}
 		}
 
-		// Calculate average confidence for valid moves
-		const avgConfidence = wordCount > 0 ? totalConfidence / wordCount : 0;
-
-		// AI decision logic based on confidence and validity
-		if (invalidWords.length === 0) {
-			return {
-				valid: true,
-				confidence: avgConfidence,
-				validWords: validWords,
-				aiRecommendation: avgConfidence >= 85 ? 'excellent' : avgConfidence >= 70 ? 'good' : 'acceptable'
-			};
-		} else {
-			return {
-				valid: false,
-				invalidWords: invalidWords,
-				validWords: validWords,
-				confidence: avgConfidence,
-				reason: `Invalid words: ${invalidWords.join(', ')}`
-			};
-		}
+		return invalidWords.length === 0
+			? { valid: true }
+			: { valid: false, invalidWords };
 	}
 
 async executeAIPlay(play) {
     const { word, startPos, isHorizontal, score } = play;
 	if (this.showAIDebug) console.log("AI attempting to play:", { word, startPos, isHorizontal, score });
 
-
     // --- FINAL TRIPLE CHECK: Ensure all words are valid before playing ---
-    const validity = await this.checkAIMoveValidity(word, startPos, isHorizontal);
+    const validity = this.checkAIMoveValidity(word, startPos, isHorizontal);
     if (!validity.valid) {
-		const rejKey = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
-		// Mark this exact placement as rejected for a short time to avoid retry loops
-		try {
-			this.aiRejectedPlays.add(rejKey);
-			// Remove rejection after short delay so AI can reconsider later
-			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
-		} catch (e) {/* ignore */}
-		// Suppress UI blunder notification to avoid spam; debug log only when enabled
-		if (this.showAIDebug) console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords, "key:", rejKey);
-		setTimeout(() => this.aiTurn(), 1000);
-		return;
+        this.showAINotification(
+            `❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
+        );
+        console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords);
+        setTimeout(() => this.aiTurn(), 1000);
+        return;
     }
 
     // --- GHOST CHECK: Simulate placing the word and check all words formed ---
@@ -4302,7 +3043,7 @@ async executeAIPlay(play) {
             const mainWord = isHorizontal ?
                 this.getHorizontalWordAt(row, col, tempBoard) :
                 this.getVerticalWordAt(row, col, tempBoard);
-			if (mainWord && mainWord.length > 1 && !this.dictionaryHas(mainWord)) {
+            if (mainWord && mainWord.length > 1 && !this.dictionary.has(mainWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(mainWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid main word: ${mainWord}`);
@@ -4317,7 +3058,7 @@ async executeAIPlay(play) {
             this.getVerticalWordAt(row, col, tempBoard) :
             this.getHorizontalWordAt(row, col, tempBoard);
         if (crossWord && crossWord.length > 1 && !checkedWords.has(crossWord)) {
-			if (!this.dictionaryHas(crossWord)) {
+            if (!this.dictionary.has(crossWord.toLowerCase())) {
                 allWordsValid = false;
                 invalidWords.push(crossWord);
 				if (this.showAIDebug) console.log(`[AI Ghost Check] Invalid cross word: ${crossWord}`);
@@ -4329,16 +3070,12 @@ async executeAIPlay(play) {
     }
 
     if (!allWordsValid) {
-		const rejKey = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
-		try {
-			this.aiRejectedPlays.add(rejKey);
-			setTimeout(() => this.aiRejectedPlays.delete(rejKey), 8000);
-		} catch (e) {}
-		// Suppress UI blunder notification to avoid spam; debug log only when enabled
-		if (this.showAIDebug) console.warn(`AI would have formed invalid words: ${invalidWords.join(", ")}. Retrying...`);
-		if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords, 'key:', rejKey);
-		setTimeout(() => this.aiTurn(), 1000);
-		return;
+        this.showAINotification(
+            `🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
+        );
+	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
+        setTimeout(() => this.aiTurn(), 1000);
+        return;
     }
 
     // --- If all words valid, proceed as normal ---
@@ -4359,12 +3096,6 @@ async executeAIPlay(play) {
     }));
 
     return new Promise(async (resolve) => {
-        let totalScore = 0; // Declare at Promise scope for both setTimeout callbacks
-        let aiBingo = false; // Declare for bingo detection
-        let aiBingoVariant = 'standard'; // Declare for bingo variant
-        let wordsList = []; // Declare for storing formed words
-        let aiBingoEffectShown = false; // Prevent duplicate bingo effects
-
         // Start placing tiles with animation
         for (let i = 0; i < word.length; i++) {
             const letter = word[i];
@@ -4412,65 +3143,67 @@ async executeAIPlay(play) {
                     );
                     const targetRect = targetCell.getBoundingClientRect();
 
-                    // Animation setup - much faster and simpler
+                    // Animation setup
                     animatedTile.style.cssText = `
                       position: fixed;
-                      top: ${targetRect.top - 40}px;
+                      top: -50px;
                       left: ${targetRect.left}px;
-                      transform: scale(0.8);
-                      opacity: 0.7;
-                      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                      transform: rotate(-180deg);
+                      transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                       z-index: 1000;
                   `;
 
                     document.body.appendChild(animatedTile);
 
-                    // Animate tile placement - much faster
+                    // Animate tile placement
                     await new Promise((resolve) => {
                         setTimeout(() => {
                             animatedTile.style.top = `${targetRect.top}px`;
-                            animatedTile.style.transform = "scale(1.1)";
-                            animatedTile.style.opacity = "1";
+                            animatedTile.style.transform = "rotate(0deg)";
 
                             setTimeout(() => {
-                                animatedTile.style.transform = "scale(1)";
+                                animatedTile.style.transform = "rotate(0deg) scale(1.2)";
                                 setTimeout(() => {
-                                    targetCell.classList.add("tile-placed");
-                                    animatedTile.remove();
+                                    animatedTile.style.transform = "rotate(0deg) scale(1)";
+                                }, 100);
+                            }, 800);
 
-                                    this.aiRack.splice(tileIndex, 1);
-                                    this.board[row][col] = tile;
-                                    this.renderAIRack();
+                            setTimeout(() => {
+                                targetCell.classList.add("tile-placed");
+                                animatedTile.remove();
 
-                                    const permanentTile = document.createElement("div");
-                                    permanentTile.className = "tile";
-                                    if (tile.isBlank) {
-                                        permanentTile.classList.add("blank-tile");
-                                    }
-                                    permanentTile.style.cssText = `
-                                      background: linear-gradient(145deg, #ffffff, #f0f0f0);
-                                      color: #000;
-                                    `;
-                                    permanentTile.innerHTML = `
-                                      ${tile.letter}
-                                      <span class="points" style="color: #000;">${tile.value}</span>
-                                      ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
-                                    `;
+                                this.aiRack.splice(tileIndex, 1);
+                                this.board[row][col] = tile;
+                                this.renderAIRack();
 
-                                    targetCell.innerHTML = "";
-                                    targetCell.appendChild(permanentTile);
+                                const permanentTile = document.createElement("div");
+                                permanentTile.className = "tile";
+                                if (tile.isBlank) {
+                                    permanentTile.classList.add("blank-tile");
+                                }
+                                permanentTile.style.cssText = `
+                                  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+                                  color: #000;
+                              `;
+                                permanentTile.innerHTML = `
+                                  ${tile.letter}
+                                  <span class="points" style="color: #000;">${tile.value}</span>
+                                  ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                              `;
 
-                                    setTimeout(() => {
-                                        targetCell.classList.remove("tile-placed");
-                                    }, 500);
+                                targetCell.innerHTML = "";
+                                targetCell.appendChild(permanentTile);
 
-                                    resolve();
-                                }, 250);
-                            }, 200);
+                                setTimeout(() => {
+                                    targetCell.classList.remove("tile-placed");
+                                }, 500);
+
+                                resolve();
+                            }, 1000);
                         }, 200);
                     });
 
-                    await new Promise((resolve) => setTimeout(resolve, 80)); // Much faster tile placement
+                    await new Promise((resolve) => setTimeout(resolve, 500));
                 }
             }
         }
@@ -4479,8 +3212,8 @@ async executeAIPlay(play) {
         setTimeout(() => {
             // Get all formed words and calculate total score
             const formedWords = this.getFormedWords();
-            totalScore = 0; // Already declared at Promise scope
-            wordsList = []; // Already declared at Promise scope
+            let totalScore = 0;
+            let wordsList = [];
 
             // --- Extra insurance: skip words that already existed on the previous board or were already played ---
             formedWords.forEach((wordInfo) => {
@@ -4536,12 +3269,14 @@ async executeAIPlay(play) {
             });
 
 			// --- BINGO BONUS for AI ---
+			let aiBingo = false;
+			let aiBingoVariant = 'standard'; // 'standard' (7), 'silver' (8), 'gold' (9+)
 			wordsList.forEach(w => {
 				if (w.word.length >= 7 && !this.wordsPlayed.has(w.word.toUpperCase())) {
 					totalScore += 50;
-					aiBingo = true; // Already declared at Promise scope
+					aiBingo = true;
 					const len = w.word.length;
-					if (len >= 9) aiBingoVariant = 'gold'; // Already declared at Promise scope
+					if (len >= 9) aiBingoVariant = 'gold';
 					else if (len === 8 && aiBingoVariant !== 'gold') aiBingoVariant = 'silver';
 					// AI should not display any celebration (no audio, no confetti) per user request.
 				}
@@ -4552,60 +3287,26 @@ async executeAIPlay(play) {
 				this.wordsPlayed.add(w.word.toUpperCase());
 			});
 
-			// Format move description for multiple words
-			let moveDescription;
-			const currentLang = localStorage.getItem('preferredLang') || 'en';
-			if (wordsList.length > 1) {
-				moveDescription = wordsList
-					.map((w) => {
-						const displayWord = translateWordForDisplay(w.word, currentLang);
-						return `${displayWord} (${w.score})`;
-					})
-					.join(" & ");
-			} else if (wordsList.length === 1) {
-				moveDescription = translateWordForDisplay(wordsList[0].word, currentLang);
-			} else {
-				moveDescription = "(No new words scored)";
-			}
+            // Format move description for multiple words
+            let moveDescription;
+            if (wordsList.length > 1) {
+                moveDescription = wordsList
+                    .map((w) => `${w.word} (${w.score})`)
+                    .join(" & ");
+            } else if (wordsList.length === 1) {
+                moveDescription = wordsList[0].word;
+            } else {
+                moveDescription = "(No new words scored)";
+            }
 
-			// --- AI auto-speech disabled by user request ---
-				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
-
-				// Score will be added in final update below
-				this.isFirstMove = false;
-				this.consecutiveSkips = 0;
-
-				this.currentTurn = "player";
-				// Clear the placed tiles array after scoring
-				this.placedTiles = [];
-
-				// Refill racks and update display
-				this.fillRacks();
-				this.renderRack(); // Ensure draggable state is updated
-				this.updateGhostPreview();
-				this.updateGameState();
-
-				// --- AI auto-speech disabled by user request ---
-				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
-
-				// Score will be added in final update below
-				this.isFirstMove = false;
-				this.consecutiveSkips = 0;
-
-				this.currentTurn = "player";
-				// Clear the placed tiles array after scoring
-				this.placedTiles = [];
-
-				// Refill racks and update display
-				this.fillRacks();
-				this.renderRack(); // Ensure draggable state is updated
-				this.updateGhostPreview();
-				this.updateGameState();
-			});
-
-			// --- AI auto-speech disabled by user request ---
-			// Execute final game state updates after tile placement animation
-			setTimeout(() => {
+			// --- Speak each word formed by AI sequentially. If AI scored a bingo, allow it to
+			// audibly announce it as well (some users want parity). If you want AI silent,
+			// set aiSpeakBingo = false.
+			const aiWordsToSpeak = wordsList.map(w => w.word).filter(w => w && w !== "BINGO BONUS");
+			const aiSpeakBingo = true; // change to false to silence AI bingo again
+			this.speakSequence(aiWordsToSpeak, aiBingo && aiSpeakBingo, 'ai').catch((e) => {
+				console.error('AI speakSequence failed', e);
+			}).then(() => {
 				if (this.showAIDebug) console.log(`Total score for move: ${totalScore}`);
 
 				this.aiScore += totalScore;
@@ -4621,27 +3322,22 @@ async executeAIPlay(play) {
 
 				// Refill racks and update display
 				this.fillRacks();
-				this.renderRack(); // Ensure draggable state is updated
-				this.updateGhostPreview();
+				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
-				// If AI scored a bingo, trigger the same bingo visuals and speech as the player (ONLY ONCE)
-				if (aiBingo && !aiBingoEffectShown) {
-					aiBingoEffectShown = true; // Mark as shown to prevent duplicates
+				// If AI scored a bingo, trigger the same bingo visuals as the player
+				if (aiBingo) {
 					try {
 						if (typeof this.showBingoBonusEffect === 'function') {
 							this.showBingoBonusEffect(false, aiBingoVariant);
 						} else if (typeof this.createConfettiEffect === 'function') {
 							this.createConfettiEffect({ variant: aiBingoVariant });
 						}
-						// Also trigger bingo speech for AI
-						if (typeof this.speakBingo === 'function') {
-							this.speakBingo('computer');
-						}
-					} catch (e) { console.warn('AI bingo effects failed', e); }
+					} catch (e) { console.warn('AI bingo visual failed', e); }
 				}
 				resolve();
-			}, 1000);  // Slightly longer delay for final updates
+			});
+        }, 500);
     });
 }
 
@@ -4941,7 +3637,7 @@ async executeAIPlay(play) {
 		// Enhanced blank tile usage - prioritize high-value opportunities
 		const priorityLetters = new Set(['S', 'R', 'E', 'D', 'L', 'Y']); // Common useful letters
 
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			if (word.length >= 3) { // Minimum word length of 3
 				const upperWord = word.toUpperCase();
 				const tempCount = {
@@ -5020,15 +3716,8 @@ async executeAIPlay(play) {
 			return false;
 		}
 
-		if (!this.dictionaryHas(word)) {
+		if (!this.dictionary.has(word.toLowerCase())) {
 			this.logAIValidation(`${word} is not a valid word in the dictionary`);
-			return false;
-		}
-
-		// Check if AI has the tiles needed for this placement
-		const tilesNeeded = this.getTilesNeededForMove(word, { row: startRow, col: startCol }, horizontal);
-		if (!this.canFormWordWithTiles(tilesNeeded.join(''), this.aiRack || [])) {
-			this.logAIValidation(`${word} rejected - AI doesn't have tiles: ${tilesNeeded.join('')}`);
 			return false;
 		}
 
@@ -5075,18 +3764,13 @@ async executeAIPlay(play) {
 						this.getVerticalWordAt(row, col, tempBoard) :
 						this.getHorizontalWordAt(row, col, tempBoard);
 
-						if (crossWord && crossWord.length > 1) {
-							// Disallow any 2-letter crosswords to avoid obscure/invalid cross words
-							if (crossWord.length === 2) {
-								this.logAIValidation(`Rejecting placement: would create 2-letter cross word: ${crossWord}`);
-								return false;
-							}
-							if (!this.dictionaryHas(crossWord)) {
-								this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
-								return false;
-							}
-							hasValidIntersection = true;
+					if (crossWord && crossWord.length > 1) {
+						if (!this.dictionary.has(crossWord.toLowerCase())) {
+							this.logAIValidation(`Invalid cross word formed: ${crossWord}`);
+							return false;
 						}
+						hasValidIntersection = true;
+					}
 				}
 			}
 		}
@@ -5275,23 +3959,533 @@ async executeAIPlay(play) {
 	}
 
 	isAbbreviation(word) {
-		if (!word) return false;
+		// Official two-letter words allowed in Scrabble/Word games
+		const validTwoLetterWords = new Set([
+			"AA",
+			"AB",
+			"AD",
+			"AE",
+			"AG",
+			"AH",
+			"AI",
+			"AL",
+			"AM",
+			"AN",
+			"AR",
+			"AS",
+			"AT",
+			"AW",
+			"AX",
+			"AY",
+			"BA",
+			"BE",
+			"BI",
+			"BO",
+			"BY",
+			"DA",
+			"DE",
+			"DI",
+			"DO",
+			"EA",
+			"ED",
+			"EE",
+			"EF",
+			"EH",
+			"EL",
+			"EM",
+			"EN",
+			"ER",
+			"ES",
+			"ET",
+			"EW",
+			"EX",
+			"FA",
+			"FE",
+			"FY",
+			"GI",
+			"GU",
+			"HA",
+			"HE",
+			"HI",
+			"HM",
+			"HO",
+			"ID",
+			"IF",
+			"IN",
+			"IO",
+			"IS",
+			"IT",
+			"JA",
+			"JO",
+			"KA",
+			"KI",
+			"KO",
+			"KY",
+			"LA",
+			"LI",
+			"LO",
+			"MA",
+			"ME",
+			"MI",
+			"MM",
+			"MO",
+			"MU",
+			"MY",
+			"NA",
+			"NE",
+			"NO",
+			"NU",
+			"NY",
+			"OB",
+			"OD",
+			"OE",
+			"OM",
+			"OP",
+			"OS",
+			"OX",
+			"OY",
+			"PA",
+			"PE",
+			"PI",
+			"PO",
+			"QI",
+			"RA",
+			"RE",
+			"RO",
+			"SH",
+			"SI",
+			"SO",
+			"TA",
+			"TE",
+			"TI",
+			"TO",
+			"UG",
+			"UH",
+			"UM",
+			"UN",
+			"UP",
+			"UR",
+			"US",
+			"UT",
+			"WE",
+			"WO",
+			"XI",
+			"XU",
+			"YA",
+			"YE",
+			"YO",
+			"YU",
+			"ZA",
+			"ZE",
+			"ZO",
+			"AO",
+			"AP",
+			"BA",
+			"BE",
+			"BI",
+			"BU",
+			"CU",
+			"DA",
+			"DU",
+			"EO",
+			"EU",
+			"FO",
+			"FU",
+			"GA",
+			"GE",
+			"HU",
+			"IQ",
+			"JE",
+			"KE",
+			"KU",
+			"LE",
+			"LU",
+			"ME",
+			"MU",
+			"NI",
+			"NU",
+			"OC",
+			"OO",
+			"OU",
+			"PU",
+			"QA",
+			"RI",
+			"RU",
+			"SA",
+			"SE",
+			"SI",
+			"SU",
+			"TU",
+			"UI",
+			"VA",
+			"WA",
+			"WU",
+			"YI",
+			"ZI",
+			"ZO",
+			"PI",
+			"NP",
+			"ET",
+			"ZO",
+		]);
 
-		const up = String(word).toUpperCase();
+		// Common three-letter abbreviations to reject
+		const commonAbbreviations = new Set([
+			// Corporate & Business
+			"CEO",
+			"CFO",
+			"CTO",
+			"COO",
+			"CAO",
+			"CDO",
+			"CHRO",
+			"CMO",
+			"CRO",
+			"CSO",
+			"B2B",
+			"B2C",
+			"C2C",
+			"ROI",
+			"KPI",
+			"CRM",
+			"ERP",
+			"SWOT",
+			"PESTEL",
+			"ROE",
+			"CAGR",
+			"EBIT",
+			"GAAP",
+			"IPO",
+			"M&A",
+			"P&L",
+			"Q1",
+			"Q2",
+			"Q3",
+			"Q4",
 
-		// If the word exists in the active dictionary, it's not an abbreviation
-		if (this.dictionaryHas(up)) return false;
+			// Technology & Computing
+			"CPU",
+			"GPU",
+			"RAM",
+			"ROM",
+			"SSD",
+			"HDD",
+			"USB",
+			"HDMI",
+			"VGA",
+			"DVI",
+			"API",
+			"SDK",
+			"SQL",
+			"NoSQL",
+			"CSS",
+			"HTML",
+			"PHP",
+			"XML",
+			"JSON",
+			"YAML",
+			"IDE",
+			"CLI",
+			"GUI",
+			"HTTP",
+			"HTTPS",
+			"FTP",
+			"SSH",
+			"VPN",
+			"LAN",
+			"WAN",
+			"DNS",
+			"URL",
+			"URI",
+			"TCP",
+			"IP",
+			"IoT",
+			"AI",
+			"ML",
+			"VR",
+			"AR",
+			"DIF",
 
-		// Check for roman numerals (considered abbreviations here)
-		const romanNumeralPattern = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
-		if (romanNumeralPattern.test(up)) {
+			// Government & Military
+			"CIA",
+			"FBI",
+			"NSA",
+			"DOD",
+			"EPA",
+			"FDA",
+			"DHS",
+			"DOJ",
+			"IRS",
+			"ICE",
+			"NATO",
+			"SEAL",
+			"POTUS",
+			"SCOTUS",
+			"DOE",
+			"HUD",
+			"FEMA",
+			"DEA",
+			"ATF",
+			"SSA",
+
+			// Educational
+			"PhD",
+			"MBA",
+			"BSc",
+			"BA",
+			"MSc",
+			"MA",
+			"JD",
+			"MD",
+			"EdD",
+			"GPA",
+			"SAT",
+			"ACT",
+			"GRE",
+			"GMAT",
+			"MCAT",
+			"LSAT",
+			"TOEFL",
+			"IELTS",
+			"ESL",
+			"STEM",
+
+			// Medical
+			"ICU",
+			"ER",
+			"ECG",
+			"EKG",
+			"MRI",
+			"CT",
+			"BP",
+			"HIV",
+			"DNA",
+			"RNA",
+			"ADHD",
+			"OCD",
+			"PTSD",
+			"ADD",
+			"CDC",
+			"WHO",
+			"RBC",
+			"WBC",
+			"BMI",
+			"ICU",
+
+			// Media & Entertainment
+			"BBC",
+			"CNN",
+			"PBS",
+			"ABC",
+			"NBC",
+			"CBS",
+			"HBO",
+			"MTV",
+			"ESPN",
+			"FIFA",
+			"NBA",
+			"NFL",
+			"NHL",
+			"MLB",
+			"UFC",
+			"WWE",
+			"IMDb",
+			"AMPAS",
+			"BAFTA",
+			"Grammy",
+
+			// Countries & Organizations
+			"USA",
+			"UK",
+			"UAE",
+			"UN",
+			"EU",
+			"NATO",
+			"ASEAN",
+			"NAFTA",
+			"WHO",
+			"UNICEF",
+			"UNESCO",
+			"OPEC",
+			"IMF",
+			"WTO",
+			"ICC",
+			"IAEA",
+			"APEC",
+			"BRICS",
+			"G7",
+			"G20",
+
+			// Common Communication
+			"ASAP",
+			"FYI",
+			"TBA",
+			"TBD",
+			"FAQ",
+			"AKA",
+			"PS",
+			"NB",
+			"RE",
+			"CC",
+			"BCC",
+			"IMO",
+			"IMHO",
+			"BTW",
+			"TBH",
+			"IDK",
+			"IRL",
+			"AFAIK",
+			"DIY",
+			"FOMO",
+
+			// Technology Companies
+			"IBM",
+			"AMD",
+			"HP",
+			"AWS",
+			"MS",
+			"FAANG",
+			"GAFA",
+			"SAP",
+			"VMware",
+			"TSMC",
+
+			// File Formats & Standards
+			"PDF",
+			"PNG",
+			"JPG",
+			"JPEG",
+			"GIF",
+			"MP3",
+			"MP4",
+			"WAV",
+			"AVI",
+			"MPEG",
+			"DOC",
+			"DOCX",
+			"XLS",
+			"XLSX",
+			"PPT",
+			"PPTX",
+			"TXT",
+			"CSV",
+			"ZIP",
+			"RAR",
+
+			// Telecommunications
+			"SMS",
+			"MMS",
+			"GSM",
+			"SIM",
+			"ISP",
+			"5G",
+			"4G",
+			"LTE",
+			"CDMA",
+			"VOIP",
+
+			// Time Zones & Measurements
+			"GMT",
+			"EST",
+			"PST",
+			"UTC",
+			"CST",
+			"MST",
+			"IST",
+			"JST",
+			"BST",
+			"CET",
+
+			// Transportation
+			"BMW",
+			"SUV",
+			"MPV",
+			"EV",
+			"GPS",
+			"MPG",
+			"MPH",
+			"KPH",
+			"ABS",
+			"ESP",
+
+			// Financial
+			"ATM",
+			"PIN",
+			"APR",
+			"APY",
+			"ETF",
+			"IRA",
+			"HSA",
+			"FSA",
+			"CD",
+			"ARM",
+
+			// Miscellaneous
+			"UFO",
+			"VIP",
+			"RIP",
+			"POV",
+			"DOB",
+			"SSN",
+			"PTO",
+			"EOD",
+			"COB",
+			"ETA",
+			"RSVP",
+			"BYOB",
+			"MVP",
+			"SOS",
+			"MIA",
+			"ETC",
+			"VS",
+			"AKA",
+			"NYC",
+			"LA",
+		]);
+
+		// If it's a two-letter word, check against valid list
+		if (word.length === 2) {
+			if (!validTwoLetterWords.has(word.toUpperCase())) {
+				console.log(`${word} is not a valid two-letter word - rejecting`);
+				return true;
+			}
+			return false; // It's a valid two-letter word
+		}
+
+		// Check for three-letter abbreviations
+		if (word.length === 3) {
+			// Check if it's in our common abbreviations list
+			if (commonAbbreviations.has(word.toUpperCase())) {
+				console.log(`${word} is a known abbreviation - rejecting`);
+				return true;
+			}
+
+			// Check if it's all caps and contains no vowels (likely an abbreviation)
+			if (word === word.toUpperCase() && !/[AEIOU]/.test(word)) {
+				console.log(
+					`${word} appears to be a three-letter abbreviation - rejecting`,
+				);
+				return true;
+			}
+		}
+
+		// Check for roman numerals
+		const romanNumeralPattern =
+			/^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
+		if (romanNumeralPattern.test(word.toUpperCase())) {
 			console.log(`${word} appears to be a roman numeral - rejecting`);
 			return true;
 		}
 
-		// Short unknown tokens (<=3 letters) that are not in the dictionary are likely abbreviations
-		if (up.length <= 3) {
-			console.log(`${word} not found in dictionary and short - treating as abbreviation`);
+		// Check for repeated letters that aren't in validTwoLetterWords
+		if (
+			word.length === 2 &&
+			word[0] === word[1] &&
+			!validTwoLetterWords.has(word.toUpperCase())
+		) {
+			console.log(
+				`${word} appears to be a repeated letter abbreviation - rejecting`,
+			);
 			return true;
 		}
 
@@ -5364,73 +4558,6 @@ async executeAIPlay(play) {
 	const existingWords = Array.from(words);
 	console.debug("Existing words on board:", existingWords);
 	return existingWords;
-	}
-
-	getExistingWordsWithPositions() {
-		const words = [];
-
-		// Check horizontal words
-		for (let row = 0; row < 15; row++) {
-			let word = "";
-			let startCol = 0;
-			for (let col = 0; col < 15; col++) {
-				if (this.board[row][col]) {
-					if (word === "") startCol = col; // Start of word
-					word += this.board[row][col].letter;
-				} else if (word.length > 1) {
-					// End of word
-					words.push({
-						word: word,
-						startPos: { row: row, col: startCol },
-						direction: 'horizontal'
-					});
-					word = "";
-				} else {
-					word = "";
-				}
-			}
-			if (word.length > 1) {
-				// End of word at board edge
-				words.push({
-					word: word,
-					startPos: { row: row, col: startCol },
-					direction: 'horizontal'
-				});
-			}
-		}
-
-		// Check vertical words
-		for (let col = 0; col < 15; col++) {
-			let word = "";
-			let startRow = 0;
-			for (let row = 0; row < 15; row++) {
-				if (this.board[row][col]) {
-					if (word === "") startRow = row; // Start of word
-					word += this.board[row][col].letter;
-				} else if (word.length > 1) {
-					// End of word
-					words.push({
-						word: word,
-						startPos: { row: startRow, col: col },
-						direction: 'vertical'
-					});
-					word = "";
-				} else {
-					word = "";
-				}
-			}
-			if (word.length > 1) {
-				// End of word at board edge
-				words.push({
-					word: word,
-					startPos: { row: startRow, col: col },
-					direction: 'vertical'
-				});
-			}
-		}
-
-		console.debug("Existing words with positions:", words);
-		return words;
 	}
 
 	calculatePotentialScore(word, startRow, startCol, horizontal) {
@@ -6035,17 +5162,12 @@ formedWords.forEach((wordInfo) => {
 
 	generateTileBag() {
 		this.tiles = [];
-		const lang = this.preferredLang || 'en';
-		const distribution = lang === 'es' ? this.spanishTileDistribution : this.tileDistribution;
-		const values = lang === 'es' ? this.spanishTileValues : this.tileValues;
-
-		for (const [letter, count] of Object.entries(distribution)) {
+		for (const [letter, count] of Object.entries(this.tileDistribution)) {
 			for (let i = 0; i < count; i++) {
 				this.tiles.push({
 					letter,
-					value: values[letter],
+					value: this.tileValues[letter],
 					id: `${letter}_${i}`,
-					isBlank: letter === "*",
 				});
 			}
 		}
@@ -6060,249 +5182,19 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async init() {
-		// Show loading screen immediately
-		this.showLoadingScreen();
-
-		try {
-			// Load dictionaries asynchronously but show progress
-			await this.loadDictionary();
-			await this.loadLanguageDictionary(this.preferredLang);
-
-			// Create board and UI elements
-			this.updateLoadingProgress('Creating game board...');
-			this.createBoard();
-
-			this.updateLoadingProgress('Setting up game pieces...');
-			this.fillRacks();
-			this.setupTapPlacement();
-			this.setupEventListeners();
-		} catch (error) {
-			console.error('Initialization failed:', error);
-			this.showErrorScreen('Failed to load game. Please refresh the page.');
-			return;
-		}
-
-		// Hide loading screen and show the game
-		this.hideLoadingScreen();
-		// Initialize all language selector dropdowns and persist choice
-		try {
-			const selectors = Array.from(document.querySelectorAll('select.language-button'));
-			if (selectors && selectors.length > 0) {
-				// set initial value from stored preference for all selectors
-				for (const s of selectors) {
-					try { s.value = this.preferredLang || 'en'; } catch (e) { /* ignore */ }
-					// add change listener
-					s.addEventListener('change', async (ev) => {
-						const val = ev.target.value || 'en';
-						this.preferredLang = val;
-						try { localStorage.setItem('preferredLang', this.preferredLang); } catch (e) { /* ignore */ }
-						// Load the new language dictionary
-						await this.loadLanguageDictionary(val);
-						// sync other selectors
-						for (const o of selectors) {
-							if (o !== ev.target) try { o.value = val; } catch (e) {}
-						}
-						console.log('Preferred language set to', this.preferredLang);
-					});
-				}
-			}
-		} catch (e) { /* ignore */ }
+		await this.loadDictionary();
+		this.createBoard();
+		this.fillRacks();
+		this.setupTapPlacement();
+		this.setupEventListeners();
 		this.updateGameState();
 
 		// --- Build the Trie for pro-level AI word generation ---
-		this.updateLoadingProgress('Preparing AI word search...');
 		this.trie = new Trie();
-		for (const word of this.activeDictionary) {
+		for (const word of this.dictionary) {
 			this.trie.insert(word.toUpperCase());
 		}
-
-		// Show the game container now that initialization is complete
-		const gameContainer = document.querySelector('.game-container');
-		if (gameContainer) {
-			gameContainer.style.transition = 'opacity 0.5s ease-in';
-			gameContainer.style.opacity = '1';
-			gameContainer.style.visibility = 'visible';
-		}
-
 	}
-
-	showLoadingScreen() {
-		// Create loading overlay
-		const loadingOverlay = document.createElement('div');
-		loadingOverlay.id = 'loading-overlay';
-		loadingOverlay.style.cssText = `
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100vw;
-			height: 100vh;
-			background: linear-gradient(135deg, #1a237e 0%, #151d69 100%);
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-			z-index: 9999;
-			color: white;
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-		`;
-
-		// Loading spinner
-		const spinner = document.createElement('div');
-		spinner.style.cssText = `
-			width: 60px;
-			height: 60px;
-			border: 4px solid rgba(255, 255, 255, 0.3);
-			border-top: 4px solid white;
-			border-radius: 50%;
-			animation: spin 1s linear infinite;
-			margin-bottom: 20px;
-		`;
-
-		// Loading text
-		const loadingText = document.createElement('div');
-		loadingText.id = 'loading-text';
-		loadingText.style.cssText = `
-			font-size: 18px;
-			font-weight: 300;
-			text-align: center;
-			margin-bottom: 10px;
-		`;
-		loadingText.textContent = 'Loading Puzzle Game...';
-
-		// Progress indicator
-		const progressText = document.createElement('div');
-		progressText.id = 'loading-progress';
-		progressText.style.cssText = `
-			font-size: 14px;
-			opacity: 0.8;
-			text-align: center;
-		`;
-		progressText.textContent = 'Loading dictionaries...';
-
-		// Floating white tiles
-		const tilesContainer = document.createElement('div');
-		tilesContainer.style.cssText = `
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			pointer-events: none;
-			z-index: 1;
-		`;
-
-		// Create floating tiles
-		const tileLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
-		for (let i = 0; i < 12; i++) {
-			const tile = document.createElement('div');
-			tile.textContent = tileLetters[i % tileLetters.length];
-			tile.style.cssText = `
-				position: absolute;
-				width: 32px;
-				height: 32px;
-				background: linear-gradient(145deg, #ffffff 70%, #f5f5f5 100%);
-				border: 2px solid #e0e0e0;
-				border-radius: 4px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				font-size: 14px;
-				font-weight: bold;
-				color: #333;
-				box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-				animation: floatTile ${3 + Math.random() * 2}s infinite ease-in-out;
-				animation-delay: ${Math.random() * 2}s;
-				left: ${10 + Math.random() * 80}vw;
-				top: ${10 + Math.random() * 80}vh;
-			`;
-			tilesContainer.appendChild(tile);
-		}
-
-		// Add CSS animation for tiles
-		const style = document.createElement('style');
-		style.textContent = `
-			@keyframes spin {
-				0% { transform: rotate(0deg); }
-				100% { transform: rotate(360deg); }
-			}
-			@keyframes floatTile {
-				0%, 100% {
-					transform: translateY(0px) rotate(0deg);
-				}
-				25% {
-					transform: translateY(-15px) rotate(5deg);
-				}
-				50% {
-					transform: translateY(-5px) rotate(-3deg);
-				}
-				75% {
-					transform: translateY(-20px) rotate(2deg);
-				}
-			}
-		`;
-		document.head.appendChild(style);
-
-		loadingOverlay.appendChild(tilesContainer);
-		loadingOverlay.appendChild(spinner);
-		loadingOverlay.appendChild(loadingText);
-		loadingOverlay.appendChild(progressText);
-		document.body.appendChild(loadingOverlay);
-
-		// Make body hidden initially to prevent flash of unstyled content
-		document.body.style.visibility = 'visible';
-	}
-
-	updateLoadingProgress(message) {
-		const progressElement = document.getElementById('loading-progress');
-		if (progressElement) {
-			progressElement.textContent = message;
-		}
-	}
-
-	hideLoadingScreen() {
-		const loadingOverlay = document.getElementById('loading-overlay');
-		if (loadingOverlay) {
-			loadingOverlay.style.transition = 'opacity 0.5s ease-out';
-			loadingOverlay.style.opacity = '0';
-			setTimeout(() => {
-				loadingOverlay.remove();
-			}, 500);
-		}
-	}
-
-	showErrorScreen(message) {
-		const loadingOverlay = document.getElementById('loading-overlay');
-		if (loadingOverlay) {
-			const spinner = loadingOverlay.querySelector('div');
-			const loadingText = document.getElementById('loading-text');
-			const progressText = document.getElementById('loading-progress');
-
-			if (spinner) spinner.style.display = 'none';
-			if (loadingText) loadingText.textContent = 'Error Loading Game';
-			if (progressText) progressText.textContent = message;
-
-			// Add retry button
-			const retryButton = document.createElement('button');
-			retryButton.textContent = 'Retry';
-			retryButton.style.cssText = `
-				margin-top: 20px;
-				padding: 10px 20px;
-				background: white;
-				color: #667eea;
-				border: none;
-				border-radius: 5px;
-				cursor: pointer;
-				font-size: 16px;
-				font-weight: 500;
-			`;
-			retryButton.onclick = () => {
-				location.reload();
-			};
-
-			loadingOverlay.appendChild(retryButton);
-		}
-	}
-
 
 	createBoard() {
 		const board = document.getElementById("scrabble-board");
@@ -6328,141 +5220,7 @@ formedWords.forEach((wordInfo) => {
 					cell.classList.add(premiumSquares[key]);
 				}
 
-				// Add drag and drop handlers for tile placement
-				cell.addEventListener('dragover', (e) => {
-					e.preventDefault();
-					if (this.currentTurn !== "player") return;
-
-					const tileData = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
-					if (!tileData.tileId) return;
-
-					// Check if this cell can accept the tile
-					const row = parseInt(cell.dataset.row);
-					const col = parseInt(cell.dataset.col);
-					const canPlace = this.isValidPlacement(row, col, { id: tileData.tileId });
-
-					if (canPlace) {
-						e.dataTransfer.dropEffect = 'move';
-						cell.classList.add('droppable-hover');
-					} else {
-						e.dataTransfer.dropEffect = 'none';
-					}
-				});
-
-				cell.addEventListener('dragleave', (e) => {
-					cell.classList.remove('droppable-hover');
-				});
-
-				cell.addEventListener('drop', (e) => {
-					e.preventDefault();
-					cell.classList.remove('droppable-hover');
-
-					if (this.currentTurn !== "player") return;
-
-					try {
-						const tileData = JSON.parse(e.dataTransfer.getData('text/plain'));
-						if (!tileData.tileId) return;
-
-						const row = parseInt(cell.dataset.row);
-						const col = parseInt(cell.dataset.col);
-
-						// Find the tile in player's rack
-						const rackIndex = this.playerRack.findIndex(t => t.id === tileData.tileId);
-						if (rackIndex === -1) return;
-
-						const tile = this.playerRack[rackIndex];
-
-						// Check if placement is valid
-						if (!this.isValidPlacement(row, col, tile)) return;
-
-						// Remove any existing ghost tile in this cell so placed tile is sole tile
-						const existingGhost = cell.querySelector('.ghost-tile');
-						if (existingGhost) existingGhost.remove();
-
-						// Place the tile
-						this.placeTile(tile, row, col);
-
-						// Remove from rack
-						this.playerRack.splice(rackIndex, 1);
-
-						// Update UI
-						this.renderRack();
-						this.highlightValidPlacements();
-
-					} catch (error) {
-						console.error('Drop handling error:', error);
-					}
-				});
-
-				// Touch drop support for mobile
-				let isTouchDropping = false;
-				let touchTileData = null;
-
-				cell.addEventListener('touchstart', (e) => {
-					if (this.currentTurn !== "player") return;
-
-					// Check if there's a tile being dragged
-					const touch = e.touches[0];
-					const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
-					const draggedTile = elementAtPoint?.closest('.tile.dragging');
-
-					if (draggedTile) {
-						isTouchDropping = true;
-						const tileId = draggedTile.dataset.id;
-						const rackIndex = Array.from(document.querySelectorAll('#tile-rack .tile')).indexOf(draggedTile);
-						touchTileData = { tileId, source: 'rack', rackIndex };
-					}
-				});
-
-				cell.addEventListener('touchend', (e) => {
-					if (!isTouchDropping || !touchTileData) {
-						isTouchDropping = false;
-						touchTileData = null;
-						return;
-					}
-
-					try {
-						const row = parseInt(cell.dataset.row);
-						const col = parseInt(cell.dataset.col);
-
-						// Find the tile in player's rack
-						const rackIndex = this.playerRack.findIndex(t => t.id === touchTileData.tileId);
-						if (rackIndex === -1) {
-							isTouchDropping = false;
-							touchTileData = null;
-							return;
-						}
-
-						const tile = this.playerRack[rackIndex];
-
-						// Check if placement is valid
-						if (!this.isValidPlacement(row, col, tile)) {
-							isTouchDropping = false;
-							touchTileData = null;
-							return;
-						}
-
-						// Remove any existing ghost tile in this cell so placed tile is sole tile
-						const existingGhostTouch = cell.querySelector('.ghost-tile');
-						if (existingGhostTouch) existingGhostTouch.remove();
-
-						// Place the tile
-						this.placeTile(tile, row, col);
-
-						// Remove from rack
-						this.playerRack.splice(rackIndex, 1);
-
-						// Update UI
-						this.renderRack();
-						this.highlightValidPlacements();
-
-					} catch (error) {
-						console.error('Touch drop handling error:', error);
-					}
-
-					isTouchDropping = false;
-					touchTileData = null;
-				});
+				// Only log if cell is empty (no tile)
 
 				board.appendChild(cell);
 			}
@@ -6552,409 +5310,59 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		this.updateLoadingProgress('Loading Hindi dictionary...');
 		try {
-			// Try multiple backup dictionary sources (online + local)
-			// Using Hindi word lists for Hindi language version
-			const onlineUrls = [
-				"https://raw.githubusercontent.com/dwyl/hindi-words/main/words_hi.txt",
-				"https://raw.githubusercontent.com/pradyunsr/hindi/refs/heads/master/dictionary.txt",
-				"https://raw.githubusercontent.com/BharatKalluri/hindi-words/refs/heads/master/words.txt"
-			];
-
-			let loaded = false;
-			let allTexts = [];
-
-			// Load all sources IN PARALLEL for speed, and track their source names in the same order
-			const fetchPromises = [];
-			const fetchSources = [];
-
-			// Fetch online sources
-			for (const url of onlineUrls) {
-				fetchPromises.push(
-					fetch(url, { cache: 'no-store' })
-						.then(response => {
-							if (response && response.ok) {
-								return response.text().then(t => {
-									if (this.showAIDebug) console.log(`✓ Online dict: ${url.split('/').pop()} loaded`);
-									return t;
-								});
-							}
-							return null;
-						})
-						.catch(e => {
-							if (this.showAIDebug) console.warn(`✗ Failed to load ${url}:`, e.message);
-							return null;
-						})
-				);
-				fetchSources.push(url.split('/').pop());
-			}
-
-
-			// Wait for ALL sources to load in parallel
-			const results = await Promise.all(fetchPromises);
-			allTexts = results.filter(t => t && t.length > 0);
-
-			if (allTexts.length === 0) {
-				throw new Error("All dictionary sources failed to load");
-			}
-
-			this.updateLoadingProgress(`Processing ${allTexts.length} dictionary sources...`);
-
-			// Process the concatenated dictionary texts - aggregate unique words from all sources
-			// Also track which source each word comes from
-			let rawWords = [];
-			const seenWords = new Set();
-			const allWordSources = {}; // { word: [source filenames] }
+			// Load Hindi dictionary - try multiple reliable sources
+			let response = null;
+			let text = "";
 			
-			for (let sourceIdx = 0; sourceIdx < allTexts.length; sourceIdx++) {
-				const t = allTexts[sourceIdx];
-				const file = fetchSources[sourceIdx] || 'unknown_source';
-				if (!t) continue;
-				for (const line of t.split('\n')) {
-					const w = (line || '').trim().toLowerCase();
-					if (w) {
-						// Initialize array if not exists
-						if (typeof allWordSources[w] === 'undefined' || !Array.isArray(allWordSources[w])) {
-							allWordSources[w] = [];
-						}
-						// Track source (as array)
-						if (allWordSources[w].indexOf(file) === -1) {
-							allWordSources[w].push(file);
-						}
-						
-						// Add to raw words only if not seen
-						if (!seenWords.has(w)) {
-							seenWords.add(w);
-							rawWords.push(w);
-						}
+			// Try primary source: Hindi word frequency list (comprehensive, well-maintained)
+			response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hi/hi_50k.txt");
+			if (response.ok) {
+				// Format: word frequency (tab or space separated), extract just words
+				const lines = (await response.text()).split("\n");
+				text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
+			} else {
+				// Try alternative: Hindi Scrabble dictionary (if exists)
+				response = await fetch("https://raw.githubusercontent.com/rahulsivalenka/hindi-scrabble/master/dictionary.txt");
+				if (response.ok) {
+					text = await response.text();
+				} else {
+					// Try another: Hindi words repository
+					response = await fetch("https://raw.githubusercontent.com/Shreeshrii/hindiwords/master/hindiwords.txt");
+					if (response.ok) {
+						text = await response.text();
 					}
 				}
 			}
-
-			// Validate words: Support Hindi Devanagari script for Hindi language
-			// Devanagari range: U+0900 to U+097F
-			let validWords = rawWords.filter(word => {
-				// For Hindi: allow Devanagari characters (U+0900-U+097F) and reasonable length
-				// Devanagari script validation
-				return /^[\u0900-\u097F]+$/.test(word) &&
-					   word.length >= 2 &&
-					   word.length <= 15;
-			});
-
-			console.log(`Filtered dictionary: ${rawWords.length} raw words -> ${validWords.length} valid words`);
-			this.dictionary = new Set(validWords);
-			// Keep a backupDictionary set containing all source words (unfiltered raw union)
-			this.backupDictionary = new Set(Array.from(seenWords || []));
-			// Store word sources for Tier 1 confidence scoring
-			this.wordSources = allWordSources;
 			
-			// BUILD TIER 1: Extract high-confidence words from actual loaded dictionary
-			// Prioritizes words from SOWPODS (most authoritative) and cross-validated words
-			this.coreValidDictionary = this.buildTier1Dictionary(validWords, allWordSources);
-			console.log(`Tier 1 Fast-Path built: ${this.coreValidDictionary.size} high-confidence words from actual dictionary (instant validation)`);
+			if (!text) {
+				throw new Error("All Hindi dictionary sources failed");
+			}
 			
-			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size, "(combined sources:", this.backupDictionary.size, ")");
-		} catch (error) {
-			console.error("Error loading dictionary:", error);
-			// If primary sources fail, use empty set - better than hardcoded list
-			this.dictionary = new Set();
-			this.backupDictionary = new Set();
-			this.coreValidDictionary = new Set();
-			console.warn("Using empty fallback dictionary - primary sources unavailable");
-		}
-
-		// Spanish dictionary will be loaded only when Spanish language is selected
-	}
-
-	buildTier1Dictionary(validWords, wordSources = {}) {
-		// Build Tier 1 with confidence scoring
-		// Only include HIGH-CONFIDENCE words (real, legitimate, Google-able)
-		// Prioritizes SOWPODS (authoritative Scrabble dict) and cross-validated words
-		
-		const tier1 = new Set();
-		
-		// Priority 1: Words from SOWPODS (most authoritative source)
-		for (const word of validWords) {
-			const sources = wordSources[word];
-			if (sources && Array.isArray(sources) && sources.includes('/SOWPODS.txt')) {
-				tier1.add(word.toLowerCase());
-			}
-		}
-		
-		// Priority 2: Words that appear in MULTIPLE sources (cross-validated = high confidence)
-		for (const word of validWords) {
-			const sources = wordSources[word] || [];
-			// For two-letter words we must be stricter to avoid abbreviations slipping in.
-			// Require either SOWPODS (authoritative) or presence in at least 3 independent sources.
-			if (word.length === 2) {
-				if (Array.isArray(sources) && (sources.includes('/SOWPODS.txt') || sources.length >= 3)) {
-					tier1.add(word.toLowerCase());
-				}
-				continue;
-			}
-			// For longer words, two sources is sufficient for cross-validation
-			if (Array.isArray(sources) && sources.length >= 2) {
-				tier1.add(word.toLowerCase());
-			}
-		}
-		
-		return tier1;
-	}
-
-	async expandDictionaryWithTranslations(existingWords) {
-		// Use Google Translate API to translate common English Scrabble words to Spanish
-		const translatedWords = [];
-
-		try {
-			// Get common words from the actual English dictionary instead of hardcoded list
-			const englishWords = Array.from(this.dictionary || []).filter(word =>
-				word.length >= 3 && word.length <= 8 && // Focus on common word lengths
-				/^[a-z]+$/i.test(word) // Only basic English letters
+			// Dictionary is one word per line, filter valid Hindi words (Devanagari script, 2+ chars)
+			this.dictionary = new Set(
+				text.split("\n")
+					.map(w => w.trim())
+					.filter(w => w.length >= 2 && /^[\u0900-\u097F]+$/.test(w)) // At least 2 chars, only Devanagari characters
 			);
 
-			// Filter out words we already have in Spanish
-			const existingSet = new Set(existingWords.map(w => w.toLowerCase()));
-			const wordsToTranslate = englishWords.slice(0, 100).filter(word => // Limit to first 100 for API efficiency
-				!existingSet.has(word.toLowerCase())
-			);
-
-			// Translate in batches to avoid API limits
-			const batchSize = 10;
-			for (let i = 0; i < wordsToTranslate.length; i += batchSize) {
-				const batch = wordsToTranslate.slice(i, i + batchSize);
-				try {
-					const translations = await this.translateBatchToSpanish(batch);
-					for (const translated of translations) {
-						if (translated &&
-							translated.length >= 2 &&
-							translated.length <= 15 &&
-							/^[a-zñáéíóúü]+$/i.test(translated) && // Only Spanish letters
-							!existingSet.has(translated.toLowerCase())) {
-							translatedWords.push(translated);
-							existingSet.add(translated.toLowerCase());
-						}
-					}
-				} catch (e) {
-					console.warn('Batch translation failed:', e);
-					// Continue with next batch
-				}
-
-				// Small delay to respect API limits
-				if (i + batchSize < wordsToTranslate.length) {
-					await new Promise(resolve => setTimeout(resolve, 100));
-				}
-			}
-
-		} catch (error) {
-			console.warn('Translation expansion failed:', error);
-		}
-
-		return translatedWords;
-	}
-
-	async translateBatchToSpanish(englishWords) {
-		// Use Google Translate API through Netlify function
-		try {
-			const response = await fetch('/.netlify/functions/translate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					text: englishWords.join('\n'),
-					source: 'en',
-					target: 'es'
-				})
+			console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
+			
+			// Test if some common Hindi words are in the dictionary
+			const testWords = ["नमस्ते", "दुनिया", "भारत", "दिल्ली", "मुंबई", "दोस्त", "पढ़ाई", "काम"];
+			testWords.forEach(word => {
+				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
 			});
-
-			if (!response.ok) {
-				throw new Error(`Translation API returned ${response.status}`);
-			}
-
-			const data = await response.json();
-			const translatedText = data.translatedText || data.translation || '';
-
-			// Split by newlines and clean up
-			return translatedText.split('\n')
-				.map(word => word.trim().toLowerCase())
-				.filter(word => word.length > 0);
-
 		} catch (error) {
-			console.warn('Google Translate API call failed:', error);
-			// Fallback: return empty array
-			return [];
+			console.error("Error loading Hindi dictionary:", error);
+			// Hindi fallback dictionary with common Hindi words
+			this.dictionary = new Set([
+				"नमस्ते", "दुनिया", "भारत", "दिल्ली", "मुंबई", "दोस्त", "पढ़ाई", "काम", "स्कूल", "शिक्षक", "छात्र", "परिवार",
+				"माता", "पिता", "बच्चा", "समय", "आज", "कल", "सुबह", "शाम", "दोपहर", "खाना", "सोना", "पढ़ना",
+				"कार", "घर", "शहर", "देश", "लोग", "जीवन", "खुशी", "सुख", "सुंदर", "अच्छा", "बड़ा", "छोटा"
+			]);
+			console.warn("Using Hindi fallback dictionary with limited words");
 		}
-	}
-
-	async loadLanguageDictionary(lang) {
-		const langNames = {
-			'en': 'English',
-			'es': 'Spanish',
-			'zh': 'Mandarin',
-			'fr': 'French',
-			'hi': 'Hindi'
-		};
-		this.updateLoadingProgress(`Setting up ${langNames[lang] || 'English'} language...`);
-
-		// Load Spanish dictionary only when Spanish is selected
-		if (lang === 'es' && (!this.spanishDictionaryNormalized || this.spanishDictionaryNormalized.size === 0)) {
-			this.updateLoadingProgress('Loading Spanish dictionary...');
-			await this.loadSpanishDictionary();
-		}
-
-		// Set activeDictionary to the appropriate language dictionary
-		if (lang === 'es') {
-			// For Spanish, use ONLY Spanish dictionary
-			// Use normalized Spanish dictionary for matching (tiles are ASCII letters)
-			this.activeDictionary = new Set(this.spanishDictionaryNormalized);
-		} else {
-			// For other languages, use English dictionary (can be extended later)
-			this.activeDictionary = new Set(this.dictionary);
-		}
-
-		// Rebuild the Trie with the active dictionary
-		this.trie = new Trie();
-		for (const word of this.activeDictionary) {
-			this.trie.insert(word.toUpperCase());
-		}
-
-		console.log(`Language set to ${lang}. Dictionary size: ${this.activeDictionary.size}`);
-		this.updateLoadingProgress(`Language set to ${langNames[lang] || 'English'}. Dictionary ready.`);
-
-		// Regenerate tile bag with correct letter distribution for the language
-		this.generateTileBag();
-
-		// Return existing rack tiles to bag and redraw new ones
-		const existingPlayerTiles = [...this.playerRack];
-		const existingAITiles = [...this.aiRack];
-
-		// Return tiles to bag
-		this.tiles.push(...existingPlayerTiles);
-		this.tiles.push(...existingAITiles);
-
-		// Clear racks
-		this.playerRack = [];
-		this.aiRack = [];
-
-		// Redraw racks with new language tiles
-		this.fillRacks();
-		this.renderRack();
-		this.renderAIRack();
-
-		// Update UI language
-		this.updateUILanguage(lang);
-
-		// Restart hints in new language
-		if (this.hintInterval) {
-			clearInterval(this.hintInterval);
-		}
-		this.initializeHints();
-	}
-
-	updateUILanguage(lang) {
-		const t = (key) => getTranslation(key, lang);
-		
-		// Update button text
-		const buttons = {
-			'play-word': t('submit'),
-			'play-word-desktop': t('submit'),
-			'play-word-desktop-drawer': t('submit'),
-			'play-word-mobile': t('submit'),
-			'play-word-desktop-bottom': t('submit'),
-			'shuffle-rack': t('shuffleRack'),
-			'shuffle-rack-desktop': t('shuffleRack'),
-			'shuffle-rack-desktop-drawer': t('shuffleRack'),
-			'skip-turn': t('skipTurn'),
-			'skip-turn-desktop': t('skipTurn'),
-			'skip-turn-desktop-drawer': t('skipTurn'),
-			'show-instructions': t('howToPlay'),
-			'show-instructions-desktop': t('howToPlay'),
-			'show-instructions-desktop-drawer': t('howToPlay'),
-			'quit-game': t('quitGame'),
-			'quit-game-desktop': t('quitGame'),
-			'quit-game-desktop-drawer': t('quitGame')
-		};
-		
-		for (const [id, text] of Object.entries(buttons)) {
-			const btn = document.getElementById(id);
-			if (btn) btn.textContent = text;
-		}
-		
-		// Update all elements with data-translate attribute
-		document.querySelectorAll('[data-translate]').forEach(el => {
-			const key = el.getAttribute('data-translate');
-			el.textContent = t(key);
-		});
-		
-		// Update fixed text headers
-		const gameInfoHeaders = document.querySelectorAll('[id*="info-panel"] h2');
-		gameInfoHeaders.forEach(h => h.textContent = t('gameInfo'));
-		
-		// Update notification text
-		const notices = {
-			'landscape-notice': t('landscape'),
-			'scroll-notice': t('scroll'),
-			'instruction-notice': t('instructions')
-		};
-		
-		for (const [className, text] of Object.entries(notices)) {
-			const notice = document.querySelector(`.${className}`);
-			if (notice) {
-				// Find the text node and update it, preserving the emoji and close button
-				const parts = notice.innerHTML.split('<button');
-				const emoji = parts[0].match(/<span class="notice-icon">.*?<\/span>/)?.[0] || '';
-				const button = parts[1] ? '<button' + parts[1] : '';
-				notice.innerHTML = `${emoji} ${text} ${button}`;
-			}
-		}
-		
-		// Update instruction content paragraphs
-		this.updateInstructionContent(lang);
-	}
-
-	updateInstructionContent(lang) {
-		const t = (key) => getTranslation(key, lang);
-		
-		// Update all drawer instruction sections
-		document.querySelectorAll('[id*="drawer-instructions"]').forEach(section => {
-			const html = `
-				<h3>${t('howToPlayTitle')}</h3>
-				<p>1. ${t('playingTiles')}</p>
-				<ul>
-					<li>${t('desktopTiles')}</li>
-					<li>${t('mobileTiles')}</li>
-					<li>${t('removeTiles')}</li>
-				</ul>
-				<p>2. ${t('creatingWords')}</p>
-				<ul>
-					<li>${t('horizontalVertical')}</li>
-					<li>${t('centerStar')}</li>
-					<li>${t('connectExisting')}</li>
-					<li>${t('validWords')}</li>
-				</ul>
-				<p>3. ${t('submittingMove')}</p>
-				<ul>
-					<li>${t('afterPlacing')}</li>
-					<li>${t('invalidWords')}</li>
-					<li>${t('pointsCalculated')}</li>
-				</ul>
-				<p>4. ${t('exchangingTiles')}</p>
-				<ul>
-					<li>${t('activateExchange')}</li>
-					<li>${t('dragUnwanted')}</li>
-					<li>${t('receiveNewTiles')}</li>
-					<li>${t('countsAsTurn')}</li>
-				</ul>
-				<p>5. ${t('skippingGameEnd')}</p>
-				<ul>
-					<li>${t('useSkipTurn')}</li>
-					<li>${t('gameEnds')}</li>
-					<li>${t('scoreBased')}</li>
-				</ul>
-			`;
-			section.innerHTML = html;
-		});
 	}
 
 	balanceAIRack() {
@@ -6994,9 +5402,16 @@ formedWords.forEach((wordInfo) => {
 		rack.innerHTML = "";
 
 		this.playerRack.forEach((tile, index) => {
-			const tileElement = this.createTileElement(tile, index);
-			// Make tiles draggable only during player's turn
-			tileElement.draggable = (this.currentTurn === "player");
+			const tileElement = document.createElement("div");
+			tileElement.className = "tile";
+			tileElement.dataset.index = index;
+			tileElement.dataset.id = tile.id;
+			tileElement.innerHTML = `
+                ${tile.letter}
+                <span class="points">${tile.value}</span>
+                ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+            `;
+			// DO NOT set draggable or add any drag/touch logic
 			rack.appendChild(tileElement);
 		});
 	}
@@ -7007,85 +5422,13 @@ formedWords.forEach((wordInfo) => {
 		tileElement.draggable = true;
 		tileElement.dataset.index = index;
 		tileElement.dataset.id = tile.id;
-
 		tileElement.innerHTML = `
                     ${tile.letter}
                     <span class="points">${tile.value}</span>
-                    ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
+                    ${tile.letter === "*" ? '<span class="blank-indicator">★</span>' : ""}
                 `;
-
-		// Add drag functionality
-		tileElement.addEventListener('dragstart', (e) => {
-			// Only allow dragging during player's turn
-			if (this.currentTurn !== "player") {
-				e.preventDefault();
-				return;
-			}
-
-			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData('text/plain', JSON.stringify({
-				tileId: tile.id,
-				source: 'rack',
-				rackIndex: index
-			}));
-
-			tileElement.classList.add('dragging');
-			this.highlightValidPlacements();
-		});
-
-		tileElement.addEventListener('dragend', (e) => {
-			tileElement.classList.remove('dragging');
-			this.highlightValidPlacements();
-		});
-
-		// Touch events for mobile drag support
-		let touchStartX = 0;
-		let touchStartY = 0;
-		let isDragging = false;
-
-		tileElement.addEventListener('touchstart', (e) => {
-			if (this.currentTurn !== "player") return;
-
-			const touch = e.touches[0];
-			touchStartX = touch.clientX;
-			touchStartY = touch.clientY;
-
-			// Add visual feedback for touch
-			tileElement.classList.add('touch-active');
-		});
-
-		tileElement.addEventListener('touchmove', (e) => {
-			if (this.currentTurn !== "player") return;
-
-			const touch = e.touches[0];
-			const deltaX = Math.abs(touch.clientX - touchStartX);
-			const deltaY = Math.abs(touch.clientY - touchStartY);
-
-			// Start dragging if moved enough
-			if (!isDragging && (deltaX > 10 || deltaY > 10)) {
-				isDragging = true;
-				tileElement.classList.add('dragging');
-				this.highlightValidPlacements();
-			}
-
-			if (isDragging) {
-				e.preventDefault(); // Prevent scrolling
-			}
-		});
-
-		tileElement.addEventListener('touchend', (e) => {
-			tileElement.classList.remove('touch-active');
-			if (isDragging) {
-				tileElement.classList.remove('dragging');
-				this.highlightValidPlacements();
-			}
-			isDragging = false;
-		});
-
 		return tileElement;
 	}
-
-
 
 	isValidPlacement(row, col, tile) {
 		console.log("Checking placement validity:", {
@@ -7235,7 +5578,7 @@ formedWords.forEach((wordInfo) => {
 		});
 	}
 
-	async placeTile(tile, row, col) {
+	placeTile(tile, row, col) {
 		if (this.board[row][col]) {
 			alert("This cell is already occupied!");
 			return;
@@ -7380,7 +5723,7 @@ formedWords.forEach((wordInfo) => {
 					this.highlightValidPlacements();
 
 					// --- Show live AI ghost move if valid ---
-					await this.updateGhostPreview();
+					await this.showAIGhostIfPlayerMoveValid();
 				});
 			});
 		} else {
@@ -7425,7 +5768,7 @@ formedWords.forEach((wordInfo) => {
 
 			// --- Show AI ghost move if player's move is valid (should remove ghost if nothing is valid) ---
 		}
-		await this.updateGhostPreview();
+		this.showAIGhostIfPlayerMoveValid(); 
 	}
 
 	areTilesConnected() {
@@ -7471,7 +5814,7 @@ formedWords.forEach((wordInfo) => {
 		return true;
 	}
 
-	async resetPlacedTiles() {
+	resetPlacedTiles() {
         this.placedTiles.forEach(({ tile, row, col }) => {
             this.board[row][col] = null;
             const cell = document.querySelector(
@@ -7512,141 +5855,10 @@ formedWords.forEach((wordInfo) => {
         this.renderRack();
 
         // Remove ghost tiles when resetting
-        await this.updateGhostPreview();
+        this.showAIGhostIfPlayerMoveValid();
     }
 
-    // Context-aware word validation with detailed results
-    async validateWordInContext(word, wordInfo, isMainWord) {
-        const upperWord = word.toUpperCase();
-        const cacheKey = `validation_${this.preferredLang || 'en'}_${word.toLowerCase()}`;
-
-        // Check cache first (fastest)
-        if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
-            const cached = this.validationCache[cacheKey];
-            return {
-                isValid: cached,
-                confidence: cached ? 90 : 0,
-                reason: cached ? 'Cached: valid' : 'Cached: invalid',
-                layer: 'cache'
-            };
-        }
-
-        // Layer 1: Basic validation (fastest)
-        if (!this.isBasicValidForLanguage(upperWord, this.preferredLang || 'en')) {
-            const result = { isValid: false, confidence: 0, reason: 'Invalid characters or pattern', layer: 'basic' };
-            // Cache negative results too
-            if (!this.validationCache) this.validationCache = {};
-            this.validationCache[cacheKey] = false;
-            return result;
-        }
-
-        // Layer 2: Local dictionary check
-        let foundInDictionary = false;
-        if (this.preferredLang === 'es') {
-            // For Spanish, normalize accented characters to match normalized dictionary
-            const normalized = normalizeWordForDict(word).toLowerCase();
-            foundInDictionary = this.activeDictionary.has(normalized);
-        } else {
-            foundInDictionary = this.activeDictionary.has(word);
-        }
-
-        if (foundInDictionary) {
-            const result = { isValid: true, confidence: 95, reason: 'Found in local dictionary', layer: 'local' };
-            // Cache positive results
-            if (!this.validationCache) this.validationCache = {};
-            this.validationCache[cacheKey] = true;
-            return result;
-        }
-
-        // Layer 3: API validation (slowest, most accurate) - with timeout
-        try {
-            const lang = this.preferredLang || 'en';
-            let apiValid = false;
-            let apiConfidence = 0;
-
-            if (lang === 'es') {
-                // Add timeout to prevent hanging
-                const validationPromise = this.validateSpanishWordWithGoogle(upperWord);
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Validation timeout')), 5000)
-                );
-                
-                try {
-                    const result = await Promise.race([validationPromise, timeoutPromise]);
-                    apiValid = result;
-                    apiConfidence = result ? 90 : 0;
-                } catch (timeoutError) {
-                    // Timeout - fallback to basic validation
-                    if (this.showAIDebug) console.warn(`Validation timeout for ${word}, using fallback`);
-                    const basicValid = this.couldBeValidSpanishWord(upperWord);
-                    apiValid = basicValid;
-                    apiConfidence = basicValid ? 60 : 0;
-                }
-            } else if (lang === 'en') {
-                // For English, prioritize speed - check dictionary first, then API
-                if (this.activeDictionary.has(word)) {
-                    // Word is in dictionary - high confidence, skip slow API validation
-                    apiValid = true;
-                    apiConfidence = 95; // Very high confidence for dictionary match
-                } else {
-                    // Word not in dictionary - use API validation with shorter timeout
-                    const validationPromise = this.validateEnglishWordWithGoogle(upperWord);
-                    const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Validation timeout')), 2000) // Reduced timeout
-                    );
-
-                    try {
-                        const result = await Promise.race([validationPromise, timeoutPromise]);
-                        apiValid = result.isValid;
-                        apiConfidence = result.confidence;
-                    } catch (timeoutError) {
-                        // Timeout - fallback to basic validation only
-                        if (this.showAIDebug) console.warn(`English validation timeout for ${word}, using basic fallback`);
-                        const basicValid = this.isBasicValidForLanguage(upperWord, lang);
-                        apiValid = basicValid;
-                        apiConfidence = basicValid ? 40 : 0; // Lower confidence for fallback
-                    }
-                }
-            } else {
-                // For other languages, use basic validation
-                apiValid = this.isBasicValidForLanguage(upperWord, lang);
-                apiConfidence = apiValid ? 70 : 0;
-            }
-
-            // Context bonus: Main words get higher confidence
-            if (apiValid && isMainWord) {
-                apiConfidence += 5;
-            }
-
-            // Cache API results
-            if (!this.validationCache) this.validationCache = {};
-            this.validationCache[cacheKey] = apiValid;
-
-            return {
-                isValid: apiValid,
-                confidence: Math.min(100, apiConfidence),
-                reason: apiValid ? 'API validated' : 'API rejected',
-                layer: 'api'
-            };
-
-        } catch (error) {
-            if (this.showAIDebug) console.warn(`API validation failed for ${word}:`, error);
-            // Fallback to basic validation
-            const basicValid = this.couldBeValidSpanishWord(upperWord);
-            const result = {
-                isValid: basicValid,
-                confidence: basicValid ? 60 : 0,
-                reason: 'API failed, using basic validation',
-                layer: 'fallback'
-            };
-            // Cache fallback results
-            if (!this.validationCache) this.validationCache = {};
-            this.validationCache[cacheKey] = basicValid;
-            return result;
-        }
-    }
-
-    async validateWord() {
+    validateWord() {
         if (this.placedTiles.length === 0) return false;
 
         // Check if tiles are properly connected (same row/col, no gaps)
@@ -7692,64 +5904,17 @@ formedWords.forEach((wordInfo) => {
             return false;
         }
 
-        // Enhanced context-aware validation for each word
+        // Validate each word
         let allWordsValid = true;
-        let validationResults = [];
-
-        for (const wordInfo of formedWords) {
+        formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
-            const isMainWord = wordInfo.direction !== undefined; // Main words have direction
-
-            // Multi-layer validation pipeline
-            const validationResult = await this.validateWordInContext(word, wordInfo, isMainWord);
-
-				// Enforce rule for PLAYER moves: if the validationResult came from the
-				// remote API (layer === 'api'), only accept it for player submissions
-				// when the word also appears in a local source (one of the loaded
-				// dictionaries or tracked `wordSources`). This avoids API-only
-				// false-positives while still allowing API+local corroboration.
-				if (validationResult.layer === 'api') {
-					const wordLower = word.toLowerCase();
-					const inAnyLocal = (this.activeDictionary && this.activeDictionary.has(wordLower)) ||
-									   (this.dictionary && this.dictionary.has(wordLower)) ||
-									   (this.backupDictionary && this.backupDictionary.has(wordLower)) ||
-									   (this.coreValidDictionary && this.coreValidDictionary.has(wordLower));
-					const inWordSources = this.wordSources && this.wordSources[wordLower] && this.wordSources[wordLower].length > 0;
-
-					if (!(inAnyLocal || inWordSources)) {
-						// Downgrade API-only acceptance for player moves
-						validationResult.isValid = false;
-						validationResult.reason = 'Rejected: API-only result not corroborated by local sources';
-					} else {
-						// API validated and at least one local source references the word
-						validationResult.reason = (validationResult.reason || '') + ' (API + local source)';
-						validationResult.isValid = true;
-					}
-				}
-
-            validationResults.push({
-                word: wordInfo.word,
-                ...validationResult
-            });
-
-            if (!validationResult.isValid) {
-                console.log(`❌ Invalid word: ${wordInfo.word} (${validationResult.reason})`);
-
-                // Generate suggestions for invalid words
-                const suggestions = await this.getWordSuggestions(wordInfo.word, this.preferredLang || 'en');
-                if (suggestions.length > 0) {
-                    console.log(`💡 Suggestions for "${wordInfo.word}": ${suggestions.map(s => `${s.word}(${s.confidence}%)`).join(', ')}`);
-                    validationResult.suggestions = suggestions;
-                }
-
+            if (!this.dictionary.has(word)) {
+                console.log(`Invalid word: ${word}`);
                 allWordsValid = false;
             } else {
-                console.log(`✅ Valid word: ${wordInfo.word} (confidence: ${validationResult.confidence}%)`);
+                console.log(`Valid word found: ${word}`);
             }
-        }
-
-        // Log validation summary
-        console.log(`Validation summary: ${validationResults.filter(r => r.isValid).length}/${formedWords.length} words valid`);
+        });
 
         // First move must use center square
         if (this.isFirstMove) {
@@ -8451,56 +6616,27 @@ calculateScore() {
 	evaluateWordQuality(word, row, col, horizontal) {
 		let quality = 0;
 
-		// Base points for word length (with diminishing returns for very long words)
-		const lengthBonus = word.length <= 7 ? word.length * 12 : 7 * 12 + (word.length - 7) * 6;
-		quality += lengthBonus;
+		// Base points for word length
+		quality += word.length * 10;
 
-		// Enhanced premium square utilization with multipliers
-		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
-		let premiumBonus = 0;
-		if (premiumSquares >= 3) {
-			premiumBonus = premiumSquares * 25; // Triple word score opportunity
-		} else if (premiumSquares >= 2) {
-			premiumBonus = premiumSquares * 20; // Double word score opportunity
-		} else if (premiumSquares >= 1) {
-			premiumBonus = premiumSquares * 15; // Single premium square
-		}
-		quality += premiumBonus;
+		// Check premium square utilization
+		const premiumSquares = this.countPremiumSquaresUsed(
+			row,
+			col,
+			horizontal,
+			word,
+		);
+		quality += premiumSquares * 15;
 
-		// Enhanced cross-word evaluation (more intersections = more strategic)
+		// Check for cross-words
 		const crossWords = this.countIntersections(row, col, horizontal, word);
-		let crossBonus = 0;
-		if (crossWords >= 4) {
-			crossBonus = crossWords * 30; // Excellent cross-word potential
-		} else if (crossWords >= 2) {
-			crossBonus = crossWords * 25; // Good cross-word potential
-		} else if (crossWords >= 1) {
-			crossBonus = crossWords * 20; // Basic cross-word
-		}
-		quality += crossBonus;
+		quality += crossWords * 20;
 
-		// Strategic position evaluation (center control, board balance)
-		const positionBonus = this.evaluateBoardPosition(row, col, horizontal, word);
-		quality += positionBonus;
-
-		// Future opportunity evaluation (opens up good spots for next moves)
-		const futureBonus = this.evaluateFutureOpportunities(row, col, horizontal, word);
-		quality += futureBonus * 8;
-
-		// Tile efficiency (using high-value letters effectively)
-		const tileEfficiency = this.evaluateTileEfficiency(word);
-		quality += tileEfficiency * 5;
-
-		// Balanced letter usage bonus
+		// Check for balanced letter usage
 		const letterBalance = this.evaluateLetterBalance(word);
-		quality += letterBalance * 12;
+		quality += letterBalance * 10;
 
-		// Bingo potential (using all 7 tiles)
-		if (this.aiRack && this.aiRack.length >= 7 && word.length >= 7) {
-			quality += 40; // Significant bonus for bingo
-		}
-
-		return Math.max(0, quality); // Ensure non-negative quality
+		return quality;
 	}
 
 	evaluateLetterBalance(word) {
@@ -8510,931 +6646,33 @@ calculateScore() {
 
 		// Ideal ratio is around 40% vowels
 		const vowelRatio = vowelCount / word.length;
-		return vowelRatio >= 0.3 && vowelRatio <= 0.5 ? 3 : vowelRatio >= 0.2 && vowelRatio <= 0.6 ? 1 : 0;
-	}
-
-	evaluateBoardPosition(row, col, horizontal, word) {
-		let positionBonus = 0;
-
-		// Center control bonus
-		const centerRow = 7, centerCol = 7;
-		const startDistance = Math.abs(row - centerRow) + Math.abs(col - centerCol);
-		const endDistance = horizontal ?
-			Math.abs(row - centerRow) + Math.abs(col + word.length - 1 - centerCol) :
-			Math.abs(row + word.length - 1 - centerRow) + Math.abs(col - centerCol);
-
-		const minDistance = Math.min(startDistance, endDistance);
-		if (minDistance <= 2) positionBonus += 15; // Near center
-		else if (minDistance <= 4) positionBonus += 8; // Moderately central
-
-		// Board balance - avoid clustering in corners
-		const quadrant = (row < 7 ? 0 : 1) + (col < 7 ? 0 : 2);
-		// Prefer moves that balance board coverage (implementation would need board state analysis)
-
-		return positionBonus;
-	}
-
-	evaluateFutureOpportunities(row, col, horizontal, word) {
-		let opportunities = 0;
-
-		// Check if this move opens up premium squares for future moves
-		for (let i = 0; i < word.length; i++) {
-			const currentRow = horizontal ? row : row + i;
-			const currentCol = horizontal ? col + i : col;
-
-			// Check adjacent squares for premium opportunities
-			const adjacentSquares = [
-				[currentRow - 1, currentCol],
-				[currentRow + 1, currentCol],
-				[currentRow, currentCol - 1],
-				[currentRow, currentCol + 1]
-			];
-
-			for (const [adjRow, adjCol] of adjacentSquares) {
-				if (this.isValidPosition(adjRow, adjCol) && !this.board[adjRow][adjCol]) {
-					const premium = this.getPremiumSquareType(adjRow, adjCol);
-					if (['tw', 'dw', 'tl'].includes(premium)) {
-						opportunities += premium === 'tw' ? 3 : premium === 'dw' ? 2 : 1;
-					}
-				}
-			}
-		}
-
-		// Bonus for moves that create multiple parallel opportunities
-		if (opportunities >= 5) return 8;
-		else if (opportunities >= 3) return 5;
-		else if (opportunities >= 1) return 2;
-		return 0;
-	}
-
-	evaluateTileEfficiency(word) {
-		let efficiency = 0;
-
-		// Bonus for using high-value letters (Q, Z, J, X) effectively
-		const highValueLetters = ['Q', 'Z', 'J', 'X'];
-		const usedHighValue = word.split('').filter(c => highValueLetters.includes(c)).length;
-		efficiency += usedHighValue * 2;
-
-		// Penalty for wasting blanks on common letters
-		const commonLetters = ['E', 'A', 'I', 'O', 'N', 'R', 'T', 'L', 'S', 'U'];
-		const wastedBlanks = word.split('').filter(c => commonLetters.includes(c) && this.tileValues[c] <= 1).length;
-		efficiency -= wastedBlanks;
-
-		// Bonus for efficient use of all rack tiles
-		if (this.aiRack && word.length >= 6) {
-			efficiency += Math.min(word.length, 3); // Up to 3 bonus points for using many tiles
-		}
-
-		return Math.max(0, efficiency);
+		return vowelRatio >= 0.3 && vowelRatio <= 0.5 ? 2 : 0;
 	}
 
 	speakWord(word) {
-		if (!word) return;
-		try {
-			if (typeof this._speakWithRetry === 'function') {
-				this._speakWithRetry(word, { lang: this._getPreferredLangCode() }).catch(() => {});
-			} else if (typeof speechSynthesis !== 'undefined') {
-				const utter = new SpeechSynthesisUtterance(word);
-				utter.lang = this._getPreferredLangCode();
-				speechSynthesis.speak(utter);
-			}
-		} catch (e) {
-			console.warn('speakWord failed', e);
+		if ('speechSynthesis' in window && word) {
+			const utter = new SpeechSynthesisUtterance(word);
+			utter.lang = 'hi-IN';
+			utter.rate = 0.9;
+			window.speechSynthesis.speak(utter);
 		}
 	}
 
-	_handleSpeechClick(word) {
-		// Handle async speech for onclick
-		this.speakWordInEnglish(word).catch(e => console.warn('Speech failed:', e));
-	}
-
-	async speakWordInEnglish(word) {
-		if (!word) return;
-
-		try {
-			// Try to translate Spanish word to English using Google Translate API
-			let englishWord = word;
-			try {
-				const translation = await this._translateViaAPI(word, 'es', 'en');
-				if (translation && translation !== word) {
-					englishWord = translation;
-				}
-			} catch (apiError) {
-				// Fallback to dictionary if API fails
-				const dictTranslation = this._translateWordToEnglish(word.toUpperCase());
-				if (dictTranslation) {
-					englishWord = dictTranslation;
-				}
-			}
-
-			if (typeof this._speakWithRetry === 'function') {
-				this._speakWithRetry(englishWord, { lang: 'en-US', forceEnglishVoice: true }).catch(() => {});
-			} else if (typeof speechSynthesis !== 'undefined') {
-				const utter = new SpeechSynthesisUtterance(englishWord);
-				utter.lang = 'en-US'; // Force English
-
-				// Force English voice selection
-				try {
-					const englishVoice = this._getEnglishVoice();
-					if (englishVoice) {
-						utter.voice = englishVoice;
-					}
-				} catch (e) {
-					console.debug('Voice selection failed, using default');
-				}
-
-				speechSynthesis.speak(utter);
-			}
-		} catch (e) {
-			console.warn('speakWordInEnglish failed', e);
-		}
-	}
-
-	isScrabbleAppropriate(word) {
-		if (!word) return false;
-
-		const upperWord = word.toUpperCase();
-		const lang = this.preferredLang || 'en';
-
-		// Debug: log words being checked (only in debug mode)
-		if (this.showAIDebug && (upperWord.includes('SOSEDAD') || Math.random() < 0.01)) {
-			console.log(`[AI Word Check] Evaluating: ${upperWord} in ${lang}`);
-		}
-
-		// Language-specific validation
-		if (lang === 'en') {
-			// English Scrabble validation - more permissive
-			// 1. Basic checks
-			if (upperWord.length < 2 || upperWord.length > 15) {
-				return false;
-			}
-
-			// 2. Must contain at least one vowel (English words requirement)
-			if (!/[AEIOU]/.test(upperWord)) {
-				return false;
-			}
-
-			// 3. Q must be followed by U (with rare exceptions)
-			if (/Q[^U]/.test(upperWord)) {
-				// Allow some exceptions like QI, but reject most
-				if (!/^QI/.test(upperWord)) {
-					return false;
-				}
-			}
-
-			// 4. Dictionary check - primary validation for English
-			const inDict = this.dictionaryHas(word);
-			if (!inDict) {
-				if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in English dictionary`);
-				return false;
-			}
-
-			return true;
-		} else {
-			// Spanish validation (existing logic)
-			// 1. Letter repetition patterns (too many of the same letter)
-			const letterCounts = {};
-			for (const letter of upperWord) {
-				letterCounts[letter] = (letterCounts[letter] || 0) + 1;
-			}
-			const maxSameLetter = Math.max(...Object.values(letterCounts));
-			if (maxSameLetter > 4 && upperWord.length > 6) {
-				return false; // Too many repeated letters for reasonable words
-			}
-
-			// 2. Check for words that are too obscure or unlikely to be real
-			const suspiciousPatterns = [
-				/(.)\1{3,}/, // Four or more identical letters in a row
-				/^[AEIOU]{4,}/, // Starts with 4+ vowels (very rare in Spanish)
-				/(.)(.)\1\2/, // ABAB pattern (often indicates made-up words like SAUSA)
-				/^[Q][^U]/, // Q not followed by U (invalid in Spanish except some exceptions)
-				/[WX]/, // W or X in Spanish words (extremely rare, mostly foreign words)
-				/(.)(.)(.)\1\2\3/, // ABCABC pattern (very suspicious)
-				/^[AEIOU][AEIOU][AEIOU]/, // Three vowels in a row at start
-				/[AEIOU]{4}/, // Four vowels anywhere (very rare)
-			];
-
-			for (const pattern of suspiciousPatterns) {
-				if (pattern.test(upperWord)) {
-					return false;
-				}
-			}
-
-			// 3. Length and complexity checks
-			if (upperWord.length < 2 || upperWord.length > 15) {
-				return false;
-			}
-
-			// 4. Vowel/consonant ratio check (Spanish words should have reasonable balance)
-			const vowels = upperWord.match(/[AEIOUÁÉÍÓÚÜ]/g) || [];
-			const consonants = upperWord.match(/[BCDFGHJKLMNÑPQRSTVWXYZ]/g) || [];
-			const vowelRatio = vowels.length / upperWord.length;
-
-			// Reject words with too few vowels (makes them hard to pronounce) or too many
-			if (vowelRatio < 0.15 || vowelRatio > 0.7) {
-				return false;
-			}
-
-			// 5. Dictionary validation - final check against known words
-			const inDict = this.dictionaryHas(word);
-			if (!inDict) {
-				if (this.showAIDebug) console.log(`[AI Word Check] Rejected ${upperWord}: not in Spanish dictionary`);
-				return false;
-			}
-
-			return true;
-		}
-
-		return true; // Allow if in dictionary and passes all intelligent checks
-	}
-
-	async validateWordWithGoogleAPI(word, targetLang = 'es') {
-		// Use Google Translate API to validate if word exists in target language
-		// Strategy: Translate word from target language to English, then back to target language
-		// If the word comes back similar, it's likely valid in that language
-
-		try {
-			// First check basic letter validity for the target language
-			if (!this.isBasicValidForLanguage(word, targetLang)) {
-				return false;
-			}
-
-			// Skip API validation for very short words (they're often valid)
-			if (word.length <= 2) {
-				return true;
-			}
-
-			// For Spanish, use more comprehensive validation
-			if (targetLang === 'es') {
-				return await this.validateSpanishWordWithGoogle(word);
-			}
-
-			// For other languages, implement similar validation
-			return await this.validateOtherLanguageWord(word, targetLang);
-
-		} catch (error) {
-			console.warn(`API validation failed for ${word} in ${targetLang}:`, error);
-			// Fall back to basic pattern validation
-			return this.isBasicValidForLanguage(word, targetLang);
-		}
-	}
-
-	isBasicValidForLanguage(word, lang) {
-		// Basic letter validation for different languages
-		switch (lang) {
-			case 'es': // Spanish
-				return /^[A-ZÑ]+$/.test(word) &&
-					   /[AEIOUÁÉÍÓÚÜ]/.test(word) && // Must have vowels
-					   word.length >= 2;
-
-			case 'fr': // French
-				return /^[A-ZÀÂÄÉÈÊËÏÎÔÖÙÛÜŸÇ]+$/.test(word) &&
-					   /[AEIOUYÀÂÄÉÈÊËÏÎÔÖÙÛÜŸ]/.test(word) &&
-					   word.length >= 2;
-
-			case 'zh': // Chinese (simplified for Scrabble context)
-				// For Chinese, we'll rely more on API validation
-				return word.length >= 1;
-
-			default: // English and others
-				return /^[A-Z]+$/.test(word) &&
-					   /[AEIOU]/.test(word) &&
-					   word.length >= 2;
-		}
-	}
-
-	async validateSpanishWordWithGoogle(word) {
-		try {
-			// Check cache first to avoid duplicate API calls
-			const cacheKey = `spanish_api_${word.toLowerCase()}`;
-			if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
-				return this.validationCache[cacheKey];
-			}
-
-			// Stricter Spanish validation with multiple checks
-
-			// TILE TRANSFORMATION SYSTEM: Players can transform tiles for Spanish characters
-			// Allow words with Ñ and accented vowels since players can transform tiles:
-			// N → Ñ, A → Á, E → É, I → Í, O → Ó, U → Ú/Ü
-			// Validation passes through - tile transformation is handled during word formation
-
-			// First, ensure basic Spanish word requirements
-			const upperWord = word.toUpperCase();
-			if (!this.couldBeValidSpanishWord(upperWord)) {
-				// Cache negative result
-				if (!this.validationCache) this.validationCache = {};
-				this.validationCache[cacheKey] = false;
-				return false;
-			}
-
-			// Use Google Translate round-trip validation
-			// Translate Spanish -> English -> Spanish
-			const englishTranslation = await this._translateViaAPI(word, 'es', 'en');
-
-			// If no translation or too generic, word might not exist in Spanish
-			if (!englishTranslation ||
-				englishTranslation.trim() === '' ||
-				englishTranslation.toLowerCase().includes('translation') ||
-				englishTranslation.toLowerCase().includes('spanish')) {
-				return false;
-			}
-
-			// Translate back to Spanish
-			const spanishTranslation = await this._translateViaAPI(englishTranslation, 'en', 'es');
-
-			if (!spanishTranslation || spanishTranslation.trim() === '') {
-				return false;
-			}
-
-			// Compare normalized versions since Google may return accented forms
-			// Input words are accent-free (tile-compatible), Google may add accents
-			const inputNormalized = word.toLowerCase(); // Input has no accents (we rejected them above)
-			const googleNormalized = spanishTranslation.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-			// Exact match (input matches Google's response exactly)
-			const exactMatch = inputNormalized === spanishTranslation.toLowerCase();
-
-			// Match after normalizing Google's accented response
-			const normalizedMatch = inputNormalized === googleNormalized;
-
-			// Similarity score for partial matches
-			const similarity = this.calculateWordSimilarity(inputNormalized, googleNormalized);
-
-			// Confidence scoring system
-			let confidence = 0;
-			if (exactMatch) confidence = 100;  // Perfect match (unlikely - Google adds accents)
-			else if (normalizedMatch) confidence = 95;  // Google returned accent-free version or we normalized it
-			else if (similarity >= 0.9) confidence = 85;  // Very similar
-			else if (similarity >= 0.8) confidence = 70;  // Similar
-			else confidence = similarity * 100;  // Raw similarity score
-
-			// Stricter validation: Require high confidence AND word must match closely
-			// Reject words where Google translates to something completely different
-			// This catches cases like "BISONE" → "bison" → "bisonte" (different word)
-			let isValid = false;
-			
-			if (normalizedMatch) {
-				// Perfect normalized match - accept with 85%+ confidence
-				isValid = confidence >= 85;
-			} else if (similarity >= 0.95) {
-				// Very high similarity (95%+) - might be valid with accents
-				isValid = confidence >= 90;
-			} else {
-				// Too different - reject
-				isValid = false;
-			}
-
-			// Enhanced logging (only in debug mode to reduce console spam)
-			if (this.showAIDebug) {
-				const googleHasAccents = spanishTranslation !== googleNormalized;
-				console.log(`Spanish validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}%`);
-				console.log(`  Google response: "${spanishTranslation}" (accents: ${googleHasAccents})`);
-				console.log(`  Comparison: "${inputNormalized}" vs "${googleNormalized}", valid: ${isValid}`);
-			}
-
-			// Cache result
-			if (!this.validationCache) this.validationCache = {};
-			this.validationCache[cacheKey] = isValid;
-
-			return isValid;
-
-		} catch (error) {
-			if (this.showAIDebug) console.warn('Spanish Google validation failed:', error);
-			// Cache negative result on error
-			const cacheKey = `spanish_api_${word.toLowerCase()}`;
-			if (!this.validationCache) this.validationCache = {};
-			this.validationCache[cacheKey] = false;
-			return false;
-		}
-	}
-
-	async validateEnglishWordWithGoogle(word) {
-		try {
-			// Check cache first to avoid duplicate API calls
-			const cacheKey = `english_api_${word.toLowerCase()}`;
-			if (this.validationCache && this.validationCache[cacheKey] !== undefined) {
-				const cached = this.validationCache[cacheKey];
-				return {
-					isValid: cached.isValid,
-					confidence: cached.confidence
-				};
-			}
-
-			// Use Google Translate round-trip validation for English
-			// Translate English -> Spanish -> English
-			const spanishTranslation = await this._translateViaAPI(word, 'en', 'es');
-
-			// If no translation or too generic, word might not exist
-			if (!spanishTranslation ||
-				spanishTranslation.trim() === '' ||
-				spanishTranslation.toLowerCase().includes('translation') ||
-				spanishTranslation.toLowerCase().includes('english')) {
-				return { isValid: false, confidence: 0 };
-			}
-
-			// Translate back to English
-			const englishTranslation = await this._translateViaAPI(spanishTranslation, 'es', 'en');
-
-			if (!englishTranslation || englishTranslation.trim() === '') {
-				return { isValid: false, confidence: 0 };
-			}
-
-			// Compare normalized versions
-			const inputNormalized = word.toLowerCase();
-			const googleNormalized = englishTranslation.toLowerCase();
-
-			// Exact match
-			const exactMatch = inputNormalized === englishTranslation.toLowerCase();
-
-			// Similarity score
-			const similarity = this.calculateWordSimilarity(inputNormalized, googleNormalized);
-
-			// Confidence scoring for English
-			let confidence = 0;
-			if (exactMatch) confidence = 100;  // Perfect match
-			else if (similarity >= 0.9) confidence = 90;  // Very similar
-			else if (similarity >= 0.8) confidence = 75;  // Similar
-			else confidence = similarity * 100;  // Raw similarity
-
-			// For English, require higher confidence to accept API-only words
-			// Raise threshold to reduce false positives (e.g., near-miss words like "AHINGED")
-			const acceptanceThreshold = 85; // percent
-			const isValid = confidence >= acceptanceThreshold;
-
-			// Enhanced logging
-			if (this.showAIDebug) {
-				console.log(`English validation for "${word}": confidence ${(confidence).toFixed(1)}%, similarity ${(similarity * 100).toFixed(1)}% (threshold ${acceptanceThreshold}%)`);
-				console.log(`  Google response: "${englishTranslation}", valid: ${isValid}`);
-			}
-			// If confidence is borderline but still accepted, log a warning for tuning
-			if (isValid && confidence < 90 && this.showAIDebug) {
-				console.warn(`Borderline API acceptance for "${word}" (confidence ${confidence.toFixed(1)}%)`);
-			}
-
-			// Cache result
-			if (!this.validationCache) this.validationCache = {};
-			this.validationCache[cacheKey] = { isValid, confidence };
-
-			return { isValid, confidence };
-
-		} catch (error) {
-			if (this.showAIDebug) console.warn('English Google validation failed:', error);
-			// Cache negative result on error
-			const cacheKey = `english_api_${word.toLowerCase()}`;
-			if (!this.validationCache) this.validationCache = {};
-			this.validationCache[cacheKey] = { isValid: false, confidence: 0 };
-			return { isValid: false, confidence: 0 };
-		}
-	}
-
-	// TILE TRANSFORMATION SYSTEM
-	// Players can transform tiles to create Spanish characters
-
-	// Check if player has tiles to form word (considering transformations)
-	canFormWordWithTiles(word, rack = this.playerRack) {
-		if (!word || !rack) return false;
-
-		const tileCounts = {};
-		let blankCount = 0;
-
-		// Count available tiles (normalize accented characters) and blanks
-		rack.forEach(tile => {
-			const letter = (tile && tile.letter) ? String(tile.letter) : '';
-			if (letter === '*' || tile.isBlank) {
-				blankCount++;
-				return;
-			}
-			// Normalize accented characters: Á→A, É→E, Í→I, Ó→O, Ú→U, Ñ→N
-			const normalized = normalizeWordForDict(letter).toUpperCase();
-			if (!normalized) return;
-			tileCounts[normalized] = (tileCounts[normalized] || 0) + 1;
-		});
-
-		// Normalize the word to match tiles (Café → CAFE)
-		const normalizedWord = normalizeWordForDict(word).toUpperCase();
-
-		// Check each letter in normalized word, allowing blanks to substitute
-		for (let i = 0; i < normalizedWord.length; i++) {
-			const neededChar = normalizedWord[i];
-			if (tileCounts[neededChar] > 0) {
-				tileCounts[neededChar]--;
-			} else if (blankCount > 0) {
-				blankCount--;
-			} else {
-				return false; // Cannot form this letter even with blanks
-			}
-		}
-
-		return true;
-	}
-
-	// Intelligent error recovery with word suggestions
-	async getWordSuggestions(invalidWord, lang = 'es') {
-		try {
-			const suggestions = [];
-			const upperWord = invalidWord.toUpperCase();
-
-			// Strategy 1: Try common Spanish word variations (tile-playable only)
-			if (lang === 'es') {
-				const accentVariations = this.generateAccentVariations(upperWord);
-				for (const variation of accentVariations) {
-					// Only suggest accent-free words since tiles don't have accents
-					const hasAccents = variation !== variation.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-					if (!hasAccents && await this.validateSpanishWordWithGoogle(variation)) {
-						suggestions.push({
-							word: variation,
-							type: 'accent_variation',
-							confidence: 90
-						});
-					}
-				}
-			}
-
-			// Strategy 2: Try removing/replacing suspicious characters
-			const cleanedWord = upperWord.replace(/[^A-ZÑ]/g, '');
-			if (cleanedWord !== upperWord && cleanedWord.length >= 3) {
-				if (lang === 'es' && await this.validateSpanishWordWithGoogle(cleanedWord)) {
-					suggestions.push({
-						word: cleanedWord,
-						type: 'character_cleaned',
-						confidence: 75
-					});
-				}
-			}
-
-			// Strategy 3: Find similar words from local dictionary
-			const similarWords = this.findSimilarWords(upperWord, lang);
-			for (const similar of similarWords) {
-				if (await this.validateWordWithGoogleAPI(similar, lang)) {
-					suggestions.push({
-						word: similar,
-						type: 'similar_word',
-						confidence: 60
-					});
-				}
-			}
-
-			// Strategy 4: Try Google Translate suggestions
-			try {
-				if (lang === 'es') {
-					const englishGuess = await this._translateViaAPI(upperWord, 'es', 'en');
-					if (englishGuess && !englishGuess.includes('translation')) {
-						// Try to get Spanish suggestions from English
-						const spanishSuggestions = await this._translateViaAPI(englishGuess, 'en', 'es');
-						if (spanishSuggestions && spanishSuggestions !== upperWord) {
-							const variations = this.generateSimilarWords(spanishSuggestions);
-							for (const variation of variations) {
-								if (variation.length >= 3 && await this.validateSpanishWordWithGoogle(variation)) {
-									suggestions.push({
-										word: variation,
-										type: 'translation_suggestion',
-										confidence: 50
-									});
-								}
-							}
-						}
-					}
-				}
-			} catch (e) {
-				// Translation suggestions failed, continue with other strategies
-			}
-
-			// Remove duplicates and sort by confidence
-			const uniqueSuggestions = suggestions.filter((s, index, arr) =>
-				arr.findIndex(x => x.word === s.word) === index
-			).sort((a, b) => b.confidence - a.confidence);
-
-			return uniqueSuggestions.slice(0, 5); // Return top 5 suggestions
-
-		} catch (error) {
-			console.warn('Error generating word suggestions:', error);
-			return [];
-		}
-	}
-
-	generateAccentVariations(word) {
-		// Generate accent variations, but return accent-FREE versions for tile compatibility
-		// This helps suggest the tile-playable version of accented words
-		const variations = [word];
-
-		// Since tiles don't have accents, we suggest the base forms
-		// Google Translate will validate that these mean the same as accented versions
-		const normalized = word.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-		if (normalized !== word) {
-			variations.push(normalized); // Add the accent-free version
-		}
-
-		// Also try common accent positions for suggestions
-		const accentMap = {
-			'A': 'Á', 'E': 'É', 'I': 'Í', 'O': 'Ó', 'U': 'Ú',
-			'a': 'á', 'e': 'é', 'i': 'í', 'o': 'ó', 'u': 'ú'
-		};
-
-		// Add variations with accents on vowels (for validation purposes)
-		for (let i = 0; i < word.length; i++) {
-			const char = word[i];
-			if (accentMap[char]) {
-				const variation = word.substring(0, i) + accentMap[char] + word.substring(i + 1);
-				variations.push(variation);
-			}
-		}
-
-		return [...new Set(variations)]; // Remove duplicates
-	}
-
-	findSimilarWords(word, lang) {
-		// Find similar words from local dictionary (simplified implementation)
-		const similar = [];
-		const wordLength = word.length;
-
-		// Check local dictionary for words of similar length
-		for (const dictWord of this.dictionary || []) {
-			if (Math.abs(dictWord.length - wordLength) <= 1) {
-				const similarity = this.calculateWordSimilarity(word.toLowerCase(), dictWord.toLowerCase());
-				if (similarity >= 0.7) {
-					similar.push(dictWord);
-				}
-			}
-		}
-
-		return similar.slice(0, 3);
-	}
-
-	generateSimilarWords(baseWord) {
-		// Generate slight variations of a word
-		const variations = [baseWord];
-		const length = baseWord.length;
-
-		// Remove one character variations
-		for (let i = 0; i < length; i++) {
-			variations.push(baseWord.substring(0, i) + baseWord.substring(i + 1));
-		}
-
-		// Add one character variations (common letters)
-		const commonLetters = 'AEIOUNRLST';
-		for (let i = 0; i <= length; i++) {
-			for (const letter of commonLetters) {
-				variations.push(baseWord.substring(0, i) + letter + baseWord.substring(i));
-			}
-		}
-
-		return [...new Set(variations)].filter(w => w.length >= 3 && w.length <= 15);
-	}
-
-	async validateOtherLanguageWord(word, targetLang) {
-		// Language-specific validation strategies
-		switch (targetLang) {
-			case 'fr':
-				return await this.validateFrenchWord(word);
-			case 'zh':
-				return await this.validateChineseWord(word);
-			case 'de':
-				return await this.validateGermanWord(word);
-			default:
-				// Generic round-trip validation for other languages
-				return await this.validateWithRoundTrip(word, targetLang);
-		}
-	}
-
-	async validateFrenchWord(word) {
-		try {
-			// Check for obviously invalid French patterns
-			if (!this.isBasicValidForLanguage(word, 'fr')) {
-				return false;
-			}
-
-			// Use round-trip validation: French -> English -> French
-			const englishTranslation = await this._translateViaAPI(word, 'fr', 'en');
-			if (!englishTranslation) return false;
-
-			const frenchTranslation = await this._translateViaAPI(englishTranslation, 'en', 'fr');
-			if (!frenchTranslation) return false;
-
-			// French words often have consistent translations
-			const similarity = this.calculateWordSimilarity(
-				word.toLowerCase(),
-				frenchTranslation.toLowerCase()
-			);
-
-			console.log(`French validation for "${word}": similarity ${similarity}`);
-
-			return similarity >= 0.6; // Slightly lower threshold for French
-
-		} catch (error) {
-			console.warn('French validation failed:', error);
-			return this.isBasicValidForLanguage(word, 'fr');
-		}
-	}
-
-	async validateChineseWord(word) {
-		// Chinese validation is trickier since Google Translate works with characters
-		// For now, use basic validation and check against common patterns
-		try {
-			if (!this.isBasicValidForLanguage(word, 'zh')) {
-				return false;
-			}
-
-			// Check if it's in a basic Chinese dictionary (simplified for now)
-			// In a full implementation, you'd want a proper Chinese dictionary API
-			const commonChineseWords = [
-				'一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
-				'人', '大', '小', '中', '国', '天', '地', '水', '火', '山'
-			];
-
-			// For single characters, check if they're common
-			if (word.length === 1) {
-				return commonChineseWords.includes(word);
-			}
-
-			// For longer words, use translation validation
-			const englishTranslation = await this._translateViaAPI(word, 'zh', 'en');
-			return englishTranslation && englishTranslation.trim() !== '';
-
-		} catch (error) {
-			console.warn('Chinese validation failed:', error);
-			return word.length >= 1; // Very basic fallback
-		}
-	}
-
-	async validateGermanWord(word) {
-		try {
-			if (!this.isBasicValidForLanguage(word, 'de')) {
-				return false;
-			}
-
-			// German round-trip validation
-			const englishTranslation = await this._translateViaAPI(word, 'de', 'en');
-			if (!englishTranslation) return false;
-
-			const germanTranslation = await this._translateViaAPI(englishTranslation, 'en', 'de');
-			if (!germanTranslation) return false;
-
-			const similarity = this.calculateWordSimilarity(
-				word.toLowerCase(),
-				germanTranslation.toLowerCase()
-			);
-
-			return similarity >= 0.7;
-
-		} catch (error) {
-			console.warn('German validation failed:', error);
-			return this.isBasicValidForLanguage(word, 'de');
-		}
-	}
-
-	async validateWithRoundTrip(word, targetLang) {
-		// Generic round-trip validation for any language
-		try {
-			const englishTranslation = await this._translateViaAPI(word, targetLang, 'en');
-			if (!englishTranslation) return false;
-
-			const backTranslation = await this._translateViaAPI(englishTranslation, 'en', targetLang);
-			if (!backTranslation) return false;
-
-			const similarity = this.calculateWordSimilarity(
-				word.toLowerCase(),
-				backTranslation.toLowerCase()
-			);
-
-			return similarity >= 0.7;
-
-		} catch (error) {
-			console.warn(`${targetLang} validation failed:`, error);
-			return this.isBasicValidForLanguage(word, targetLang);
-		}
-	}
-
-	calculateWordSimilarity(word1, word2) {
-		// Simple Levenshtein distance-based similarity
-		if (word1 === word2) return 1.0;
-
-		const longer = word1.length > word2.length ? word1 : word2;
-		const shorter = word1.length > word2.length ? word2 : word1;
-
-		if (longer.length === 0) return 1.0;
-
-		const distance = this.levenshteinDistance(longer, shorter);
-		return (longer.length - distance) / longer.length;
-	}
-
-	levenshteinDistance(str1, str2) {
-		const matrix = [];
-		for (let i = 0; i <= str2.length; i++) {
-			matrix[i] = [i];
-		}
-		for (let j = 0; j <= str1.length; j++) {
-			matrix[0][j] = j;
-		}
-		for (let i = 1; i <= str2.length; i++) {
-			for (let j = 1; j <= str1.length; j++) {
-				if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-					matrix[i][j] = matrix[i - 1][j - 1];
-				} else {
-					matrix[i][j] = Math.min(
-						matrix[i - 1][j - 1] + 1, // substitution
-						matrix[i][j - 1] + 1,     // insertion
-						matrix[i - 1][j] + 1      // deletion
-					);
-				}
-			}
-		}
-		return matrix[str2.length][str1.length];
-	}
-
-	// Keep the old function for backward compatibility but make it much more targeted
-
-	async validateSpanishWordWithAPI(word) {
-		try {
-			// Use the new Google API validation system
-			const isValid = await this.validateWordWithGoogleAPI(word, 'es');
-
-			// Cache the result for future sync checks
-			if (!this.validationCache) {
-				this.validationCache = {};
-			}
-			this.validationCache[`spanish_validation_${word.toLowerCase()}`] = isValid;
-
-			return isValid;
-		} catch (error) {
-			console.warn('Spanish API validation failed for', word, ':', error);
-			// Fall back to basic validation
-			return this.couldBeValidSpanishWord(word);
-		}
-	}
-
-	couldBeValidSpanishWord(word) {
-		// Basic Spanish word validation heuristics
-		if (!word) return false;
-
-		// Must contain only valid Spanish letters
-		if (!/^[A-ZÑ]+$/.test(word)) return false;
-
-		// Must have at least one vowel
-		if (!/[AEIOUÁÉÍÓÚÜ]/.test(word)) return false;
-
-		// Spanish words typically don't start with certain consonants
-		if (/^[JKWXY]/.test(word) && word.length < 4) return false;
-
-		// Check for common Spanish letter patterns
-		const hasCommonSpanishPattern =
-			/[AEIOUÁÉÍÓÚÜ]/.test(word) && // Has vowels
-			(/[NQ]/.test(word) || /[LR]/.test(word) || word.length >= 3); // Common consonants or longer words
-
-		return hasCommonSpanishPattern;
-	}
-
-	_translateViaAPI(text, sourceLang = 'es', targetLang = 'en') {
-		return new Promise((resolve, reject) => {
-			fetch('/.netlify/functions/translate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					text: text,
-					source: sourceLang,
-					target: targetLang
-				})
-			})
-			.then(response => {
-				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
-				}
-				return response.json();
-			})
-			.then(data => {
-				if (data.translatedText) {
-					resolve(data.translatedText);
-				} else {
-					reject(new Error('No translation received'));
-				}
-			})
-			.catch(error => {
-				console.warn('Translation API failed:', error);
-				reject(error);
-			});
-		});
-	}
-
-	_translateWordToEnglish(word) {
-		// Since we removed the hardcoded translations, return null
-		// The Google Translate API should handle all translation needs
-		return null;
-	}
 	// Announce Bingo bonus after words are spoken. Kept lightweight and tolerant of missing TTS.
 	speakBingo(source = 'player') {
 		try {
 			if (typeof window === 'undefined') return;
 			// Attempt to speak via the robust helper that retries and sets a preferred voice
 			try {
-				// Force local browser TTS for bingo to avoid noisy remote 403 errors
-				this._speakWithRetry('Bingo bonus!', { lang: 'en-US', rate: 1.15, pitch: 1.4, forceLocal: true }).catch(e => {
-					// Completely silent - no logging for TTS failures
+				this._speakWithRetry('Bingo bonus!', { lang: 'hi-IN', rate: 1.15, pitch: 1.4 }).catch(e => {
+					console.warn('speakBingo TTS path failed', e);
+					try { this.appendConsoleMessage('speakBingo TTS failed'); } catch(e){}
 				});
-				// Remove console logging to reduce noise
+				console.log('[Speech] speakBingo invoked for', source);
 				try { this.appendConsoleMessage('speakBingo invoked for '+source); } catch(e){}
 			} catch (e) {
-				// Completely silent TTS setup failures
+				console.warn('speakBingo TTS attempt failed', e);
+				try { this.appendConsoleMessage('speakBingo TTS attempt failed'); } catch(e){}
 			}
 
 			// Always trigger visual celebration for bingo (player only)
@@ -9515,60 +6753,25 @@ calculateScore() {
 		}
 	}
 
-	// Pick a preferred voice matching the current preferred language (falls back to English)
-	_getPreferredVoice(preferredLang) {
+	// Pick a preferred English voice if available. Returns a SpeechSynthesisVoice or null.
+	_getPreferredVoice() {
 		try {
 			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
 			const voices = window.speechSynthesis.getVoices() || [];
 			if (!voices || voices.length === 0) return null;
-			const target = (preferredLang && preferredLang.toLowerCase()) || (this._getPreferredLangCode && this._getPreferredLangCode().toLowerCase());
+			// Prefer explicit English voices (en-US/en-GB) and prefer female-like names if present
 			let pick = null;
-			if (target) {
-				// prefer exact match first
-				for (const v of voices) {
-					if (!v.lang) continue;
-					const lang = v.lang.toLowerCase();
-					if (lang === target || lang.startsWith(target.split('-')[0])) { pick = v; break; }
-				}
-			}
-			// fallback to any en* voice
-			if (!pick) {
-				for (const v of voices) {
-					if (!v.lang) continue;
-					if (v.lang.toLowerCase().startsWith('en')) { pick = v; break; }
-				}
-			}
-			if (!pick) pick = voices[0];
-			return pick || null;
-		} catch (e) {
-			console.debug('getPreferredVoice failed', e);
-			return null;
-		}
-	}
-
-	_getEnglishVoice() {
-		try {
-			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-			const voices = window.speechSynthesis.getVoices() || [];
-			if (!voices || voices.length === 0) return null;
-
-			// Prioritize US English voices
 			for (const v of voices) {
 				if (!v.lang) continue;
 				const lang = v.lang.toLowerCase();
-				if (lang === 'en-us' || lang === 'en_us') { return v; }
+				if (lang.startsWith('en') && (!pick || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'))) {
+					pick = v;
+				}
 			}
-
-			// Then any English voice
-			for (const v of voices) {
-				if (!v.lang) continue;
-				if (v.lang.toLowerCase().startsWith('en')) { return v; }
-			}
-
-			// Finally any voice (better than nothing)
-			return voices[0] || null;
+			if (!pick) pick = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || voices[0];
+			return pick || null;
 		} catch (e) {
-			console.debug('getEnglishVoice failed', e);
+			console.debug('getPreferredVoice failed', e);
 			return null;
 		}
 	}
@@ -9577,159 +6780,67 @@ calculateScore() {
 	// Returns a Promise that resolves on end or rejects on persistent failure.
 	_speakWithRetry(text, opts = {}) {
 		return new Promise(async (resolve, reject) => {
-			if (typeof window === 'undefined') return resolve();
-			const finalLang = opts.forceEnglishVoice ? 'en-US' : (opts.lang || this._getPreferredLangCode());
-			const forceLocal = !!opts.forceLocal;
-			// First try remote Netlify Google TTS function (server-side, uses GOOGLE_API_KEY)
-			const tryRemote = async () => {
-				if (!window.fetch) return false;
-
-				// Completely suppress ALL console output during TTS API calls
-				const originalConsoleError = console.error;
-				const originalConsoleWarn = console.warn;
-				const originalConsoleDebug = console.debug;
-				const originalConsoleLog = console.log;
-				console.error = () => {};
-				console.warn = () => {};
-				console.debug = () => {};
-				console.log = () => {};
-
-				// Override fetch globally to suppress TTS API errors
-				const originalFetch = window.fetch;
-				window.fetch = async function(url, ...args) {
-					// Only override TTS API calls
-					if (typeof url === 'string' && url.includes('/.netlify/functions/tts')) {
-						try {
-							const response = await originalFetch.apply(this, [url, ...args]);
-							return response; // Let normal responses through
-						} catch (e) {
-							// Return a fake successful response to prevent errors
-							return new Response(JSON.stringify({ audioContent: null }), {
-								status: 200,
-								statusText: 'OK',
-								headers: { 'Content-Type': 'application/json' }
-							});
-						}
-					}
-					// For non-TTS requests, use normal fetch
-					return originalFetch.apply(this, [url, ...args]);
-				};
-
+			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return resolve();
+			let tried = 0;
+			const attempt = async () => {
 				try {
-					const resp = await fetch('/.netlify/functions/tts', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ text, lang: finalLang, audioEncoding: 'MP3' }),
-						cache: 'no-store'
-					});
-
-					// Restore console and fetch before processing response
-					console.error = originalConsoleError;
-					console.warn = originalConsoleWarn;
-					console.debug = originalConsoleDebug;
-					console.log = originalConsoleLog;
-					window.fetch = originalFetch;
-
-					if (!resp.ok) {
-						// Silently skip ALL TTS API failures (403, 429, 500, etc.) - fallback to browser TTS
-						// Optionally warn in debug mode
-						if (this.showAIDebug) console.warn('Remote TTS failed with status', resp.status);
-						return false;
-					}
-					const j = await resp.json();
-					if (j && j.audioContent) {
-						try {
-							await this._playAudioBase64(j.audioContent);
-							return true;
-						} catch (e) {
-							// Silently handle audio playback errors too
-							return false;
+					if (!text) return resolve();
+					const u = new SpeechSynthesisUtterance(text);
+					u.lang = opts.lang || 'hi-IN';
+					u.rate = typeof opts.rate === 'number' ? opts.rate : 0.95;
+					u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
+					// assign preferred voice if available
+					try {
+						const v = this._getPreferredVoice();
+						if (v) u.voice = v;
+					} catch (e) { /* ignore */ }
+					u.onend = () => resolve();
+					u.onerror = async (ev) => {
+						if (tried === 0) {
+							tried++;
+							console.warn('utterance error, attempting unlock+retry', ev);
+							try { await this.ensureAudioUnlocked(); } catch (e) { /* ignore */ }
+							// try a tiny silent audio play as a fallback on Android
+							try {
+								const AC = window.AudioContext || window.webkitAudioContext;
+								if (AC) {
+									const ac = new AC();
+									if (ac.state === 'suspended' && ac.resume) await ac.resume();
+									const g = ac.createGain(); g.gain.value = 0; const o = ac.createOscillator(); o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.03);
+								}
+							} catch (e) { /* ignore */ }
+							// attempt to speak again
+							try { window.speechSynthesis.speak(u); } catch (e) { resolve(); }
+						} else {
+							console.error('utterance failed after retry', ev);
+							resolve();
 						}
+					};
+					try {
+						window.speechSynthesis.speak(u);
+					} catch (e) {
+						if (tried === 0) { tried++; try { await this.ensureAudioUnlocked(); } catch(e){}; try { window.speechSynthesis.speak(u); } catch(e2){ resolve(); } }
+						else resolve();
 					}
 				} catch (e) {
-					// Restore console and fetch on error - but don't log TTS network errors
-					console.error = originalConsoleError;
-					console.warn = originalConsoleWarn;
-					console.debug = originalConsoleDebug;
-					console.log = originalConsoleLog;
-					window.fetch = originalFetch;
-					// Don't throw or log TTS connection errors - just return false for fallback
-				}
-				return false;
-			};
-			// If not forcing local, try remote first; else skip to local TTS
-			if (!forceLocal) {
-				try {
-					const ok = await tryRemote();
-					if (ok) return resolve();
-				} catch (e) { /* ignore */ }
-			}
-			// Fallback to in-browser SpeechSynthesis
-			if (!('speechSynthesis' in window) || !text) return resolve();
-			let tried = 0;
-			const u = new SpeechSynthesisUtterance(text);
-			u.lang = finalLang || 'en-US';
-			u.rate = typeof opts.rate === 'number' ? opts.rate : 0.75;
-			u.pitch = typeof opts.pitch === 'number' ? opts.pitch : 1.0;
-				try {
-					let voiceToUse = null;
-					if (opts.forceEnglishVoice) {
-						voiceToUse = this._getEnglishVoice();
-					} else {
-						voiceToUse = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
-					}
-					if (voiceToUse) u.voice = voiceToUse;
-				} catch (e) { /* ignore */ }
-			u.onend = () => resolve();
-			u.onerror = async (ev) => {
-				if (tried === 0) {
-					tried++;
-					try { await this.ensureAudioUnlocked(); } catch (e) { /* ignore */ }
-					try { window.speechSynthesis.speak(u); } catch (e) { return resolve(); }
-				} else {
-					return resolve();
+						// Fallback: if nothing is queued or speaking shortly after, try robust retry speaker
+						setTimeout(async () => {
+							try {
+								if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+								if (!window.speechSynthesis.pending && !window.speechSynthesis.speaking) {
+									// nothing queued/playing — perform robust speak outside gesture
+									for (let t of texts) {
+										try { await this._speakWithRetry(t, { lang: 'hi-IN' }); } catch (e) { /* ignore */ }
+									}
+									try { resolveInline(); } catch(e){}
+								}
+							} catch (e) { /* ignore */ }
+						}, 480);
+					console.warn('speakWithRetry inner error', e);
+					resolve();
 				}
 			};
-			try {
-				window.speechSynthesis.speak(u);
-			} catch (e) {
-				if (tried === 0) { tried++; try { await this.ensureAudioUnlocked(); } catch(e){}; try { window.speechSynthesis.speak(u); } catch(e2){ return resolve(); } }
-				else return resolve();
-			}
-		});
-	}
-
-	_getPreferredLangCode() {
-		const short = this.preferredLang || 'en';
-		const map = {
-			'en': 'en-US',
-			'es': 'es-ES',
-			'zh': 'zh-CN',
-			'fr': 'fr-FR'
-		};
-		if (map[short]) return map[short];
-		// if already a locale-like code, return as-is
-		if (short && short.indexOf('-') !== -1) return short;
-		return 'en-US';
-	}
-
-	_playAudioBase64(base64Audio) {
-		return new Promise((resolve, reject) => {
-			try {
-				const binary = atob(base64Audio);
-				const len = binary.length;
-				const bytes = new Uint8Array(len);
-				for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
-				const blob = new Blob([bytes], { type: 'audio/mpeg' });
-				const url = URL.createObjectURL(blob);
-				const a = new Audio(url);
-				a.addEventListener('ended', () => { try { URL.revokeObjectURL(url); } catch (e) {} resolve(); });
-				a.addEventListener('error', (e) => { try { URL.revokeObjectURL(url); } catch (e) {} reject(e); });
-				// Attempt to play; some browsers require user gesture — handle rejection
-				const p = a.play();
-				if (p && p.then) p.then(() => {}).catch(() => {});
-				// If play() didn't error, resolve when ended via event
-			} catch (e) { reject(e); }
+			attempt();
 		});
 	}
 
@@ -9763,7 +6874,7 @@ calculateScore() {
 						text = text + ' Bingo bonus!';
 					}
 					try {
-						await this._speakWithRetry(text, { lang: this._getPreferredLangCode() });
+						await this._speakWithRetry(text, { lang: 'hi-IN' });
 					} catch (e) {
 						console.warn('speakSequence word failed', text, e);
 						try { this.appendConsoleMessage('speakSequence word failed: '+text); } catch(e){}
@@ -9782,7 +6893,7 @@ calculateScore() {
 					resolve();
 				}
 			} catch (e) {
-				console.debug('speakSequence TTS failed, using browser fallback');
+				console.error('speakSequence failed', e);
 				try { this.appendConsoleMessage('speakSequence failed'); } catch(e){}
 				if (speakBingoAfter && typeof this.speakBingo === 'function') this.speakBingo(source);
 				resolve();
@@ -9796,7 +6907,6 @@ calculateScore() {
 	// guarding calls to avoid runtime errors.
 
 	async playWord() {
-		console.log('playWord invoked', { placedTiles: this.placedTiles && this.placedTiles.map(p=>({r:p.row,c:p.col,letter:p.tile && p.tile.letter})), currentTurn: this.currentTurn });
 		// Show a spinner or disable the submit button for better UX
 		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
 		if (playWordBtn) {
@@ -9835,8 +6945,8 @@ calculateScore() {
 							// Try to create and speak an utterance synchronously inside the user gesture first.
 							try {
 								if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-										try {
-											const pref = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
+									try {
+										const pref = this._getPreferredVoice && this._getPreferredVoice();
 										// Play a short audible beep to unlock audio on stubborn Android builds
 										try {
 											const actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -9856,13 +6966,12 @@ calculateScore() {
 										}
 										// Speak 'Bingo' and 'bonus!' as two synchronous utterances inside gesture
 										try {
-											const prefLang = this._getPreferredLangCode();
 											const b1 = new SpeechSynthesisUtterance('Bingo');
-											b1.lang = prefLang;
-											if (pref) try { b1.voice = pref; } catch(_){ }
+											b1.lang = 'hi-IN';
+											if (pref) try { b1.voice = pref; } catch(_){}
 											const b2 = new SpeechSynthesisUtterance('bonus!');
-											b2.lang = prefLang;
-											if (pref) try { b2.voice = pref; } catch(_){ }
+											b2.lang = 'hi-IN';
+											if (pref) try { b2.voice = pref; } catch(_){}
 											window.speechSynthesis.speak(b1);
 											// small gap before second utterance
 											setTimeout(() => { try { window.speechSynthesis.speak(b2); } catch(_){}; }, 130);
@@ -9885,7 +6994,7 @@ calculateScore() {
 										this.appendConsoleMessage(`Bingo speak attempt ${attempt}`);
 										// Only try speaking if nothing is currently queued/playing
 										if (!(typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
-											await this._speakWithRetry('Bingo bonus!', { lang: 'en-US' });
+											await this._speakWithRetry('Bingo bonus!', { lang: 'hi-IN' });
 										}
 										// small delay to let speech start
 										await new Promise(r => setTimeout(r, 220));
@@ -9927,8 +7036,6 @@ calculateScore() {
 				return;
 			}
 
-			console.log('areTilesConnected?', this.areTilesConnected());
-
 			if (!this.areTilesConnected()) {
 				alert("Tiles must be connected and in a straight line!");
 				this.resetPlacedTiles();
@@ -9937,7 +7044,6 @@ calculateScore() {
 
 			// Validate the word(s) asynchronously
 			const isValid = await (async () => this.validateWord())();
-			console.log('validateWord result:', isValid);
 			// If validation failed and we had started inline speech, stop it to avoid orphaned audio
 			if (!isValid && this._submitStartedSpeak) {
 				try { window.speechSynthesis && window.speechSynthesis.cancel && window.speechSynthesis.cancel(); } catch(e) {}
@@ -10062,7 +7168,7 @@ calculateScore() {
 						} catch (e) { console.error('Player bingo effect failed', e); }
 					}
 				} catch (e) {
-					console.debug('Player TTS failed, using browser speech synthesis');
+					console.error('Player speakSequence failed', e);
 				}
 
 				// Update game state
@@ -10072,7 +7178,7 @@ calculateScore() {
 				this.fillRacks();
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
-				await this.updateGhostPreview();
+				this.showAIGhostIfPlayerMoveValid();
 
 				// Pass structured wordDescriptions (array of {word,score}) so move history shows per-word scores
 				this.addToMoveHistory("Player", wordDescriptions, totalScore);
@@ -10087,12 +7193,10 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words
 				try { 
-					const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-					const invalidMsg = getTranslation('invalidWords', lang);
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(invalidMsg, 'error');
+						this.showAnimatedToast('Invalid word! Please try again.', 'error');
 					} else if (this.showToast) {
-						this.showToast(invalidMsg);
+						this.showToast('Invalid word! Please try again.');
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
@@ -10115,12 +7219,6 @@ calculateScore() {
 	// - a string like "SKIP"/"EXCHANGE"/single word
 	// - an array of {word, score} for multiple words scored in one move
 	addToMoveHistory(player, words, score) {
-		// Prevent duplicate entries by checking the last move
-		const lastMove = this.moveHistory[this.moveHistory.length - 1];
-		if (lastMove && lastMove.player === player && JSON.stringify(lastMove.words || lastMove.word) === JSON.stringify(words) && lastMove.score === score) {
-			return; // Skip adding duplicate move
-		}
-
 		const entry = {
 			player,
 			timestamp: new Date(),
@@ -10142,56 +7240,67 @@ calculateScore() {
 	}
 
 	updateMoveHistory() {
-		// Update both mobile and desktop history displays
-		const historyDisplay = document.getElementById("move-history");
-		const historyDisplayDesktop = document.getElementById("move-history-desktop");
-		const currentLang = localStorage.getItem('preferredLang') || 'en';
+		// Update mobile, desktop, and desktop drawer move history containers
+		const mobileHistoryDisplay = document.getElementById("move-history");
+		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
+		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
 		
-		// Helper function to create word display with speech button
-		const createWordDisplay = (word, score, isMultiple = false) => {
-			const translatedWord = translateWordForDisplay(word, currentLang);
-			const speechButton = `<button class="speech-btn" onclick="game._handleSpeechClick('${word}')" title="Speak '${word}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
-			const scoreText = score > 0 ? `(${score}pt)` : '';
-			return `"${translatedWord}"${scoreText}${speechButton}`;
-		};
-
-		// Populate history content
-		const historyContent = this.moveHistory
+		const historyContent = "<h3>Move History</h3>" +
+			this.moveHistory
+			.slice(-50)
 			.map((move) => {
-				const playerLabel = getTranslation(move.player && move.player.toLowerCase() === 'computer' ? 'computer' : 'player', currentLang) || move.player;
-				if (Array.isArray(move.words)) {
-					const wordsDisplay = move.words.map(w => createWordDisplay(w.word, w.score || 0, true)).join(", ");
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${wordsDisplay} = ${move.score}pts</div>`;
-				} else if (move.word) {
-					const raw = String(move.word);
-					const rawUpper = raw.toUpperCase();
-					// Special-case SKIP: localized label, no points shown
-					if (rawUpper === 'SKIP') {
-						const label = getTranslation('skip', currentLang) || raw;
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${label}</div>`;
-					}
-					// Special-case EXCHANGE / AI exchange messages: localized label, no points shown
-					if (rawUpper === 'EXCHANGE' || raw.toLowerCase().includes('exchange')) {
-						const isAI = /ai|computer/i.test(raw);
-						const label = isAI ? getTranslation('aiExchanged', currentLang) : getTranslation('exchange', currentLang) || raw;
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: ${label}</div>`;
-					}
-					// Default: show translated word with speech button; show points only if > 0
-					const display = translateWordForDisplay(raw, currentLang);
-					const speechButton = `<button class="speech-btn" onclick="game._handleSpeechClick('${raw}')" title="Speak '${raw}' in English" style="background:none;border:none;cursor:pointer;font-size:0.8em;margin-left:2px;display:inline-block;width:auto;padding:0 2px;">🔊</button>`;
-					if (typeof move.score === 'number' && move.score > 0) {
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"(${move.score}pt)${speechButton} = ${move.score}pts</div>`;
-					} else {
-						return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${playerLabel}: "${display}"${speechButton}</div>`;
-					}
-				} else {
-					return `<div class="move" style="margin-bottom:6px; padding:4px; border-bottom:1px solid #ddd;">${move.player}: ${move.word || 'move'} = ${move.score}pts</div>`;
+				// Structured entry with words array
+				if (move.words && Array.isArray(move.words)) {
+					// Check for bingo entries and format each word with its score if available
+					const parts = move.words.map(w => {
+						if (w.word === "BINGO BONUS") {
+							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
+						}
+						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
+						return `${w.word}`;
+					});
+					const formatted = parts.join(" & ");
+					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
 				}
+
+				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
+				if (move.word === "SKIP") {
+					return `<div class="move">${move.player}: "SKIP" for ${move.score} points</div>`;
+				}
+				if (move.word === "EXCHANGE") {
+					return `<div class="move">${move.player}: Exchanged tiles</div>`;
+				}
+				if (move.word === "QUIT") {
+					return `<div class="move">${move.player}: "QUIT" for ${move.score} points</div>`;
+				}
+
+				// Fallback: single word string
+				if (move.word) {
+					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+				}
+
+				// Unknown format
+				return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
 			})
 			.join("");
-		
-		if (historyDisplay) historyDisplay.innerHTML = historyContent;
-		if (historyDisplayDesktop) historyDisplayDesktop.innerHTML = historyContent;
+
+		// Update mobile history (create if doesn't exist)
+		if (mobileHistoryDisplay) {
+			mobileHistoryDisplay.innerHTML = historyContent;
+		} else {
+			const createdMobile = this.createMoveHistoryDisplay();
+			createdMobile.innerHTML = historyContent;
+		}
+
+		// Update desktop history
+		if (desktopHistoryDisplay) {
+			desktopHistoryDisplay.innerHTML = historyContent;
+		}
+
+		// Update desktop drawer history
+		if (desktopDrawerHistoryDisplay) {
+			desktopDrawerHistoryDisplay.innerHTML = historyContent;
+		}
 	}
 
 	updateGameState() {
@@ -10231,10 +7340,7 @@ calculateScore() {
 	updateTurnIndicator() {
 		const turnDisplay =
 			document.getElementById("current-turn") || this.createTurnIndicator();
-		const lang = this.preferredLang || 'en';
-		const t = (key) => getTranslation(key, lang);
-		const playerText = this.currentTurn === "player" ? t('yourTurn') : t('computerTurn');
-		turnDisplay.textContent = `${t('currentTurn')}: ${playerText}`;
+		turnDisplay.textContent = `Current Turn: ${this.currentTurn === "player" ? "Your" : "Computer's"} Turn`;
 		turnDisplay.className =
 			this.currentTurn === "player" ? "player-turn" : "ai-turn";
 	}
@@ -10242,20 +7348,7 @@ calculateScore() {
 	createTurnIndicator() {
 		const turnDisplay = document.createElement("div");
 		turnDisplay.id = "current-turn";
-
-		// Try mobile first, then desktop panels
-		const mobilePanel = document.querySelector(".info-panel");
-		const desktopPanel = document.querySelector(".desktop-info-panel");
-
-		if (mobilePanel) {
-			mobilePanel.prepend(turnDisplay);
-		} else if (desktopPanel) {
-			desktopPanel.prepend(turnDisplay);
-		} else {
-			// Fallback: add to body
-			document.body.appendChild(turnDisplay);
-		}
-
+		document.querySelector(".info-panel").prepend(turnDisplay);
 		return turnDisplay;
 	}
 
@@ -10279,9 +7372,6 @@ calculateScore() {
 	}
 
 	announceWinner() {
-		// Stop ghost thinking when game ends
-		this.stopGhostUpdates();
-
 		// --- 1. Sum up points from move history for each player ---
 		let playerScore = 0;
 		let aiScore = 0;
@@ -10406,29 +7496,38 @@ calculateScore() {
 	}
 
 	createConfettiEffect(options = {}) {
-		// Simplified: only use emoji confetti for one clean splash
+		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
 		options = options || {};
 		const variant = options.variant || 'standard';
+		// Just run ONE confetti effect - no staggering or multiple animations
+		// Use DOM confetti as it's the most reliable
+		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 
 		try {
-			// Simplified: only use emoji confetti for one clean splash
-			if (typeof this.createEmojiConfetti === 'function') {
-				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨','🥇','👑','💎','🌟'] :
-									 variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈','🥈','🎖️','🥈','🌙','💫'] :
-									 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨','🌟','💫','✨','🎨'] :
-									 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵','🥳','🎈','🎊','🎂'] :
-									 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐','🎆','🎇','🎊','🎉'] :
-									 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️','🎄','❄️','🎅','⛄'] :
-									 variant === 'hearts' ? ['❤️','💖','💕','💗','💓','💘','💝','💞','💟','💌'] :
-									 variant === 'stars' ? ['⭐','🌟','✨','💫','🌠','🎇','🎆','🎊','🎉','✨'] :
-									 variant === 'fireworks' ? ['🎆','🎇','✨','💥','🎆','🎇','🎆','🎇','✨','💫'] :
-									 variant === 'nature' ? ['🌸','🌺','🌻','🌹','🌷','🌼','🌻','🌺','🌸','🌼'] :
-									 variant === 'animals' ? ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'] :
-									 variant === 'food' ? ['🍕','🍔','🍟','🌭','🍿','🍩','🍪','🍰','🧁','🍭'] :
-									 ['🎉','🎊','✨','🥳','🎈','😊','🎯','🎪','🌟','💫','⭐'];
-
-				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
+			// Use DOM confetti for all cases (simplest and most reliable)
+			if (typeof this.createDOMConfetti === 'function') {
+				const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
+				const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
+				this.createDOMConfetti({ count, variant });
+				return;
 			}
+
+			// Fallback: try emoji confetti if DOM not available
+			if (typeof this.createEmojiConfetti === 'function') {
+				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
+				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
+				return;
+			}
+
+			// Ultimate fallback: white flash overlay
+			const overlay = document.createElement('div');
+			overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
+			document.body.appendChild(overlay);
+			requestAnimationFrame(() => overlay.style.opacity = '1');
+			setTimeout(() => overlay.style.opacity = '0', 140);
+			setTimeout(() => overlay.remove(), 520);
+
 		} catch (e) { console.warn('createConfettiEffect failed', e); }
 	}
 
@@ -10438,8 +7537,8 @@ calculateScore() {
 			if (this._canvasConfettiActive) return;
 			this._canvasConfettiActive = true;
 			const variant = options.variant || 'standard';
-			const count = options.count || (window.innerWidth > 720 ? (variant === 'gold' ? 280 : variant === 'silver' ? 220 : variant === 'rainbow' ? 300 : variant === 'party' ? 320 : variant === 'celebration' ? 340 : variant === 'winter' ? 260 : 180) : (variant === 'gold' ? 150 : variant === 'silver' ? 120 : variant === 'rainbow' ? 160 : variant === 'party' ? 170 : variant === 'celebration' ? 180 : variant === 'winter' ? 140 : 90));
-			const duration = options.duration || (variant === 'gold' ? 4200 : variant === 'silver' ? 3800 : variant === 'rainbow' ? 4500 : variant === 'party' ? 4800 : variant === 'celebration' ? 5000 : variant === 'winter' ? 4600 : 3500);
+			const count = options.count || (window.innerWidth > 720 ? (variant === 'gold' ? 260 : variant === 'silver' ? 200 : 160) : (variant === 'gold' ? 140 : variant === 'silver' ? 110 : 80));
+			const duration = options.duration || (variant === 'gold' ? 3200 : variant === 'silver' ? 2800 : 2500);
 			const canvas = document.createElement('canvas');
 			canvas.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:100000';
 			canvas.width = window.innerWidth * devicePixelRatio;
@@ -10449,13 +7548,7 @@ calculateScore() {
 			document.body.appendChild(canvas);
 			const ctx = canvas.getContext('2d');
 
-			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081','#FFE082'] :
-											variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40','#B0BEC5'] :
-											variant === 'rainbow' ? ['#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3'] :
-											variant === 'party' ? ['#FF4081','#448AFF','#00E676','#FFD700','#FFAB40','#EA80FC','#FF5722'] :
-											variant === 'celebration' ? ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD','#FFC107'] :
-											variant === 'winter' ? ['#E3F2FD','#BBDEFB','#90CAF9','#42A5F5','#1E88E5','#1565C0','#0D47A1'] :
-											['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const particles = [];
 			for (let i=0;i<count;i++) {
 				particles.push({
@@ -10503,14 +7596,8 @@ calculateScore() {
 			this._domConfettiActive = true;
 			const variant = options.variant || 'standard';
 			const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-			const count = options.count || (variant === 'gold' ? Math.min(480, Math.floor(baseCount * 1.8)) : variant === 'silver' ? Math.min(380, Math.floor(baseCount * 1.4)) : variant === 'rainbow' ? Math.min(520, Math.floor(baseCount * 2.0)) : variant === 'party' ? Math.min(540, Math.floor(baseCount * 2.1)) : variant === 'celebration' ? Math.min(560, Math.floor(baseCount * 2.2)) : variant === 'winter' ? Math.min(420, Math.floor(baseCount * 1.6)) : baseCount);
-			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081','#FFE082'] :
-											variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40','#B0BEC5'] :
-											variant === 'rainbow' ? ['#FF0000','#FF7F00','#FFFF00','#00FF00','#0000FF','#4B0082','#9400D3'] :
-											variant === 'party' ? ['#FF4081','#448AFF','#00E676','#FFD700','#FFAB40','#EA80FC','#FF5722'] :
-											variant === 'celebration' ? ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD','#FFC107'] :
-											variant === 'winter' ? ['#E3F2FD','#BBDEFB','#90CAF9','#42A5F5','#1E88E5','#1565C0','#0D47A1'] :
-											['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
+			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
+			const colors = options.colors || (variant === 'gold' ? ['#FFD700','#FFC107','#FFAB40','#FF4081'] : variant === 'silver' ? ['#C0C0C0','#90A4AE','#448AFF','#FFAB40'] : ['#FFD700','#FF4081','#00E676','#448AFF','#FFAB40','#8E44AD']);
 			const container = document.createElement('div');
 			container.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;overflow:hidden;z-index:100000';
 			document.body.appendChild(container);
@@ -10526,9 +7613,9 @@ calculateScore() {
 					el.style.transform = `translateX(${dx}px) rotate(${Math.random()*1080}deg) translateY(0)`;
 					el.style.opacity = '0';
 				}, 20 + Math.random()*160);
-				setTimeout(() => el.remove(), 3200 + Math.random()*1500);
+				setTimeout(() => el.remove(), 2200 + Math.random()*1000);
 			}
-			setTimeout(() => { try { container.remove(); } catch(e){} this._domConfettiActive = false; }, 3800 + Math.random()*1800);
+			setTimeout(() => { try { container.remove(); } catch(e){} this._domConfettiActive = false; }, 2600 + Math.random()*1200);
 		} catch (e) { console.warn('createDOMConfetti failed', e); this._domConfettiActive = false; }
 	}
 
@@ -10549,23 +7636,11 @@ calculateScore() {
 			let colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
 			// Tune visuals based on variant
 			if (variant === 'silver') {
-				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈","🥳"];
-				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40","#90CAF9"];
+				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈"];
+				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40"];
 			} else if (variant === 'gold') {
-				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇","🎊"];
-				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081","#FFE082"];
-			} else if (variant === 'rainbow') {
-				emojis = ["🌈","🎨","🎭","🎪","🎡","🎢","🌟"];
-				colors = ["#FF0000","#FF7F00","#FFFF00","#00FF00","#0000FF","#4B0082","#9400D3"];
-			} else if (variant === 'party') {
-				emojis = ["🎉","🎊","🎈","🎂","🎁","🎀","🎶","🎵"];
-				colors = ["#FF4081","#448AFF","#00E676","#FFD700","#FFAB40","#EA80FC","#FF5722"];
-			} else if (variant === 'celebration') {
-				emojis = ["🎉","🎊","🎆","🎇","✨","🌟","💫","⭐"];
-				colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#8E44AD","#FFC107"];
-			} else if (variant === 'winter') {
-				emojis = ["❄️","⛄","🎄","🎅","🔔","🎁","🕯️"];
-				colors = ["#E3F2FD","#BBDEFB","#90CAF9","#42A5F5","#1E88E5","#1565C0","#0D47A1"];
+				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇"];
+				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081"];
 			}
 
 			// Overlay flash
@@ -10582,7 +7657,7 @@ calculateScore() {
 			setTimeout(() => overlay.remove(), 1200);
 
 			const baseCount = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
-			const count = variant === 'gold' ? Math.min(480, Math.floor(baseCount * 1.8)) : variant === 'silver' ? Math.min(380, Math.floor(baseCount * 1.4)) : variant === 'rainbow' ? Math.min(520, Math.floor(baseCount * 2.0)) : variant === 'party' ? Math.min(540, Math.floor(baseCount * 2.1)) : variant === 'celebration' ? Math.min(560, Math.floor(baseCount * 2.2)) : variant === 'winter' ? Math.min(420, Math.floor(baseCount * 1.6)) : baseCount;
+			const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
 			const cx = window.innerWidth / 2;
 			const cy = Math.max(80, window.innerHeight * 0.28); // burst from upper-center, slightly higher on mobile
 
@@ -10627,10 +7702,10 @@ calculateScore() {
 					el.style.opacity = '0';
 				});
 
-				setTimeout(() => el.remove(), 3000 + Math.random() * 1800);
+				setTimeout(() => el.remove(), 2000 + Math.random() * 1200);
 			}
 		} finally {
-			setTimeout(() => { this._bingoSplashActive = false; }, 3200);
+			setTimeout(() => { this._bingoSplashActive = false; }, 2200);
 		}
 	}
 
@@ -10646,13 +7721,7 @@ calculateScore() {
 			const count = options.count || (variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount);
             
 			// Enhanced emoji set with more variety and Samsung-friendly emojis
-			const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','🥇','✨'] :
-								 variant === 'silver' ? ['🎉','🎖️','✨','🎊','🥈','🥳','🎈'] :
-								 variant === 'rainbow' ? ['🌈','🎨','🎭','🎪','🎡','🎢','🎨','🌟','✨'] :
-								 variant === 'party' ? ['🎉','🎊','🎈','🎂','🎁','🎀','🎶','🎵','🥳','🎈'] :
-								 variant === 'celebration' ? ['🎉','🎊','🎆','🎇','✨','🌟','💫','⭐','🎆','🎇'] :
-								 variant === 'winter' ? ['❄️','⛄','🎄','🎅','🔔','🎁','🕯️','🎄','❄️'] :
-								 ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
+			const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊'] : variant === 'silver' ? ['🎉','🎖️','✨','🎊','🥈'] : ['🎉','🎊','✨','🌟','⭐','🎈','🎯','🎨','🎭','🎪','🎡','🎢'];
 			const emojis = options.emojis || defaultEmojis;
 			const container = document.createElement('div');
 			container.className = 'emoji-confetti-container';
@@ -10704,7 +7773,7 @@ calculateScore() {
 					if (i === 0 || i === count-1) {
 						try { this.appendConsoleMessage && this.appendConsoleMessage(`[Confetti] emoji particle ${i} removed`); } catch(e){}
 					}
-				}, 3800 + Math.random()*1500);
+				}, 2800 + Math.random()*1000);
 			}
 
 			// Extended container lifetime with safety checks for Samsung/Android
@@ -10717,7 +7786,7 @@ calculateScore() {
 					console.warn('Emoji container cleanup failed:', e);
 					try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji container cleanup failed: ' + e); } catch(e2){}
 				}
-			}, 5800 + Math.random()*1800);
+			}, 4200 + Math.random()*1200);
 			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji scheduled removal'); } catch(e){}
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}
@@ -10741,8 +7810,36 @@ calculateScore() {
 				} catch (e) { console.warn('createBingoSplash failed', e); }
 			}
 
-			// Confetti is now handled by the calling code (createConfettiEffect)
-			// to avoid duplicate confetti effects
+			// Fallback: use the general confetti/win effect but keep it subtle for bingo
+			try {
+				try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] selecting confetti variant ' + variant); } catch(e){}
+				const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+				const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
+				const isAndroid = /Android/i.test(ua) || isSamsung;
+				if (isAndroid && typeof this.createEmojiConfetti === 'function') {
+					try {
+						console.info('[BingoEffect] Attempting emoji confetti for Android/Samsung');
+						try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Attempting emoji confetti for Android/Samsung'); } catch(e){}
+						this.createEmojiConfetti({ variant });
+						// After a short delay, verify whether emoji elements exist; retry once if nothing rendered
+						setTimeout(() => {
+							try {
+								const container = document.querySelector('.emoji-confetti-container');
+								const found = container && container.children && container.children.length > 0;
+								console.info('[BingoEffect] Emoji confetti presence check:', { found, children: container ? container.children.length : 0 });
+								try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] Emoji confetti presence check: found=' + !!found + ' children=' + (container ? container.children.length : 0)); } catch(e){}
+								if (!found) {
+									console.warn('[BingoEffect] No emoji confetti rendered; retrying with larger count');
+									try { this.appendConsoleMessage && this.appendConsoleMessage('[BingoEffect] retrying emoji confetti with larger count'); } catch(e){}
+									try { this.createEmojiConfetti({ count: Math.max(80, Math.floor(window.innerWidth / 5)), variant }); } catch(e) { console.warn('Retry createEmojiConfetti failed', e); }
+								}
+							} catch (e) { console.warn('Emoji confetti verification failed', e); }
+						}, 400);
+					} catch (e) { console.warn('createEmojiConfetti failed', e); }
+				} else if (typeof this.createConfettiEffect === 'function') {
+					try { this.createConfettiEffect({ variant }); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				}
+			} catch (e) { console.warn('bingo confetti selection failed', e); }
 
 			// Ultimate fallback: flash an overlay and small emoji burst
 			try {
@@ -10796,17 +7893,41 @@ calculateScore() {
 	createMoveHistoryDisplay() {
 		const historyDisplay = document.createElement("div");
 		historyDisplay.id = "move-history";
-		// Prefer placing history near the instructions (drawer-instructions)
-		const drawerInstructions = document.querySelector('.drawer-instructions') || document.querySelector('.drawer-instructions-desktop');
-		if (drawerInstructions) {
-			drawerInstructions.appendChild(historyDisplay);
-			return historyDisplay;
-		}
-		// Fallbacks: mobile drawer's moves-panel then info-panel
+		// Try to append to mobile drawer first, then fallback to info-panel
 		const mobileDrawer = document.querySelector(".mobile-drawer .moves-panel");
 		const infoPanel = document.querySelector(".info-panel");
 		if (mobileDrawer) {
 			mobileDrawer.appendChild(historyDisplay);
+			// Also add a console output container at the bottom of the drawer for debug messages
+			let consoleBox = mobileDrawer.querySelector('.drawer-console-output');
+			if (!consoleBox) {
+				consoleBox = document.createElement('div');
+				consoleBox.className = 'drawer-console-output';
+				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
+				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
+				const copyBtn = consoleBox.querySelector('.copy-console-btn');
+				if (copyBtn) {
+					copyBtn.addEventListener('click', async () => {
+						try {
+							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
+							if (!entries.trim()) { alert('No console messages to copy'); return; }
+							if (navigator.clipboard && navigator.clipboard.writeText) {
+								await navigator.clipboard.writeText(entries);
+								alert('Console copied to clipboard!');
+							} else {
+								const textArea = document.createElement('textarea');
+								textArea.value = entries;
+								document.body.appendChild(textArea);
+								textArea.select();
+								document.execCommand('copy');
+								document.body.removeChild(textArea);
+								alert('Console copied to clipboard!');
+							}
+						} catch (e) { console.error('Copy failed:', e); alert('Copy failed: ' + e.message); }
+					});
+				}
+				mobileDrawer.appendChild(consoleBox);
+			}
 		} else if (infoPanel) {
 			infoPanel.appendChild(historyDisplay);
 		}
@@ -10871,10 +7992,10 @@ calculateScore() {
 			rareLetters: ['J', 'K', 'Q', 'V', 'W', 'X', 'Y', 'Z']
 		};
 
-		// AI gets significantly better distribution and higher chance of premium tiles
+		// AI gets better distribution and higher chance of blank tiles
 		while (this.aiRack.length < 7 && this.tiles.length > 0) {
-			// 60% chance to get strategic tiles (increased from 40%)
-			if (Math.random() < 0.6) {
+			// 40% chance to get exactly what AI needs
+			if (Math.random() < 0.4) {
 				const currentVowels = this.aiRack.filter(tile =>
 					optimalDistribution.vowels.includes(tile.letter)).length;
 
@@ -10887,17 +8008,8 @@ calculateScore() {
 					// Need consonants
 					desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
 				} else {
-					// Get blank tile (higher chance), premium letter, or common letter
-					if (Math.random() < 0.3) {
-						// 30% chance for blank tile
-						desiredTile = this.findTileInBag(['*']);
-					} else if (Math.random() < 0.4) {
-						// 28% chance for premium consonant (J, Q, X, Z)
-						desiredTile = this.findTileInBag(optimalDistribution.rareLetters);
-					} else {
-						// 42% chance for common letter
-						desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
-					}
+					// Get blank tile or common letter
+					desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
 				}
 
 				if (desiredTile) {
@@ -11223,8 +8335,6 @@ calculateScore() {
 	async handleTileExchange(tileIndex) {
 		if (!this.exchangeMode || this.tiles.length === 0 || isNaN(tileIndex))
 			return;
-		// If exchange portal removed from UI, do nothing
-		if (!document.getElementById('exchange-portal')) return;
 
 		const tile = this.playerRack[tileIndex];
 		if (!tile) {
@@ -11243,100 +8353,37 @@ calculateScore() {
 			const tileRect = tileElement.getBoundingClientRect();
 			const portalRect = this.exchangePortal.getBoundingClientRect();
 
-			// Create clone for animation
+			// Create clone for smooth animation
 			const clone = tileElement.cloneNode(true);
 			clone.style.position = "fixed";
 			clone.style.left = `${tileRect.left}px`;
 			clone.style.top = `${tileRect.top}px`;
-			clone.style.width = `${tileRect.width}px`;
-			clone.style.height = `${tileRect.height}px`;
-			clone.style.transition = "none";
 			clone.style.zIndex = "1000";
+			clone.style.pointerEvents = "none";
 			document.body.appendChild(clone);
 
-			// Calculate the center of the portal
+			// Get portal center
 			const portalCenterX = portalRect.left + portalRect.width / 2;
 			const portalCenterY = portalRect.top + portalRect.height / 2;
 
-			// Create keyframes for the spiral animation
-			const spiralKeyframes = [];
-			const totalSteps = 50;
-			const totalRotations = 3;
-			const scaleFactor = 0.1;
-
-			for (let i = 0; i <= totalSteps; i++) {
-				const progress = i / totalSteps;
-				const angle = progress * totalRotations * 2 * Math.PI;
-				const radius = (1 - progress) * 100; // Spiral radius decreases as progress increases
-
-				// Calculate position along spiral
-				const x =
-					tileRect.left +
-					(portalCenterX - tileRect.left) * progress +
-					Math.cos(angle) * radius;
-				const y =
-					tileRect.top +
-					(portalCenterY - tileRect.top) * progress +
-					Math.sin(angle) * radius;
-
-				// Calculate scale and rotation
-				const scale = 1 - progress * (1 - scaleFactor);
-				const rotation = progress * 720; // Two full rotations
-
-				spiralKeyframes.push({
-					transform: `translate(${x - tileRect.left}px, ${y - tileRect.top}px) 
-                            rotate(${rotation}deg) 
-                            scale(${scale})`,
-					opacity: 1 - progress * 0.8,
-				});
-			}
-
-			// Add final keyframe for disappearing into portal
-			spiralKeyframes.push({
-				transform: `translate(${portalCenterX - tileRect.left}px, ${portalCenterY - tileRect.top}px) 
-                        rotate(720deg) 
-                        scale(${scaleFactor})`,
-				opacity: 0,
-			});
-
-			// Create and play the animation
-			const animation = clone.animate(spiralKeyframes, {
-				duration: 1500,
-				easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-				fill: "forwards",
-			});
-
-			// Create swirling particle effect
-			const particles = [];
-			const particleCount = 10;
-			for (let i = 0; i < particleCount; i++) {
-				const particle = document.createElement("div");
-				particle.className = "exchange-particle";
-				particle.style.cssText = `
-                  position: fixed;
-                  width: 4px;
-                  height: 4px;
-                  background: ${["#64b5f6", "#2196f3", "#1976d2"][Math.floor(Math.random() * 3)]};
-                  border-radius: 50%;
-                  pointer-events: none;
-                  z-index: 999;
-              `;
-				document.body.appendChild(particle);
-				particles.push(particle);
-
-				const delay = i * (1500 / particleCount);
-				const particleAnimation = particle.animate(spiralKeyframes, {
-					duration: 1500,
-					delay: delay,
-					easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+			// Simple smooth animation: tile floats to portal center and shrinks
+			await new Promise((resolve) => {
+				clone.animate([
+					{
+						transform: "translate(0, 0) scale(1) rotate(0deg)",
+						opacity: 1,
+					},
+					{
+						transform: `translate(${portalCenterX - tileRect.left - tileRect.width / 2}px, ${portalCenterY - tileRect.top - tileRect.height / 2}px) scale(0.3) rotate(360deg)`,
+						opacity: 0,
+					}
+				], {
+					duration: 800,
+					easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
 					fill: "forwards",
-				});
+				}).onfinish = resolve;
+			});
 
-				particleAnimation.onfinish = () => particle.remove();
-			}
-
-			// Wait for animation to complete
-			await animation.finished;
 			clone.remove();
 
 			// Add to exchanging tiles
@@ -11353,7 +8400,7 @@ calculateScore() {
 			this.exchangePortal.classList.add("portal-pulse");
 			setTimeout(() => {
 				this.exchangePortal.classList.remove("portal-pulse");
-			}, 500);
+			}, 400);
 
 			// If player has exchanged enough tiles or rack is empty
 			if (this.exchangingTiles.length >= 7 || this.playerRack.length === 0) {
@@ -11369,24 +8416,29 @@ calculateScore() {
 
 		// Disable exchange mode
 		this.exchangeMode = false;
-		// If portal present, remove active state; otherwise continue silently
-		const portal = document.getElementById('exchange-portal');
-		if (portal && portal.classList) portal.classList.remove('active');
-		const actBtn = document.getElementById('activate-exchange');
-		if (actBtn) actBtn.textContent = 'Activate Exchange Portal';
+		this.exchangePortal.classList.remove("active");
+		document.getElementById("activate-exchange").textContent =
+			"Activate Exchange Portal";
 
-		// Optionally animate portal close if UI exists
-		let portalClose = null;
-		if (portal && portal.animate) {
-			portalClose = portal.animate([
-				{ transform: 'scale(1) rotate(0deg)', opacity: 1 },
-				{ transform: 'scale(0) rotate(360deg)', opacity: 0 }
-			], { duration: 1000, easing: 'cubic-bezier(0.4,0,0.2,1)' });
-		}
+		// Create portal closing animation
+		const portalClose = this.exchangePortal.animate(
+			[{
+					transform: "scale(1) rotate(0deg)",
+					opacity: 1
+				},
+				{
+					transform: "scale(0) rotate(360deg)",
+					opacity: 0
+				},
+			], {
+				duration: 1000,
+				easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+			},
+		);
 
-		// Create new tiles animation container
-		const newTilesContainer = document.createElement('div');
-		newTilesContainer.className = 'new-tiles-container';
+		// Create new tiles animation
+		const newTilesContainer = document.createElement("div");
+		newTilesContainer.className = "new-tiles-container";
 		document.body.appendChild(newTilesContainer);
 
 		// Return exchanged tiles to bag and get new ones
@@ -11411,34 +8463,32 @@ calculateScore() {
                 `;
 			newTilesContainer.appendChild(tileElement);
 
-			const portalRect = portal ? portal.getBoundingClientRect() : null;
-			const rackRect = document.getElementById("tile-rack").getBoundingClientRect();
+			const portalRect = this.exchangePortal.getBoundingClientRect();
+			const rackRect = document
+				.getElementById("tile-rack")
+				.getBoundingClientRect();
 			const finalX = rackRect.left + i * 50; // Adjust spacing as needed
 			const finalY = rackRect.top;
-			// starting coordinates (use portal center if available, otherwise start at final position)
-			const startLeft = portalRect ? (portalRect.left + portalRect.width / 2) : finalX;
-			const startTop = portalRect ? (portalRect.top + portalRect.height / 2) : finalY;
 
 			await new Promise((resolve) => {
 				tileElement.animate(
-					[
-						{
-							left: `${startLeft}px`,
-							top: `${startTop}px`,
-							transform: 'scale(0) rotate(-360deg)',
+					[{
+							left: `${portalRect.left + portalRect.width / 2}px`,
+							top: `${portalRect.top + portalRect.height / 2}px`,
+							transform: "scale(0) rotate(-360deg)",
 							opacity: 0,
 						},
 						{
 							left: `${finalX}px`,
 							top: `${finalY}px`,
-							transform: 'scale(1) rotate(0deg)',
+							transform: "scale(1) rotate(0deg)",
 							opacity: 1,
 						},
 					], {
 						duration: 1000,
-						easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-						fill: 'forwards',
-					}
+						easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+						fill: "forwards",
+					},
 				).onfinish = resolve;
 			});
 		}
@@ -11497,12 +8547,8 @@ calculateScore() {
 			this.renderAIRack();
 			this.updateTilesCount();
 
-			// Add to move history (localized)
-			{
-				const lang = this.preferredLang || (typeof localStorage !== 'undefined' && localStorage.getItem('preferredLang')) || 'en';
-				const label = getTranslation('aiExchanged', lang);
-				this.addToMoveHistory("Computer", label, 0);
-			}
+			// Add to move history
+			this.addToMoveHistory("Computer", "AI decided to exchange their tiles.", 0);
 
 			// Switch turn
 			this.currentTurn = "player";
@@ -11521,10 +8567,6 @@ calculateScore() {
 
 	async showAIExchangeAnimation() {
 		const portal = document.getElementById("exchange-portal");
-		if (!portal) {
-			// Exchange UI removed — quickly resolve without visual animation
-			return;
-		}
 		portal.classList.add("active");
 
 		// Animate AI tiles going into portal
@@ -11736,10 +8778,8 @@ calculateScore() {
 			this.highlightValidPlacements();
 		});
 
-		// Add exchange system setup only if exchange UI is present
-		if (document.getElementById('activate-exchange') || document.getElementById('activate-exchange-desktop')) {
-			this.setupExchangeSystem();
-		}
+		// Add exchange system setup
+		this.setupExchangeSystem();
 
 		// Play word button
 		const playWordBtn = document.getElementById("play-word");
@@ -11784,7 +8824,6 @@ calculateScore() {
 					try {
 						if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 							const texts = formedWords.map(w => w.word).filter(w => w && w !== 'BINGO BONUS');
-							const inlinePrefLang = this._getPreferredLangCode();
 							// Ensure bingo phrase is queued last so it's heard after the spelled words
 							texts.push('Bingo bonus!');
 							let resolveInline;
@@ -11792,12 +8831,12 @@ calculateScore() {
 							texts.forEach((txt, idx) => {
 								try {
 									const u = new SpeechSynthesisUtterance(txt);
-									u.lang = inlinePrefLang;
-									u.rate = 0.75;
+									u.lang = 'hi-IN';
+									u.rate = 0.95;
 									u.pitch = 1.0;
 									// Try to set a preferred voice synchronously inside the gesture
 									try {
-										const pref = this._getPreferredVoice && this._getPreferredVoice(this._getPreferredLangCode && this._getPreferredLangCode());
+										const pref = this._getPreferredVoice && this._getPreferredVoice();
 										if (pref) {
 											u.voice = pref;
 											try { this.appendConsoleMessage('inline prequeue used voice: '+pref.name); } catch(e){}
@@ -11926,10 +8965,6 @@ calculateScore() {
 		const skipTurnBtn = document.getElementById("skip-turn");
 		if (skipTurnBtn) skipTurnBtn.addEventListener("click", () => {
 			if (this.currentTurn === "player") {
-				// If player has placed tiles but hasn't submitted, revert them before skipping
-				if (this.placedTiles && this.placedTiles.length > 0) {
-					if (typeof this.revertPlacedTiles === 'function') this.revertPlacedTiles();
-				}
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
 				this.addToMoveHistory("Player", "SKIP", 0);
@@ -11945,10 +8980,6 @@ calculateScore() {
 		const skipTurnDesktopBtn = document.getElementById("skip-turn-desktop");
 		if (skipTurnDesktopBtn) skipTurnDesktopBtn.addEventListener("click", () => {
 			if (this.currentTurn === "player") {
-				// If player has placed tiles but hasn't submitted, revert them before skipping
-				if (this.placedTiles && this.placedTiles.length > 0) {
-					if (typeof this.revertPlacedTiles === 'function') this.revertPlacedTiles();
-				}
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
 				this.addToMoveHistory("Player", "SKIP", 0);
@@ -12017,45 +9048,6 @@ calculateScore() {
 
 				// Trigger game over animation
 				this.announceWinner();
-			});
-		}
-
-
-		// Copy move history button (mobile)
-		const copyHistoryBtnMobile = document.getElementById("copy-move-history-mobile");
-		if (copyHistoryBtnMobile) {
-			copyHistoryBtnMobile.addEventListener("click", () => {
-				const historyContent = document.getElementById("move-history").innerText;
-				if (historyContent && historyContent.trim()) {
-					navigator.clipboard.writeText(historyContent).then(() => {
-						copyHistoryBtnMobile.textContent = "✓ Copied!";
-						setTimeout(() => { copyHistoryBtnMobile.textContent = "📋 Copy"; }, 2000);
-					}).catch(err => {
-						console.error("Failed to copy:", err);
-						alert("Failed to copy to clipboard");
-					});
-				} else {
-					alert("No move history to copy");
-				}
-			});
-		}
-
-		// Copy move history button (desktop)
-		const copyHistoryBtnDesktop = document.getElementById("copy-move-history-desktop");
-		if (copyHistoryBtnDesktop) {
-			copyHistoryBtnDesktop.addEventListener("click", () => {
-				const historyContent = document.getElementById("move-history-desktop").innerText;
-				if (historyContent && historyContent.trim()) {
-					navigator.clipboard.writeText(historyContent).then(() => {
-						copyHistoryBtnDesktop.textContent = "✓ Copied!";
-						setTimeout(() => { copyHistoryBtnDesktop.textContent = "📋 Copy"; }, 2000);
-					}).catch(err => {
-						console.error("Failed to copy:", err);
-						alert("Failed to copy to clipboard");
-					});
-				} else {
-					alert("No move history to copy");
-				}
 			});
 		}
 
@@ -12387,7 +9379,25 @@ calculateScore() {
 			this.toggleExchangeMode("desktop-drawer");
 		});
 
-		// (Language selectors are initialized earlier during init)
+		// Language selector (desktop drawer)
+		const languageSelectorDesktopDrawer = document.getElementById("language-selector-desktop-drawer");
+		if (languageSelectorDesktopDrawer) {
+			languageSelectorDesktopDrawer.addEventListener("change", (e) => {
+				const selectedLanguage = e.target.value;
+				if (selectedLanguage) {
+					// Update all language selectors to maintain consistency
+					const allLanguageSelectors = document.querySelectorAll('.language-selector select');
+					allLanguageSelectors.forEach(selector => {
+						if (selector !== e.target) {
+							selector.value = selectedLanguage;
+						}
+					});
+					
+					// Handle language change logic here
+					console.log(`Language changed to: ${selectedLanguage}`);
+				}
+			});
+		}
 
 		// Handle window resize to update AI rack visibility
 
@@ -12681,10 +9691,110 @@ document.addEventListener("DOMContentLoaded", () => {
 		};
 	}
 
-	// In-game drawer console UI removed per request — no DOM console will be created or attached
-});
+	// Ensure the in-drawer console output container exists for mobile drawer diagnostics
+	try {
+		const mobileDrawer = document.getElementById('mobile-drawer');
+		if (mobileDrawer) {
+			let consoleContainer = mobileDrawer.querySelector('.drawer-console-output');
+			if (!consoleContainer) {
+				consoleContainer = document.createElement('div');
+				consoleContainer.className = 'drawer-console-output';
+				consoleContainer.style.whiteSpace = 'pre-wrap';
+				consoleContainer.style.maxHeight = '220px';
+				consoleContainer.style.overflow = 'auto';
+				consoleContainer.style.padding = '8px';
+				consoleContainer.style.background = '#f6f8fb';
+				consoleContainer.style.borderRadius = '6px';
+				consoleContainer.style.border = '1px solid rgba(0,0,0,0.06)';
 
-document.addEventListener('DOMContentLoaded', function() {
+				const header = document.createElement('div');
+				header.style.display = 'flex';
+				header.style.justifyContent = 'space-between';
+				header.style.alignItems = 'center';
+				header.style.marginBottom = '6px';
+
+				const title = document.createElement('div');
+				title.textContent = 'Console';
+				title.style.fontWeight = '600';
+				title.style.color = '#123';
+
+				const copyBtn = document.createElement('button');
+				copyBtn.textContent = 'Copy All';
+				copyBtn.style.fontSize = '0.9em';
+				copyBtn.style.padding = '4px 8px';
+				copyBtn.style.borderRadius = '4px';
+				copyBtn.style.border = 'none';
+				copyBtn.style.background = '#1a237e';
+				copyBtn.style.color = '#fff';
+			copyBtn.style.cursor = 'pointer';
+			copyBtn.addEventListener('click', async () => {
+				try {
+					const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
+						.map(n => n.textContent).join('\n');
+					if (!text.trim()) { game.appendConsoleMessage('No messages to copy'); return; }
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						await navigator.clipboard.writeText(text);
+						game.appendConsoleMessage('Console copied to clipboard');
+					} else {
+						const textArea = document.createElement('textarea');
+						textArea.value = text;
+						document.body.appendChild(textArea);
+						textArea.select();
+						document.execCommand('copy');
+						document.body.removeChild(textArea);
+						game.appendConsoleMessage('Console copied to clipboard');
+					}
+				} catch (err) {
+					game.appendConsoleMessage('Copy failed: ' + (err && err.message));
+				}
+			});
+
+			header.appendChild(title);
+			header.appendChild(copyBtn);
+			consoleContainer.appendChild(header);
+
+			// Add an inner list for messages
+			const list = document.createElement('div');
+			list.className = 'drawer-console-list';
+			consoleContainer.appendChild(list);
+
+			// insert near the top of drawer content if possible
+			const drawerContent = mobileDrawer.querySelector('.drawer-content');
+			if (drawerContent) drawerContent.insertBefore(consoleContainer, drawerContent.firstChild);
+			}
+		}
+	} catch (err) {
+		console.warn('Failed to ensure drawer console:', err);
+	}
+
+	// Also ensure desktop drawer has the same console UI for users on larger screens
+	try {
+		const desktopDrawer = document.getElementById('desktop-drawer');
+		if (desktopDrawer && !desktopDrawer.querySelector('.drawer-console-output')) {
+			// Clone the mobile console if present to keep parity
+			const mobileConsole = document.querySelector('#mobile-drawer .drawer-console-output');
+			if (mobileConsole) {
+				const clone = mobileConsole.cloneNode(true);
+				// Reattach the copy handler on the cloned header button
+				const copyBtn = clone.querySelector('button');
+				if (copyBtn) {
+					copyBtn.addEventListener('click', () => {
+						try {
+							const text = Array.from(clone.querySelectorAll('.console-line')).map(n => n.textContent).join('\n');
+							navigator.clipboard.writeText(text);
+							game.appendConsoleMessage('Console copied to clipboard');
+						} catch (err) {
+							game.appendConsoleMessage('Copy failed: ' + (err && err.message));
+						}
+					});
+				}
+				const drawerContent = desktopDrawer.querySelector('.drawer-content');
+				if (drawerContent) drawerContent.insertBefore(clone, drawerContent.firstChild);
+			}
+		}
+	} catch (err) { console.warn('Failed to ensure desktop drawer console', err); }
+
+	// Drawer toggle functionality
 	const drawer = document.getElementById('mobile-drawer');
 	const toggle = document.getElementById('mobile-menu-toggle');
 	const closeBtn = drawer.querySelector('.drawer-close');

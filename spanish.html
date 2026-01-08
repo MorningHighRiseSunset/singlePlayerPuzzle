@@ -351,34 +351,40 @@
     <div id="mobile-drawer" class="mobile-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
-        <!-- Definitions/Move History - FIRST so it's visible -->
-        <div id="move-history-container" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:150px; overflow-y:auto;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h3 style="margin:0; font-size:1em; color:#1a237e;" data-translate="moveHistory">Move History</h3>
-            <button id="copy-move-history-mobile" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
-          </div>
-          <div id="move-history" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
-        </div>
-        <!-- Definitions history will be created dynamically and placed near instructions -->
+        <aside class="moves-panel">
+          <h2>Definitions History</h2>
+          <button id="print-history" class="print-button">Print Definition History (Shows Word Definitions)</button>
+          <div id="move-history"></div>
+        </aside>
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
             <h3>Scores</h3>
-            <p><span data-translate="player">Player</span>: <span id="player-score">0</span>
+            <p>Player: <span id="player-score">0</span>
             </p>
-            <p><span data-translate="computer">Computer</span>: <span id="computer-score">0</span>
+            <p>Computer: <span id="computer-score">0</span>
             </p>
           </div>
           <div class="tiles-left">
-            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count">98</span>
+            <h3>Tiles Remaining: <span id="tiles-count">98</span>
             </h3>
           </div>
-          <!-- Exchange portal removed -->
+          <section class="exchange-area">
+            <h3>Exchange Tiles</h3>
+            <button id="activate-exchange" class="exchange-button">Activate Exchange Portal</button>
+            <div id="exchange-portal" class="exchange-portal">
+              <div class="portal-ring outer"></div>
+              <div class="portal-ring middle"></div>
+              <div class="portal-ring inner"></div>
+              <div class="portal-core"></div>
+              <div class="portal-particles"></div>
+            </div>
+            <div class="exchange-instructions"> Drag tiles here to exchange them </div>
+          </section>
           <nav class="controls">
             <button id="play-word">Submit</button>
             <button id="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn">Skip Turn</button>
-            <button id="show-instructions">How to Play</button>
             <button id="quit-game" class="quit-button">Quit / End Game</button>
           </nav>
           <!-- How to Play instructions INSIDE the burger menu drawer -->
@@ -424,29 +430,36 @@
     <div id="desktop-drawer" class="desktop-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
       <div class="drawer-content">
-        <!-- Definitions/Move History - FIRST so it's visible -->
-        <div id="move-history-container-desktop" style="margin-bottom:6px; padding:8px; background:#f7faff; border-radius:6px; max-height:180px; overflow-y:auto;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h3 style="margin:0; font-size:1em; color:#1a237e;">Move History</h3>
-            <button id="copy-move-history-desktop" style="background:#1a237e; color:white; border:none; border-radius:4px; padding:4px 8px; font-size:0.8em; cursor:pointer; margin-left:4px;" title="Copy to clipboard">📋 Copy</button>
-          </div>
-          <div id="move-history-desktop" style="font-size:0.85em; color:#333; line-height:1.25;"></div>
-        </div>
-        <!-- Definitions history inside desktop drawer removed; history will be shown near instructions -->
+        <aside class="moves-panel">
+          <h2>Definitions History</h2>
+          <button id="print-history-desktop-drawer" class="print-button">Print Definition History (Shows Word Definitions)</button>
+          <div id="move-history-desktop-drawer"></div>
+        </aside>
         <aside class="info-panel">
           <h2>Game Info</h2>
           <div class="score-box">
             <h3>Scores</h3>
-            <p><span data-translate="player">Player</span>: <span id="player-score-desktop-drawer">0</span>
+            <p>Player: <span id="player-score-desktop-drawer">0</span>
             </p>
-            <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop-drawer">0</span>
+            <p>Computer: <span id="computer-score-desktop-drawer">0</span>
             </p>
           </div>
           <div class="tiles-left">
-            <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop-drawer">98</span>
+            <h3>Tiles Remaining: <span id="tiles-count-desktop-drawer">98</span>
             </h3>
           </div>
-          <!-- Exchange portal removed -->
+          <section class="exchange-area">
+            <h3>Exchange Tiles</h3>
+            <button id="activate-exchange-desktop-drawer" class="exchange-button">Activate Exchange Portal</button>
+            <div id="exchange-portal-desktop-drawer" class="exchange-portal">
+              <div class="portal-ring outer"></div>
+              <div class="portal-ring middle"></div>
+              <div class="portal-ring inner"></div>
+              <div class="portal-core"></div>
+              <div class="portal-particles"></div>
+            </div>
+            <div class="exchange-instructions"> Drag tiles here to exchange them </div>
+          </section>
           <nav class="controls">
             <button id="play-word-desktop-drawer">Submit</button>
             <button id="shuffle-rack-desktop-drawer">Shuffle Rack</button>
@@ -454,7 +467,15 @@
             <button id="show-instructions-desktop-drawer">How to Play</button>
             <button id="quit-game-desktop-drawer" class="quit-button">Quit / End Game</button>
           </nav>
-          <!-- Language selector removed (moved to index.html) -->
+          <div class="language-selector">
+            <select id="language-selector-desktop-drawer" class="language-button">
+              <option value="" disabled selected hidden>Click to change language</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="zh">中文</option>
+              <option value="fr">French</option>
+            </select>
+          </div>
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
           <div class="drawer-instructions" id="drawer-instructions-desktop">
             <h3>How to Play</h3>
@@ -518,22 +539,37 @@
         </div>
       </main>
       <!-- Desktop Definitions/History Panel -->
-        <!-- Desktop definitions/history panel removed — history will appear near instructions -->
+      <aside class="moves-panel">
+        <h2>Definitions History</h2>
+        <button id="print-history-desktop" class="print-button">Print Definition History (Shows Word Definitions)</button>
+        <div id="move-history-desktop"></div>
+      </aside>
       <!-- Desktop Info Panel -->
       <aside class="info-panel">
         <h2>Game Info</h2>
         <div class="score-box">
-          <h3 data-translate="scores">Scores</h3>
-          <p><span data-translate="player">Player</span>: <span id="player-score-desktop">0</span>
+          <h3>Scores</h3>
+          <p>Player: <span id="player-score-desktop">0</span>
           </p>
-          <p><span data-translate="computer">Computer</span>: <span id="computer-score-desktop">0</span>
+          <p>Computer: <span id="computer-score-desktop">0</span>
           </p>
         </div>
         <div class="tiles-left">
-          <h3><span data-translate="tilesRemaining">Tiles Remaining</span>: <span id="tiles-count-desktop">98</span>
+          <h3>Tiles Remaining: <span id="tiles-count-desktop">98</span>
           </h3>
         </div>
-        <!-- Exchange portal removed -->
+        <section class="exchange-area">
+          <h3>Exchange Tiles</h3>
+          <button id="activate-exchange-desktop" class="exchange-button">Activate Exchange Portal</button>
+          <div id="exchange-portal-desktop" class="exchange-portal">
+            <div class="portal-ring outer"></div>
+            <div class="portal-ring middle"></div>
+            <div class="portal-ring inner"></div>
+            <div class="portal-core"></div>
+            <div class="portal-particles"></div>
+          </div>
+          <div class="exchange-instructions"> Drag tiles here to exchange them </div>
+        </section>
         <nav class="controls">
           <button id="play-word-desktop">Submit</button>
           <button id="shuffle-rack-desktop">Shuffle Rack</button>
@@ -541,7 +577,15 @@
           <button id="show-instructions-desktop">How to Play</button>
           <button id="quit-game-desktop" class="quit-button">Quit / End Game</button>
         </nav>
-        <!-- Language selection moved to index.html -->
+        <div class="language-selector">
+          <select id="language-selector-desktop" class="language-button">
+            <option value="" disabled selected hidden>Click to change language</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh">中文</option>
+            <option value="fr">French</option>
+          </select>
+        </div>
       </aside>
     </div>
     <!-- Win/Lose Overlay (hidden by default, shown via JS) -->
@@ -577,9 +621,13 @@
         const mobileToggle = document.getElementById('mobile-menu-toggle');
         const mobileCloseBtn = mobileDrawer.querySelector('.drawer-close');
         mobileToggle.addEventListener('click', () => {
-          // Toggle the drawer open/closed
-          mobileDrawer.classList.toggle('open');
-          document.body.style.overflow = mobileDrawer.classList.contains('open') ? 'hidden' : '';
+          if (mobileDrawer.classList.contains('open')) {
+            mobileDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          } else {
+            mobileDrawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+          }
         });
         mobileCloseBtn.addEventListener('click', () => {
           mobileDrawer.classList.remove('open');
@@ -596,9 +644,13 @@
         const desktopToggle = document.getElementById('desktop-menu-toggle');
         const desktopCloseBtn = desktopDrawer.querySelector('.drawer-close');
         desktopToggle.addEventListener('click', () => {
-          // Toggle the drawer open/closed
-          desktopDrawer.classList.toggle('open');
-          document.body.style.overflow = desktopDrawer.classList.contains('open') ? 'hidden' : '';
+          if (desktopDrawer.classList.contains('open')) {
+            desktopDrawer.classList.remove('open');
+            document.body.style.overflow = '';
+          } else {
+            desktopDrawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+          }
         });
         desktopCloseBtn.addEventListener('click', () => {
           desktopDrawer.classList.remove('open');
@@ -661,16 +713,6 @@
         });
       });
     </script>
-      <script>
-        // Read language from URL (set by index) and persist before main script loads
-        (function(){
-          try {
-            const params = new URLSearchParams(window.location.search);
-            const lang = params.get('lang');
-            if (lang) localStorage.setItem('preferredLang', lang);
-          } catch (e) { /* ignore */ }
-        })();
-      </script>
-      <script src="spanish.js"></script>
+    <script src="spanish.js"></script>
   </body>
 </html>
