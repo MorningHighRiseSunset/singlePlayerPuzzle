@@ -2540,7 +2540,7 @@ class ScrabbleGame {
 		try {
 			// Fetch from the dictionary API
 			const response = await fetch(
-				`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord.toLowerCase()}`,
+				`https://api.dictionaryapi.dev/api/v2/entries/hi/${cleanWord.toLowerCase()}`,
 			);
 
 			// Handle API errors
@@ -6753,22 +6753,22 @@ calculateScore() {
 		}
 	}
 
-	// Pick a preferred English voice if available. Returns a SpeechSynthesisVoice or null.
+	// Pick a preferred Hindi voice if available. Returns a SpeechSynthesisVoice or null.
 	_getPreferredVoice() {
 		try {
 			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
 			const voices = window.speechSynthesis.getVoices() || [];
 			if (!voices || voices.length === 0) return null;
-			// Prefer explicit English voices (en-US/en-GB) and prefer female-like names if present
+			// Prefer explicit Hindi voices (hi-IN) and prefer female-like names if present
 			let pick = null;
 			for (const v of voices) {
 				if (!v.lang) continue;
 				const lang = v.lang.toLowerCase();
-				if (lang.startsWith('en') && (!pick || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'))) {
+				if (lang.startsWith('hi') && (!pick || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('female'))) {
 					pick = v;
 				}
 			}
-			if (!pick) pick = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || voices[0];
+			if (!pick) pick = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi')) || voices[0];
 			return pick || null;
 		} catch (e) {
 			console.debug('getPreferredVoice failed', e);
