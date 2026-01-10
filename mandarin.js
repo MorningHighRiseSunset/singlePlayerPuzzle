@@ -27,6 +27,30 @@ function setupMobileLayout() {
 	}
 }
 
+// Mandarin Chinese translations for all user-facing text
+const TRANSLATIONS = {
+	invalidWord: '无效单词!请重试。',
+	errorInAITurn: 'AI回合出错:',
+	errorInAIPossiblePlays: '查找AI可能走法时出错:',
+	aiTripleCheckFailed: '❌ AI三重检查失败:会形成无效单词: ',
+	aiMadeBlunder: '🤦 哎呀!AI犯了一个错误:会形成无效单词: ',
+	notValidWordInDictionary: '不是字典中的有效单词',
+	notValidTwoLetterWord: '不是有效的两个字母单词',
+	errorProcessingMove: '处理走法时出错:',
+	errorFetchingDefinition: '获取定义时出错',
+	aiGhostPossiblePlays: 'AI可能的幽灵走法:',
+	aiThinking: 'AI在思考...',
+	aiUsingGhostMove: 'AI使用幽灵走法:',
+	errorLoading: '加载出错',
+	dictionnaire: '字典:',
+	fallbackDictionary: '使用带有有限单词的中文备用字典',
+	bingoBonus: '宾果奖励!',
+	invalidMove: '找到无效走法:',
+	noDefinitionFound: '找不到定义:',
+	tryAllSeven: '尝试在一个回合中使用全部7个字母获得50分宾果奖励!',
+	parallelPlays: '平行走法通过同时形成多个单词可以获得高分。'
+};
+
 class TrieNode {
     constructor() {
         this.children = {};
@@ -7204,9 +7228,9 @@ calculateScore() {
 				// Show an animated toast for invalid words
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(TRANSLATIONS.invalidWord);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);

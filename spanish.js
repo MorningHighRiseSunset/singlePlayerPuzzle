@@ -27,6 +27,31 @@ function setupMobileLayout() {
 	}
 }
 
+// Spanish translations for all user-facing text
+const TRANSLATIONS = {
+	invalidWord: '¡Palabra no válida! Por favor intenta de nuevo.',
+	errorInAITurn: 'Error en el turno de la IA:',
+	errorInAIPossiblePlays: 'Error al encontrar jugadas posibles de la IA:',
+	aiTripleCheckFailed: '❌ Verificación triple de IA falló: habría formado palabra(s) no válida(s): ',
+	aiMadeBlunder: '🤦 ¡Ups! La IA cometió un error: habría formado palabra(s) no válida(s): ',
+	notValidWordInDictionary: 'no es una palabra válida en el diccionario',
+	notValidTwoLetterWord: 'no es una palabra válida de dos letras',
+	invalidWord: 'Palabra no válida',
+	errorProcessingMove: 'Error al procesar el movimiento:',
+	errorFetchingDefinition: 'Error al obtener la definición para',
+	aiGhostPossiblePlays: 'Jugadas posibles fantasma de la IA:',
+	aiThinking: 'La IA está pensando...',
+	aiUsingGhostMove: 'La IA usando movimiento fantasma:',
+	errorLoading: 'Error cargando',
+	diccionario: 'diccionario:',
+	fallbackDictionary: 'Usando diccionario de respaldo en español con palabras limitadas',
+	bingoBonus: '¡Bonificación Bingo!',
+	invalidMove: 'Movimiento inválido encontrado:',
+	noDefinitionFound: 'No se encontró definición para:',
+	tryAllSeven: 'Intenta usar los 7 fichas en un turno para una bonificación de 50 puntos de BINGO!',
+	parallelPlays: 'Los juegos paralelos pueden marcar mucho formando múltiples palabras a la vez.'
+};
+
 class TrieNode {
     constructor() {
         this.children = {};
@@ -7195,9 +7220,9 @@ calculateScore() {
 				// Show an animated toast for invalid words
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(TRANSLATIONS.invalidWord);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);

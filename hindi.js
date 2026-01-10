@@ -27,6 +27,30 @@ function setupMobileLayout() {
 	}
 }
 
+// Hindi translations for all user-facing text
+const TRANSLATIONS = {
+	invalidWord: 'अमान्य शब्द! कृपया पुनः प्रयास करें।',
+	errorInAITurn: 'AI की बारी में त्रुटि:',
+	errorInAIPossiblePlays: 'AI की संभावित चालें खोजने में त्रुटि:',
+	aiTripleCheckFailed: '❌ AI तिहरी जांच विफल: अमान्य शब्द(ों) बना देता: ',
+	aiMadeBlunder: '🤦 ओह! AI ने गलती की: अमान्य शब्द(ों) बना देता: ',
+	notValidWordInDictionary: 'शब्दकोश में एक वैध शब्द नहीं है',
+	notValidTwoLetterWord: 'दो अक्षरों का एक वैध शब्द नहीं है',
+	errorProcessingMove: 'चाल को संसाधित करने में त्रुटि:',
+	errorFetchingDefinition: 'के लिए परिभाषा प्राप्त करने में त्रुटि',
+	aiGhostPossiblePlays: 'AI की संभावित भूतिया चालें:',
+	aiThinking: 'AI सोच रहा है...',
+	aiUsingGhostMove: 'AI भूतिया चाल का उपयोग कर रहा है:',
+	errorLoading: 'लोड करने में त्रुटि',
+	dictionnaire: 'शब्दकोश:',
+	fallbackDictionary: 'सीमित शब्दों के साथ हिंदी फॉलबैक शब्दकोश का उपयोग',
+	bingoBonus: 'बिंगो बोनस!',
+	invalidMove: 'अमान्य चाल मिली:',
+	noDefinitionFound: 'के लिए कोई परिभाषा नहीं मिली:',
+	tryAllSeven: 'एक बार में सभी 7 टाइलों का उपयोग करने का प्रयास करें BINGO बोनस के लिए 50 अंक!',
+	parallelPlays: 'समानांतर खेल एक ही समय में कई शब्द बनाकर बड़ा स्कोर कर सकते हैं।'
+};
+
 class TrieNode {
     constructor() {
         this.children = {};
@@ -7194,9 +7218,9 @@ calculateScore() {
 				// Show an animated toast for invalid words
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(TRANSLATIONS.invalidWord);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);

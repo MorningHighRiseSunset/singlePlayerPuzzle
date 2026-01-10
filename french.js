@@ -27,6 +27,30 @@ function setupMobileLayout() {
 	}
 }
 
+// French translations for all user-facing text
+const TRANSLATIONS = {
+	invalidWord: 'Mot invalide ! Veuillez réessayer.',
+	errorInAITurn: 'Erreur dans le tour de l\'IA:',
+	errorInAIPossiblePlays: 'Erreur lors de la recherche des coups possibles de l\'IA:',
+	aiTripleCheckFailed: '❌ Vérification triple de l\'IA échouée: aurait formé le(s) mot(s) invalide(s): ',
+	aiMadeBlunder: '🤦 Oups! L\'IA a fait une erreur: aurait formé le(s) mot(s) invalide(s): ',
+	notValidWordInDictionary: 'n\'est pas un mot valide dans le dictionnaire',
+	notValidTwoLetterWord: 'n\'est pas un mot valide de deux lettres',
+	errorProcessingMove: 'Erreur lors du traitement du mouvement:',
+	errorFetchingDefinition: 'Erreur lors de la récupération de la définition pour',
+	aiGhostPossiblePlays: 'Coups fantômes possibles de l\'IA:',
+	aiThinking: 'L\'IA réfléchit...',
+	aiUsingGhostMove: 'L\'IA utilise un coup fantôme:',
+	errorLoading: 'Erreur lors du chargement',
+	dictionnaire: 'dictionnaire:',
+	fallbackDictionary: 'Utilisation du dictionnaire de secours français avec des mots limités',
+	bingoBonus: 'Bonus Bingo!',
+	invalidMove: 'Coup invalide trouvé:',
+	noDefinitionFound: 'Pas de définition trouvée pour:',
+	tryAllSeven: 'Essayez d\'utiliser les 7 tuiles en un seul tour pour un bonus BINGO de 50 points!',
+	parallelPlays: 'Les coups parallèles peuvent marquer gros en formant plusieurs mots à la fois.'
+};
+
 class TrieNode {
     constructor() {
         this.children = {};
@@ -7195,9 +7219,9 @@ calculateScore() {
 				// Show an animated toast for invalid words
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(TRANSLATIONS.invalidWord);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
