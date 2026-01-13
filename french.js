@@ -1212,36 +1212,36 @@ class ScrabbleGame {
 
 	setupHintSystem() {
 		const hints = [
-			"Triple Word Score (TW) squares multiply the entire word score by 3!",
-			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
-			"Double Word Score (DW) squares double your entire word score.",
-			"Double Letter Score (DL) squares double the value of a single letter.",
-			"Try to use all 7 tiles in one turn for a 50-point BINGO bonus!",
-			"You can exchange tiles if you don't like your rack.",
-			"hint-short-words",  // Will be translated
-			"Parallel plays can score big by forming multiple words at once.",
-			"Try to block your opponent from premium squares.",
-			"Save high-value letters like Q, Z, X, and J for premium squares.",
-			"Don't forget: the first word must cover the center star.",
-			"You can shuffle your rack to get a new perspective.",
-			"Use blank tiles (*) as any letter, but they score zero points.",
-			"Keep a good balance of vowels and consonants in your rack.",
-			"Adding an 'S' can pluralize and create new words for extra points.",
-			"Look for hooks: adding a letter to an existing word to form a new one.",
-			"Try to build off existing words for more scoring opportunities.",
-			"If you're stuck, exchange some tiles or skip your turn.",
-			"The game ends when all tiles are used or both players pass 2 times.",
-			"You can print your move history and word definitions after the game.",
-			"Hover over a tile to see its point value.",
-			"You can undo your move before submitting if you make a mistake.",
-			"Use the exchange portal to swap out unwanted tiles.",
-			"Plan ahead: don't open up triple word squares for your opponent!",
-			"Try to form two or more words in one move for extra points.",
-			"The AI gets smarter as the game progresses—watch out!",
-			"You can click the 'Simulate Endgame' button to test the AI.",
-			"Words must be connected to existing tiles after the first move.",
-			"Use the 'Skip Turn' button if you can't play.",
-			"Good luck and have fun!"
+			"hint-0",
+			"hint-1",
+			"hint-2",
+			"hint-3",
+			"hint-4",
+			"hint-5",
+			"hint-short-words",
+			"hint-7",
+			"hint-8",
+			"hint-9",
+			"hint-10",
+			"hint-11",
+			"hint-12",
+			"hint-13",
+			"hint-14",
+			"hint-15",
+			"hint-16",
+			"hint-17",
+			"hint-18",
+			"hint-19",
+			"hint-20",
+			"hint-21",
+			"hint-22",
+			"hint-23",
+			"hint-24",
+			"hint-25",
+			"hint-26",
+			"hint-27",
+			"hint-28",
+			"hint-29"
 		];
 
 		let currentHintIndex = 0;
@@ -1267,15 +1267,15 @@ class ScrabbleGame {
 				currentHintIndex = 0;
 			}
 			const hintKey = shuffledHints[currentHintIndex];
-			// Translate if it looks like a translation key, otherwise use the string as-is
-			const hintText_ = (hintKey === 'hint-short-words' && typeof t === 'function') ? t(hintKey) : hintKey;
+			// All hints are now translation keys, so translate them
+			const hintText_ = (typeof t === 'function') ? t(hintKey) : hintKey;
 			hintText.textContent = hintText_;
 			hintBox.classList.add("show");
 
 			clearTimeout(this.hintBoxTimeout);
 			this.hintBoxTimeout = setTimeout(() => {
 				hintBox.classList.remove("show");
-			}, 8000);  // Increased from 5000 to 8000ms
+			}, 8000);
 
 			currentHintIndex++;
 		};
@@ -1290,7 +1290,7 @@ class ScrabbleGame {
 		hintBox.addEventListener("mouseenter", () => {
 			if (this.hintBoxBlocked) return;
 			const randomHint = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
-			const hintText_ = (randomHint === 'hint-short-words' && typeof t === 'function') ? t(randomHint) : randomHint;
+			const hintText_ = (typeof t === 'function') ? t(randomHint) : randomHint;
 			hintText.textContent = hintText_;
 			hintBox.classList.add("show");
 		});
