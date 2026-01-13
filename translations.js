@@ -93,6 +93,11 @@ const translations = {
     "no-messages-copy": "No messages to copy",
     "place-tiles-first": "Please place some tiles first!",
     
+    // Game action messages in move history
+    "move-skip": "SKIP",
+    "move-exchange": "EXCHANGE",
+    "ai-exchange": "AI decided to exchange their tiles.",
+    
     // Game messages
     "click-change-language": "Click to change language"
   },

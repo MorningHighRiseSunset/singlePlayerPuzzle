@@ -5160,7 +5160,7 @@ formedWords.forEach((wordInfo) => {
 			this.checkGameEnd();
 		} else {
 			// Optionally record skip in move history
-			this.addToMoveHistory("Computer", "SKIP", 0);
+			this.addToMoveHistory("Computer", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
 			this.updateGameState();
 		}
 	}
@@ -5316,33 +5316,101 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Use a working SOWPODS mirror
-			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-			let text = await response.text();
-			// SOWPODS is all uppercase, one word per line
-			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
+			let response = null;
+			let text = "";
+			const lang = getCurrentLanguage();
+			
+			if (lang === 'es') {
+				// Spanish dictionary
+				response = await fetch("https://raw.githubusercontent.com/JosepLleal/diccionari/main/diccionari.txt");
+				if (response.ok) {
+					text = await response.text();
+				}
+			} else if (lang === 'fr') {
+				// French dictionary
+				response = await fetch("https://raw.githubusercontent.com/Tagazok/french-scrabble-dictionary/master/ods9.txt");
+				if (response.ok) {
+					text = await response.text();
+				} else {
+					response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt");
+					if (response.ok) {
+						const lines = (await response.text()).split("\n");
+						text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
+					}
+				}
+			} else if (lang === 'hi') {
+				// Hindi dictionary
+				response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hi/hi_50k.txt");
+				if (response.ok) {
+					const lines = (await response.text()).split("\n");
+					text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
+				} else {
+					response = await fetch("https://raw.githubusercontent.com/rahulsivalenka/hindi-scrabble/master/dictionary.txt");
+					if (response.ok) {
+						text = await response.text();
+					}
+				}
+			} else if (lang === 'zh') {
+				// Mandarin Chinese dictionary
+				response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/jieba/dict.txt");
+				if (response.ok) {
+					text = await response.text();
+					const lines = text.split("\n");
+					text = lines.map(line => {
+						const parts = line.trim().split(/\s+/);
+						return parts[0];
+					}).filter(Boolean).join("\n");
+				} else {
+					response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/dict.txt.big");
+					if (response.ok) {
+						text = await response.text();
+						const lines = text.split("\n");
+						text = lines.map(line => {
+							const parts = line.trim().split(/\s+/);
+							return parts[0];
+						}).filter(Boolean).join("\n");
+					}
+				}
+			} else {
+				// Default to English
+				response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+				if (response.ok) {
+					text = await response.text();
+				}
+			}
+			
+			if (!text) {
+				throw new Error("Dictionary source failed, using fallback");
+			}
+			
+			// Process based on language
+			if (lang === 'hi') {
+				// Hindi: filter for Devanagari characters
+				this.dictionary = new Set(
+					text.split("\n")
+						.map(w => w.trim())
+						.filter(w => w.length >= 2 && /^[\u0900-\u097F]+$/.test(w))
+				);
+			} else if (lang === 'zh') {
+				// Chinese: filter for CJK characters
+				this.dictionary = new Set(
+					text.split("\n")
+						.map(w => w.trim())
+						.filter(w => w.length >= 1 && /^[\u4e00-\u9fff]+$/.test(w))
+				);
+			} else {
+				// English, Spanish, French: lowercase and filter
+				this.dictionary = new Set(
+					text.split("\n")
+						.map(w => w.trim().toLowerCase())
+						.filter(w => w.length >= 2)
+				);
+			}
 
-			// Datamuse fetch removed to prevent CORS errors and speed up loading
-			// try {
-			//     const additionalWords = await this.loadAdditionalWords();
-			//     additionalWords.forEach(word => {
-			//         if (word.length >= 2) {
-			//             this.dictionary.add(word.toLowerCase());
-			//         }
-			//     });
-			// } catch (error) {
-			//     console.error("Error loading additional words:", error);
-			// }
-
-			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
-					// Test if some common words are in the dictionary
-		const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
-		testWords.forEach(word => {
-			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-		});
+			console.log(`${lang.toUpperCase()} dictionary loaded successfully. Word count:`, this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			// More comprehensive fallback dictionary
+			// Fallback dictionary
 			this.dictionary = new Set([
 				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
 			]);
@@ -8488,7 +8556,7 @@ calculateScore() {
 		this.exchangingTiles = [];
 
 		// Add to move history
-		this.addToMoveHistory("Player", "EXCHANGE", 0);
+		this.addToMoveHistory("Player", typeof t === 'function' ? t('move-exchange') : "EXCHANGE", 0);
 
 		// Switch turn to AI
 		this.currentTurn = "ai";
@@ -8534,7 +8602,7 @@ calculateScore() {
 			this.updateTilesCount();
 
 			// Add to move history
-			this.addToMoveHistory("Computer", "AI decided to exchange their tiles.", 0);
+			this.addToMoveHistory("Computer", typeof t === 'function' ? t('ai-exchange') : "AI decided to exchange their tiles.", 0);
 
 			// Switch turn
 			this.currentTurn = "player";
@@ -8953,7 +9021,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", "SKIP", 0);
+				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
@@ -8968,7 +9036,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", "SKIP", 0);
+				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
@@ -9272,7 +9340,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", "SKIP", 0);
+				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
