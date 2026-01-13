@@ -200,6 +200,43 @@ class ScrabbleGame {
 		this.init();
 	}
 
+	getTileRomanization(letter) {
+		// Mandarin pinyin mapping for common characters
+		const pinyinMap = {
+			'的': 'de', '一': 'yi', '是': 'shi', '在': 'zai', '不': 'bu',
+			'了': 'le', '有': 'you', '人': 'ren', '这': 'zhe', '中': 'zho',
+			'大': 'da', '为': 'wei', '上': 'sha', '个': 'ge', '国': 'guo',
+			'我': 'wo', '以': 'yi', '要': 'yao', '他': 'ta', '时': 'shi',
+			'来': 'lai', '用': 'yong', '们': 'men', '生': 'she', '到': 'dao',
+			'作': 'zuo', '地': 'di', '于': 'yu', '出': 'chu', '就': 'jiu',
+			'分': 'fen', '对': 'dui', '成': 'che', '会': 'hui', '可': 'ke',
+			'主': 'zhu', '发': 'fa', '年': 'nian', '动': 'dong', '同': 'tong',
+			'工': 'gong', '也': 'ye', '能': 'neng', '下': 'xia', '过': 'guo',
+			'子': 'zi', '说': 'shuo', '产': 'cha', '样': 'yang', '配': 'pei',
+			'接': 'jie', '待': 'dai', '采': 'cai', '获': 'huo', '较': 'jiao',
+			'苦': 'ku', '夺': 'duo', '杀': 'sha', '效': 'xiao', '里': 'li',
+			'易': 'yi', '官': 'guan', '府': 'fu', '更': 'geng', '最': 'zui',
+			'新': 'xin', '办': 'ban', '任': 'ren', '通': 'tong', '好': 'hao',
+			'步': 'bu', '反': 'fan', '感': 'gan', '完': 'wan', '见': 'jian',
+			'许': 'xu', '多': 'duo', '音': 'yin', '你': 'ni', '起': 'qi',
+			'地': 'di', '么': 'me', '变': 'bian', '要': 'yao', '想': 'xiang',
+			'实': 'shi', '分': 'fen', '第': 'di', '手': 'shou', '写': 'xie',
+			'照': 'zhao', '那': 'na', '给': 'gei', '名': 'ming', '法': 'fa',
+			'间': 'jian', '血': 'xue', '正': 'zheng', '身': 'shen', '初': 'chu',
+			'保': 'bao', '护': 'hu', '收': 'shou', '经': 'jing', '己': 'ji',
+			'进': 'jin', '期': 'qi', '根': 'gen', '共': 'gong', '由': 'you',
+			'听': 'ting', '表': 'biao', '鼓': 'gu', '播': 'bo', '画': 'hua',
+			'红': 'hong', '争': 'zheng', '器': 'qi', '私': 'si', '效': 'xiao',
+			'跟': 'gen', '号': 'hao', '召': 'zhao', '强': 'qiang', '造': 'zao',
+			'夜': 'ye', '战': 'zhan', '深': 'shen', '把': 'ba', '美': 'mei',
+			'进': 'jin', '早': 'zao', '走': 'zou', '亲': 'qin', '象': 'xiang',
+			'死': 'si', '带': 'dai', '懂': 'dong', '寝': 'qin', '追': 'zhui',
+			'求': 'qiu', '放': 'fang', '血': 'xue', '亲': 'qin',
+			'龍': 'long', '鳳': 'feng'
+		};
+		return pinyinMap[letter] || '';
+	}
+
 	pickNonRepeating(arr, type) {
 		let msg;
 		let tries = 0;
@@ -5445,8 +5482,10 @@ formedWords.forEach((wordInfo) => {
 			tileElement.className = "tile";
 			tileElement.dataset.index = index;
 			tileElement.dataset.id = tile.id;
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
                 ${tile.letter}
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
             `;
@@ -8014,8 +8053,10 @@ calculateScore() {
 		this.aiRack.forEach((tile) => {
 			const tileElement = document.createElement("div");
 			tileElement.className = "tile";
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
                 ${tile.letter}
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 <span class="points">${tile.value}</span>
             `;
 			rack.appendChild(tileElement);

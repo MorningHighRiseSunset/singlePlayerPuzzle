@@ -360,6 +360,18 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Romanization label for non-English tiles */
+.tile-romanization {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 0.5em;
+  color: #666;
+  font-weight: normal;
+  pointer-events: none;
+  line-height: 1;
+}
+
 .tile.selected {
   border: 2.5px solid #2979ff !important; /* Blue, slightly thicker than normal */
   box-shadow: 0 0 0 2px #bbdefb, 0 0 8px 1px #2979ff44 !important; /* Soft blue glow */

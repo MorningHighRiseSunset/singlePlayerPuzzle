@@ -200,6 +200,22 @@ class ScrabbleGame {
 		this.init();
 	}
 
+	getTileRomanization(letter) {
+		// French - show accented versions for base letters
+		const accentedMap = {
+			'A': 'à', 'E': 'é', 'O': 'ô'
+		};
+		return accentedMap[letter] || '';
+	}
+
+	getCanonicalForm(word) {
+		// Return the properly accented version of a word if available
+		if (this.accentMap && this.accentMap[word.toLowerCase()]) {
+			return this.accentMap[word.toLowerCase()];
+		}
+		return word.toLowerCase();
+	}
+
 	pickNonRepeating(arr, type) {
 		let msg;
 		let tries = 0;
@@ -5344,20 +5360,20 @@ formedWords.forEach((wordInfo) => {
 			let response = null;
 			let text = "";
 			
-			// Try primary source: French ODS (Official Dictionary of Scrabble) - best for Scrabble
-			response = await fetch("https://raw.githubusercontent.com/Tagazok/french-scrabble-dictionary/master/ods9.txt");
+			// Try primary source: French word frequency list (well-maintained, reliable)
+			response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt");
 			if (response.ok) {
-				text = await response.text();
+				// Format: word frequency (tab or space separated), extract just words
+				const lines = (await response.text()).split("\n");
+				text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
 			} else {
-				// Try alternative: French word frequency list (well-maintained)
-				response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt");
+				// Try alternative: French word list (backup source)
+				response = await fetch("https://raw.githubusercontent.com/McSinyx/fr-wordlist/master/fr.txt");
 				if (response.ok) {
-					// Format: word frequency (tab or space separated), extract just words
-					const lines = (await response.text()).split("\n");
-					text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
+					text = await response.text();
 				} else {
-					// Try another: French word list
-					response = await fetch("https://raw.githubusercontent.com/McSinyx/fr-wordlist/master/fr.txt");
+					// Try another: French Scrabble dictionary from different source
+					response = await fetch("https://raw.githubusercontent.com/facebookresearch/fastText/master/docs/crawl-300d-2M-subword.fr");
 					if (response.ok) {
 						text = await response.text();
 					}
@@ -5368,30 +5384,88 @@ formedWords.forEach((wordInfo) => {
 				throw new Error("All French dictionary sources failed");
 			}
 			
+			// Initialize accent map to preserve canonical (accented) forms
+			this.accentMap = {};
+			
 			// Dictionary is one word per line, normalize to lowercase and filter valid French words
+			const rawWords = text.split("\n")
+				.map(w => w.trim().toLowerCase())
+				.filter(w => w.length >= 2 && /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(w)); // At least 2 chars, valid French characters
+			
 			this.dictionary = new Set(
-				text.split("\n")
-					.map(w => w.trim().toLowerCase())
-					.filter(w => w.length >= 2 && /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(w)) // At least 2 chars, valid French characters
+				rawWords.map(w => {
+					// Normalize accented characters so tiles work interchangeably
+					const normalized = w
+						.replace(/à/g, 'a').replace(/À/g, 'A')
+						.replace(/â/g, 'a').replace(/Â/g, 'A')
+						.replace(/ä/g, 'a').replace(/Ä/g, 'A')
+						.replace(/é/g, 'e').replace(/É/g, 'E')
+						.replace(/è/g, 'e').replace(/È/g, 'E')
+						.replace(/ê/g, 'e').replace(/Ê/g, 'E')
+						.replace(/ë/g, 'e').replace(/Ë/g, 'E')
+						.replace(/ï/g, 'i').replace(/Ï/g, 'I')
+						.replace(/î/g, 'i').replace(/Î/g, 'I')
+						.replace(/ô/g, 'o').replace(/Ô/g, 'O')
+						.replace(/ö/g, 'o').replace(/Ö/g, 'O')
+						.replace(/ù/g, 'u').replace(/Ù/g, 'U')
+						.replace(/û/g, 'u').replace(/Û/g, 'U')
+						.replace(/ü/g, 'u').replace(/Ü/g, 'U')
+						.replace(/ÿ/g, 'y').replace(/Ÿ/g, 'Y')
+						.replace(/ç/g, 'c').replace(/Ç/g, 'C');
+					
+					// Store mapping: normalized → original accented form (prefer accented if available)
+					if (!this.accentMap[normalized] || w.includes(/[àâäéèêëïîôöùûüÿç]/)) {
+						this.accentMap[normalized] = w;
+					}
+					return normalized;
+				})
 			);
 
-			console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-			// Test if some common French words are in the dictionary
-			const testWords = ["maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie"];
+		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
+		
+		// Test if some common French words are in the dictionary
+		const testWords = ["maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie"];
 			testWords.forEach(word => {
 				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
 			});
 		} catch (error) {
 			console.error("Error loading French dictionary:", error);
-			// French fallback dictionary with common French words
+			// Build accent map for fallback dictionary
+			this.accentMap = {
+				"tetard": "tétard", "metre": "mètre", "foret": "forêt", "fleur": "fleur",
+				"pere": "père", "mere": "mère", "frere": "frère", "soeur": "sœur",
+				"ecole": "école", "cole": "côle", "heureux": "heureux", "triste": "triste",
+				"chaud": "chaud", "froid": "froid", "mouille": "mouillé"
+			};
+			// French fallback dictionary with comprehensive common French words
 			this.dictionary = new Set([
+				// Common nouns
 				"maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie", "monde", "temps", "année", "jour",
-				"nuit", "homme", "femme", "enfant", "garçon", "fille", "père", "mère", "frère", "sœur", "ami", "amie",
-				"travail", "école", "livre", "voiture", "ville", "pays", "nourriture", "lait", "pain", "viande", "fruit",
-				"vert", "bleu", "rouge", "blanc", "noir", "grand", "petit", "bon", "mauvais", "nouveau", "vieux", "haut", "bas"
+				"nuit", "homme", "femme", "enfant", "garçon", "fille", "pere", "mere", "frere", "soeur", "ami", "amie",
+				"travail", "ecole", "livre", "voiture", "ville", "pays", "nourriture", "lait", "pain", "viande", "fruit",
+				"fleur", "arbre", "herbe", "montagne", "riviere", "mer", "plage", "foret", "maison", "porte", "fenetre",
+				// Common adjectives and verbs
+				"vert", "bleu", "rouge", "blanc", "noir", "grand", "petit", "bon", "mauvais", "nouveau", "vieux", "haut", "bas",
+				"beau", "laid", "heureux", "triste", "facile", "difficile", "rapide", "lent", "chaud", "froid", "sec", "mouille",
+				"avoir", "etre", "faire", "aller", "venir", "pouvoir", "vouloir", "devoir", "savoir", "dire", "voir", "donner",
+				"prendre", "porter", "mettre", "laisser", "tenir", "trouver", "chercher", "demander", "repondre", "parler", "ecouter",
+				"a", "à", "an", "ans", "au", "aux", "as", "ce", "de", "des", "du", "en", "es", "et", "eu", "eus", "eut",
+				"je", "la", "le", "les", "lui", "ma", "me", "mi", "mis", "mon", "mu", "ne", "nos", "nu", "oui", "ou", "où",
+				"par", "pas", "pis", "pu", "pus", "que", "qui", "sa", "se", "si", "so", "son", "su", "ta", "te", "toi", "ton",
+				"tu", "tu", "un", "une", "us", "va", "vis", "vos", "vu", "ya", "ze",
+				// Additional common words to prevent invalid plays
+				"table", "chaise", "lampe", "cuisine", "chambre", "salon", "salle", "baie", "mur", "toit", "mains", "pieds",
+				"corps", "tête", "bras", "jambe", "oeil", "yeux", "nez", "bouche", "oreille", "dent", "coeur", "poumon",
+				"aller", "arriver", "partir", "commencer", "finir", "continuer", "arrêter", "entrer", "sortir", "monter", "descendre",
+				"manger", "boire", "dormir", "rire", "pleurer", "courir", "marcher", "danser", "chanter", "jouer", "travailler",
+				// Two-letter valid French words (critical for Scrabble)
+				"ai", "ais", "ait", "ant", "as", "ça", "ce", "da", "de", "do", "du", "eh", "en", "es", "et", "eu", "ex",
+				"fa", "fi", "go", "ha", "hé", "ho", "hu", "il", "in", "jo", "ka", "ki", "la", "le", "li", "lo", "lu",
+				"ma", "me", "mi", "mo", "mu", "na", "ne", "ni", "no", "nu", "ô", "od", "oe", "of", "oh", "om", "on", "op",
+				"or", "os", "ou", "pa", "pé", "pi", "po", "pu", "ra", "ré", "ri", "ro", "ru", "sa", "se", "si", "so", "su",
+				"ta", "té", "ti", "to", "tu", "un", "us", "ut", "va", "vé", "vi", "vo", "vu", "wa", "xu", "ya", "ye", "yo", "yu"
 			]);
-			console.warn("Using French fallback dictionary with limited words");
+			console.warn("Using French fallback dictionary with comprehensive words");
 		}
 	}
 
@@ -5436,7 +5510,9 @@ formedWords.forEach((wordInfo) => {
 			tileElement.className = "tile";
 			tileElement.dataset.index = index;
 			tileElement.dataset.id = tile.id;
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
@@ -7286,8 +7362,10 @@ calculateScore() {
 						if (w.word === "BINGO BONUS") {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
-						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
-						return `${w.word}`;
+						// Display canonical (accented) form of word
+						const displayWord = this.getCanonicalForm(w.word).toUpperCase();
+						if (typeof w.score === 'number') return `${displayWord} (${w.score})`;
+						return `${displayWord}`;
 					});
 					const formatted = parts.join(" & ");
 					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
@@ -8005,7 +8083,9 @@ calculateScore() {
 		this.aiRack.forEach((tile) => {
 			const tileElement = document.createElement("div");
 			tileElement.className = "tile";
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
             `;

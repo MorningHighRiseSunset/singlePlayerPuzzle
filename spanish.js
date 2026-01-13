@@ -201,6 +201,14 @@ class ScrabbleGame {
 		this.init();
 	}
 
+	getTileRomanization(letter) {
+		// Spanish - show accented versions for vowels
+		const accentedMap = {
+			'A': 'á', 'E': 'é', 'I': 'í', 'O': 'ó', 'U': 'ú'
+		};
+		return accentedMap[letter] || '';
+	}
+
 	pickNonRepeating(arr, type) {
 		let msg;
 		let tries = 0;
@@ -5374,6 +5382,17 @@ formedWords.forEach((wordInfo) => {
 				text.split("\n")
 					.map(w => w.trim().toLowerCase())
 					.filter(w => w.length >= 2 && /^[a-zñáéíóúü]+$/i.test(w)) // At least 2 chars, valid Spanish characters
+					.map(w => {
+						// Normalize accented characters so tiles work interchangeably
+						// A tile can satisfy both 'a' and 'á'
+						return w
+							.replace(/á/g, 'a')
+							.replace(/é/g, 'e')
+							.replace(/í/g, 'i')
+							.replace(/ó/g, 'o')
+							.replace(/ú/g, 'u')
+							.replace(/ü/g, 'u');
+					})
 			);
 
 			console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
@@ -5437,7 +5456,9 @@ formedWords.forEach((wordInfo) => {
 			tileElement.className = "tile";
 			tileElement.dataset.index = index;
 			tileElement.dataset.id = tile.id;
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
@@ -8006,7 +8027,9 @@ calculateScore() {
 		this.aiRack.forEach((tile) => {
 			const tileElement = document.createElement("div");
 			tileElement.className = "tile";
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
             `;

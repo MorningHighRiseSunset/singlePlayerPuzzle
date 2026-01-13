@@ -1188,36 +1188,36 @@ class ScrabbleGame {
 
 	setupHintSystem() {
 		const hints = [
-			"hint-0",
-			"hint-1",
-			"hint-2",
-			"hint-3",
-			"hint-4",
-			"hint-5",
-			"hint-short-words",
-			"hint-7",
-			"hint-8",
-			"hint-9",
-			"hint-10",
-			"hint-11",
-			"hint-12",
-			"hint-13",
-			"hint-14",
-			"hint-15",
-			"hint-16",
-			"hint-17",
-			"hint-18",
-			"hint-19",
-			"hint-20",
-			"hint-21",
-			"hint-22",
-			"hint-23",
-			"hint-24",
-			"hint-25",
-			"hint-26",
-			"hint-27",
-			"hint-28",
-			"hint-29"
+			"Triple Word Score (TW) squares multiply the entire word score by 3!",
+			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
+			"Double Word Score (DW) squares double your entire word score.",
+			"Double Letter Score (DL) squares double the value of a single letter.",
+			"Try to use all 7 tiles in one turn for a 50-point BINGO bonus!",
+			"You can exchange tiles if you don't like your rack.",
+			"Short words like 'QI', 'ZA', and 'JO' are valid and useful.",
+			"Parallel plays can score big by forming multiple words at once.",
+			"Try to block your opponent from premium squares.",
+			"Save high-value letters like Q, Z, X, and J for premium squares.",
+			"Don't forget: the first word must cover the center star.",
+			"You can shuffle your rack to get a new perspective.",
+			"Use blank tiles (*) as any letter, but they score zero points.",
+			"Keep a good balance of vowels and consonants in your rack.",
+			"Adding an 'S' can pluralize and create new words for extra points.",
+			"Look for hooks: adding a letter to an existing word to form a new one.",
+			"Try to build off existing words for more scoring opportunities.",
+			"If you're stuck, exchange some tiles or skip your turn.",
+			"The game ends when all tiles are used or both players pass 2 times.",
+			"You can print your move history and word definitions after the game.",
+			"Hover over a tile to see its point value.",
+			"You can undo your move before submitting if you make a mistake.",
+			"Use the exchange portal to swap out unwanted tiles.",
+			"Plan ahead: don't open up triple word squares for your opponent!",
+			"Try to form two or more words in one move for extra points.",
+			"The AI gets smarter as the game progresses—watch out!",
+			"You can click the 'Simulate Endgame' button to test the AI.",
+			"Words must be connected to existing tiles after the first move.",
+			"Use the 'Skip Turn' button if you can't play.",
+			"Good luck and have fun!"
 		];
 
 		let currentHintIndex = 0;
@@ -1242,16 +1242,13 @@ class ScrabbleGame {
 				shuffledHints = shuffleArray([...hints]);
 				currentHintIndex = 0;
 			}
-			const hintKey = shuffledHints[currentHintIndex];
-			// All hints are now translation keys, so translate them
-			const hintText_ = (typeof t === 'function') ? t(hintKey) : hintKey;
-			hintText.textContent = hintText_;
+			hintText.textContent = shuffledHints[currentHintIndex];
 			hintBox.classList.add("show");
 
 			clearTimeout(this.hintBoxTimeout);
 			this.hintBoxTimeout = setTimeout(() => {
 				hintBox.classList.remove("show");
-			}, 8000);
+			}, 5000);
 
 			currentHintIndex++;
 		};
@@ -1265,9 +1262,7 @@ class ScrabbleGame {
 		// Show random hint on hover
 		hintBox.addEventListener("mouseenter", () => {
 			if (this.hintBoxBlocked) return;
-			const randomHint = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
-			const hintText_ = (typeof t === 'function') ? t(randomHint) : randomHint;
-			hintText.textContent = hintText_;
+			hintText.textContent = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
 			hintBox.classList.add("show");
 		});
 		hintBox.addEventListener("mouseleave", () => {
@@ -5160,7 +5155,7 @@ formedWords.forEach((wordInfo) => {
 			this.checkGameEnd();
 		} else {
 			// Optionally record skip in move history
-			this.addToMoveHistory("Computer", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
+			this.addToMoveHistory("Computer", "SKIP", 0);
 			this.updateGameState();
 		}
 	}
@@ -5316,151 +5311,37 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			let response = null;
-			let text = "";
-			const lang = getCurrentLanguage();
-			
-			if (lang === 'es') {
-				// Spanish dictionary
-				response = await fetch("https://raw.githubusercontent.com/JosepLleal/diccionari/main/diccionari.txt");
-				if (response.ok) {
-					text = await response.text();
-				}
-			} else if (lang === 'fr') {
-				// French dictionary
-				response = await fetch("https://raw.githubusercontent.com/Tagazok/french-scrabble-dictionary/master/ods9.txt");
-				if (response.ok) {
-					text = await response.text();
-				} else {
-					response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt");
-					if (response.ok) {
-						const lines = (await response.text()).split("\n");
-						text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
-					}
-				}
-			} else if (lang === 'hi') {
-				// Hindi dictionary
-				response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/hi/hi_50k.txt");
-				if (response.ok) {
-					const lines = (await response.text()).split("\n");
-					text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
-				} else {
-					response = await fetch("https://raw.githubusercontent.com/rahulsivalenka/hindi-scrabble/master/dictionary.txt");
-					if (response.ok) {
-						text = await response.text();
-					}
-				}
-			} else if (lang === 'zh') {
-				// Mandarin Chinese dictionary
-				// Try multiple sources
-				response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/jieba/dict.txt");
-				if (response.ok) {
-					text = await response.text();
-					const lines = text.split("\n");
-					text = lines.map(line => {
-						const parts = line.trim().split(/\s+/);
-						return parts[0];
-					}).filter(Boolean).join("\n");
-				}
-				
-				// Fallback: try alternative Jieba dictionary
-				if (!text || text.length < 1000) {
-					try {
-						response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/dict.txt.big");
-						if (response.ok) {
-							text = await response.text();
-							const lines = text.split("\n");
-							text = lines.map(line => {
-								const parts = line.trim().split(/\s+/);
-								return parts[0];
-							}).filter(Boolean).join("\n");
-						}
-					} catch (e) {
-						console.warn("Failed to load Jieba backup dictionary", e);
-					}
-				}
-				
-				// Fallback: try Tencent dictionary
-				if (!text || text.length < 1000) {
-					try {
-						response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/tencent_dict.py");
-						if (response.ok) {
-							text = await response.text();
-						}
-					} catch (e) {
-						console.warn("Failed to load Tencent dictionary", e);
-					}
-				}
-			} else {
-				// Default to English
-				response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
-				if (response.ok) {
-					text = await response.text();
-				}
-			}
-			
-			if (!text) {
-				throw new Error("Dictionary source failed, using fallback");
-			}
-			
-			// Process based on language
-			if (lang === 'hi') {
-				// Hindi: filter for Devanagari characters
-				this.dictionary = new Set(
-					text.split("\n")
-						.map(w => w.trim())
-						.filter(w => w.length >= 2 && /^[\u0900-\u097F]+$/.test(w))
-				);
-			} else if (lang === 'zh') {
-				// Chinese: filter for CJK characters
-				this.dictionary = new Set(
-					text.split("\n")
-						.map(w => w.trim())
-						.filter(w => w.length >= 1 && /^[\u4e00-\u9fff]+$/.test(w))
-				);
-			} else {
-				// English, Spanish, French: lowercase and filter
-				this.dictionary = new Set(
-					text.split("\n")
-						.map(w => w.trim().toLowerCase())
-						.filter(w => w.length >= 2)
-				);
-			}
+			// Use a working SOWPODS mirror
+			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+			let text = await response.text();
+			// SOWPODS is all uppercase, one word per line
+			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
-			console.log(`${lang.toUpperCase()} dictionary loaded successfully. Word count:`, this.dictionary.size);
+			// Datamuse fetch removed to prevent CORS errors and speed up loading
+			// try {
+			//     const additionalWords = await this.loadAdditionalWords();
+			//     additionalWords.forEach(word => {
+			//         if (word.length >= 2) {
+			//             this.dictionary.add(word.toLowerCase());
+			//         }
+			//     });
+			// } catch (error) {
+			//     console.error("Error loading additional words:", error);
+			// }
+
+			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
+					// Test if some common words are in the dictionary
+		const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
+		testWords.forEach(word => {
+			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
+		});
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			const lang = getCurrentLanguage();
-			
-			// Language-specific fallback dictionaries
-			if (lang === 'es') {
-				// Spanish fallback
-				this.dictionary = new Set([
-					"hola", "mundo", "juego", "jugar", "palabra", "el", "la", "de", "que", "y", "a", "en", "un", "ser", "se", "no", "haber", "por", "con", "su", "para", "es", "lo", "como", "más", "o", "poder", "decir", "este", "ir", "otro", "ese", "la", "si", "me", "ya", "ver", "porque", "dar", "cuando", "él", "muy", "sin", "vez", "mucho", "saber", "qué", "sobre", "mi", "alguno", "mismo", "yo", "también", "hasta", "hay", "donde", "han", "quien", "están", "estado", "desde", "todo", "nos", "durante", "estados", "todos", "uno", "les", "ni", "contra", "otros", "fueron", "ese", "eso", "había", "ante", "ellos", "dos", "esa", "esto", "mio", "fuera", "fue", "casa", "familia", "día", "años", "tiempo", "vida", "parte", "número", "hombre", "lugar", "país", "historia", "ciudad", "siglo", "mundo", "grupo", "forma", "término", "escuela", "orden", "nivel", "empresa", "servicio", "tipo", "sistema", "punto", "centro", "lado", "conocimiento", "minuto", "semana", "mes", "hora", "gente"
-				]);
-			} else if (lang === 'fr') {
-				// French fallback
-				this.dictionary = new Set([
-					"bonjour", "monde", "jeu", "jouer", "mot", "le", "la", "de", "que", "et", "à", "en", "un", "être", "se", "ne", "avoir", "par", "avec", "son", "pour", "est", "ce", "comme", "plus", "ou", "pouvoir", "dire", "ce", "aller", "autre", "celui", "si", "me", "déjà", "voir", "parce", "donner", "quand", "il", "très", "sans", "fois", "beaucoup", "savoir", "quoi", "sur", "mon", "quelque", "même", "je", "aussi", "jusqu", "y", "où", "avoir", "qui", "être", "lors", "entre", "autres", "deux", "celui", "cela", "ceci", "ceux", "cette", "celui", "celuici", "celuilà", "c", "ç", "ê", "ô", "û", "é", "è", "ù", "à", "maison", "famille", "jour", "ans", "temps", "vie", "part", "nombre", "homme", "lieu", "pays", "histoire", "ville", "siècle", "monde", "groupe", "façon", "terme", "école", "ordre", "niveau", "entreprise", "service", "type", "système", "point", "centre", "côté", "connaissance", "minute", "semaine", "mois", "heure", "gens"
-				]);
-			} else if (lang === 'hi') {
-				// Hindi fallback
-				this.dictionary = new Set([
-					"नमस्ते", "दुनिया", "खेल", "खेलना", "शब्द", "है", "का", "और", "में", "एक", "को", "के", "यह", "कि", "हो", "से", "या", "तो", "नहीं", "हर", "जो", "ये", "कर", "सकता", "भी", "लिए", "पर", "बहुत", "हुआ", "ही", "दो", "वह", "जब", "बात", "समय", "आदमी", "दिन", "साल", "घर", "परिवार", "इतिहास", "शहर", "देश", "दुनिया", "संख्या", "स्थान", "समूह", "तरीका", "शर्त", "विद्यालय", "क्रम", "स्तर", "कंपनी", "सेवा", "प्रकार", "प्रणाली", "बिंदु", "केंद्र", "पक्ष", "ज्ञान", "मिनट", "सप्ताह", "महीना", "घंटा", "लोग"
-				]);
-			} else if (lang === 'zh') {
-				// Mandarin Chinese fallback - common characters and common words
-				this.dictionary = new Set([
-					"我", "你", "他", "的", "是", "了", "有", "在", "不", "人", "这", "中", "大", "为", "来", "个", "好", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "日", "月", "年", "天", "时", "小", "木", "火", "水", "土", "金", "东", "西", "南", "北", "上", "下", "左", "右", "中", "心", "手", "头", "脚", "眼", "耳", "口", "鼻", "身", "头", "家", "学", "校", "生", "活", "工", "作", "国", "世", "界", "游", "戏", "玩", "字", "词", "语", "话", "说", "写", "读", "听", "看", "去", "来", "能", "可", "要", "会", "很", "好", "坏", "对", "错", "是", "否", "多", "少", "高", "低", "大", "小", "长", "短", "快", "慢", "美", "丑", "强", "弱", "老", "少", "新", "旧", "早", "晚"
-				]);
-			} else {
-				// English fallback
-				this.dictionary = new Set([
-					"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use", "make", "know", "take", "come", "good", "much", "some", "time", "very", "when", "your", "them", "well", "back", "only", "over", "such", "even", "most", "like", "just", "then", "with", "than", "help", "more", "find", "tell", "need", "work", "call", "hand", "turn", "want", "show", "give", "keep", "live", "feel", "seem", "high", "best", "open", "hard", "able", "made", "talk"
-				]);
-			}
-			
-			console.warn(`Using fallback dictionary for ${lang.toUpperCase()} with ${this.dictionary.size} words`);
+			// More comprehensive fallback dictionary
+			this.dictionary = new Set([
+				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
+			]);
+			console.warn("Using fallback dictionary with limited words");
 		}
 	}
 
@@ -7131,7 +7012,7 @@ calculateScore() {
 
 		try {
 			if (this.placedTiles.length === 0) {
-				alert(typeof t === 'function' ? t('place-tiles-first') : "Please place some tiles first!");
+				alert("Please place some tiles first!");
 				return;
 			}
 
@@ -7292,11 +7173,10 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words
 				try { 
-					const invalidMsg = typeof t === 'function' ? t('invalid-word') : 'Invalid word! Please try again.';
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(invalidMsg, 'error');
+						this.showAnimatedToast('Invalid word! Please try again.', 'error');
 					} else if (this.showToast) {
-						this.showToast(invalidMsg);
+						this.showToast('Invalid word! Please try again.');
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
@@ -8004,16 +7884,16 @@ calculateScore() {
 				consoleBox = document.createElement('div');
 				consoleBox.className = 'drawer-console-output';
 				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
-				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>' + (typeof t === 'function' ? t('console') : 'Console') + '</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">' + (typeof t === 'function' ? t('copy-all') : 'Copy All') + '</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
+				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
 				const copyBtn = consoleBox.querySelector('.copy-console-btn');
 				if (copyBtn) {
 					copyBtn.addEventListener('click', async () => {
 						try {
 							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
-							if (!entries.trim()) { alert(typeof t === 'function' ? t('no-messages-copy') : 'No console messages to copy'); return; }
+							if (!entries.trim()) { alert('No console messages to copy'); return; }
 							if (navigator.clipboard && navigator.clipboard.writeText) {
 								await navigator.clipboard.writeText(entries);
-								alert(typeof t === 'function' ? t('copied-clipboard') : 'Console copied to clipboard!');
+								alert('Console copied to clipboard!');
 							} else {
 								const textArea = document.createElement('textarea');
 								textArea.value = entries;
@@ -8021,7 +7901,7 @@ calculateScore() {
 								textArea.select();
 								document.execCommand('copy');
 								document.body.removeChild(textArea);
-								alert(typeof t === 'function' ? t('copied-clipboard') : 'Console copied to clipboard!');
+								alert('Console copied to clipboard!');
 							}
 						} catch (e) { console.error('Copy failed:', e); alert('Copy failed: ' + e.message); }
 					});
@@ -8602,7 +8482,7 @@ calculateScore() {
 		this.exchangingTiles = [];
 
 		// Add to move history
-		this.addToMoveHistory("Player", typeof t === 'function' ? t('move-exchange') : "EXCHANGE", 0);
+		this.addToMoveHistory("Player", "EXCHANGE", 0);
 
 		// Switch turn to AI
 		this.currentTurn = "ai";
@@ -8648,7 +8528,7 @@ calculateScore() {
 			this.updateTilesCount();
 
 			// Add to move history
-			this.addToMoveHistory("Computer", typeof t === 'function' ? t('ai-exchange') : "AI decided to exchange their tiles.", 0);
+			this.addToMoveHistory("Computer", "AI decided to exchange their tiles.", 0);
 
 			// Switch turn
 			this.currentTurn = "player";
@@ -9067,7 +8947,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
+				this.addToMoveHistory("Player", "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
@@ -9082,7 +8962,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
+				this.addToMoveHistory("Player", "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
@@ -9386,7 +9266,7 @@ calculateScore() {
 			if (this.currentTurn === "player") {
 				this.consecutiveSkips++;
 				this.currentTurn = "ai";
-				this.addToMoveHistory("Player", typeof t === 'function' ? t('move-skip') : "SKIP", 0);
+				this.addToMoveHistory("Player", "SKIP", 0);
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
@@ -9485,42 +9365,16 @@ calculateScore() {
 			languageSelectorDesktopDrawer.addEventListener("change", (e) => {
 				const selectedLanguage = e.target.value;
 				if (selectedLanguage) {
-					// Map language codes to file names
-					const languageMap = {
-						'en': 'game.html',
-						'es': 'spanish.html',
-						'fr': 'french.html',
-						'hi': 'hindi.html',
-						'zh': 'mandarin.html'
-					};
+					// Update all language selectors to maintain consistency
+					const allLanguageSelectors = document.querySelectorAll('.language-selector select');
+					allLanguageSelectors.forEach(selector => {
+						if (selector !== e.target) {
+							selector.value = selectedLanguage;
+						}
+					});
 					
-					const targetUrl = languageMap[selectedLanguage];
-					if (targetUrl) {
-						window.location.href = targetUrl;
-					}
-				}
-			});
-		}
-
-		// Language selector (desktop main panel)
-		const languageSelectorDesktop = document.getElementById("language-selector-desktop");
-		if (languageSelectorDesktop) {
-			languageSelectorDesktop.addEventListener("change", (e) => {
-				const selectedLanguage = e.target.value;
-				if (selectedLanguage) {
-					// Map language codes to file names
-					const languageMap = {
-						'en': 'game.html',
-						'es': 'spanish.html',
-						'fr': 'french.html',
-						'hi': 'hindi.html',
-						'zh': 'mandarin.html'
-					};
-					
-					const targetUrl = languageMap[selectedLanguage];
-					if (targetUrl) {
-						window.location.href = targetUrl;
-					}
+					// Handle language change logic here
+					console.log(`Language changed to: ${selectedLanguage}`);
 				}
 			});
 		}
@@ -9840,12 +9694,12 @@ document.addEventListener("DOMContentLoaded", () => {
 				header.style.marginBottom = '6px';
 
 				const title = document.createElement('div');
-				title.textContent = typeof t === 'function' ? t('console') : 'Console';
+				title.textContent = 'Console';
 				title.style.fontWeight = '600';
 				title.style.color = '#123';
 
 				const copyBtn = document.createElement('button');
-				copyBtn.textContent = typeof t === 'function' ? t('copy-all') : 'Copy All';
+				copyBtn.textContent = 'Copy All';
 				copyBtn.style.fontSize = '0.9em';
 				copyBtn.style.padding = '4px 8px';
 				copyBtn.style.borderRadius = '4px';
@@ -9857,7 +9711,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				try {
 					const text = Array.from(consoleContainer.querySelectorAll('.console-line'))
 						.map(n => n.textContent).join('\n');
-					if (!text.trim()) { game.appendConsoleMessage(typeof t === 'function' ? t('no-messages-copy') : 'No messages to copy'); return; }
+					if (!text.trim()) { game.appendConsoleMessage('No messages to copy'); return; }
 					if (navigator.clipboard && navigator.clipboard.writeText) {
 						await navigator.clipboard.writeText(text);
 						game.appendConsoleMessage('Console copied to clipboard');

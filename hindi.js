@@ -211,6 +211,17 @@ class ScrabbleGame {
 		return msg;
 	}
 
+	getTileRomanization(letter) {
+		// Map English letters to Devanagari transliteration for reference
+		const romanizationMap = {
+			A: 'आ', B: 'ब', C: 'च', D: 'द', E: 'ए', F: 'फ', G: 'ग',
+			H: 'ह', I: 'इ', J: 'ज', K: 'क', L: 'ल', M: 'म', N: 'न',
+			O: 'ओ', P: 'प', Q: 'क्', R: 'र', S: 'स', T: 'त', U: 'उ',
+			V: 'व', W: 'व', X: 'क्ष', Y: 'य', Z: 'ज़'
+		};
+		return romanizationMap[letter?.toUpperCase()] || '';
+	}
+
 	logAIValidation(msg) {
 		// Deduplicate messages so we don't flood the console repeatedly
 		if (!this.aiValidationLogSet.has(msg)) {
@@ -5435,7 +5446,9 @@ formedWords.forEach((wordInfo) => {
 			tileElement.className = "tile";
 			tileElement.dataset.index = index;
 			tileElement.dataset.id = tile.id;
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
@@ -8004,7 +8017,9 @@ calculateScore() {
 		this.aiRack.forEach((tile) => {
 			const tileElement = document.createElement("div");
 			tileElement.className = "tile";
+			const romanization = this.getTileRomanization(tile.letter);
 			tileElement.innerHTML = `
+                ${romanization ? `<span class="tile-romanization">${romanization}</span>` : ""}
                 ${tile.letter}
                 <span class="points">${tile.value}</span>
             `;
