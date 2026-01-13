@@ -5414,7 +5414,7 @@ formedWords.forEach((wordInfo) => {
 						.replace(/ç/g, 'c').replace(/Ç/g, 'C');
 					
 					// Store mapping: normalized → original accented form (prefer accented if available)
-					if (!this.accentMap[normalized] || w.includes(/[àâäéèêëïîôöùûüÿç]/)) {
+					if (!this.accentMap[normalized] || /[àâäéèêëïîôöùûüÿç]/.test(w)) {
 						this.accentMap[normalized] = w;
 					}
 					return normalized;
