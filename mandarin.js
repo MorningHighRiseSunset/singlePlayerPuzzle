@@ -237,6 +237,14 @@ class ScrabbleGame {
 		return pinyinMap[letter] || '';
 	}
 
+	getCanonicalForm(word) {
+		// Return the properly Chinese version of a word if available
+		if (this.accentMap && this.accentMap[word.toLowerCase()]) {
+			return this.accentMap[word.toLowerCase()];
+		}
+		return word.toLowerCase();
+	}
+
 	pickNonRepeating(arr, type) {
 		let msg;
 		let tries = 0;
@@ -5415,17 +5423,26 @@ formedWords.forEach((wordInfo) => {
 				throw new Error("All Mandarin dictionary sources failed");
 			}
 			
-			// Dictionary is one word per line, filter valid Chinese words (2+ Chinese characters)
-			this.dictionary = new Set(
-				text.split("\n")
-					.map(w => w.trim())
-					.filter(w => w.length >= 2 && /^[\u4e00-\u9fff]+$/.test(w)) // At least 2 chars, only Chinese characters
-			);
+		// Initialize accent map to preserve canonical (Chinese) forms
+		this.accentMap = {};
+		
+		// Dictionary is one word per line, filter valid Chinese words (2+ Chinese characters)
+		const rawWords = text.split("\n")
+			.map(w => w.trim())
+			.filter(w => w.length >= 2 && /^[\u4e00-\u9fff]+$/.test(w)); // At least 2 chars, only Chinese characters
+		
+		this.dictionary = new Set(
+			rawWords.map(w => {
+				// For Mandarin, store the Chinese form in accentMap
+				this.accentMap[w.toLowerCase()] = w;
+				return w.toLowerCase();
+			})
+		);
 
-			console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-			// Test if some common Mandarin words are in the dictionary
-			const testWords = ["你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作"];
+		console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
+		
+		// Test if some common Mandarin words are in the dictionary
+		const testWords = ["你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作"];
 			testWords.forEach(word => {
 				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
 			});
@@ -7334,8 +7351,10 @@ calculateScore() {
 						if (w.word === "BINGO BONUS") {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
-						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
-						return `${w.word}`;
+						// Display canonical (Chinese) form of word
+						const displayWord = this.getCanonicalForm(w.word).toUpperCase();
+						if (typeof w.score === 'number') return `${displayWord} (${w.score})`;
+						return `${displayWord}`;
 					});
 					const formatted = parts.join(" & ");
 					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;

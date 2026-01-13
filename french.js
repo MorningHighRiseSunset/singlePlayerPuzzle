@@ -5425,10 +5425,10 @@ formedWords.forEach((wordInfo) => {
 		
 		// Test if some common French words are in the dictionary
 		const testWords = ["maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie"];
-			testWords.forEach(word => {
-				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-			});
-		} catch (error) {
+		testWords.forEach(word => {
+			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
+		});
+	} catch (error) {
 			console.error("Error loading French dictionary:", error);
 			// Build accent map for fallback dictionary
 			this.accentMap = {

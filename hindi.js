@@ -222,6 +222,14 @@ class ScrabbleGame {
 		return romanizationMap[letter?.toUpperCase()] || '';
 	}
 
+	getCanonicalForm(word) {
+		// Return the properly Devanagari version of a word if available
+		if (this.accentMap && this.accentMap[word.toLowerCase()]) {
+			return this.accentMap[word.toLowerCase()];
+		}
+		return word.toLowerCase();
+	}
+
 	logAIValidation(msg) {
 		// Deduplicate messages so we don't flood the console repeatedly
 		if (!this.aiValidationLogSet.has(msg)) {
@@ -5380,16 +5388,25 @@ formedWords.forEach((wordInfo) => {
 			}
 			
 			// Dictionary is one word per line, filter valid Hindi words (Devanagari script, 2+ chars)
-			this.dictionary = new Set(
-				text.split("\n")
-					.map(w => w.trim())
-					.filter(w => w.length >= 2 && /^[\u0900-\u097F]+$/.test(w)) // At least 2 chars, only Devanagari characters
-			);
+		// Initialize accent map to preserve canonical (Devanagari) forms
+		this.accentMap = {};
+		
+		const rawWords = text.split("\n")
+			.map(w => w.trim())
+			.filter(w => w.length >= 2 && /^[\u0900-\u097F]+$/.test(w)); // At least 2 chars, only Devanagari characters
+		
+		this.dictionary = new Set(
+			rawWords.map(w => {
+				// For Hindi, store the Devanagari form in accentMap
+				this.accentMap[w.toLowerCase()] = w;
+				return w.toLowerCase();
+			}
+		);
 
-			console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-			// Test if some common Hindi words are in the dictionary
-			const testWords = ["नमस्ते", "दुनिया", "भारत", "दिल्ली", "मुंबई", "दोस्त", "पढ़ाई", "काम"];
+		console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
+		
+		// Test if some common Hindi words are in the dictionary
+		const testWords = ["नमस्ते", "दुनिया", "भारत", "दिल्ली", "मुंबई", "दोस्त", "पढ़ाई", "काम"];
 			testWords.forEach(word => {
 				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
 			});
@@ -7298,8 +7315,10 @@ calculateScore() {
 						if (w.word === "BINGO BONUS") {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
-						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
-						return `${w.word}`;
+						// Display canonical (Devanagari) form of word
+						const displayWord = this.getCanonicalForm(w.word).toUpperCase();
+						if (typeof w.score === 'number') return `${displayWord} (${w.score})`;
+						return `${displayWord}`;
 					});
 					const formatted = parts.join(" & ");
 					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;

@@ -5330,11 +5330,12 @@ formedWords.forEach((wordInfo) => {
 			// }
 
 			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
-					// Test if some common words are in the dictionary
-		const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
-		testWords.forEach(word => {
-			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-		});
+			
+			// Test if some common words are in the dictionary
+			const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
+			testWords.forEach(word => {
+				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
+			});
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			// More comprehensive fallback dictionary
