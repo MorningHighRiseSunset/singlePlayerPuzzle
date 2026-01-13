@@ -5352,6 +5352,7 @@ formedWords.forEach((wordInfo) => {
 				}
 			} else if (lang === 'zh') {
 				// Mandarin Chinese dictionary
+				// Try multiple sources
 				response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/jieba/dict.txt");
 				if (response.ok) {
 					text = await response.text();
@@ -5360,15 +5361,34 @@ formedWords.forEach((wordInfo) => {
 						const parts = line.trim().split(/\s+/);
 						return parts[0];
 					}).filter(Boolean).join("\n");
-				} else {
-					response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/dict.txt.big");
-					if (response.ok) {
-						text = await response.text();
-						const lines = text.split("\n");
-						text = lines.map(line => {
-							const parts = line.trim().split(/\s+/);
-							return parts[0];
-						}).filter(Boolean).join("\n");
+				}
+				
+				// Fallback: try alternative Jieba dictionary
+				if (!text || text.length < 1000) {
+					try {
+						response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/dict.txt.big");
+						if (response.ok) {
+							text = await response.text();
+							const lines = text.split("\n");
+							text = lines.map(line => {
+								const parts = line.trim().split(/\s+/);
+								return parts[0];
+							}).filter(Boolean).join("\n");
+						}
+					} catch (e) {
+						console.warn("Failed to load Jieba backup dictionary", e);
+					}
+				}
+				
+				// Fallback: try Tencent dictionary
+				if (!text || text.length < 1000) {
+					try {
+						response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/tencent_dict.py");
+						if (response.ok) {
+							text = await response.text();
+						}
+					} catch (e) {
+						console.warn("Failed to load Tencent dictionary", e);
 					}
 				}
 			} else {
@@ -5410,11 +5430,37 @@ formedWords.forEach((wordInfo) => {
 			console.log(`${lang.toUpperCase()} dictionary loaded successfully. Word count:`, this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			// Fallback dictionary
-			this.dictionary = new Set([
-				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
-			]);
-			console.warn("Using fallback dictionary with limited words");
+			const lang = getCurrentLanguage();
+			
+			// Language-specific fallback dictionaries
+			if (lang === 'es') {
+				// Spanish fallback
+				this.dictionary = new Set([
+					"hola", "mundo", "juego", "jugar", "palabra", "el", "la", "de", "que", "y", "a", "en", "un", "ser", "se", "no", "haber", "por", "con", "su", "para", "es", "lo", "como", "más", "o", "poder", "decir", "este", "ir", "otro", "ese", "la", "si", "me", "ya", "ver", "porque", "dar", "cuando", "él", "muy", "sin", "vez", "mucho", "saber", "qué", "sobre", "mi", "alguno", "mismo", "yo", "también", "hasta", "hay", "donde", "han", "quien", "están", "estado", "desde", "todo", "nos", "durante", "estados", "todos", "uno", "les", "ni", "contra", "otros", "fueron", "ese", "eso", "había", "ante", "ellos", "dos", "esa", "esto", "mio", "fuera", "fue", "casa", "familia", "día", "años", "tiempo", "vida", "parte", "número", "hombre", "lugar", "país", "historia", "ciudad", "siglo", "mundo", "grupo", "forma", "término", "escuela", "orden", "nivel", "empresa", "servicio", "tipo", "sistema", "punto", "centro", "lado", "conocimiento", "minuto", "semana", "mes", "hora", "gente"
+				]);
+			} else if (lang === 'fr') {
+				// French fallback
+				this.dictionary = new Set([
+					"bonjour", "monde", "jeu", "jouer", "mot", "le", "la", "de", "que", "et", "à", "en", "un", "être", "se", "ne", "avoir", "par", "avec", "son", "pour", "est", "ce", "comme", "plus", "ou", "pouvoir", "dire", "ce", "aller", "autre", "celui", "si", "me", "déjà", "voir", "parce", "donner", "quand", "il", "très", "sans", "fois", "beaucoup", "savoir", "quoi", "sur", "mon", "quelque", "même", "je", "aussi", "jusqu", "y", "où", "avoir", "qui", "être", "lors", "entre", "autres", "deux", "celui", "cela", "ceci", "ceux", "cette", "celui", "celuici", "celuilà", "c", "ç", "ê", "ô", "û", "é", "è", "ù", "à", "maison", "famille", "jour", "ans", "temps", "vie", "part", "nombre", "homme", "lieu", "pays", "histoire", "ville", "siècle", "monde", "groupe", "façon", "terme", "école", "ordre", "niveau", "entreprise", "service", "type", "système", "point", "centre", "côté", "connaissance", "minute", "semaine", "mois", "heure", "gens"
+				]);
+			} else if (lang === 'hi') {
+				// Hindi fallback
+				this.dictionary = new Set([
+					"नमस्ते", "दुनिया", "खेल", "खेलना", "शब्द", "है", "का", "और", "में", "एक", "को", "के", "यह", "कि", "हो", "से", "या", "तो", "नहीं", "हर", "जो", "ये", "कर", "सकता", "भी", "लिए", "पर", "बहुत", "हुआ", "ही", "दो", "वह", "जब", "बात", "समय", "आदमी", "दिन", "साल", "घर", "परिवार", "इतिहास", "शहर", "देश", "दुनिया", "संख्या", "स्थान", "समूह", "तरीका", "शर्त", "विद्यालय", "क्रम", "स्तर", "कंपनी", "सेवा", "प्रकार", "प्रणाली", "बिंदु", "केंद्र", "पक्ष", "ज्ञान", "मिनट", "सप्ताह", "महीना", "घंटा", "लोग"
+				]);
+			} else if (lang === 'zh') {
+				// Mandarin Chinese fallback - common characters and common words
+				this.dictionary = new Set([
+					"我", "你", "他", "的", "是", "了", "有", "在", "不", "人", "这", "中", "大", "为", "来", "个", "好", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "日", "月", "年", "天", "时", "小", "木", "火", "水", "土", "金", "东", "西", "南", "北", "上", "下", "左", "右", "中", "心", "手", "头", "脚", "眼", "耳", "口", "鼻", "身", "头", "家", "学", "校", "生", "活", "工", "作", "国", "世", "界", "游", "戏", "玩", "字", "词", "语", "话", "说", "写", "读", "听", "看", "去", "来", "能", "可", "要", "会", "很", "好", "坏", "对", "错", "是", "否", "多", "少", "高", "低", "大", "小", "长", "短", "快", "慢", "美", "丑", "强", "弱", "老", "少", "新", "旧", "早", "晚"
+				]);
+			} else {
+				// English fallback
+				this.dictionary = new Set([
+					"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use", "make", "know", "take", "come", "good", "much", "some", "time", "very", "when", "your", "them", "well", "back", "only", "over", "such", "even", "most", "like", "just", "then", "with", "than", "help", "more", "find", "tell", "need", "work", "call", "hand", "turn", "want", "show", "give", "keep", "live", "feel", "seem", "high", "best", "open", "hard", "able", "made", "talk"
+				]);
+			}
+			
+			console.warn(`Using fallback dictionary for ${lang.toUpperCase()} with ${this.dictionary.size} words`);
 		}
 	}
 
