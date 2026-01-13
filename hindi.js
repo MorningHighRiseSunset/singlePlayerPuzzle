@@ -1218,7 +1218,7 @@ class ScrabbleGame {
 			"Double Letter Score (DL) squares double the value of a single letter.",
 			"Try to use all 7 tiles in one turn for a 50-point BINGO bonus!",
 			"You can exchange tiles if you don't like your rack.",
-			"Short words like 'QI', 'ZA', and 'JO' are valid and useful.",
+			"hint-short-words",  // Will be translated
 			"Parallel plays can score big by forming multiple words at once.",
 			"Try to block your opponent from premium squares.",
 			"Save high-value letters like Q, Z, X, and J for premium squares.",
@@ -1266,13 +1266,16 @@ class ScrabbleGame {
 				shuffledHints = shuffleArray([...hints]);
 				currentHintIndex = 0;
 			}
-			hintText.textContent = shuffledHints[currentHintIndex];
+			const hintKey = shuffledHints[currentHintIndex];
+			// Translate if it looks like a translation key, otherwise use the string as-is
+			const hintText_ = (hintKey === 'hint-short-words' && typeof t === 'function') ? t(hintKey) : hintKey;
+			hintText.textContent = hintText_;
 			hintBox.classList.add("show");
 
 			clearTimeout(this.hintBoxTimeout);
 			this.hintBoxTimeout = setTimeout(() => {
 				hintBox.classList.remove("show");
-			}, 5000);
+			}, 8000);  // Increased from 5000 to 8000ms
 
 			currentHintIndex++;
 		};
@@ -1286,7 +1289,9 @@ class ScrabbleGame {
 		// Show random hint on hover
 		hintBox.addEventListener("mouseenter", () => {
 			if (this.hintBoxBlocked) return;
-			hintText.textContent = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
+			const randomHint = shuffledHints[Math.floor(Math.random() * shuffledHints.length)];
+			const hintText_ = (randomHint === 'hint-short-words' && typeof t === 'function') ? t(randomHint) : randomHint;
+			hintText.textContent = hintText_;
 			hintBox.classList.add("show");
 		});
 		hintBox.addEventListener("mouseleave", () => {
@@ -7928,7 +7933,7 @@ calculateScore() {
 				consoleBox = document.createElement('div');
 				consoleBox.className = 'drawer-console-output';
 				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
-				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>Console</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">Copy All</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
+				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>' + (typeof t === 'function' ? t('console') : 'कंसोल') + '</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">' + (typeof t === 'function' ? t('copy-all') : 'सभी कॉपी करें') + '</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
 				const copyBtn = consoleBox.querySelector('.copy-console-btn');
 				if (copyBtn) {
 					copyBtn.addEventListener('click', async () => {
@@ -9738,12 +9743,12 @@ document.addEventListener("DOMContentLoaded", () => {
 				header.style.marginBottom = '6px';
 
 				const title = document.createElement('div');
-				title.textContent = 'Console';
+				title.textContent = typeof t === 'function' ? t('console') : 'कंसोल';
 				title.style.fontWeight = '600';
 				title.style.color = '#123';
 
 				const copyBtn = document.createElement('button');
-				copyBtn.textContent = 'Copy All';
+				copyBtn.textContent = typeof t === 'function' ? t('copy-all') : 'सभी कॉपी करें';
 				copyBtn.style.fontSize = '0.9em';
 				copyBtn.style.padding = '4px 8px';
 				copyBtn.style.borderRadius = '4px';
