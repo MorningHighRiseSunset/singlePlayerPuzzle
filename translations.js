@@ -195,6 +195,11 @@ const translations = {
     "no-messages-copy": "No hay mensajes para copiar",
     "place-tiles-first": "¡Por favor coloca algunas fichas primero!",
     
+    // Game action messages in move history
+    "move-skip": "SALTAR",
+    "move-exchange": "INTERCAMBIAR",
+    "ai-exchange": "La IA decidió intercambiar sus fichas.",
+    
     // Game messages
     "click-change-language": "Haz clic para cambiar idioma"
   },
@@ -291,6 +296,11 @@ const translations = {
     "copied-clipboard": "Console copiée dans le presse-papiers!",
     "no-messages-copy": "Aucun message à copier",
     "place-tiles-first": "Veuillez placer d'abord quelques jetons!",
+    
+    // Game action messages in move history
+    "move-skip": "PASSER",
+    "move-exchange": "ÉCHANGER",
+    "ai-exchange": "L'IA a décidé d'échanger ses jetons.",
     
     // Game messages
     "click-change-language": "Cliquez pour changer de langue"
@@ -389,6 +399,11 @@ const translations = {
     "no-messages-copy": "कॉपी करने के लिए कोई संदेश नहीं",
     "place-tiles-first": "कृपया पहले कुछ टाइलें रखें!",
     
+    // Game action messages in move history
+    "move-skip": "छोड़ें",
+    "move-exchange": "एक्सचेंज",
+    "ai-exchange": "AI ने अपनी टाइलें एक्सचेंज करने का फैसला किया।",
+    
     // Game messages
     "click-change-language": "भाषा बदलने के लिए क्लिक करें"
   },
@@ -485,6 +500,11 @@ const translations = {
     "copied-clipboard": "控制台已复制到剪贴板！",
     "no-messages-copy": "没有要复制的消息",
     "place-tiles-first": "请先放置一些瓷砖！",
+    
+    // Game action messages in move history
+    "move-skip": "跳过",
+    "move-exchange": "交换",
+    "ai-exchange": "AI 决定交换其瓷砖。",
     
     // Game messages
     "click-change-language": "点击更改语言"
