@@ -5323,70 +5323,57 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Load French dictionary - try multiple reliable sources
-			let response = null;
-			let text = "";
+			// Load French dictionary from Wiktionary API
+			console.log("Fetching French dictionary from Wiktionary API...");
+			const response = await fetch("https://fr.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Français&cmlimit=500&format=json&origin=*");
 			
-			// Try primary source: French word frequency list (well-maintained, reliable)
-			response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/fr/fr_50k.txt");
-			if (response.ok) {
-				// Format: word frequency (tab or space separated), extract just words
-				const lines = (await response.text()).split("\n");
-				text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
-			} else {
-				// Try alternative: French word list (backup source)
-				response = await fetch("https://raw.githubusercontent.com/McSinyx/fr-wordlist/master/fr.txt");
-				if (response.ok) {
-					text = await response.text();
-				} else {
-					// Try another: French Scrabble dictionary from different source
-					response = await fetch("https://raw.githubusercontent.com/facebookresearch/fastText/master/docs/crawl-300d-2M-subword.fr");
-					if (response.ok) {
-						text = await response.text();
-					}
-				}
+			if (!response.ok) {
+				throw new Error(`Wiktionary API failed: ${response.status}`);
 			}
 			
-			if (!text) {
-				throw new Error("All French dictionary sources failed");
+			const data = await response.json();
+			const members = data.query?.categorymembers || [];
+			
+			if (members.length === 0) {
+				throw new Error("No French words returned from Wiktionary");
 			}
+			
+			// Extract French words from Wiktionary results
+			const frenchWords = members
+				.map(m => m.title.toLowerCase())
+				.filter(word => word && /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(word))
+				.slice(0, 1000);
+			
+			console.log(`Fetched ${frenchWords.length} French words from Wiktionary`);
+			
+			if (frenchWords.length < 100) {
+				throw new Error("Insufficient French words from Wiktionary");
+			}
+			
+			// Initialize accent map
+			this.accentMap = {};
+			this.dictionary = new Set(
+				frenchWords.map(w => {
+					const normalized = w
+						.replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e')
+						.replace(/[ïî]/g, 'i').replace(/[ôö]/g, 'o')
+						.replace(/[ùûü]/g, 'u').replace(/ç/g, 'c').replace(/ÿ/g, 'y');
+					this.accentMap[normalized] = w;
+					return normalized;
+				})
+			);
+			
+			console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
+			
+		} catch (error) {
+			console.error("Error loading French dictionary from Wiktionary:", error);
+			console.log("Loading fallback French dictionary...");
 			
 			// Initialize accent map to preserve canonical (accented) forms
 			this.accentMap = {};
 			
 			// Dictionary is one word per line, normalize to lowercase and filter valid French words
-			const rawWords = text.split("\n")
-				.map(w => w.trim().toLowerCase())
-				.filter(w => w.length >= 2 && /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(w)); // At least 2 chars, valid French characters
-			
-			this.dictionary = new Set(
-				rawWords.map(w => {
-					// Normalize accented characters so tiles work interchangeably
-					const normalized = w
-						.replace(/à/g, 'a').replace(/À/g, 'A')
-						.replace(/â/g, 'a').replace(/Â/g, 'A')
-						.replace(/ä/g, 'a').replace(/Ä/g, 'A')
-						.replace(/é/g, 'e').replace(/É/g, 'E')
-						.replace(/è/g, 'e').replace(/È/g, 'E')
-						.replace(/ê/g, 'e').replace(/Ê/g, 'E')
-						.replace(/ë/g, 'e').replace(/Ë/g, 'E')
-						.replace(/ï/g, 'i').replace(/Ï/g, 'I')
-						.replace(/î/g, 'i').replace(/Î/g, 'I')
-						.replace(/ô/g, 'o').replace(/Ô/g, 'O')
-						.replace(/ö/g, 'o').replace(/Ö/g, 'O')
-						.replace(/ù/g, 'u').replace(/Ù/g, 'U')
-						.replace(/û/g, 'u').replace(/Û/g, 'U')
-						.replace(/ü/g, 'u').replace(/Ü/g, 'U')
-						.replace(/ÿ/g, 'y').replace(/Ÿ/g, 'Y')
-						.replace(/ç/g, 'c').replace(/Ç/g, 'C');
-					
-					// Store mapping: normalized → original accented form (prefer accented if available)
-					if (!this.accentMap[normalized] || /[àâäéèêëïîôöùûüÿç]/.test(w)) {
-						this.accentMap[normalized] = w;
-					}
-					return normalized;
-				})
-			);
+			const rawWords = [
 
 		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
 		

@@ -5247,61 +5247,42 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Load Spanish dictionary - try multiple reliable sources
-			let response = null;
-			let text = "";
+			// Load Spanish dictionary from Wiktionary API
+			console.log("Fetching Spanish dictionary from Wiktionary API...");
+			const response = await fetch("https://es.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Español&cmlimit=500&format=json&origin=*");
 			
-			// Try primary source: Comprehensive Spanish word list (well-maintained repository)
-			response = await fetch("https://api.dictionaryapi.dev/api/v2/entries/es");
-			if (response.ok) {
-				text = await response.text();
-			} else {
-				// Try alternative: ManuelGil Spanish words (backup)
-				response = await fetch("https://raw.githubusercontent.com/ManuelGil/Spanish-Words/master/words.txt");
-				if (response.ok) {
-					text = await response.text();
-				} else {
-					// Try another: Spanish word frequency list
-					response = await fetch("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/es/es_50k.txt");
-					if (response.ok) {
-						// Format: word frequency (tab or space separated), extract just words
-						const lines = (await response.text()).split("\n");
-						text = lines.map(line => line.split(/\s+/)[0]).filter(Boolean).join("\n");
-					}
-				}
+			if (!response.ok) {
+				throw new Error(`Wiktionary API failed: ${response.status}`);
 			}
 			
-			if (!text) {
-				throw new Error("All Spanish dictionary sources failed");
+			const data = await response.json();
+			const members = data.query?.categorymembers || [];
+			
+			if (members.length === 0) {
+				throw new Error("No Spanish words returned from Wiktionary");
 			}
 			
-			// Dictionary is one word per line, normalize to lowercase and filter valid Spanish words
-			this.dictionary = new Set(
-				text.split("\n")
-					.map(w => w.trim().toLowerCase())
-					.filter(w => w.length >= 2 && /^[a-zñáéíóúü]+$/i.test(w)) // At least 2 chars, valid Spanish characters
-					.map(w => {
-						// Normalize accented characters so tiles work interchangeably
-						// A tile can satisfy both 'a' and 'á'
-						return w
-							.replace(/á/g, 'a')
-							.replace(/é/g, 'e')
-							.replace(/í/g, 'i')
-							.replace(/ó/g, 'o')
-							.replace(/ú/g, 'u')
-							.replace(/ü/g, 'u');
-					})
-			);
-
+			// Extract Spanish words from Wiktionary results
+			const spanishWords = members
+				.map(m => m.title.toLowerCase())
+				.filter(word => word && /^[a-zñáéíóúü]+$/i.test(word))
+				.map(w => w.replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u'))
+				.slice(0, 1000);
+			
+			console.log(`Fetched ${spanishWords.length} Spanish words from Wiktionary`);
+			
+			if (spanishWords.length < 100) {
+				throw new Error("Insufficient Spanish words from Wiktionary");
+			}
+			
+			this.dictionary = new Set(spanishWords);
+			
 			console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
 			
-			// Test if some common Spanish words are in the dictionary
-			const testWords = ["casa", "perro", "gato", "agua", "sol", "luna", "amor", "vida"];
-			testWords.forEach(word => {
-				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-			});
 		} catch (error) {
-			console.error("Error loading Spanish dictionary:", error);
+			console.error("Error loading Spanish dictionary from Wiktionary:", error);
+			console.log("Loading fallback Spanish dictionary...");
+			
 			// Spanish fallback dictionary with common Spanish words
 			this.dictionary = new Set([
 				"casa", "perro", "gato", "agua", "sol", "luna", "amor", "vida", "mundo", "tiempo", "año", "día", "noche", 

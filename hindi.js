@@ -5315,12 +5315,49 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Load Hindi dictionary - try multiple reliable sources
-			let response = null;
-			let text = "";
+			// Load Hindi dictionary from Wiktionary API
+			console.log("Fetching Hindi dictionary from Wiktionary API...");
+			const response = await fetch("https://en.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Hindi_lemmas&cmlimit=500&format=json&origin=*");
 			
-			// Try primary source: Common Hindi words (hardcoded comprehensive list)
-			// This is the most reliable source since external repos are failing
+			if (!response.ok) {
+				throw new Error(`Wiktionary API failed: ${response.status}`);
+			}
+			
+			const data = await response.json();
+			const members = data.query?.categorymembers || [];
+			
+			if (members.length === 0) {
+				throw new Error("No Hindi words returned from Wiktionary");
+			}
+			
+			// Extract Hindi words from Wiktionary results
+			const hindiWords = members
+				.map(m => m.title)
+				.filter(word => word && /^[\u0900-\u097F]+$/.test(word)) // Only Devanagari
+				.slice(0, 1000); // Limit to avoid huge arrays
+			
+			console.log(`Fetched ${hindiWords.length} Hindi words from Wiktionary`);
+			
+			if (hindiWords.length < 100) {
+				throw new Error("Insufficient Hindi words from Wiktionary");
+			}
+			
+			// Initialize dictionary
+			this.accentMap = {};
+			this.dictionary = new Set(
+				hindiWords.map(w => {
+					this.accentMap[w.toLowerCase()] = w;
+					return w.toLowerCase();
+				})
+			);
+			
+			console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
+			
+		} catch (error) {
+			console.error("Error loading Hindi dictionary from Wiktionary:", error);
+			console.log("Loading fallback Hindi dictionary...");
+			
+			// Comprehensive fallback dictionary with common Hindi words
 			const hindiWords = [
 				// Common verbs
 				'है', 'हो', 'करना', 'देना', 'लेना', 'रखना', 'जाना', 'आना', 'चलना', 'बैठना', 'उठना', 'सोना', 'उड़ना', 'तैरना', 'दौड़ना',

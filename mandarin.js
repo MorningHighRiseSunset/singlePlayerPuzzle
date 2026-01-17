@@ -5342,69 +5342,50 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Load Mandarin Chinese dictionary - try multiple reliable sources
-			let response = null;
-			let text = "";
+			// Load Mandarin Chinese dictionary from Wiktionary API
+			console.log("Fetching Mandarin dictionary from Wiktionary API...");
+			const response = await fetch("https://zh.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=汉字&cmlimit=500&format=json&origin=*");
 			
-			// Try primary source: Jieba main dictionary (well-maintained, comprehensive)
-			response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/jieba/dict.txt");
-			if (response.ok) {
-				text = await response.text();
-				// Jieba format: word frequency pos, extract just the word (first column)
-				const lines = text.split("\n");
-				text = lines.map(line => {
-					const parts = line.trim().split(/\s+/);
-					return parts[0]; // First part is the word
-				}).filter(Boolean).join("\n");
-			} else {
-				// Try alternative: Jieba big dictionary (more comprehensive)
-				response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/dict.txt.big");
-				if (response.ok) {
-					text = await response.text();
-					// Same format: extract first column
-					const lines = text.split("\n");
-					text = lines.map(line => {
-						const parts = line.trim().split(/\s+/);
-						return parts[0];
-					}).filter(Boolean).join("\n");
-				} else {
-					// Try another: Sina news dictionary
-					response = await fetch("https://raw.githubusercontent.com/fxsjy/jieba/master/extra_dict/sina_news.txt");
-					if (response.ok) {
-						text = await response.text();
-					}
-				}
+			if (!response.ok) {
+				throw new Error(`Wiktionary API failed: ${response.status}`);
 			}
 			
-			if (!text) {
-				throw new Error("All Mandarin dictionary sources failed");
+			const data = await response.json();
+			const members = data.query?.categorymembers || [];
+			
+			if (members.length === 0) {
+				throw new Error("No Mandarin words returned from Wiktionary");
 			}
 			
-		// Initialize accent map to preserve canonical (Chinese) forms
-		this.accentMap = {};
-		
-		// Dictionary is one word per line, filter valid Chinese words (2+ Chinese characters)
-		const rawWords = text.split("\n")
-			.map(w => w.trim())
-			.filter(w => w.length >= 2 && /^[\u4e00-\u9fff]+$/.test(w)); // At least 2 chars, only Chinese characters
-		
-		this.dictionary = new Set(
-			rawWords.map(w => {
-				// For Mandarin, store the Chinese form in accentMap
-				this.accentMap[w.toLowerCase()] = w;
-				return w.toLowerCase();
-			})
-		);
+			// Extract Mandarin words from Wiktionary results
+			const mandarinWords = members
+				.map(m => m.title)
+				.filter(word => word && /^[\u4e00-\u9fff]+$/.test(word))
+				.slice(0, 1000);
+			
+			console.log(`Fetched ${mandarinWords.length} Mandarin words from Wiktionary`);
+			
+			if (mandarinWords.length < 100) {
+				throw new Error("Insufficient Mandarin words from Wiktionary");
+			}
+			
+			// Initialize accent map to preserve canonical (Chinese) forms
+			this.accentMap = {};
+			
+			this.dictionary = new Set(
+				mandarinWords.map(w => {
+					// For Mandarin, store the Chinese form in accentMap
+					this.accentMap[w.toLowerCase()] = w;
+					return w.toLowerCase();
+				})
+			);
 
-		console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
-		
-		// Test if some common Mandarin words are in the dictionary
-		const testWords = ["你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作"];
-			testWords.forEach(word => {
-				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-			});
+			console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
+			
 		} catch (error) {
-			console.error("Error loading Mandarin dictionary:", error);
+			console.error("Error loading Mandarin dictionary from Wiktionary:", error);
+			console.log("Loading fallback Mandarin dictionary...");
+			
 			// Mandarin fallback dictionary with common Chinese words
 			this.dictionary = new Set([
 				"你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作", "学校", "老师", "学生", "家庭",
