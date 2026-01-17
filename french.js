@@ -5325,59 +5325,41 @@ formedWords.forEach((wordInfo) => {
 		// Use comprehensive hardcoded French dictionary
 		console.log("Loading French dictionary...");
 		
-		// Comprehensive French dictionary
-		this.dictionary = new Set([
-		const testWords = ["maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie"];
-		testWords.forEach(word => {
-			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-		});
-	} catch (error) {
-			console.error("Error loading French dictionary:", error);
-			// Build accent map for fallback dictionary
-			this.accentMap = {
-				"tetard": "tétard", "metre": "mètre", "foret": "forêt", "fleur": "fleur",
-				"pere": "père", "mere": "mère", "frere": "frère", "soeur": "sœur",
-				"ecole": "école", "cole": "côle", "heureux": "heureux", "triste": "triste",
-				"chaud": "chaud", "froid": "froid", "mouille": "mouillé"
-			};
-			// French fallback dictionary with comprehensive common French words
-			this.dictionary = new Set([
-				// Common nouns
-				"maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie", "monde", "temps", "année", "jour",
-				"nuit", "homme", "femme", "enfant", "garçon", "fille", "pere", "mere", "frere", "soeur", "ami", "amie",
-				"travail", "ecole", "livre", "voiture", "ville", "pays", "nourriture", "lait", "pain", "viande", "fruit",
-				"fleur", "arbre", "herbe", "montagne", "riviere", "mer", "plage", "foret", "maison", "porte", "fenetre",
-				// Common adjectives and verbs
-				"vert", "bleu", "rouge", "blanc", "noir", "grand", "petit", "bon", "mauvais", "nouveau", "vieux", "haut", "bas",
-				"beau", "laid", "heureux", "triste", "facile", "difficile", "rapide", "lent", "chaud", "froid", "sec", "mouille",
-				"avoir", "etre", "faire", "aller", "venir", "pouvoir", "vouloir", "devoir", "savoir", "dire", "voir", "donner",
-				"prendre", "porter", "mettre", "laisser", "tenir", "trouver", "chercher", "demander", "repondre", "parler", "ecouter",
-				"a", "à", "an", "ans", "au", "aux", "as", "ce", "de", "des", "du", "en", "es", "et", "eu", "eus", "eut",
-				"je", "la", "le", "les", "lui", "ma", "me", "mi", "mis", "mon", "mu", "ne", "nos", "nu", "oui", "ou", "où",
-				"par", "pas", "pis", "pu", "pus", "que", "qui", "sa", "se", "si", "so", "son", "su", "ta", "te", "toi", "ton",
-				"tu", "tu", "un", "une", "us", "va", "vis", "vos", "vu", "ya", "ze",
-				// Additional common words to prevent invalid plays
-				"table", "chaise", "lampe", "cuisine", "chambre", "salon", "salle", "baie", "mur", "toit", "mains", "pieds",
-				"corps", "tête", "bras", "jambe", "oeil", "yeux", "nez", "bouche", "oreille", "dent", "coeur", "poumon",
-				"aller", "arriver", "partir", "commencer", "finir", "continuer", "arrêter", "entrer", "sortir", "monter", "descendre",
-				"manger", "boire", "dormir", "rire", "pleurer", "courir", "marcher", "danser", "chanter", "jouer", "travailler",
-				// Two-letter valid French words (critical for Scrabble)
-				"ai", "ais", "ait", "ant", "as", "ça", "ce", "da", "de", "do", "du", "eh", "en", "es", "et", "eu", "ex",
-				"fa", "fi", "go", "ha", "hé", "ho", "hu", "il", "in", "jo", "ka", "ki", "la", "le", "li", "lo", "lu",
-				"ma", "me", "mi", "mo", "mu", "na", "ne", "ni", "no", "nu", "ô", "od", "oe", "of", "oh", "om", "on", "op",
-				"or", "os", "ou", "pa", "pé", "pi", "po", "pu", "ra", "ré", "ri", "ro", "ru", "sa", "se", "si", "so", "su",
-				"ta", "té", "ti", "to", "tu", "un", "us", "ut", "va", "vé", "vi", "vo", "vu", "wa", "xu", "ya", "ye", "yo", "yu"
-		]);
+		const frenchWords = [
+			"maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie", "monde", "temps", "année", "jour", "nuit",
+			"homme", "femme", "enfant", "garçon", "fille", "pere", "mere", "frere", "soeur", "ami", "amie", "travail", "ecole",
+			"livre", "voiture", "ville", "pays", "nourriture", "lait", "pain", "viande", "fruit", "fleur", "arbre", "herbe",
+			"montagne", "riviere", "mer", "plage", "foret", "porte", "fenetre", "table", "chaise", "lampe", "cuisine", "chambre",
+			"salon", "salle", "baie", "mur", "toit", "mains", "pieds", "corps", "tete", "bras", "jambe", "oeil", "yeux", "nez",
+			"bouche", "oreille", "dent", "coeur", "poumon", "vert", "bleu", "rouge", "blanc", "noir", "grand", "petit", "bon",
+			"mauvais", "nouveau", "vieux", "haut", "bas", "beau", "laid", "heureux", "triste", "facile", "difficile", "rapide",
+			"lent", "chaud", "froid", "sec", "mouille", "avoir", "etre", "faire", "aller", "venir", "pouvoir", "vouloir", "devoir",
+			"savoir", "dire", "voir", "donner", "prendre", "porter", "mettre", "laisser", "tenir", "trouver", "chercher", "demander",
+			"repondre", "parler", "ecouter", "arriver", "partir", "commencer", "finir", "continuer", "arreter", "entrer", "sortir",
+			"monter", "descendre", "manger", "boire", "dormir", "rire", "pleurer", "courir", "marcher", "danser", "chanter", "jouer",
+			"travailler", "apprendre", "enseigner", "oublier", "se souvenir", "penser", "croire", "comprendre", "saber", "connaître",
+			"reconnaître", "produire", "construire", "detruire", "creer", "modifier", "transformer", "changer", "echanger", "abandonner",
+			"garder", "perdre", "trouver", "chercher", "appeler", "repondre", "ecrire", "lire", "compter", "calculer", "mesurer",
+			"peser", "remplir", "vider", "verser", "couler", "mélanger", "separer", "partager", "diviser", "multiplier", "ajouter",
+			"soustraire", "augmenter", "diminuer", "reduire", "etendre", "allonger", "raccourcir", "renforcer", "affaiblir", "fatiguer",
+			"reposer", "reveiller", "endormir", "reveir", "venir", "revenir", "aller", "rester", "demurer", "habiter", "installer",
+			"ai", "ais", "ait", "ant", "as", "ca", "ce", "da", "de", "do", "du", "eh", "en", "es", "et", "eu", "ex",
+			"fa", "fi", "go", "ha", "he", "ho", "hu", "il", "in", "jo", "ka", "ki", "la", "le", "li", "lo", "lu",
+			"ma", "me", "mi", "mo", "mu", "na", "ne", "ni", "no", "nu", "od", "oe", "of", "oh", "om", "on", "op",
+			"or", "os", "ou", "pa", "pe", "pi", "po", "pu", "ra", "re", "ri", "ro", "ru", "sa", "se", "si", "so", "su",
+			"ta", "te", "ti", "to", "tu", "un", "us", "ut", "va", "ve", "vi", "vo", "vu", "wa", "xu", "ya", "ye", "yo", "yu",
+			"rose", "blanche", "bleue", "ronde", "longue", "courte", "epaisse", "fine", "claire", "sombre", "claire", "grosse",
+			"mince", "molle", "rude", "lisse", "rêche", "tendre", "dur", "mou", "liquide", "solide", "vide", "plein", "riche",
+			"pauvre", "jeune", "mature", "vieux", "ancien", "moderne", "actuel", "passe", "futur", "present", "moment", "instant",
+			"seconde", "minute", "heure", "jour", "semaine", "mois", "saison", "epoque", "periode", "age", "ère", "ere"
+		];
+		
+		this.dictionary = new Set(frenchWords);
 		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
+	}
 
-		// Aim for 2-3 vowels in the rack
-		if (vowelCount < 2 || vowelCount > 4) {
-			const desiredVowelCount = 3;
-			while (this.tiles.length > 0 &&
-				this.aiRack.filter(tile => vowels.includes(tile.letter)).length !== desiredVowelCount) {
-
-				// Remove excess vowels or consonants
-				const indexToRemove = this.aiRack.findIndex(tile =>
+	balanceAIRack() {
+		const vowels = ['A', 'E', 'I', 'O', 'U'];
 					vowelCount > 3 ? vowels.includes(tile.letter) : !vowels.includes(tile.letter)
 				);
 

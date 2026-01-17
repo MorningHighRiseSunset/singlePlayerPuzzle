@@ -5261,7 +5261,28 @@ formedWords.forEach((wordInfo) => {
 			"hospital", "farmacia", "banco", "tienda", "mercado", "restaurant", "café", "hotel", "playa", "montaña", "río",
 			"árbol", "flores", "plantas", "hierba", "piedra", "arena", "fuego", "humo", "lluvia", "viento", "trueno", "relámpago",
 			"nube", "cielo", "estrella", "planeta", "animal", "pájaro", "pez", "insecto", "serpiente", "león", "tigre", "oso",
-			"caballo", "vaca", "cerdo", "oveja", "cabra", "gallina", "pato", "ganso", "fútbol", "baloncesto", "tenis", "natación"
+			"caballo", "vaca", "cerdo", "oveja", "cabra", "gallina", "pato", "ganso", "fútbol", "baloncesto", "tenis", "natación",
+		"carrera", "salto", "ciencia", "matemáticas", "historia", "geografía", "arte", "dibujo", "pintura", "escultura", "poesía", "novela",
+		"película", "actor", "actriz", "cantante", "músico", "artista", "pintor", "escritor", "poeta", "profesor", "estudiante", "doctor",
+		"enfermera", "abogado", "juez", "policía", "soldado", "granjero", "cocinero", "camarero", "barbero", "zapatero", "sastre", "electricista",
+		"mecánico", "carpintero", "plomero", "comer", "beber", "dormir", "despertar", "levantarse", "sentarse", "estar", "ir", "venir",
+		"quedarse", "partir", "regresar", "correr", "saltar", "caer", "tropezar", "bailar", "cantar", "hablar", "escuchar", "mirar",
+		"ver", "oír", "tocar", "oler", "gustar", "sentir", "pensar", "creer", "saber", "conocer", "entender", "comprender",
+		"aprender", "enseñar", "olvidar", "recordar", "imaginar", "soñar", "desear", "esperar", "temer", "amar", "odiar", "necesitar",
+		"querer", "poder", "deber", "intentar", "conseguir", "lograr", "fallar", "buscar", "encontrar", "perder", "ganar", "pedir",
+		"dar", "recibir", "tomar", "coger", "soltar", "tirar", "lanzar", "agarrar", "atrapar", "empujar", "jalar", "romper",
+		"reparar", "construir", "destruir", "hacer", "deshacer", "crear", "inventar", "dibujar", "pintar", "escribir", "leer", "contar",
+		"calcular", "medir", "pesar", "llenar", "vaciar", "mezclar", "separar", "unir", "dividir", "multiplicar", "restar", "sumar",
+		"repartir", "distribuir", "ordenar", "organizar", "limpiar", "ensuciar", "guardar", "esconder", "mostrar", "apuntar", "señalar",
+		"indicar", "dirigir", "guiar", "conducir", "llevar", "traer", "sacar", "meter", "poner", "colocar", "instalar", "desinstalar",
+		"montar", "desmontar", "empacar", "desempacar", "abrir", "cerrar", "trancar", "prender", "apagar", "encender", "extinguir", "quemar",
+		"hervir", "cocinar", "freír", "hornear", "guisar", "pelar", "picar", "rallar", "exprimir", "estrujar", "moler", "triturar",
+		"machacar", "amasar", "revolver", "batir", "cernir", "tamizar", "colar", "filtrar", "cristalizar", "solidificar", "licuar", "evaporar",
+		"condensar", "destilan", "fermentar", "oxidar", "corroer", "diluir", "disolver", "precipitar", "sedimentar", "clarificar", "emulsificar",
+		"suspender", "colgar", "pender", "columpiar", "oscilar", "vibrar", "resonar", "ecos", "sonidos", "ruidos", "silencio", "quietud",
+		"movimiento", "reposo", "inercia", "fricción", "resistencia", "fuerza", "peso", "gravedad", "levedad", "equilibrio", "desequilibrio",
+		"estabilidad", "inestabilidad", "tensión", "compresión", "torsión", "flexión", "extensión", "rotación", "traslación", "proyección",
+		"reflexión", "refracción", "dispersión", "polarización", "interferencia", "difracción", "resonancia", "armonía", "melodía", "ritmo"
 		]);
 		console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
 	}
