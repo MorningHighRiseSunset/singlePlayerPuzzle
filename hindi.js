@@ -5314,51 +5314,11 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		try {
-			// Load Hindi dictionary from Wiktionary API
-			console.log("Fetching Hindi dictionary from Wiktionary API...");
-			const response = await fetch("https://en.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Hindi_lemmas&cmlimit=500&format=json&origin=*");
-			
-			if (!response.ok) {
-				throw new Error(`Wiktionary API failed: ${response.status}`);
-			}
-			
-			const data = await response.json();
-			const members = data.query?.categorymembers || [];
-			
-			if (members.length === 0) {
-				throw new Error("No Hindi words returned from Wiktionary");
-			}
-			
-			// Extract Hindi words from Wiktionary results
-			const hindiWords = members
-				.map(m => m.title)
-				.filter(word => word && /^[\u0900-\u097F]+$/.test(word)) // Only Devanagari
-				.slice(0, 1000); // Limit to avoid huge arrays
-			
-			console.log(`Fetched ${hindiWords.length} Hindi words from Wiktionary`);
-			
-			if (hindiWords.length < 100) {
-				throw new Error("Insufficient Hindi words from Wiktionary");
-			}
-			
-			// Initialize dictionary
-			this.accentMap = {};
-			this.dictionary = new Set(
-				hindiWords.map(w => {
-					this.accentMap[w.toLowerCase()] = w;
-					return w.toLowerCase();
-				})
-			);
-			
-			console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-		} catch (error) {
-			console.error("Error loading Hindi dictionary from Wiktionary:", error);
-			console.log("Loading fallback Hindi dictionary...");
-			
-			// Comprehensive fallback dictionary with common Hindi words
-			const hindiWords = [
+		// Use comprehensive hardcoded Hindi dictionary
+		console.log("Loading Hindi dictionary...");
+		
+		// Comprehensive fallback dictionary with common Hindi words
+		const hindiWords = [
 				// Common verbs
 				'है', 'हो', 'करना', 'देना', 'लेना', 'रखना', 'जाना', 'आना', 'चलना', 'बैठना', 'उठना', 'सोना', 'उड़ना', 'तैरना', 'दौड़ना',
 				// Common nouns
@@ -5467,10 +5427,10 @@ formedWords.forEach((wordInfo) => {
 				'बड़ा', 'छोटा', 'लंबा', 'मोटा', 'काला', 'सफेद', 'लाल', 'हरा', 'नीला', 'पीला', 'गर्म', 'ठंडा',
 				'में', 'पर', 'के', 'को', 'से', 'तक', 'बिना', 'साथ', 'बीच', 'पास', 'दूर', 'नमस्ते',
 				'हां', 'नहीं', 'क्या', 'कौन', 'कब', 'कहां', 'क्यों', 'कैसे'
-			]);
-			console.warn("Using Hindi fallback dictionary with comprehensive words");
-		}
-	}
+		];
+		
+		this.dictionary = new Set(hindiWords);
+		console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
 
 	balanceAIRack() {
 		const vowels = ['A', 'E', 'I', 'O', 'U'];

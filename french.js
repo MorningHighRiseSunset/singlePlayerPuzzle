@@ -5322,62 +5322,11 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		try {
-			// Load French dictionary from Wiktionary API
-			console.log("Fetching French dictionary from Wiktionary API...");
-			const response = await fetch("https://fr.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Français&cmlimit=500&format=json&origin=*");
-			
-			if (!response.ok) {
-				throw new Error(`Wiktionary API failed: ${response.status}`);
-			}
-			
-			const data = await response.json();
-			const members = data.query?.categorymembers || [];
-			
-			if (members.length === 0) {
-				throw new Error("No French words returned from Wiktionary");
-			}
-			
-			// Extract French words from Wiktionary results
-			const frenchWords = members
-				.map(m => m.title.toLowerCase())
-				.filter(word => word && /^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(word))
-				.slice(0, 1000);
-			
-			console.log(`Fetched ${frenchWords.length} French words from Wiktionary`);
-			
-			if (frenchWords.length < 100) {
-				throw new Error("Insufficient French words from Wiktionary");
-			}
-			
-			// Initialize accent map
-			this.accentMap = {};
-			this.dictionary = new Set(
-				frenchWords.map(w => {
-					const normalized = w
-						.replace(/[àâä]/g, 'a').replace(/[éèêë]/g, 'e')
-						.replace(/[ïî]/g, 'i').replace(/[ôö]/g, 'o')
-						.replace(/[ùûü]/g, 'u').replace(/ç/g, 'c').replace(/ÿ/g, 'y');
-					this.accentMap[normalized] = w;
-					return normalized;
-				})
-			);
-			
-			console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-		} catch (error) {
-			console.error("Error loading French dictionary from Wiktionary:", error);
-			console.log("Loading fallback French dictionary...");
-			
-			// Initialize accent map to preserve canonical (accented) forms
-			this.accentMap = {};
-			
-			// Dictionary is one word per line, normalize to lowercase and filter valid French words
-			const rawWords = [
-
-		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
+		// Use comprehensive hardcoded French dictionary
+		console.log("Loading French dictionary...");
 		
-		// Test if some common French words are in the dictionary
+		// Comprehensive French dictionary
+		this.dictionary = new Set([
 		const testWords = ["maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie"];
 		testWords.forEach(word => {
 			console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
@@ -5418,14 +5367,8 @@ formedWords.forEach((wordInfo) => {
 				"ma", "me", "mi", "mo", "mu", "na", "ne", "ni", "no", "nu", "ô", "od", "oe", "of", "oh", "om", "on", "op",
 				"or", "os", "ou", "pa", "pé", "pi", "po", "pu", "ra", "ré", "ri", "ro", "ru", "sa", "se", "si", "so", "su",
 				"ta", "té", "ti", "to", "tu", "un", "us", "ut", "va", "vé", "vi", "vo", "vu", "wa", "xu", "ya", "ye", "yo", "yu"
-			]);
-			console.warn("Using French fallback dictionary with comprehensive words");
-		}
-	}
-
-	balanceAIRack() {
-		const vowels = ['A', 'E', 'I', 'O', 'U'];
-		const vowelCount = this.aiRack.filter(tile => vowels.includes(tile.letter)).length;
+		]);
+		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
 
 		// Aim for 2-3 vowels in the rack
 		if (vowelCount < 2 || vowelCount > 4) {

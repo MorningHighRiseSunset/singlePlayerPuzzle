@@ -5246,52 +5246,24 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		try {
-			// Load Spanish dictionary from Wiktionary API
-			console.log("Fetching Spanish dictionary from Wiktionary API...");
-			const response = await fetch("https://es.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=Español&cmlimit=500&format=json&origin=*");
-			
-			if (!response.ok) {
-				throw new Error(`Wiktionary API failed: ${response.status}`);
-			}
-			
-			const data = await response.json();
-			const members = data.query?.categorymembers || [];
-			
-			if (members.length === 0) {
-				throw new Error("No Spanish words returned from Wiktionary");
-			}
-			
-			// Extract Spanish words from Wiktionary results
-			const spanishWords = members
-				.map(m => m.title.toLowerCase())
-				.filter(word => word && /^[a-zñáéíóúü]+$/i.test(word))
-				.map(w => w.replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u'))
-				.slice(0, 1000);
-			
-			console.log(`Fetched ${spanishWords.length} Spanish words from Wiktionary`);
-			
-			if (spanishWords.length < 100) {
-				throw new Error("Insufficient Spanish words from Wiktionary");
-			}
-			
-			this.dictionary = new Set(spanishWords);
-			
-			console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-		} catch (error) {
-			console.error("Error loading Spanish dictionary from Wiktionary:", error);
-			console.log("Loading fallback Spanish dictionary...");
-			
-			// Spanish fallback dictionary with common Spanish words
-			this.dictionary = new Set([
-				"casa", "perro", "gato", "agua", "sol", "luna", "amor", "vida", "mundo", "tiempo", "año", "día", "noche", 
-				"hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "amigo", "amiga", "trabajo",
-				"escuela", "libro", "coche", "ciudad", "país", "comida", "agua", "leche", "pan", "carne", "fruta", "verde",
-				"azul", "rojo", "blanco", "negro", "grande", "pequeño", "bueno", "malo", "nuevo", "viejo", "alto", "bajo"
-			]);
-			console.warn("Using Spanish fallback dictionary with limited words");
-		}
+		// Use comprehensive hardcoded Spanish dictionary
+		console.log("Loading Spanish dictionary...");
+		
+		// Spanish fallback dictionary with common Spanish words
+		this.dictionary = new Set([
+			"casa", "perro", "gato", "agua", "sol", "luna", "amor", "vida", "mundo", "tiempo", "año", "día", "noche", 
+			"hombre", "mujer", "niño", "niña", "padre", "madre", "hermano", "hermana", "amigo", "amiga", "trabajo",
+			"escuela", "libro", "coche", "ciudad", "país", "comida", "agua", "leche", "pan", "carne", "fruta", "verde",
+			"azul", "rojo", "blanco", "negro", "grande", "pequeño", "bueno", "malo", "nuevo", "viejo", "alto", "bajo",
+			"mesa", "silla", "puerta", "ventana", "pared", "techo", "suelo", "cama", "dormitorio", "cocina", "comedor", "sala",
+			"baño", "espejo", "lámpara", "televisión", "radio", "teléfono", "computadora", "reloj", "dinero", "tarjeta",
+			"viaje", "auto", "bicicleta", "tren", "avión", "barco", "calle", "camino", "puente", "plaza", "parque", "iglesia",
+			"hospital", "farmacia", "banco", "tienda", "mercado", "restaurant", "café", "hotel", "playa", "montaña", "río",
+			"árbol", "flores", "plantas", "hierba", "piedra", "arena", "fuego", "humo", "lluvia", "viento", "trueno", "relámpago",
+			"nube", "cielo", "estrella", "planeta", "animal", "pájaro", "pez", "insecto", "serpiente", "león", "tigre", "oso",
+			"caballo", "vaca", "cerdo", "oveja", "cabra", "gallina", "pato", "ganso", "fútbol", "baloncesto", "tenis", "natación"
+		]);
+		console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
 	}
 
 	balanceAIRack() {

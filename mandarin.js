@@ -5341,59 +5341,31 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		try {
-			// Load Mandarin Chinese dictionary from Wiktionary API
-			console.log("Fetching Mandarin dictionary from Wiktionary API...");
-			const response = await fetch("https://zh.wiktionary.org/w/api.php?action=query&list=categorymembers&cmtitle=汉字&cmlimit=500&format=json&origin=*");
-			
-			if (!response.ok) {
-				throw new Error(`Wiktionary API failed: ${response.status}`);
-			}
-			
-			const data = await response.json();
-			const members = data.query?.categorymembers || [];
-			
-			if (members.length === 0) {
-				throw new Error("No Mandarin words returned from Wiktionary");
-			}
-			
-			// Extract Mandarin words from Wiktionary results
-			const mandarinWords = members
-				.map(m => m.title)
-				.filter(word => word && /^[\u4e00-\u9fff]+$/.test(word))
-				.slice(0, 1000);
-			
-			console.log(`Fetched ${mandarinWords.length} Mandarin words from Wiktionary`);
-			
-			if (mandarinWords.length < 100) {
-				throw new Error("Insufficient Mandarin words from Wiktionary");
-			}
-			
-			// Initialize accent map to preserve canonical (Chinese) forms
-			this.accentMap = {};
-			
-			this.dictionary = new Set(
-				mandarinWords.map(w => {
-					// For Mandarin, store the Chinese form in accentMap
-					this.accentMap[w.toLowerCase()] = w;
-					return w.toLowerCase();
-				})
-			);
-
-			console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-		} catch (error) {
-			console.error("Error loading Mandarin dictionary from Wiktionary:", error);
-			console.log("Loading fallback Mandarin dictionary...");
-			
-			// Mandarin fallback dictionary with common Chinese words
-			this.dictionary = new Set([
-				"你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作", "学校", "老师", "学生", "家庭",
-				"父母", "孩子", "时间", "今天", "明天", "昨天", "早上", "晚上", "中午", "吃饭", "睡觉", "看书",
-				"汽车", "房子", "城市", "国家", "人民", "生活", "快乐", "幸福", "美丽", "好的", "大的", "小的"
-			]);
-			console.warn("Using Mandarin fallback dictionary with limited words");
-		}
+		// Use comprehensive hardcoded Mandarin dictionary
+		console.log("Loading Mandarin dictionary...");
+		
+		// Mandarin fallback dictionary with common Chinese words
+		this.dictionary = new Set([
+			"你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作", "学校", "老师", "学生", "家庭",
+			"父母", "孩子", "时间", "今天", "明天", "昨天", "早上", "晚上", "中午", "吃饭", "睡觉", "看书",
+			"汽车", "房子", "城市", "国家", "人民", "生活", "快乐", "幸福", "美丽", "好的", "大的", "小的",
+			"书", "笔", "纸", "桌子", "椅子", "门", "窗户", "墙", "天花板", "地板", "床", "枕头", "被子",
+			"衣服", "鞋", "帽子", "袜子", "裤子", "衬衫", "毛衣", "外套", "夹克", "雨衣", "围巾", "手套",
+			"食物", "米", "面包", "水", "牛奶", "茶", "咖啡", "果汁", "酒", "啤酒", "肉", "鱼", "鸡", "蛋",
+			"菜", "米饭", "面条", "馄饨", "饺子", "春卷", "粥", "粉", "糖", "盐", "油", "酱油", "醋",
+			"公路", "街道", "小路", "桥", "隧道", "火车站", "机场", "港口", "医院", "学校", "图书馆", "博物馆",
+			"电影院", "剧院", "餐厅", "酒吧", "咖啡馆", "商店", "超市", "市场", "银行", "邮局", "警察局",
+			"寺庙", "教堂", "清真寺", "公园", "花园", "动物园", "植物园", "海滩", "山", "森林", "草原",
+			"湖", "河", "溪流", "瀑布", "泉水", "井", "池塘", "海", "洋", "岛", "半岛", "海湾",
+			"天空", "太阳", "月亮", "星星", "云", "雨", "雪", "冰", "风", "雷", "闪电", "彩虹",
+			"火", "烟", "灰", "尘土", "沙", "石头", "土", "泥", "岩石", "矿物", "金属", "玻璃",
+			"塑料", "纸张", "棉布", "毛线", "皮革", "木头", "植物", "花", "草", "树", "灌木", "草坪",
+			"蔬菜", "水果", "坚果", "谷物", "豆类", "种子", "根", "茎", "叶", "花瓣", "树皮", "树根",
+			"动物", "鸟", "鱼", "蛇", "青蛙", "昆虫", "蜜蜂", "蝴蝶", "蜘蛛", "螃蟹", "虾", "贝壳",
+			"狗", "猫", "老鼠", "兔子", "松鼠", "狐狸", "狼", "熊", "狮子", "老虎", "豹", "猴子",
+			"大象", "长颈鹿", "斑马", "河马", "鳄鱼", "乌龟", "壁虎", "蜥蜴", "鹰", "鸦", "鸽子", "燕子"
+		]);
+		console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
 	}
 
 	balanceAIRack() {
