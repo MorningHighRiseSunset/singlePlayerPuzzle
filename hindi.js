@@ -5431,6 +5431,7 @@ formedWords.forEach((wordInfo) => {
 		
 		this.dictionary = new Set(hindiWords);
 		console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
+	}
 
 	balanceAIRack() {
 		const vowels = ['A', 'E', 'I', 'O', 'U'];
