@@ -931,109 +931,7 @@ class ScrabbleGame {
 
 	findTwoLetterPlay() {
 		const validTwoLetterWords = new Set([
-			"AA",
-			"AB",
-			"AD",
-			"AE",
-			"AG",
-			"AH",
-			"AI",
-			"AL",
-			"AM",
-			"AN",
-			"AR",
-			"AS",
-			"AT",
-			"AW",
-			"AX",
-			"AY",
-			"BA",
-			"BE",
-			"BI",
-			"BO",
-			"BY",
-			"DE",
-			"DO",
-			"ED",
-			"EF",
-			"EH",
-			"EL",
-			"EM",
-			"EN",
-			"ER",
-			"ES",
-			"ET",
-			"EX",
-			"FA",
-			"FE",
-			"GO",
-			"HA",
-			"HE",
-			"HI",
-			"HM",
-			"HO",
-			"ID",
-			"IF",
-			"IN",
-			"IS",
-			"IT",
-			"JO",
-			"KA",
-			"LA",
-			"LI",
-			"LO",
-			"MA",
-			"ME",
-			"MI",
-			"MM",
-			"MO",
-			"MU",
-			"MY",
-			"NA",
-			"NE",
-			"NO",
-			"NU",
-			"OD",
-			"OE",
-			"OF",
-			"OH",
-			"OI",
-			"OK",
-			"OM",
-			"ON",
-			"OP",
-			"OR",
-			"OS",
-			"OW",
-			"OX",
-			"OY",
-			"PA",
-			"PE",
-			"PI",
-			"PO",
-			"QI",
-			"RE",
-			"SH",
-			"SI",
-			"SO",
-			"TA",
-			"TE",
-			"TI",
-			"TO",
-			"UH",
-			"UM",
-			"UN",
-			"UP",
-			"US",
-			"UT",
-			"WE",
-			"WO",
-			"XI",
-			"XU",
-			"YA",
-			"YE",
-			"YO",
-			"ZA",
+			"AA", "AB", "AD", "AE", "AG", "AH", "AI", "AL", "AM", "AN", "AR", "AS", "AT", "AW", "AX", "AY", "BA", "BE", "BI", "BO", "BY", "DE", "DO", "ED", "EF", "EH", "EL", "EM", "EN", "ER", "ES", "ET", "EX", "FA", "FE", "GO", "HA", "HE", "HI", "HM", "HO", "ID", "IF", "IN", "IS", "IT", "JO", "KA", "LA", "LI", "LO", "MA", "ME", "MI", "MM", "MO", "MU", "MY", "NA", "NE", "NO", "NU", "OD", "OE", "OF", "OH", "OI", "OK", "OM", "ON", "OP", "OR", "OS", "OW", "OX", "OY", "PA", "PE", "PI", "PO", "QI", "RE", "SH", "SI", "SO", "TA", "TE", "TI", "TO", "UH", "UM", "UN", "UP", "US", "UT", "WE", "WO", "XI", "XU", "YA", "YE", "YO", "ZA",
 		]);
 
 		const rack = this.aiRack.map((t) => t.letter);
@@ -5354,7 +5252,7 @@ formedWords.forEach((wordInfo) => {
 			let text = "";
 			
 			// Try primary source: Comprehensive Spanish word list (well-maintained repository)
-			response = await fetch("https://raw.githubusercontent.com/javierarce/palabras/master/listado-general.txt");
+			response = await fetch("https://api.dictionaryapi.dev/api/v2/entries/es");
 			if (response.ok) {
 				text = await response.text();
 			} else {
@@ -7297,13 +7195,35 @@ calculateScore() {
 		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
 		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
 		
-		const historyContent = "<h3>Move History</h3>" +
+
+		// Helper to get translation
+		const t = (key) => {
+			// Use Spanish translation if available
+			if (window.language === 'es' && window.translations && window.translations.es && window.translations.es[key]) {
+				return window.translations.es[key];
+			}
+			// Fallback to English
+			if (window.translations && window.translations.en && window.translations.en[key]) {
+				return window.translations.en[key];
+			}
+			return key;
+		};
+
+		// Map player and action labels
+		const playerLabel = (p) => p === 'Player' ? t('player') : (p === 'Computer' ? t('computer') : p);
+		const actionLabel = (w) => {
+			if (w === 'SKIP') return t('move-skip');
+			if (w === 'EXCHANGE') return t('move-exchange');
+			if (w === 'QUIT') return t('quit-game');
+			return w;
+		};
+
+		const historyContent = `<h3>${t('definitions-history')}</h3>` +
 			this.moveHistory
 			.slice(-50)
 			.map((move) => {
 				// Structured entry with words array
 				if (move.words && Array.isArray(move.words)) {
-					// Check for bingo entries and format each word with its score if available
 					const parts = move.words.map(w => {
 						if (w.word === "BINGO BONUS") {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
@@ -7312,27 +7232,21 @@ calculateScore() {
 						return `${w.word}`;
 					});
 					const formatted = parts.join(" & ");
-					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
+					return `<div class="move">${playerLabel(move.player)}: ${formatted} ${t('scores').toLowerCase()}: ${move.score}</div>`;
 				}
 
 				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
-				if (move.word === "SKIP") {
-					return `<div class="move">${move.player}: "SKIP" for ${move.score} points</div>`;
-				}
-				if (move.word === "EXCHANGE") {
-					return `<div class="move">${move.player}: Exchanged tiles</div>`;
-				}
-				if (move.word === "QUIT") {
-					return `<div class="move">${move.player}: "QUIT" for ${move.score} points</div>`;
+				if (move.word === "SKIP" || move.word === "EXCHANGE" || move.word === "QUIT") {
+					return `<div class="move">${playerLabel(move.player)}: ${actionLabel(move.word)} ${t('scores').toLowerCase()}: ${move.score}</div>`;
 				}
 
 				// Fallback: single word string
 				if (move.word) {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+					return `<div class="move">${playerLabel(move.player)}: "${move.word}" ${t('scores').toLowerCase()}: ${move.score}</div>`;
 				}
 
 				// Unknown format
-				return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
+				return `<div class="move">${playerLabel(move.player)}: (movimiento) ${t('scores').toLowerCase()}: ${move.score}</div>`;
 			})
 			.join("");
 
