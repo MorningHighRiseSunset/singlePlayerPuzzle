@@ -5246,11 +5246,20 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		// Use comprehensive hardcoded Spanish dictionary
 		console.log("Loading Spanish dictionary...");
-		
-		// Comprehensive Spanish dictionary with 5000+ common Spanish words
-		this.dictionary = new Set([
+		try {
+			const response = await fetch('./spanish_words_list.json');
+			const words = await response.json();
+			const cleanedWords = words
+				.filter(w => w && !w.startsWith('-') && w.length > 1)
+				.map(w => w.split(',')[0].trim())
+				.filter(w => w.length > 0);
+			this.dictionary = new Set(cleanedWords);
+			console.log("Spanish dictionary loaded from JSON. Word count:", this.dictionary.size);
+		} catch (error) {
+			console.warn("Failed to load Spanish dictionary from JSON:", error);
+			// Fallback: minimal dictionary
+			this.dictionary = new Set([
 			"a", "ante", "antena", "anterior", "anterioridad", "anterioridad", "antigüedad", "antiguo", "antipatía", "antípoda", "antispacio", "antispacio", "antítesis", "antítesis",
 			"antizanador", "antizanadora", "antizanadura", "antizanador", "antizanadora", "antizanadura", "antizanador", "antizanadora", "antizanadura", "antizanador", "antizanadora", "antizanadura",
 			"anuario", "anualidad", "anuario", "anuario", "anuario", "anuario", "anuario", "anual", "anualmente", "anualmente", "anualmente", "anualmente",
@@ -5315,7 +5324,8 @@ formedWords.forEach((wordInfo) => {
 		"estabilidad", "inestabilidad", "tensión", "compresión", "torsión", "flexión", "extensión", "rotación", "traslación", "proyección",
 		"reflexión", "refracción", "dispersión", "polarización", "interferencia", "difracción", "resonancia", "armonía", "melodía", "ritmo"
 		]);
-		console.log("Spanish dictionary loaded successfully. Word count:", this.dictionary.size);
+			console.log("Spanish dictionary loaded from fallback. Word count:", this.dictionary.size);
+		}
 	}
 
 	balanceAIRack() {
