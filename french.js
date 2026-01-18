@@ -5398,7 +5398,6 @@ formedWords.forEach((wordInfo) => {
 			}
 		}
 	}
-	}
 
 	renderRack() {
 		const rack = document.getElementById("tile-rack");
