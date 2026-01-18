@@ -2,14 +2,14 @@
 // Strict French word check: must be in dictionary, not capitalized, only French letters, not a name/English
 function isStrictFrenchWord(word, dictionary) {
     if (!word) return false;
-    // Only allow lowercase, no capitalized names
-    if (word[0] !== word[0].toLowerCase()) return false;
+    // Convert to lowercase for checking (Trie stores uppercase, but dictionary has lowercase)
+    const lowerWord = word.toLowerCase();
     // Only allow French letters (including accents)
-    if (!/^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(word)) return false;
+    if (!/^[a-zàâäéèêëïîôöùûüÿç]+$/i.test(lowerWord)) return false;
     // Block common English words and names (expand as needed)
     const blocklist = ["sound","drill","marilyn","skip","name","test","word","play","score","computer","player"];
-    if (blocklist.includes(word.toLowerCase())) return false;
-    return dictionary.has(word.toLowerCase());
+    if (blocklist.includes(lowerWord)) return false;
+    return dictionary.has(lowerWord);
 }
 let shownBlunders = new Set();
 
