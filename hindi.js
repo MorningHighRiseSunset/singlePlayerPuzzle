@@ -5314,10 +5314,19 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		// Use comprehensive hardcoded Hindi dictionary
 		console.log("Loading Hindi dictionary...");
-		
-		const hindiWords = [
+		try {
+			const response = await fetch('./hindi_words_list.json');
+			const words = await response.json();
+			const cleanedWords = words
+				.filter(w => w && w.length > 0)
+				.filter(w => w.length > 0);
+			this.dictionary = new Set(cleanedWords);
+			console.log("Hindi dictionary loaded from JSON. Word count:", this.dictionary.size);
+		} catch (error) {
+			console.warn("Failed to load Hindi dictionary from JSON:", error);
+			// Fallback: minimal dictionary
+			const hindiWords = [
 			'है', 'हो', 'करना', 'देना', 'लेना', 'रखना', 'जाना', 'आना', 'चलना', 'बैठना', 'उठना', 'सोना', 'उड़ना', 'तैरना', 'दौड़ना',
 			'आदमी', 'स्त्री', 'बच्चा', 'घर', 'शहर', 'गांव', 'देश', 'नदी', 'पहाड़', 'जंगल', 'बाग', 'पेड़', 'फूल', 'पत्ता', 'फल',
 			'पानी', 'खाना', 'रोटी', 'दूध', 'चाय', 'चीनी', 'नमक', 'तेल', 'आटा', 'दही', 'घी', 'मसाला',
@@ -5373,9 +5382,9 @@ formedWords.forEach((wordInfo) => {
 			'टाइफॉयड', 'डेंगू', 'मलेरिया', 'प्लेग', 'लेप्रोसी', 'रेबीज', 'हैपेटाइटिस', 'पीलिया', 'आंतरिक कीड़े', 'कफ', 'पित्त', 'वात',
 			'आयुर्वेद', 'यूनानी', 'होम्योपैथी', 'एलोपैथी', 'नेचुरोपैथी', 'स्पा', 'सॉना', 'मसाज', 'एक्यूपंक्चर', 'चिरोप्रैक्टिक्स', 'ऑस्टिओपैथी'
 		];
-		
-		this.dictionary = new Set(hindiWords);
-		console.log("Hindi dictionary loaded successfully. Word count:", this.dictionary.size);
+			this.dictionary = new Set(hindiWords);
+			console.log("Hindi dictionary loaded from fallback. Word count:", this.dictionary.size);
+		}
 	}
 
 	balanceAIRack() {
