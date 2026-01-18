@@ -5322,10 +5322,19 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		// Use comprehensive hardcoded French dictionary
 		console.log("Loading French dictionary...");
-		
-		const frenchWords = [
+		try {
+			const response = await fetch('./french_words_list.json');
+			const words = await response.json();
+			const cleanedWords = words
+				.filter(w => w && w.length > 1)
+				.filter(w => w.length > 0);
+			this.dictionary = new Set(cleanedWords);
+			console.log("French dictionary loaded from JSON. Word count:", this.dictionary.size);
+		} catch (error) {
+			console.warn("Failed to load French dictionary from JSON:", error);
+			// Fallback: minimal dictionary
+			const frenchWords = [
 			"maison", "chien", "chat", "eau", "soleil", "lune", "amour", "vie", "monde", "temps", "année", "jour", "nuit",
 			"homme", "femme", "enfant", "garçon", "fille", "pere", "mere", "frere", "soeur", "ami", "amie", "travail", "ecole",
 			"livre", "voiture", "ville", "pays", "nourriture", "lait", "pain", "viande", "fruit", "fleur", "arbre", "herbe",
@@ -5353,9 +5362,9 @@ formedWords.forEach((wordInfo) => {
 			"pauvre", "jeune", "mature", "vieux", "ancien", "moderne", "actuel", "passe", "futur", "present", "moment", "instant",
 			"seconde", "minute", "heure", "jour", "semaine", "mois", "saison", "epoque", "periode", "age", "ère", "ere"
 		];
-		
-		this.dictionary = new Set(frenchWords);
-		console.log("French dictionary loaded successfully. Word count:", this.dictionary.size);
+			this.dictionary = new Set(frenchWords);
+			console.log("French dictionary loaded from fallback. Word count:", this.dictionary.size);
+		}
 	}
 
 	balanceAIRack() {
