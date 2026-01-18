@@ -466,15 +466,6 @@
             <button id="skip-turn-desktop-drawer" data-i18n="skip-turn">Skip Turn</button>
             <button id="quit-game-desktop-drawer" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
-          <div class="language-selector">
-            <select id="language-selector-desktop-drawer" class="language-button" data-i18n-label="click-change-language" aria-label="Click to change language">
-              <option value="" disabled selected hidden data-i18n="click-change-language">Click to change language</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="zh">中文</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
           <div class="drawer-instructions" id="drawer-instructions-desktop">
             <h3 data-i18n="how-to-play-title">How to Play</h3>
@@ -657,14 +648,7 @@
             this.parentElement.style.display = 'none';
           });
         });
-        // Language selector placeholder removal (both desktop and mobile)
-        document.querySelectorAll('.language-selector select').forEach(languageSelector => {
-          languageSelector.addEventListener('focus', function() {
-            if (languageSelector.options[0].value === "") {
-              languageSelector.remove(0);
-            }
-          });
-        });
+
         // --- Win/Lose Overlay Close Button Logic ---
         const winLoseOverlay = document.getElementById('win-lose-overlay');
         const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
