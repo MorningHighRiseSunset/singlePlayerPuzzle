@@ -5341,11 +5341,19 @@ formedWords.forEach((wordInfo) => {
 	}
 
 	async loadDictionary() {
-		// Use comprehensive hardcoded Mandarin dictionary
 		console.log("Loading Mandarin dictionary...");
-		
-		// Mandarin fallback dictionary with common Chinese words
-		this.dictionary = new Set([
+		try {
+			const response = await fetch('./mandarin_words_list.json');
+			const words = await response.json();
+			const cleanedWords = words
+				.filter(w => w && w.length > 0)
+				.filter(w => w.length > 0);
+			this.dictionary = new Set(cleanedWords);
+			console.log("Mandarin dictionary loaded from JSON. Word count:", this.dictionary.size);
+		} catch (error) {
+			console.warn("Failed to load Mandarin dictionary from JSON:", error);
+			// Fallback: minimal dictionary
+			this.dictionary = new Set([
 			"你好", "世界", "中国", "北京", "上海", "朋友", "学习", "工作", "学校", "老师", "学生", "家庭",
 			"父母", "孩子", "时间", "今天", "明天", "昨天", "早上", "晚上", "中午", "吃饭", "睡觉", "看书",
 			"汽车", "房子", "城市", "国家", "人民", "生活", "快乐", "幸福", "美丽", "好的", "大的", "小的",
@@ -5427,7 +5435,8 @@ formedWords.forEach((wordInfo) => {
 			"烹饪", "烹饪", "烤", "炒", "炖", "蒸", "煮", "炸", "腌", "腌制", "烧烤", "烘焙",
 			"厨房", "厨房", "锅", "盘子", "碗", "勺子", "叉子", "刀", "砧板", "冰箱", "炉灶", "烤箱"
 		]);
-		console.log("Mandarin dictionary loaded successfully. Word count:", this.dictionary.size);
+			console.log("Mandarin dictionary loaded from fallback. Word count:", this.dictionary.size);
+		}
 	}
 
 	balanceAIRack() {
