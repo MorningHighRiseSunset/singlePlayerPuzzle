@@ -5360,6 +5360,16 @@ formedWords.forEach((wordInfo) => {
 
 	balanceAIRack() {
 		const vowels = ['A', 'E', 'I', 'O', 'U'];
+		const vowelCount = this.aiRack.filter(tile => vowels.includes(tile.letter)).length;
+
+		// Aim for 2-3 vowels in the rack
+		if (vowelCount < 2 || vowelCount > 4) {
+			const desiredVowelCount = 3;
+			while (this.tiles.length > 0 &&
+				this.aiRack.filter(tile => vowels.includes(tile.letter)).length !== desiredVowelCount) {
+
+				// Remove excess vowels or consonants
+				const indexToRemove = this.aiRack.findIndex(tile =>
 					vowelCount > 3 ? vowels.includes(tile.letter) : !vowels.includes(tile.letter)
 				);
 
@@ -5378,6 +5388,7 @@ formedWords.forEach((wordInfo) => {
 				}
 			}
 		}
+	}
 	}
 
 	renderRack() {
