@@ -5787,11 +5787,16 @@ formedWords.forEach((wordInfo) => {
             );
             cell.innerHTML = "";
 
-            // If this was a wild tile, reset its letter back to *
-            if (tile && tile.originalLetter === "*") {
-                tile.letter = "*";
-                tile.score = 0;
-            }
+
+			// If this was a wild tile, reset its letter back to * and remove any isBlank property
+			if (tile && tile.originalLetter === "*") {
+				tile.letter = "*";
+				tile.value = 0;
+				// Remove isBlank property if present
+				if (tile.hasOwnProperty('isBlank')) {
+					delete tile.isBlank;
+				}
+			}
 
             // Always restore the center star if this is the center cell and it's empty
             if (row === 7 && col === 7) {
@@ -5804,16 +5809,16 @@ formedWords.forEach((wordInfo) => {
                 }
             }
 
-            // --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-            if (tile.isBlank || tile.letter === "*") {
-                this.playerRack.push({
-                    letter: "*",
-                    value: 0,
-                    id: tile.id
-                });
-            } else {
-                this.playerRack.push(tile);
-            }
+			// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
+			if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
+				this.playerRack.push({
+					letter: "*",
+					value: 0,
+					id: tile.id
+				});
+			} else {
+				this.playerRack.push(tile);
+			}
         });
 
         this.placedTiles = [];
