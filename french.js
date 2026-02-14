@@ -363,7 +363,7 @@ class ScrabbleGame {
 		this.placedTiles.splice(placedIdx, 1);
 
 		// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-		if (tile.isBlank || tile.letter === "*") {
+		if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
 			this.playerRack.push({
 				letter: "*",
 				value: 0,
