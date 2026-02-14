@@ -6,53 +6,6 @@
     <title>Puzzle Game</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-      .console-submit-row {
-        display: flex;
-        flex-direction: row;
-        align-items: flex-end;
-        gap: 12px;
-        margin: 18px 0 0 0;
-      }
-      .game-console {
-        flex: 1 1 0;
-        min-height: 48px;
-        max-height: 120px;
-        background: #f7faff;
-        border-radius: 8px;
-        border: 1px solid #b0bec5;
-        padding: 8px 12px;
-        overflow-y: auto;
-        font-size: 1em;
-        color: #222;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      }
-      .play-word-main {
-        min-width: 100px;
-        height: 48px;
-        font-size: 1.1em;
-        border-radius: 24px;
-        background: linear-gradient(145deg, #1a237e, #151d69);
-        color: #fff;
-        border: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-        cursor: pointer;
-        transition: background 0.2s, transform 0.2s;
-      }
-      .play-word-main:hover {
-        background: linear-gradient(145deg, #151d69, #0d1428);
-        transform: translateY(-2px);
-      }
-      @media (max-width: 768px) {
-        .console-submit-row {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 8px;
-        }
-        .play-word-main {
-          width: 100%;
-          min-width: 0;
-        }
-      }
       @media (max-width: 768px) {
         #mobile-bottom-bar {
           position: fixed;
@@ -429,6 +382,7 @@
             <div class="exchange-instructions" data-i18n="exchange-instructions"> Drag tiles here to exchange them </div>
           </section>
           <nav class="controls">
+            <button id="play-word" data-i18n="submit">Submit</button>
             <button id="shuffle-rack" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn" data-i18n="skip-turn">Skip Turn</button>
             <button id="quit-game" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
@@ -569,10 +523,6 @@
         <div id="ai-rack" class="tile-rack ai-rack"></div>
         <div id="scrabble-board"></div>
         <div id="tile-rack" class="tile-rack"></div>
-        <div class="console-submit-row">
-          <div id="game-console" class="game-console"></div>
-          <button id="play-word-main" class="play-word-main" data-i18n="submit">Submit</button>
-        </div>
         <div id="hint-box">
           <span class="hint-icon">💡</span>
           <span id="hint-text"></span>
@@ -737,25 +687,6 @@
       });
     </script>
     <script src="translations.js"></script>
-    <script>
-      // Wire up the new Submit button to trigger the same logic as the original
-      document.addEventListener('DOMContentLoaded', function() {
-        var playWordMain = document.getElementById('play-word-main');
-        var playWordOrig = document.getElementById('play-word');
-        if (playWordMain && playWordOrig) {
-          playWordMain.addEventListener('click', function() {
-            playWordOrig.click();
-          });
-        }
-        // Move game messages to the new console area if needed
-        var oldConsole = document.getElementById('game-console-old');
-        var newConsole = document.getElementById('game-console');
-        if (oldConsole && newConsole) {
-          newConsole.innerHTML = oldConsole.innerHTML;
-          oldConsole.parentNode.removeChild(oldConsole);
-        }
-      });
-    </script>
     <script src="spanish.js"></script>
   </body>
 </html>

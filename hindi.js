@@ -7946,35 +7946,7 @@ calculateScore() {
 		if (mobileDrawer) {
 			mobileDrawer.appendChild(historyDisplay);
 			// Also add a console output container at the bottom of the drawer for debug messages
-			let consoleBox = mobileDrawer.querySelector('.drawer-console-output');
-			if (!consoleBox) {
-				consoleBox = document.createElement('div');
-				consoleBox.className = 'drawer-console-output';
-				consoleBox.style.cssText = 'margin-top:12px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);max-height:140px;overflow:auto;font-size:12px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));border-radius:6px';
-				consoleBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between"><strong>' + (typeof t === 'function' ? t('console') : 'कंसोल') + '</strong><button class="copy-console-btn" style="font-size:12px;padding:4px 6px;border-radius:4px">' + (typeof t === 'function' ? t('copy-all') : 'सभी कॉपी करें') + '</button></div><div class="console-entries" style="margin-top:6px;font-family:monospace"></div>';
-				const copyBtn = consoleBox.querySelector('.copy-console-btn');
-				if (copyBtn) {
-					copyBtn.addEventListener('click', async () => {
-						try {
-							const entries = Array.from(consoleBox.querySelectorAll('.console-entries div')).map(d => d.textContent).join('\n');
-							if (!entries.trim()) { alert('No console messages to copy'); return; }
-							if (navigator.clipboard && navigator.clipboard.writeText) {
-								await navigator.clipboard.writeText(entries);
-								alert('Console copied to clipboard!');
-							} else {
-								const textArea = document.createElement('textarea');
-								textArea.value = entries;
-								document.body.appendChild(textArea);
-								textArea.select();
-								document.execCommand('copy');
-								document.body.removeChild(textArea);
-								alert('Console copied to clipboard!');
-							}
-						} catch (e) { console.error('Copy failed:', e); alert('Copy failed: ' + e.message); }
-					});
-				}
-				mobileDrawer.appendChild(consoleBox);
-			}
+			// Console and Copy All button removed as requested
 		} else if (infoPanel) {
 			infoPanel.appendChild(historyDisplay);
 		}
