@@ -359,10 +359,12 @@ class ScrabbleGame {
 
 		// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
 		if (tile.isBlank || tile.letter === "*") {
+			// Reset wild tile to unused state
 			this.playerRack.push({
 				letter: "*",
 				value: 0,
-				id: tile.id
+				id: tile.id,
+				isBlank: true
 			});
 		} else {
 			this.playerRack.push(tile);
