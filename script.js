@@ -7157,8 +7157,14 @@ calculateScore() {
 				// Update game state
 				this.playerScore += totalScore;
 				this.isFirstMove = false;
+				// Track how many tiles were used before clearing placedTiles
+				const tilesUsedFromRack = this.placedTiles.length;
 				this.placedTiles = [];
-				this.fillRacks();
+				// Only refill rack if player actually used tiles from their rack
+				// (tiles are already removed from rack during placement)
+				if (this.playerRack.length < 7 - tilesUsedFromRack) {
+					this.fillRacks();
+				}
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
 				this.showAIGhostIfPlayerMoveValid();
