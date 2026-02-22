@@ -25,6 +25,7 @@
         }
 
         #mobile-menu-toggle,
+        #pull-tiles-mobile,
         #play-word-mobile {
           width: 48px;
           height: 48px;
@@ -63,6 +64,27 @@
           display: flex;
           white-space: nowrap;
           /* Prevent text wrap */
+        }
+
+        #pull-tiles-mobile {
+          width: 80px;
+          min-width: 80px;
+          max-width: 100px;
+          height: 48px;
+          min-height: 48px;
+          max-height: 48px;
+          font-size: 1.0em;
+          border-radius: 24px;
+          padding: 0 10px;
+          justify-content: center;
+          align-items: center;
+          display: flex;
+          white-space: nowrap;
+          background: linear-gradient(145deg, #1a237e, #151d69);
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+          border: none;
+          transition: background 0.2s, transform 0.2s;
         }
 
         .moves-panel,
@@ -596,6 +618,7 @@
     <!-- Mobile Bottom Bar: Hamburger + Submit (Mobile Only, fixed at bottom, left-aligned, side by side, no white bg) -->
     <div id="mobile-bottom-bar">
       <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="pull-tiles-mobile" class="pull-tiles-mobile" title="Pull Tiles from Board" data-i18n="Pull-Tiles">Pull Tiles</button>
       <button id="play-word-mobile" class="play-word-mobile" title="Submit Move" data-i18n="submit">Submit</button>
     </div>
     <!-- Desktop Bottom Bar: Hamburger + Submit (Desktop Only, fixed at bottom, left-aligned, side by side, no white bg) -->
@@ -693,6 +716,13 @@
           // Try both IDs for desktop/mobile
           let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
           if (playBtn) playBtn.click();
+        });
+        // --- Mobile Pull Tiles Button Logic ---
+        const pullTilesMobile = document.getElementById('pull-tiles-mobile');
+        pullTilesMobile.addEventListener('click', function() {
+          if (window.game && typeof window.game.resetPlacedTiles === 'function') {
+            window.game.resetPlacedTiles();
+          }
         });
         // --- Desktop Submit Button Logic ---
         const playWordDesktopBottom = document.getElementById('play-word-desktop-bottom');

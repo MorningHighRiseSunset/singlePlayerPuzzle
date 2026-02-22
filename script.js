@@ -5823,18 +5823,37 @@ formedWords.forEach((wordInfo) => {
             }
 
             // --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-            if (tile.isBlank || tile.letter === "*") {
-                this.playerRack.push({
-                    letter: "*",
-                    value: 0,
-                    id: tile.id
-                });
+            if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
+                // Reset the original tile object properly
+                if (tile.originalLetter === "*") {
+                    tile.letter = "*";
+                    tile.score = 0;
+                    tile.value = 0;
+                } else {
+                    // Create new wild tile if this was a regular blank
+                    tile.letter = "*";
+                    tile.score = 0;
+                    tile.value = 0;
+                    tile.originalLetter = "*";
+                }
+                this.playerRack.push(tile);
             } else {
                 this.playerRack.push(tile);
             }
         });
 
         this.placedTiles = [];
+        
+        // --- DOUBLE-CHECKER: Ensure all wild tiles in rack are properly reverted ---
+        this.playerRack.forEach(tile => {
+            if (tile.originalLetter === "*" && tile.letter !== "*") {
+                console.warn("Wild tile not properly reverted, fixing...");
+                tile.letter = "*";
+                tile.score = 0;
+                tile.value = 0;
+            }
+        });
+        
         this.renderRack();
 
         // Remove ghost tiles when resetting
