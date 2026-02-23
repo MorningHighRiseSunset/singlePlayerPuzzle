@@ -3087,15 +3087,26 @@ async executeAIPlay(play) {
     this.previousBoard = JSON.parse(JSON.stringify(this.board));
 
     // Create the placedTiles array for the AI's move
-    this.placedTiles = Array.from(word).map((letter, i) => ({
-        row: isHorizontal ? startPos.row : startPos.row + i,
-        col: isHorizontal ? startPos.col + i : startPos.col,
-        tile: {
-            letter: letter,
-            value: this.tileValues[letter],
-            id: `ai_${letter}_${Date.now()}_${i}`,
-        },
-    }));
+    // Only include tiles that are actually being placed on empty squares
+    const aiPlacedTiles = [];
+    for (let i = 0; i < word.length; i++) {
+        const row = isHorizontal ? startPos.row : startPos.row + i;
+        const col = isHorizontal ? startPos.col + i : startPos.col;
+        
+        // Only add to placedTiles if the square is empty (newly placed tile)
+        if (!this.board[row][col]) {
+            aiPlacedTiles.push({
+                row: row,
+                col: col,
+                tile: {
+                    letter: word[i],
+                    value: this.tileValues[word[i]],
+                    id: `ai_${word[i]}_${Date.now()}_${i}`,
+                },
+            });
+        }
+    }
+    this.placedTiles = aiPlacedTiles;
 
     return new Promise(async (resolve) => {
         // Start placing tiles with animation
