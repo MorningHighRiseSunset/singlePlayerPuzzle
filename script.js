@@ -5816,10 +5816,27 @@ formedWords.forEach((wordInfo) => {
             );
             cell.innerHTML = "";
 
-            // If this was a wild tile, reset its letter back to *
+            // If this was a wild tile, reset its letter back to * and remove any isBlank property
             if (tile && tile.originalLetter === "*") {
                 tile.letter = "*";
                 tile.score = 0;
+                // Remove isBlank property if present
+                if (tile.hasOwnProperty('isBlank')) {
+                    delete tile.isBlank;
+                }
+            }
+
+            // Always restore as a blank tile if it was a blank, regardless of its current letter
+            if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
+                this.playerRack.push({
+                    letter: "*",
+                    value: 0,
+                    id: tile.id,
+                    isBlank: true,
+                    originalLetter: "*"
+                });
+            } else {
+                this.playerRack.push(tile);
             }
 
             // Always restore the center star if this is the center cell and it's empty
@@ -5828,33 +5845,11 @@ formedWords.forEach((wordInfo) => {
                 if (!existingStar && !cell.querySelector('.tile')) {
                     const centerStar = document.createElement("span");
                     centerStar.textContent = "⚜";
-                    centerStar.className = "center-star";
                     cell.appendChild(centerStar);
                 }
             }
-
-            // --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-            if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
-                // Reset the original tile object properly
-                if (tile.originalLetter === "*") {
-                    tile.letter = "*";
-                    tile.score = 0;
-                    tile.value = 0;
-                } else {
-                    // Create new wild tile if this was a regular blank
-                    tile.letter = "*";
-                    tile.score = 0;
-                    tile.value = 0;
-                    tile.originalLetter = "*";
-                }
-                this.playerRack.push(tile);
-            } else {
-                this.playerRack.push(tile);
-            }
         });
 
-        this.placedTiles = [];
-        
         // --- DOUBLE-CHECKER: Ensure all wild tiles in rack are properly reverted ---
         this.playerRack.forEach(tile => {
             if (tile.originalLetter === "*" && tile.letter !== "*") {
