@@ -7216,6 +7216,15 @@ calculateScore() {
 					console.warn('Toast display failed:', e);
 				}
 				this.resetPlacedTiles();
+				// Track how many tiles were used before clearing placedTiles
+				// IMPORTANT: Calculate this AFTER resetPlacedTiles to avoid duplication
+				const tilesUsedFromRack = this.placedTiles.length;
+				this.placedTiles = [];
+				// Only refill rack if player actually used tiles from their rack
+				// (tiles are already removed from rack during placement)
+				if (this.playerRack.length < 7 - tilesUsedFromRack) {
+					this.fillRacks();
+				}
 			}
 		} finally {
 			// Restore button state
