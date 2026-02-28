@@ -471,32 +471,12 @@
             <h3><span data-i18n="tiles-remaining">Tiles Remaining:</span> <span id="tiles-count-desktop-drawer">98</span>
             </h3>
           </div>
-          <section class="exchange-area">
-            <h3 data-i18n="exchange-tiles">Exchange Tiles</h3>
-            <button id="activate-exchange-desktop-drawer" class="exchange-button" data-i18n="activate-exchange">Activate Exchange Portal</button>
-            <div id="exchange-portal-desktop-drawer" class="exchange-portal">
-              <div class="portal-ring outer"></div>
-              <div class="portal-ring middle"></div>
-              <div class="portal-ring inner"></div>
-              <div class="portal-core"></div>
-              <div class="portal-particles"></div>
-            </div>
-            <div class="exchange-instructions" data-i18n="exchange-instructions"> Drag tiles here to exchange them </div>
-          </section>
           <nav class="controls">
             <button id="play-word-desktop-drawer" data-i18n="submit">Submit</button>
             <button id="shuffle-rack-desktop-drawer" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn-desktop-drawer" data-i18n="skip-turn">Skip Turn</button>
             <button id="quit-game-desktop-drawer" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
-          <div class="language-selector">
-            <select id="language-selector-desktop-drawer" class="language-button">
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="zh">中文</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
           <div class="drawer-instructions" id="drawer-instructions-desktop">
             <h3 data-i18n="how-to-play-title">How to Play</h3>
@@ -519,14 +499,7 @@
               <li data-i18n="submitting-move-2">Invalid words will be rejected and tiles returned to your rack</li>
               <li data-i18n="submitting-move-3">Points will be automatically calculated and added to your score</li>
             </ul>
-            <p data-i18n="exchanging-tiles">4. Exchanging Tiles:</p>
-            <ul>
-              <li data-i18n="exchanging-tiles-1">Click "Activate Exchange Portal" to start an exchange</li>
-              <li data-i18n="exchanging-tiles-2">Drag unwanted tiles into the portal</li>
-              <li data-i18n="exchanging-tiles-3">You'll receive the same number of new tiles</li>
-              <li data-i18n="exchanging-tiles-4">This counts as your turn</li>
-            </ul>
-            <p data-i18n="skipping-end">5. Skipping and Game End:</p>
+            <p data-i18n="skipping-end">4. Skipping and Game End:</p>
             <ul>
               <li data-i18n="skipping-end-1">Use "Skip Turn" if you can't make a valid move</li>
               <li data-i18n="skipping-end-2">The game ends when all tiles are used or both players skip twice in a row</li>
@@ -580,18 +553,6 @@
           <h3><span data-i18n="tiles-remaining">Tiles Remaining:</span> <span id="tiles-count-desktop">98</span>
           </h3>
         </div>
-        <section class="exchange-area">
-          <h3 data-i18n="exchange-tiles">Exchange Tiles</h3>
-          <button id="activate-exchange-desktop" class="exchange-button" data-i18n="activate-exchange">Activate Exchange Portal</button>
-          <div id="exchange-portal-desktop" class="exchange-portal">
-            <div class="portal-ring outer"></div>
-            <div class="portal-ring middle"></div>
-            <div class="portal-ring inner"></div>
-            <div class="portal-core"></div>
-            <div class="portal-particles"></div>
-          </div>
-          <div class="exchange-instructions" data-i18n="exchange-instructions"> Drag tiles here to exchange them </div>
-        </section>
         <nav class="controls">
           <button id="play-word-desktop" data-i18n="submit">Submit</button>
           <button id="shuffle-rack-desktop" data-i18n="shuffle-rack">Shuffle Rack</button>
@@ -678,14 +639,6 @@
         document.querySelectorAll('.notice-close').forEach(btn => {
           btn.addEventListener('click', function() {
             this.parentElement.style.display = 'none';
-          });
-        });
-        // Language selector placeholder removal (both desktop and mobile)
-        document.querySelectorAll('.language-selector select').forEach(languageSelector => {
-          languageSelector.addEventListener('focus', function() {
-            if (languageSelector.options[0].value === "") {
-              languageSelector.remove(0);
-            }
           });
         });
         // --- Win/Lose Overlay Close Button Logic ---
