@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Puzzle Game Tester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .game-frame {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .game-frame iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls h2 {
+            margin-top: 0;
+            color: #fff;
+        }
+        
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #fff;
+        }
+        
+        .instructions ul {
+            margin: 10px 0 0 20px;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Puzzle Game Tester</h1>
+            <p>Automated testing and AI gameplay for the Scrabble puzzle game</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ul>
+                <li>Load the game below and wait for it to initialize</li>
+                <li>The AI tester will automatically start in interactive mode</li>
+                <li>Use the command input that appears in the top-right</li>
+                <li>Type "auto" to run automated tests</li>
+                <li>Type "help" for all available commands</li>
+                <li>The AI can find moves, play words, and test game functionality</li>
+            </ul>
+        </div>
+        
+        <div class="game-frame">
+            <iframe src="game.html" title="Puzzle Game"></iframe>
+        </div>
+        
+        <div class="controls">
+            <h2>🎮 AI Controls</h2>
+            <div class="control-buttons">
+                <button class="control-btn" onclick="runAutoTest()">
+                    🚀 Run Automated Tests
+                </button>
+                <button class="control-btn" onclick="findMoves()">
+                    🔍 Find Possible Moves
+                </button>
+                <button class="control-btn" onclick="playBestMove()">
+                    ⭐ Play Best Move
+                </button>
+                <button class="control-btn" onclick="resetMove()">
+                    🔄 Reset Current Move
+                </button>
+                <button class="control-btn" onclick="showGameState()">
+                    📊 Show Game State
+                </button>
+                <button class="control-btn" onclick="toggleAI()">
+                    🤖 Toggle AI Mode
+                </button>
+            </div>
+            <div class="status" id="status">
+                AI Status: Ready. Load the game and wait for initialization...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let aiTester = null;
+        let aiEnabled = false;
+        
+        // Update status display
+        function updateStatus(message) {
+            document.getElementById('status').textContent = `AI Status: ${message}`;
+        }
+        
+        // Wait for game to load and initialize AI
+        window.addEventListener('load', () => {
+            updateStatus('Loading game and AI tester...');
+            
+            // Load the AI tester script
+            const script = document.createElement('script');
+            script.src = 'ai_tester.js';
+            script.onload = () => {
+                updateStatus('AI tester loaded. Waiting for game initialization...');
+                
+                // Wait for AI to initialize
+                setTimeout(() => {
+                    if (window.PuzzleGameAITester) {
+                        aiTester = new window.PuzzleGameAITester();
+                        aiEnabled = true;
+                        updateStatus('AI ready! Use commands or buttons below.');
+                    } else {
+                        updateStatus('Error: AI tester not loaded');
+                    }
+                }, 3000);
+            };
+            script.onerror = () => {
+                updateStatus('Error: Failed to load AI tester script');
+            };
+            document.head.appendChild(script);
+        });
+        
+        // Control functions
+        async function runAutoTest() {
+            if (!aiEnabled) {
+                updateStatus('AI not ready yet...');
+                return;
+            }
+            updateStatus('Running automated tests...');
+            try {
+                await aiTester.runAutomatedTest();
+                updateStatus('Automated tests completed. Check console for report.');
+            } catch (error) {
+                updateStatus(`Test error: ${error.message}`);
+            }
+        }
+        
+        async function findMoves() {
+            if (!aiEnabled) {
+                updateStatus('AI not ready yet...');
+                return;
+            }
+            updateStatus('Finding possible moves...');
+            try {
+                await aiTester.findAndDisplayMoves();
+                updateStatus('Moves found. Check console for details.');
+            } catch (error) {
+                updateStatus(`Error finding moves: ${error.message}`);
+            }
+        }
+        
+        async function playBestMove() {
+            if (!aiEnabled) {
+                updateStatus('AI not ready yet...');
+                return;
+            }
+            updateStatus('Playing best move...');
+            try {
+                await aiTester.playBestMove();
+                updateStatus('Best move played successfully.');
+            } catch (error) {
+                updateStatus(`Error playing move: ${error.message}`);
+            }
+        }
+        
+        function resetMove() {
+            if (!aiEnabled) {
+                updateStatus('AI not ready yet...');
+                return;
+            }
+            try {
+                aiTester.game.resetPlacedTiles();
+                updateStatus('Current move reset.');
+            } catch (error) {
+                updateStatus(`Error resetting move: ${error.message}`);
+            }
+        }
+        
+        function showGameState() {
+            if (!aiEnabled) {
+                updateStatus('AI not ready yet...');
+                return;
+            }
+            try {
+                const state = aiTester.getGameState();
+                updateStatus(`Game state: Player ${state.playerScore} - AI ${state.aiScore}, Tiles: ${state.tilesRemaining}, Rack: ${state.playerRack.map(t => t.letter).join('')}`);
+            } catch (error) {
+                updateStatus(`Error getting state: ${error.message}`);
+            }
+        }
+        
+        function toggleAI() {
+            aiEnabled = !aiEnabled;
+            updateStatus(aiEnabled ? 'AI mode enabled' : 'AI mode disabled');
+        }
+        
+        // Listen for AI status updates
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'AI_STATUS') {
+                updateStatus(event.data.message);
+            }
+        });
+    </script>
+</body>
+</html>

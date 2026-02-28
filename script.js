@@ -8406,7 +8406,7 @@ calculateScore() {
 				index: tileIndex,
 			});
 
-			// Remove from rack visually
+			// Remove from rack visually (IMPORTANT: This prevents duplication)
 			this.playerRack.splice(tileIndex, 1);
 			this.renderRack();
 
