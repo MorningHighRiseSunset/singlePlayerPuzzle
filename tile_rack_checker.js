@@ -144,24 +144,28 @@ class TileRackChecker {
 
     // Auto-fix detected violations
     autoFixViolations() {
-        this.violations.forEach(violation => {
-            switch (violation.type) {
-                case 'RACK_OVERFLOW':
-                    this.fixRackOverflow(violation);
-                    break;
-                case 'DUPLICATE_TILES':
-                    this.fixDuplicateTiles(violation);
-                    break;
-                case 'INVALID_TILE_OBJECT':
-                    this.fixInvalidTileObjects(violation);
-                    break;
-                case 'WILD_TILE_INTEGRITY':
-                    this.fixWildTileIntegrity(violation);
-                    break;
-            }
-        });
+        console.log('🚨 AUTO-FIXING DISABLED - REPORTING ONLY');
+        console.log('🚨 Use fixTileRack() manually to fix issues');
+        
+        // Temporarily disable auto-fixing to prevent corruption
+        // this.violations.forEach(violation => {
+        //     switch (violation.type) {
+        //         case 'RACK_OVERFLOW':
+        //             this.fixRackOverflow(violation);
+        //             break;
+        //         case 'DUPLICATE_TILES':
+        //             this.fixDuplicateTiles(violation);
+        //             break;
+        //         case 'INVALID_TILE_OBJECT':
+        //             this.fixInvalidTileObjects(violation);
+        //             break;
+        //         case 'WILD_TILE_INTEGRITY':
+        //             this.fixWildTileIntegrity(violation);
+        //             break;
+        //     }
+        // });
 
-        // Clear violations after fixing
+        // Clear violations after reporting
         this.violations = [];
     }
 
@@ -187,9 +191,21 @@ class TileRackChecker {
         
         // Remove duplicates, keeping only one of each
         const tilesToKeep = [];
+        const seenLetters = new Set();
+        
         this.game.playerRack.forEach((tile, index) => {
-            if (tile && tile.letter === violation.details.letter) {
-                tilesToKeep.push(tile);
+            if (tile && tile.letter) {
+                if (!seenLetters.has(tile.letter)) {
+                    // First occurrence of this letter - keep it
+                    seenLetters.add(tile.letter);
+                    tilesToKeep.push(tile);
+                } else {
+                    // Duplicate letter - skip it
+                    console.log(`  Skipping duplicate tile: ${tile.letter} at index ${index}`);
+                }
+            } else {
+                // Invalid tile - skip it
+                console.log(`  Skipping invalid tile at index ${index}`);
             }
         });
         
