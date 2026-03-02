@@ -430,7 +430,9 @@ class ScrabbleGame {
 					const ghost = cell.querySelector('.ghost-tile');
 					if (ghost) ghost.remove();
 
-					this.placeTile(tile, row, col);
+					// If tile was moved from the board this turn, inform placeTile so it doesn't
+					// try to remove the tile from the rack (object identity may differ).
+					this.placeTile(tile, row, col, { fromBoard: movedFromBoard });
 
 					// Redo ghost preview after placement
 					this.showAIGhostIfPlayerMoveValid();
@@ -5572,7 +5574,7 @@ formedWords.forEach((wordInfo) => {
 		});
 	}
 
-	placeTile(tile, row, col) {
+	placeTile(tile, row, col, options = {}) {
 		if (this.board[row][col]) {
 			alert("This cell is already occupied!");
 			return;
@@ -5582,6 +5584,7 @@ formedWords.forEach((wordInfo) => {
 			`[data-row="${row}"][data-col="${col}"]`,
 		);
 		const tileIndex = this.playerRack.indexOf(tile);
+		const fromBoard = !!options.fromBoard;
 
 		// Remove only existing tile element, not the center star or other decorations
 		const existingTile = cell.querySelector('.tile');
@@ -5695,9 +5698,14 @@ formedWords.forEach((wordInfo) => {
 					if (existingTile) existingTile.remove();
 					cell.appendChild(tileElement);
 
-					// Remove tile from rack
-					if (tileIndex > -1) {
-						this.playerRack.splice(tileIndex, 1);
+					// Remove tile from rack only if it came from the rack (not moved from board).
+					if (!fromBoard) {
+						let idxToRemove = tileIndex;
+						// If object identity lookup failed, try matching by id
+						if (idxToRemove === -1 && tile && tile.id) {
+							idxToRemove = this.playerRack.findIndex(r => r && r.id === tile.id);
+						}
+						if (idxToRemove > -1) this.playerRack.splice(idxToRemove, 1);
 					}
 
 					// Add to placed tiles
@@ -5745,9 +5753,13 @@ formedWords.forEach((wordInfo) => {
 			if (existingTile) existingTile.remove();
 			cell.appendChild(tileElement);
 
-			// Remove tile from rack
-			if (tileIndex > -1) {
-				this.playerRack.splice(tileIndex, 1);
+			// Remove tile from rack only if it came from the rack (not moved from board).
+			if (!fromBoard) {
+				let idxToRemove = tileIndex;
+				if (idxToRemove === -1 && tile && tile.id) {
+					idxToRemove = this.playerRack.findIndex(r => r && r.id === tile.id);
+				}
+				if (idxToRemove > -1) this.playerRack.splice(idxToRemove, 1);
 			}
 
 			// Add to placed tiles
@@ -5826,18 +5838,21 @@ formedWords.forEach((wordInfo) => {
                 }
             }
 
-            // Always restore as a blank tile if it was a blank, regardless of its current letter
-            if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
-                this.playerRack.push({
-                    letter: "*",
-                    value: 0,
-                    id: tile.id,
-                    isBlank: true,
-                    originalLetter: "*"
-                });
-            } else {
-                this.playerRack.push(tile);
-            }
+			// Always restore as a blank tile if it was a blank, regardless of its current letter
+			const alreadyInRack = this.playerRack.some(r => r && r.id === tile.id);
+			if (!alreadyInRack) {
+				if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
+					this.playerRack.push({
+						letter: "*",
+						value: 0,
+						id: tile.id,
+						isBlank: true,
+						originalLetter: "*"
+					});
+				} else {
+					this.playerRack.push(tile);
+				}
+			}
 
             // Always restore the center star if this is the center cell and it's empty
             if (row === 7 && col === 7) {
@@ -7215,10 +7230,9 @@ calculateScore() {
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
 				}
-				this.resetPlacedTiles();
 				// Track how many tiles were used before clearing placedTiles
-				// IMPORTANT: Calculate this AFTER resetPlacedTiles to avoid duplication
 				const tilesUsedFromRack = this.placedTiles.length;
+				this.resetPlacedTiles();
 				this.placedTiles = [];
 				// Only refill rack if player actually used tiles from their rack
 				// (tiles are already removed from rack during placement)
@@ -7642,96 +7656,6 @@ calculateScore() {
 		} catch (e) { console.warn('createDOMConfetti failed', e); this._domConfettiActive = false; }
 	}
 
-	// Lightweight bingo splash used for player-only celebrations
-	// variant: 'standard' | 'silver' | 'gold'
-	createBingoSplash(variant = 'standard') {
-		// Subtle guard if called excessively
-		try {
-			this.appendConsoleMessage && this.appendConsoleMessage('createBingoSplash() called');
-		} catch (e) {}
-		if (this._bingoSplashActive) {
-			try { this.appendConsoleMessage('createBingoSplash() skipped: _bingoSplashActive true'); } catch(e){}
-			return;
-		}
-		this._bingoSplashActive = true;
-		try {
-			let emojis = ["🎉","🎊","✨","🌟","💫","🎈","🥳"];
-			let colors = ["#FFD700","#FF4081","#00E676","#448AFF","#FFAB40","#EA80FC"];
-			// Tune visuals based on variant
-			if (variant === 'silver') {
-				emojis = ["🎉","🎖️","✨","🌟","🎊","🥈"];
-				colors = ["#C0C0C0","#B0BEC5","#90A4AE","#448AFF","#FFAB40"];
-			} else if (variant === 'gold') {
-				emojis = ["🏆","🎖️","🌟","✨","🎉","🥇"];
-				colors = ["#FFD700","#FFB300","#FFC107","#FFAB40","#FF4081"];
-			}
-
-			// Overlay flash
-			const overlay = document.createElement('div');
-			overlay.style.cssText = `
-				position: fixed;
-				left: 0; top: 0; width: 100vw; height: 100vh;
-				background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.92), rgba(255,255,255,0.7));
-				opacity: 0; pointer-events: none; z-index: 99999; transition: opacity .35s ease-out;
-			`;
-			document.body.appendChild(overlay);
-			requestAnimationFrame(() => overlay.style.opacity = '1');
-			setTimeout(() => overlay.style.opacity = '0', 320);
-			setTimeout(() => overlay.remove(), 1200);
-
-			const baseCount = Math.max(60, Math.min(200, Math.floor(window.innerWidth / 6))); // scale with screen width
-			const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-			const cx = window.innerWidth / 2;
-			const cy = Math.max(80, window.innerHeight * 0.28); // burst from upper-center, slightly higher on mobile
-
-			for (let i = 0; i < count; i++) {
-				const isEmoji = Math.random() > 0.45;
-				const el = document.createElement('div');
-				if (isEmoji) {
-					el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-				} else {
-					el.textContent = '';
-					el.style.background = colors[Math.floor(Math.random() * colors.length)];
-				}
-				let size = 20 + Math.random() * 36;
-				// make larger on mobile / small screens
-				if (window.innerWidth <= 480) size *= 1.4;
-				el.style.cssText = `
-					position: fixed;
-					left: ${cx}px;
-					top: ${cy}px;
-					width: ${isEmoji ? 'auto' : size + 'px'};
-					height: ${isEmoji ? 'auto' : size + 'px'};
-					font-size: ${isEmoji ? size + 'px' : '0'};
-					line-height: 1;
-					text-align: center;
-					transform: translate(-50%,-50%) scale(1) rotate(${Math.random() * 360}deg);
-					border-radius: ${isEmoji ? '0' : '4px'};
-					pointer-events: none;
-					opacity: 1;
-					z-index: 100000;
-					transition: transform ${1.6 + Math.random() * 1.4}s cubic-bezier(.2,.8,.2,1), opacity ${1.4 + Math.random() * 0.8}s ease-out;
-				`;
-				document.body.appendChild(el);
-
-				// Random direction and distance
-				const angle = Math.random() * Math.PI * 2;
-				const distance = (120 + Math.random() * (window.innerWidth * 0.5)) * (window.innerWidth <= 480 ? 0.9 : 1);
-				const dx = Math.cos(angle) * distance;
-				const dy = Math.sin(angle) * distance + (Math.random() * 80 - 40);
-
-				requestAnimationFrame(() => {
-					el.style.transform = `translate(${dx}px, ${dy}px) rotate(${Math.random() * 720}deg) scale(${1 + Math.random() * 0.6})`;
-					el.style.opacity = '0';
-				});
-
-				setTimeout(() => el.remove(), 2000 + Math.random() * 1200);
-			}
-		} finally {
-			setTimeout(() => { this._bingoSplashActive = false; }, 2200);
-		}
-	}
-
 	// Enhanced emoji-only confetti designed to be extra reliable on Android/Samsung browsers
 	createEmojiConfetti(options = {}) {
 		try {
@@ -7909,6 +7833,41 @@ calculateScore() {
 				try { o.stop(); ctx.close && ctx.close(); } catch (e) {}
 			}, duration + 50);
 		} catch (e) { console.warn('playBeep failed', e); }
+	}
+
+	// Play distinct sound effects for different bingo variants
+	playBingoSound(soundEffect) {
+		try {
+			if (typeof window === 'undefined' || !window.AudioContext && !window.webkitAudioContext) return;
+			
+			const AudioCtx = window.AudioContext || window.webkitAudioContext;
+			const ctx = new AudioCtx();
+			
+			soundEffect.frequencies.forEach((frequency, index) => {
+				setTimeout(() => {
+					const o = ctx.createOscillator();
+					const g = ctx.createGain();
+					o.type = soundEffect.type === 'clap' ? 'square' : soundEffect.type === 'woohoo' ? 'sawtooth' : 'sine';
+					o.frequency.value = frequency;
+					g.gain.value = 0.0001;
+					o.connect(g);
+					g.connect(ctx.destination);
+					const now = ctx.currentTime;
+					g.gain.setValueAtTime(0.0001, now);
+					g.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
+					o.start(now);
+					g.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+					setTimeout(() => {
+						try { o.stop(); } catch (e) {}
+					}, 150);
+				}, index * 50);
+			});
+			
+			setTimeout(() => {
+				try { ctx.close && ctx.close(); } catch (e) {}
+			}, soundEffect.duration + 100);
+			
+		} catch (e) { console.warn('playBingoSound failed', e); }
 	}
 
     

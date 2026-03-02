@@ -643,10 +643,14 @@
         });
         // --- Win/Lose Overlay Close Button Logic ---
         const winLoseOverlay = document.getElementById('win-lose-overlay');
-        const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
-        overlayCloseBtn.addEventListener('click', function() {
-          winLoseOverlay.classList.remove('active');
-        });
+        if (winLoseOverlay) {
+          const overlayCloseBtn = winLoseOverlay.querySelector('.overlay-close-btn');
+          if (overlayCloseBtn) {
+            overlayCloseBtn.addEventListener('click', function() {
+              winLoseOverlay.classList.remove('active');
+            });
+          }
+        }
         // --- Mobile Submit Button Logic ---
         function isMobile() {
           return window.innerWidth <= 768;
@@ -664,25 +668,31 @@
         window.addEventListener('resize', updateMobileSubmitVisibility);
         // Connect mobile submit to main playWord logic
         const playWordMobile = document.getElementById('play-word-mobile');
-        playWordMobile.addEventListener('click', function() {
-          // Try both IDs for desktop/mobile
-          let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
-          if (playBtn) playBtn.click();
-        });
+        if (playWordMobile) {
+          playWordMobile.addEventListener('click', function() {
+            // Try both IDs for desktop/mobile
+            let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
+            if (playBtn) playBtn.click();
+          });
+        }
         // --- Mobile Pull Tiles Button Logic ---
         const pullTilesMobile = document.getElementById('pull-tiles-mobile');
-        pullTilesMobile.addEventListener('click', function() {
-          if (window.game && typeof window.game.resetPlacedTiles === 'function') {
-            window.game.resetPlacedTiles();
-          }
-        });
+        if (pullTilesMobile) {
+          pullTilesMobile.addEventListener('click', function() {
+            if (window.game && typeof window.game.resetPlacedTiles === 'function') {
+              window.game.resetPlacedTiles();
+            }
+          });
+        }
         // --- Desktop Submit Button Logic ---
         const playWordDesktopBottom = document.getElementById('play-word-desktop-bottom');
-        playWordDesktopBottom.addEventListener('click', function() {
-          // Try both IDs for desktop/mobile
-          let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
-          if (playBtn) playBtn.click();
-        });
+        if (playWordDesktopBottom) {
+          playWordDesktopBottom.addEventListener('click', function() {
+            // Try both IDs for desktop/mobile
+            let playBtn = document.getElementById('play-word') || document.getElementById('play-word-desktop');
+            if (playBtn) playBtn.click();
+          });
+        }
       });
     </script>
     <script src="translations.js"></script>

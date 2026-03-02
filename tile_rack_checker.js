@@ -10,6 +10,9 @@ class TileRackChecker {
         this.violations = [];
         this.maxRackSize = 7;
         this.isEnabled = true;
+        this.lastLoggedRackSize = -1;
+        this.lastLoggedPlacedTiles = -1;
+        this.logRepetitionCount = 0;
     }
 
     // Initialize the checker when game is available
@@ -49,14 +52,31 @@ class TileRackChecker {
         const rackSize = this.game.playerRack ? this.game.playerRack.length : 0;
         const placedTiles = this.game.placedTiles ? this.game.placedTiles.length : 0;
 
-        // Log current state
-        console.log(`🎯 Rack Check: ${rackSize} tiles, ${placedTiles} placed`);
-
         // Check for violations
         this.checkForViolations(rackSize, placedTiles);
 
+        // Only log when state changes or violations detected
+        const hasViolations = this.violations.length > 0;
+        const stateChanged = rackSize !== this.lastLoggedRackSize || placedTiles !== this.lastLoggedPlacedTiles;
+        
+        if (stateChanged || hasViolations) {
+            // Log previous state count if it was repeating
+            if (this.logRepetitionCount > 0) {
+                console.log(`🎯 Rack Check: ${this.lastLoggedRackSize} tiles, ${this.lastLoggedPlacedTiles} placed (x${this.logRepetitionCount + 1})`);
+            }
+            // Log new state
+            console.log(`🎯 Rack Check: ${rackSize} tiles, ${placedTiles} placed`);
+            
+            this.lastLoggedRackSize = rackSize;
+            this.lastLoggedPlacedTiles = placedTiles;
+            this.logRepetitionCount = 0;
+        } else {
+            // Same state, increment counter
+            this.logRepetitionCount++;
+        }
+
         // Auto-fix violations
-        if (this.violations.length > 0) {
+        if (hasViolations) {
             this.autoFixViolations();
         }
     }
@@ -80,6 +100,7 @@ class TileRackChecker {
         }
 
         // Violation 2: Duplicate tiles in rack
+        // Only flag duplicates when count exceeds the known tile distribution (legal duplicates allowed)
         const tileLetters = this.game.playerRack.map(t => t ? t.letter : 'EMPTY');
         const letterCounts = {};
         tileLetters.forEach(letter => {
@@ -89,16 +110,32 @@ class TileRackChecker {
         });
 
         Object.keys(letterCounts).forEach(letter => {
-            if (letterCounts[letter] > 1) {
-                this.violations.push({
-                    type: 'DUPLICATE_TILES',
-                    severity: 'HIGH',
-                    message: `Duplicate tile "${letter}" found ${letterCounts[letter]} times`,
-                    details: {
-                        letter,
-                        count: letterCounts[letter]
-                    }
-                });
+            const allowed = (this.game && this.game.tileDistribution && this.game.tileDistribution[letter]) || null;
+            // If we know the allowed distribution, only flag if we exceed it; otherwise ignore common small duplicates
+            if (allowed !== null) {
+                if (letterCounts[letter] > allowed) {
+                    this.violations.push({
+                        type: 'RACK_OVER_DISTRIBUTION',
+                        severity: 'HIGH',
+                        message: `Too many tiles "${letter}" in rack: found ${letterCounts[letter]} (allowed ${allowed})`,
+                        details: {
+                            letter,
+                            count: letterCounts[letter],
+                            allowed
+                        }
+                    });
+                }
+            } else {
+                // If we don't know distribution for this letter, don't treat ordinary duplicates as violations
+                // but record if there are many copies (safeguard threshold)
+                if (letterCounts[letter] > 4) {
+                    this.violations.push({
+                        type: 'DUPLICATE_TILES_SUSPICIOUS',
+                        severity: 'MEDIUM',
+                        message: `Suspicious duplicate tile "${letter}" found ${letterCounts[letter]} times`,
+                        details: { letter, count: letterCounts[letter] }
+                    });
+                }
             }
         });
 
@@ -115,18 +152,34 @@ class TileRackChecker {
         });
 
         // Violation 4: Wild tile integrity
+        // Ensure wild tiles have expected properties and do not exceed allowed blank count
         const wildTiles = this.game.playerRack.filter(t => t && (t.letter === '*' || t.originalLetter === '*'));
-        wildTiles.forEach((tile, index) => {
-            const actualIndex = this.game.playerRack.indexOf(tile);
-            if (actualIndex !== index) {
+        const allowedWilds = (this.game && this.game.tileDistribution && this.game.tileDistribution['*']) || 2;
+        wildTiles.forEach((tile, idx) => {
+            const problems = [];
+            if (!tile) problems.push('null tile');
+            else {
+                if (!(tile.letter === '*' || tile.originalLetter === '*')) problems.push('not marked as wild');
+                if (typeof tile.value === 'number' && tile.value !== 0) problems.push('wild tile has nonzero value');
+                if (!tile.isBlank && tile.letter !== '*') problems.push('missing isBlank flag');
+            }
+            if (problems.length > 0) {
                 this.violations.push({
                     type: 'WILD_TILE_INTEGRITY',
                     severity: 'MEDIUM',
-                    message: `Wild tile integrity issue at index ${actualIndex}`,
-                    details: { tile, expectedIndex: index, actualIndex }
+                    message: `Wild tile property issues: ${problems.join(', ')}`,
+                    details: { tile, problems }
                 });
             }
         });
+        if (wildTiles.length > allowedWilds) {
+            this.violations.push({
+                type: 'TOO_MANY_WILDS',
+                severity: 'HIGH',
+                message: `Too many wild tiles in rack: found ${wildTiles.length} (allowed ${allowedWilds})`,
+                details: { found: wildTiles.length, allowed: allowedWilds }
+            });
+        }
 
         // Report violations
         if (this.violations.length > 0) {
