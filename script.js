@@ -5838,20 +5838,26 @@ formedWords.forEach((wordInfo) => {
                 }
             }
 
-			// Always restore as a blank tile if it was a blank, regardless of its current letter
+			// Check for duplicates using both ID and letter to prevent letter duplication
 			const alreadyInRack = this.playerRack.some(r => r && r.id === tile.id);
-			if (!alreadyInRack) {
+			const letterAlreadyInRack = this.playerRack.some(r => r && r.letter === tile.letter && r.id !== tile.id);
+			
+			if (!alreadyInRack && !letterAlreadyInRack) {
 				if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
-					this.playerRack.push({
-						letter: "*",
-						value: 0,
-						id: tile.id,
-						isBlank: true,
-						originalLetter: "*"
-					});
+					// Restore the original wild tile object to blank state
+					tile.letter = "*";
+					tile.score = 0;
+					tile.value = 0;
+					tile.isBlank = true;
+					tile.originalLetter = "*";
+					this.playerRack.push(tile);
 				} else {
 					this.playerRack.push(tile);
 				}
+			} else if (alreadyInRack) {
+				console.warn(`Tile ${tile.letter} (ID: ${tile.id}) already in rack, skipping return`);
+			} else if (letterAlreadyInRack) {
+				console.warn(`Tile ${tile.letter} already exists in rack with different ID, skipping return to prevent duplication`);
 			}
 
             // Always restore the center star if this is the center cell and it's empty
