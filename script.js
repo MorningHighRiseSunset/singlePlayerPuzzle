@@ -5826,16 +5826,20 @@ formedWords.forEach((wordInfo) => {
             const cell = document.querySelector(
                 `[data-row="${row}"][data-col="${col}"]`
             );
+            
+            // Completely clear the cell and reset all styles
             cell.innerHTML = "";
+            cell.className = cell.className.replace(/highlighted|valid-placement|invalid-placement/g, '').trim();
+            cell.style.backgroundColor = "";
+            cell.style.border = "";
 
-            // If this was a wild tile, reset its letter back to * and remove any isBlank property
-            if (tile && tile.originalLetter === "*") {
+            // If this was a wild tile, reset its properties completely
+            if (tile && (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*")) {
                 tile.letter = "*";
                 tile.score = 0;
-                // Remove isBlank property if present
-                if (tile.hasOwnProperty('isBlank')) {
-                    delete tile.isBlank;
-                }
+                tile.value = 0;
+                tile.isBlank = true;
+                tile.originalLetter = "*";
             }
 
 			// Check for duplicates using both ID and letter to prevent letter duplication
@@ -5843,8 +5847,9 @@ formedWords.forEach((wordInfo) => {
 			const letterAlreadyInRack = this.playerRack.some(r => r && r.letter === tile.letter && r.id !== tile.id);
 			
 			if (!alreadyInRack && !letterAlreadyInRack) {
-				if (tile.isBlank || tile.letter === "*" || tile.originalLetter === "*") {
-					// Restore the original wild tile object to blank state
+				// Always restore wild tiles as proper blank tiles
+				if (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*") {
+					// Ensure wild tile is completely reset
 					tile.letter = "*";
 					tile.score = 0;
 					tile.value = 0;
