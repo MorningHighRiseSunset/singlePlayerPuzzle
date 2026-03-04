@@ -476,6 +476,29 @@ button:active,
   box-shadow: 0 0 0 4px #ffd70044, 0 2px 8px rgba(0,0,0,0.08);
 }
 
+/* --- Submit Button Cooldown --- */
+button.cooldown,
+#play-word-mobile.cooldown, .play-word-mobile.cooldown {
+  background: linear-gradient(145deg, #666, #444);
+  color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+button.cooldown:hover,
+#play-word-mobile.cooldown:hover, .play-word-mobile.cooldown:hover {
+  background: linear-gradient(145deg, #666, #444);
+  transform: none;
+  box-shadow: none;
+}
+
+button.cooldown:focus-visible,
+#play-word-mobile.cooldown:focus-visible, .play-word-mobile.cooldown:focus-visible {
+  outline: 2px solid #999;
+}
+
 /* --- Exchange Portal --- */
 .exchange-area {
   margin-top: 20px;

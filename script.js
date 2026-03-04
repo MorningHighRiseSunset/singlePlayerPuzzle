@@ -6941,12 +6941,56 @@ calculateScore() {
 	// guarding calls to avoid runtime errors.
 
 	async playWord() {
-		// Show a spinner or disable the submit button for better UX
+		// Prevent rapid clicks and race conditions
 		const playWordBtn = document.getElementById("play-word-desktop") || document.getElementById("play-word");
+		
+		// Check if button is already in cooldown
+		if (playWordBtn && playWordBtn.classList.contains('cooldown')) {
+			console.log('Submit button is in cooldown, ignoring rapid click');
+			return;
+		}
+
+		// Disable button and add cooldown state
 		if (playWordBtn) {
 			playWordBtn.disabled = true;
+			playWordBtn.classList.add('cooldown');
 			playWordBtn.textContent = "Checking...";
+			
+			// Add visual cooldown indicator
+			const originalText = playWordBtn.textContent;
+			let cooldownTime = 3;
+			playWordBtn.textContent = `Cooldown (${cooldownTime}s)`;
+			
+			// Start countdown
+			const countdownInterval = setInterval(() => {
+				cooldownTime--;
+				if (cooldownTime > 0) {
+					playWordBtn.textContent = `Cooldown (${cooldownTime}s)`;
+				} else {
+					clearInterval(countdownInterval);
+					playWordBtn.textContent = originalText;
+				}
+			}, 1000);
+			
+			// Remove cooldown after 3 seconds
+			setTimeout(() => {
+				clearInterval(countdownInterval);
+				if (playWordBtn) {
+					playWordBtn.disabled = false;
+					playWordBtn.classList.remove('cooldown');
+					playWordBtn.textContent = "Submit";
+				}
+			}, 3000);
 		}
+
+		// Prevent multiple simultaneous submissions
+		if (this._isSubmitting) {
+			console.log('Submission already in progress, ignoring');
+			return;
+		}
+		
+		this._isSubmitting = true;
+		
 		// Let UI update
 		await new Promise(res => setTimeout(res, 30));
 
@@ -7252,11 +7296,11 @@ calculateScore() {
 				}
 			}
 		} finally {
-			// Restore button state
-			if (playWordBtn) {
-				playWordBtn.disabled = false;
-				playWordBtn.textContent = "Submit";
-			}
+			// Reset submission flag
+			this._isSubmitting = false;
+			
+			// Note: Button restoration is handled by the cooldown timer
+			// Do not manually restore button state here as it conflicts with cooldown
 
 			// reset transient announce flag so future moves can announce again
 			try { this._playerBingoAnnounced = false; } catch (e) {}
