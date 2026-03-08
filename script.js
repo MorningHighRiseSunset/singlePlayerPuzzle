@@ -7255,10 +7255,10 @@ calculateScore() {
 				// Track how many tiles were used before clearing placedTiles
 				const tilesUsedFromRack = this.placedTiles.length;
 				this.placedTiles = [];
-				// Only refill rack if player actually used tiles from their rack
-				// (tiles are already removed from rack during placement)
-				if (this.playerRack.length < 7 - tilesUsedFromRack) {
-					this.fillRacks();
+				// Refill so the player has 7 tiles after their turn (Scrabble rules). Tiles were
+				// already removed from the rack during placement. Only refill when rack < 7 and bag has tiles.
+				if (this.playerRack.length < 7 && this.tiles.length > 0) {
+					this.fillRacks(true); // player first so they get their full draw
 				}
 				this.consecutiveSkips = 0;
 				this.currentTurn = "ai";
@@ -7289,10 +7289,9 @@ calculateScore() {
 				const tilesUsedFromRack = this.placedTiles.length;
 				this.resetPlacedTiles();
 				this.placedTiles = [];
-				// Only refill rack if player actually used tiles from their rack
-				// (tiles are already removed from rack during placement)
-				if (this.playerRack.length < 7 - tilesUsedFromRack) {
-					this.fillRacks();
+				// Same refill rule: player should have 7 when possible (invalid move: tiles go back, then refill if needed)
+				if (this.playerRack.length < 7 && this.tiles.length > 0) {
+					this.fillRacks(true);
 				}
 			}
 		} finally {
@@ -8020,7 +8019,7 @@ calculateScore() {
 		});
 	}
 
-	fillRacks() {
+	fillRacks(playerFirst = false) {
 		// Define optimal letter distributions
 		const optimalDistribution = {
 			vowels: ['A', 'E', 'I', 'O', 'U'],
@@ -8029,89 +8028,102 @@ calculateScore() {
 			rareLetters: ['J', 'K', 'Q', 'V', 'W', 'X', 'Y', 'Z']
 		};
 
-		// AI gets better distribution and higher chance of blank tiles
-		while (this.aiRack.length < 7 && this.tiles.length > 0) {
-			// 40% chance to get exactly what AI needs
-			if (Math.random() < 0.4) {
-				const currentVowels = this.aiRack.filter(tile =>
+		const fillPlayer = () => {
+			while (this.playerRack.length < 7 && this.tiles.length > 0) {
+				const currentVowels = this.playerRack.filter(tile =>
 					optimalDistribution.vowels.includes(tile.letter)).length;
+				const currentWildTiles = this.playerRack.filter(tile => tile.letter === "*").length;
 
-				// Decide what type of tile AI needs
-				let desiredTile;
-				if (currentVowels < 2) {
-					// Need vowels
-					desiredTile = this.findTileInBag(optimalDistribution.vowels);
-				} else if (currentVowels > 3) {
-					// Need consonants
-					desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
-				} else {
-					// Get blank tile or common letter
-					desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
+				// 15% chance to specifically get a wild tile (increased priority)
+				// 25% chance if player has no wild tiles yet (bonus for empty rack)
+				const wildTileChance = currentWildTiles === 0 ? 0.25 : 0.15;
+				if (Math.random() < wildTileChance && currentWildTiles < 2) {
+					let wildTile = this.findTileInBag(['*']);
+					if (wildTile) {
+						this.playerRack.push(wildTile);
+						continue;
+					}
 				}
 
-				if (desiredTile) {
-					this.aiRack.push(desiredTile);
-					continue;
-				}
-			}
-
-			// Regular draw with weighted probability
-			const tile = this.drawWeightedTile(true); // true for AI
-			if (tile) this.aiRack.push(tile);
-		}
-
-		// --- ENHANCED PLAYER RACK LOGIC: Better chances for wild tiles ---
-		while (this.playerRack.length < 7 && this.tiles.length > 0) {
-			const currentVowels = this.playerRack.filter(tile =>
-				optimalDistribution.vowels.includes(tile.letter)).length;
-			const currentWildTiles = this.playerRack.filter(tile => tile.letter === "*").length;
-
-			// 15% chance to specifically get a wild tile (increased priority)
-			// 25% chance if player has no wild tiles yet (bonus for empty rack)
-			const wildTileChance = currentWildTiles === 0 ? 0.25 : 0.15;
-			if (Math.random() < wildTileChance && currentWildTiles < 2) {
-				let wildTile = this.findTileInBag(['*']);
-				if (wildTile) {
-					this.playerRack.push(wildTile);
-					continue;
-				}
-			}
-
-			// If already 3 vowels, force consonant
-			if (currentVowels >= 3) {
-				let desiredTile = this.findTileInBag(
-					optimalDistribution.commonConsonants
-					.concat(optimalDistribution.mediumConsonants)
-					.concat(optimalDistribution.rareLetters)
-				);
-				if (desiredTile) {
-					this.playerRack.push(desiredTile);
-					continue;
-				}
-			}
-
-			// 25% chance to get needed letter type (prefer consonant if too many vowels)
-			if (Math.random() < 0.25) {
-				let desiredTile;
-				if (currentVowels < 2) {
-					desiredTile = this.findTileInBag(optimalDistribution.vowels);
-				} else {
-					desiredTile = this.findTileInBag(
+				// If already 3 vowels, force consonant
+				if (currentVowels >= 3) {
+					let desiredTile = this.findTileInBag(
 						optimalDistribution.commonConsonants
 						.concat(optimalDistribution.mediumConsonants)
 						.concat(optimalDistribution.rareLetters)
 					);
+					if (desiredTile) {
+						this.playerRack.push(desiredTile);
+						continue;
+					}
 				}
 
-				if (desiredTile) {
-					this.playerRack.push(desiredTile);
-					continue;
+				// 25% chance to get needed letter type (prefer consonant if too many vowels)
+				if (Math.random() < 0.25) {
+					let desiredTile;
+					if (currentVowels < 2) {
+						desiredTile = this.findTileInBag(optimalDistribution.vowels);
+					} else {
+						desiredTile = this.findTileInBag(
+							optimalDistribution.commonConsonants
+							.concat(optimalDistribution.mediumConsonants)
+							.concat(optimalDistribution.rareLetters)
+						);
+					}
+
+					if (desiredTile) {
+						this.playerRack.push(desiredTile);
+						continue;
+					}
 				}
+
+				// Regular draw with weighted probability, but reduce vowel weight for player
+				const tile = this.drawWeightedTile(false, /*playerMode=*/ true);
+				if (tile) this.playerRack.push(tile);
 			}
+		};
 
-			// Regular draw with weighted probability, but reduce vowel weight for player
-			const tile = this.drawWeightedTile(false, /*playerMode=*/ true);
-			if (tile) this.playerRack.push(tile);
+		const fillAI = () => {
+			// AI gets better distribution and higher chance of blank tiles
+			while (this.aiRack.length < 7 && this.tiles.length > 0) {
+				// 40% chance to get exactly what AI needs
+				if (Math.random() < 0.4) {
+					const currentVowels = this.aiRack.filter(tile =>
+						optimalDistribution.vowels.includes(tile.letter)).length;
+
+					// Decide what type of tile AI needs
+					let desiredTile;
+					if (currentVowels < 2) {
+						// Need vowels
+						desiredTile = this.findTileInBag(optimalDistribution.vowels);
+					} else if (currentVowels > 3) {
+						// Need consonants
+						desiredTile = this.findTileInBag(optimalDistribution.commonConsonants);
+					} else {
+						// Get blank tile or common letter
+						desiredTile = this.findTileInBag(['*'].concat(optimalDistribution.commonConsonants));
+					}
+
+					if (desiredTile) {
+						this.aiRack.push(desiredTile);
+						continue;
+					}
+				}
+
+				// Regular draw with weighted probability
+				const tile = this.drawWeightedTile(true); // true for AI
+				if (tile) this.aiRack.push(tile);
+			}
+		};
+
+		// After the player's move, refill the player first so they get their full draw (Scrabble rules).
+		// After the AI's move, refill the AI first.
+		if (playerFirst) {
+			fillPlayer();
+			fillAI();
+		} else {
+			fillAI();
+			fillPlayer();
 		}
 
 		// Update displays
