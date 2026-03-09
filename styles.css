@@ -563,6 +563,7 @@ button.cooldown:focus-visible,
 }
 .win-overlay.active { opacity: 1; visibility: visible; }
 .win-overlay.lose { background: rgba(255,0,0,0.13); }
+.win-overlay.draw { background: rgba(128,128,128,0.13); }
 .win-message {
   background: #fff;
   padding: 2em;

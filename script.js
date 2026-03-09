@@ -2575,6 +2575,12 @@ class ScrabbleGame {
 	// Modify the generatePrintContent method to handle undefined words
 	generatePrintContent(gameDate, wordDefinitions) {
 		// Generate header with game information
+		const winnerLabel =
+			this.playerScore === this.aiScore
+				? "Draw"
+				: this.playerScore > this.aiScore
+					? "Player"
+					: "Computer";
 		const header = `
             <div class="header">
                 <h1>Scrabble Game History</h1>
@@ -2583,7 +2589,7 @@ class ScrabbleGame {
                     <h2>Final Scores</h2>
                     <p>Player: ${this.playerScore} points</p>
                     <p>Computer: ${this.aiScore} points</p>
-                    <p>Winner: ${this.playerScore > this.aiScore ? "Player" : "Computer"}</p>
+                    <p>Winner: ${winnerLabel}</p>
                 </div>
             </div>
         `;
@@ -7510,8 +7516,10 @@ calculateScore() {
 		// Update scores before animation
 		this.updateScores();
 
-		const winner = this.playerScore > this.aiScore ? "Player" : "Computer";
+		const isDraw = this.playerScore === this.aiScore;
+		const winner = isDraw ? null : (this.playerScore > this.aiScore ? "Player" : "Computer");
 		const finalScore = Math.max(this.playerScore, this.aiScore);
+		const headingColor = isDraw ? "#888888" : (winner === "Computer" ? "#ff3333" : "#33cc33");
 
 		// Use the existing overlay from HTML
 		let winOverlay = document.getElementById("win-lose-overlay");
@@ -7531,8 +7539,12 @@ calculateScore() {
 		// Insert the close button and content
 		messageBox.innerHTML = `
 			<button class="overlay-close-btn" aria-label="Close">&times;</button>
-			<h2 style="color: ${winner === "Computer" ? "#ff3333" : "#33cc33"}; margin-bottom: 20px;">Game Over!</h2>
-			<p style="font-size: 1.2em; margin-bottom: 15px;">${winner} wins with ${finalScore} points!</p>
+			<h2 style="color: ${headingColor}; margin-bottom: 20px;">${isDraw ? "Draw!" : "Game Over!"}</h2>
+			<p style="font-size: 1.2em; margin-bottom: 15px;">${
+				isDraw
+					? `Both players scored ${finalScore} points.`
+					: `${winner} wins with ${finalScore} points!`
+			}</p>
 			<p style="font-weight: bold; margin-bottom: 10px;">Final Scores:</p>
 			<p>Player: ${this.playerScore}</p>
 			<p>Computer: ${this.aiScore}</p>
@@ -7555,11 +7567,13 @@ calculateScore() {
 		`;
 
 		// Remove any previous classes
-		winOverlay.classList.remove("active", "lose");
+		winOverlay.classList.remove("active", "lose", "draw");
 		messageBox.classList.remove("celebrate");
 
 		// Add appropriate classes
-		if (winner === "Computer") {
+		if (isDraw) {
+			winOverlay.classList.add("draw");
+		} else if (winner === "Computer") {
 			winOverlay.classList.add("lose");
 		}
 
@@ -7568,7 +7582,7 @@ calculateScore() {
 		if (overlayCloseBtn) {
 			overlayCloseBtn.onclick = (e) => {
 				e.stopPropagation();
-				winOverlay.classList.remove("active", "lose");
+				winOverlay.classList.remove("active", "lose", "draw");
 				winOverlay.style.display = "none";
 			};
 		}
@@ -7578,10 +7592,12 @@ calculateScore() {
 		requestAnimationFrame(() => {
 			winOverlay.classList.add("active");
 			messageBox.classList.add("celebrate");
-			if (typeof this.showBingoBonusEffect === 'function') {
-				try { this.showBingoBonusEffect(); } catch (e) { console.warn('showBingoBonusEffect failed', e); }
-			} else {
-				try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+			if (!isDraw) {
+				if (typeof this.showBingoBonusEffect === 'function') {
+					try { this.showBingoBonusEffect(); } catch (e) { console.warn('showBingoBonusEffect failed', e); }
+				} else {
+					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				}
 			}
 		});
 	}
