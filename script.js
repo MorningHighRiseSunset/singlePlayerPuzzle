@@ -5848,11 +5848,10 @@ formedWords.forEach((wordInfo) => {
                 tile.originalLetter = "*";
             }
 
-			// Check for duplicates using both ID and letter to prevent letter duplication
+			// Check for duplicates by ID only; multiple same-letter tiles are allowed
 			const alreadyInRack = this.playerRack.some(r => r && r.id === tile.id);
-			const letterAlreadyInRack = this.playerRack.some(r => r && r.letter === tile.letter && r.id !== tile.id);
 			
-			if (!alreadyInRack && !letterAlreadyInRack) {
+			if (!alreadyInRack) {
 				// Always restore wild tiles as proper blank tiles
 				if (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*") {
 					// Ensure wild tile is completely reset
@@ -5867,8 +5866,6 @@ formedWords.forEach((wordInfo) => {
 				}
 			} else if (alreadyInRack) {
 				console.warn(`Tile ${tile.letter} (ID: ${tile.id}) already in rack, skipping return`);
-			} else if (letterAlreadyInRack) {
-				console.warn(`Tile ${tile.letter} already exists in rack with different ID, skipping return to prevent duplication`);
 			}
 
             // Always restore the center star if this is the center cell and it's empty
@@ -5897,6 +5894,30 @@ formedWords.forEach((wordInfo) => {
         // Remove ghost tiles when resetting
         this.showAIGhostIfPlayerMoveValid();
     }
+
+	// Return all currently placed tiles back to the player's rack without drawing new tiles
+	returnTilesToRack() {
+		if (!this.placedTiles || this.placedTiles.length === 0) {
+			console.log('[ReturnTiles] No tiles to return.');
+			return;
+		}
+
+		// Log the exact tiles (and wilds) being returned for debugging
+		try {
+			const debugSnapshot = this.placedTiles.map(p => ({
+				id: p.tile && p.tile.id,
+				letter: p.tile && p.tile.letter,
+				isBlank: p.tile && p.tile.isBlank === true
+			}));
+			console.log('[ReturnTiles] Returning placed tiles to rack:', debugSnapshot);
+		} catch (e) {
+			console.warn('[ReturnTiles] Failed to log placed tiles snapshot', e);
+		}
+
+		// This will also correctly revert any wild tiles back to true blanks
+		this.resetPlacedTiles();
+		this.placedTiles = [];
+	}
 
     validateWord() {
         if (this.placedTiles.length === 0) return false;
@@ -7281,7 +7302,8 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				// Show an animated toast for invalid words
+				// Show an animated toast for invalid words, but leave tiles on the board.
+				// The player can now use the dedicated "Return Tiles" button to undo the move.
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
 						this.showAnimatedToast('Invalid word! Please try again.', 'error');
@@ -7290,14 +7312,6 @@ calculateScore() {
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
-				}
-				// Track how many tiles were used before clearing placedTiles
-				const tilesUsedFromRack = this.placedTiles.length;
-				this.resetPlacedTiles();
-				this.placedTiles = [];
-				// Same refill rule: player should have 7 when possible (invalid move: tiles go back, then refill if needed)
-				if (this.playerRack.length < 7 && this.tiles.length > 0) {
-					this.fillRacks(true);
 				}
 			}
 		} finally {
@@ -8938,6 +8952,16 @@ calculateScore() {
 		if (playWordDesktopBtn) {
 			playWordDesktopBtn.addEventListener("click", handlePlayGesture, true);
 			playWordDesktopBtn.addEventListener("click", () => this.playWord());
+		}
+
+		// Return tiles button (mobile & desktop, if present)
+		const returnTilesBtn = document.getElementById("return-tiles");
+		if (returnTilesBtn) {
+			returnTilesBtn.addEventListener("click", () => {
+				// Only allow during player's turn
+				if (this.currentTurn !== "player") return;
+				this.returnTilesToRack();
+			});
 		}
 
 		// Shuffle rack button (mobile)
