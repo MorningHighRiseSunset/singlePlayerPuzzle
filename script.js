@@ -7304,14 +7304,27 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
 				// The player can now use the dedicated "Return Tiles" button to undo the move.
+				const msg = 'Invalid word! Please try again.';
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast('Invalid word! Please try again.', 'error');
+						this.showAnimatedToast(msg, 'error');
 					} else if (this.showToast) {
-						this.showToast('Invalid word! Please try again.');
+						this.showToast(msg);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
+				}
+
+				// Also speak the invalid-word message out loud for accessibility.
+				try {
+					if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+						this._speakWithRetry(msg, { lang: 'en-US' }).catch(() => {
+							// Fallback to basic speakWord if robust path fails
+							try { this.speakWord('Invalid word, please try again'); } catch(e2) {}
+						});
+					}
+				} catch (e) {
+					console.warn('Invalid-word TTS failed', e);
 				}
 			}
 		} finally {
@@ -8954,15 +8967,19 @@ calculateScore() {
 			playWordDesktopBtn.addEventListener("click", () => this.playWord());
 		}
 
-		// Return tiles button (mobile & desktop, if present)
-		const returnTilesBtn = document.getElementById("return-tiles");
-		if (returnTilesBtn) {
-			returnTilesBtn.addEventListener("click", () => {
+		// Return tiles buttons (mobile & desktop, if present)
+		const returnTilesButtons = [
+			document.getElementById("return-tiles-mobile"),
+			document.getElementById("return-tiles-desktop"),
+			document.getElementById("return-tiles-desktop-bottom")
+		].filter(Boolean);
+		returnTilesButtons.forEach(btn => {
+			btn.addEventListener("click", () => {
 				// Only allow during player's turn
 				if (this.currentTurn !== "player") return;
 				this.returnTilesToRack();
 			});
-		}
+		});
 
 		// Shuffle rack button (mobile)
 		const shuffleRackBtn = document.getElementById("shuffle-rack");
