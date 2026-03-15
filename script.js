@@ -7316,8 +7316,12 @@ calculateScore() {
 				}
 
 				// Also speak the invalid-word message out loud for accessibility.
+				// Clear any queued speech (e.g., bingo/bonus announcements) so only the invalid-word message plays.
 				try {
 					if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+						window.speechSynthesis.cancel();
+						this._submitStartedSpeak = false;
+						this._inlineSpeakPromise = null;
 						this._speakWithRetry(msg, { lang: 'en-US' }).catch(() => {
 							// Fallback to basic speakWord if robust path fails
 							try { this.speakWord('Invalid word, please try again'); } catch(e2) {}
