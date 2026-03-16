@@ -9202,10 +9202,6 @@ calculateScore() {
 		}
 
 		// Desktop Drawer Button Connections
-		// Play word button (desktop drawer)
-		const playWordDesktopDrawerBtn = document.getElementById("play-word-desktop-drawer");
-		if (playWordDesktopDrawerBtn) playWordDesktopDrawerBtn.addEventListener("click", () => this.playWord());
-
 		// Shuffle rack button (desktop drawer)
 		const shuffleRackDesktopDrawerBtn = document.getElementById("shuffle-rack-desktop-drawer");
 		if (shuffleRackDesktopDrawerBtn) shuffleRackDesktopDrawerBtn.addEventListener("click", async () => {
