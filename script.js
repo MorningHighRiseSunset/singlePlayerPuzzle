@@ -333,66 +333,31 @@ class ScrabbleGame {
 
 		// Single click handler for rack
 		document.getElementById("tile-rack").addEventListener("click", (e) => {
-    const tileElem = e.target.closest(".tile");
-    if (this.currentTurn !== "player") return;
+			const tileElem = e.target.closest(".tile");
+			if (this.currentTurn !== "player") return;
 
-    // If a tile from the board is selected and rack is clicked, move it back to rack
-	if (this.selectedTile && this.selectedTileSource === "board") {
-		const fromRow = parseInt(this.selectedTile.dataset.row);
-		const fromCol = parseInt(this.selectedTile.dataset.col);
-		const placedIdx = this.placedTiles.findIndex(t => t.row == fromRow && t.col == fromCol);
-		if (placedIdx === -1) return;
-		let tile = this.placedTiles[placedIdx].tile;
-		// Remove from board
-		this.board[fromRow][fromCol] = null;
-		const cell = document.querySelector(`[data-row="${fromRow}"][data-col="${fromCol}"]`);
-		cell.innerHTML = "";
-		// Restore center star if needed
-		if (fromRow === 7 && fromCol === 7) {
-			const centerStar = document.createElement("span");
-			centerStar.textContent = "⚜";
-			centerStar.className = "center-star";
-			cell.appendChild(centerStar);
-		}
-		// Remove from placedTiles
-		this.placedTiles.splice(placedIdx, 1);
+			// If a tile from the board is selected, do NOT send it back to the rack here.
+			// Players must use the dedicated "Return Tiles" control to undo a move.
+			if (this.selectedTile && this.selectedTileSource === "board") {
+				deselect();
+				return;
+			}
 
-		// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-		if (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*") {
-			// Reset wild tile to unused state
-			this.playerRack.push({
-				letter: "*",
-				value: 0,
-				score: 0,
-				id: tile.id,
-				isBlank: true,
-				originalLetter: "*"
-			});
-		} else {
-			this.playerRack.push(tile);
-		}
-
-		this.renderRack();
-		this.highlightValidPlacements();
-		deselect();
-		return;
-	}
-
-    // Otherwise, select/deselect a tile in the rack
-    if (!tileElem) {
-        deselect();
-        return;
-    }
-    // Deselect if already selected
-    if (this.selectedTile === tileElem) {
-        deselect();
-        return;
-    }
-    deselect();
-    this.selectedTile = tileElem;
-    this.selectedTileSource = "rack";
-    tileElem.classList.add("selected");
-});
+			// Otherwise, select/deselect a tile in the rack
+			if (!tileElem) {
+				deselect();
+				return;
+			}
+			// Deselect if already selected
+			if (this.selectedTile === tileElem) {
+				deselect();
+				return;
+			}
+			deselect();
+			this.selectedTile = tileElem;
+			this.selectedTileSource = "rack";
+			tileElem.classList.add("selected");
+		});
 
 		// Board cell logic
 		document.getElementById("scrabble-board").addEventListener("click", (e) => {
