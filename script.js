@@ -358,13 +358,15 @@ class ScrabbleGame {
 		this.placedTiles.splice(placedIdx, 1);
 
 		// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-		if (tile.isBlank || tile.letter === "*") {
+		if (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*") {
 			// Reset wild tile to unused state
 			this.playerRack.push({
 				letter: "*",
 				value: 0,
+				score: 0,
 				id: tile.id,
-				isBlank: true
+				isBlank: true,
+				originalLetter: "*"
 			});
 		} else {
 			this.playerRack.push(tile);
@@ -439,11 +441,14 @@ class ScrabbleGame {
 				} else if (movedFromBoard) {
 					// If invalid placement, return tile to rack and update UI
 					// --- Always restore as a blank tile if it was a blank, regardless of its current letter ---
-					if (tile.isBlank || tile.letter === "*") {
+					if (tile.isBlank || tile.originalLetter === "*" || tile.letter === "*") {
 						this.playerRack.push({
 							letter: "*",
 							value: 0,
-							id: tile.id
+							score: 0,
+							id: tile.id,
+							isBlank: true,
+							originalLetter: "*"
 						});
 					} else {
 						this.playerRack.push(tile);
@@ -7021,129 +7026,17 @@ calculateScore() {
 		// Let UI update
 		await new Promise(res => setTimeout(res, 30));
 
-		// Ensure speech is primed on mobile right after a direct user action (playWord)
+		// Prime audio/TTS inside the user gesture, but do NOT speak anything before validation.
+		// (Previously this pre-announced "Bingo bonus!" for any 7+ letter attempt, even invalid words.)
 		try {
-			// If player placed 7 or more tiles this move, pre-announce Bingo inside this user gesture
-			try {
-				// Detect bingo either by placing 7+ tiles or by forming any word of length >= 7
-				let bingoCandidate = false;
-				try {
-					if (this.currentTurn === 'player') {
-						if (this.placedTiles && this.placedTiles.length >= 7) bingoCandidate = true;
-						// Also check formed words (covers extensions that create bingo using existing tiles)
-						try {
-							const formed = this.getFormedWords && this.getFormedWords();
-							if (Array.isArray(formed)) {
-								for (const wi of formed) {
-									if (wi && wi.word && wi.word.length >= 7) { bingoCandidate = true; break; }
-								}
-							}
-						} catch(e) { /* ignore formedWords check */ }
-					}
-				} catch (e) { /* ignore detection errors */ }
-				if (bingoCandidate) {
-					// prevent duplicates within the same move
-					if (!this._playerBingoAnnounced) {
-						this._playerBingoAnnounced = true;
-						try {
-							// call robust speaker directly inside gesture with retries
-							// Try to create and speak an utterance synchronously inside the user gesture first.
-							try {
-								if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-									try {
-										const pref = this._getPreferredVoice && this._getPreferredVoice();
-										// Play a short audible beep to unlock audio on stubborn Android builds
-										try {
-											const actx = new (window.AudioContext || window.webkitAudioContext)();
-											const osc = actx.createOscillator();
-											const gain = actx.createGain();
-											osc.type = 'sine';
-											osc.frequency.setValueAtTime(880, actx.currentTime);
-											// Make priming effectively silent to avoid audible beep on submit
-											// Keep a tiny nonzero gain so some browsers still consider audio unlocked
-											gain.gain.setValueAtTime(0.00001, actx.currentTime);
-											osc.connect(gain);
-											gain.connect(actx.destination);
-											osc.start();
-											setTimeout(() => { try { osc.stop(); actx.close(); } catch(_){} }, 70);
-										} catch (e) {
-											// ignore audio unlock failure
-										}
-										// Speak 'Bingo' and 'bonus!' as two synchronous utterances inside gesture
-										try {
-											const b1 = new SpeechSynthesisUtterance('Bingo');
-											b1.lang = 'en-US';
-											if (pref) try { b1.voice = pref; } catch(_){}
-											const b2 = new SpeechSynthesisUtterance('bonus!');
-											b2.lang = 'en-US';
-											if (pref) try { b2.voice = pref; } catch(_){}
-											window.speechSynthesis.speak(b1);
-											// small gap before second utterance
-											setTimeout(() => { try { window.speechSynthesis.speak(b2); } catch(_){}; }, 130);
-											this.appendConsoleMessage('In-gesture utterances spoken: Bingo | bonus!');
-											this._submitStartedSpeak = true;
-										} catch (e) {
-											console.warn('sync in-gesture speak failed', e);
-										}
-									} catch (e) { /* ignore */ }
-								}
-							} catch(e) { /* silence */ }
-
-							(async () => {
-								const maxRetries = 2; // additional attempts after the in-gesture call
-								let attempt = 0;
-								let success = false;
-								while (attempt <= maxRetries && !success) {
-									attempt++;
-									try {
-										this.appendConsoleMessage(`Bingo speak attempt ${attempt}`);
-										// Only try speaking if nothing is currently queued/playing
-										if (!(typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
-											await this._speakWithRetry('Bingo bonus!', { lang: 'en-US' });
-										}
-										// small delay to let speech start
-										await new Promise(r => setTimeout(r, 220));
-										if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-											if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-												success = true; break;
-											}
-										}
-										// if not speaking, loop to retry
-									} catch (e) {
-										console.warn('inline bingo speak failed attempt', attempt, e);
-										try { this.appendConsoleMessage('inline bingo speak failed: '+(e && e.message)); } catch(_){ }
-									}
-									// small backoff before next try
-									await new Promise(r => setTimeout(r, 360));
-								}
-								if (!success) {
-									// Offer a manual replay control in the drawer console so the user can tap to hear bingo.
-									try { this.appendConsoleMessage('Bingo speech did not start after retries — tap "Hear Bingo" in the console to replay.'); } catch(_){}
-									try { this.offerBingoReplayInConsole(); } catch(_){}
-								}
-							})();
-						} catch (e) { console.warn('failed to start inline bingo speak', e); }
-					}
-				}
-			} catch (e) { console.warn('bingo preannounce guard failed', e); }
-
 			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-				// Try a robust unlock helper that resumes AudioContext and loads voices where possible
 				try { await this.ensureAudioUnlocked(); } catch(e) { console.debug('playWord priming: ensureAudioUnlocked failed', e); }
 			}
-		} catch (e) {
-			console.warn('playWord priming failed', e);
-		}
+		} catch (e) { console.warn('playWord priming failed', e); }
 
 		try {
 			if (this.placedTiles.length === 0) {
 				alert("Please place some tiles first!");
-				return;
-			}
-
-			if (!this.areTilesConnected()) {
-				alert("Tiles must be connected and in a straight line!");
-				this.resetPlacedTiles();
 				return;
 			}
 
@@ -7304,12 +7197,13 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
 				// The player can now use the dedicated "Return Tiles" button to undo the move.
-				const msg = 'Invalid word! Please try again.';
+				const toastMsg = 'Invalid word! Please try again.';
+				const speakMsg = 'Invalid word, please try again';
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(msg, 'error');
+						this.showAnimatedToast(toastMsg, 'error');
 					} else if (this.showToast) {
-						this.showToast(msg);
+						this.showToast(toastMsg);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
@@ -7322,9 +7216,9 @@ calculateScore() {
 						window.speechSynthesis.cancel();
 						this._submitStartedSpeak = false;
 						this._inlineSpeakPromise = null;
-						this._speakWithRetry(msg, { lang: 'en-US' }).catch(() => {
+						this._speakWithRetry(speakMsg, { lang: 'en-US' }).catch(() => {
 							// Fallback to basic speakWord if robust path fails
-							try { this.speakWord('Invalid word, please try again'); } catch(e2) {}
+							try { this.speakWord(speakMsg); } catch(e2) {}
 						});
 					}
 				} catch (e) {
