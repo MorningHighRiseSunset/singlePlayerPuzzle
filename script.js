@@ -7164,7 +7164,7 @@ calculateScore() {
 				// Show an animated toast for invalid words, but leave tiles on the board.
 				// The player can now use the dedicated "Return Tiles" button to undo the move.
 				const toastMsg = 'Invalid word! Please try again.';
-				const speakMsg = 'Invalid word, please try again';
+				const speakMsg = 'Invalid word. Please try again.';
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
 						this.showAnimatedToast(toastMsg, 'error');
