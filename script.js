@@ -5654,6 +5654,7 @@ formedWords.forEach((wordInfo) => {
 						value: 0,
 						id: tile.id,
 						isBlank: true,
+						originalLetter: "*", // Preserve original letter for proper restoration
 					};
 
 					this.board[row][col] = placedTile;
