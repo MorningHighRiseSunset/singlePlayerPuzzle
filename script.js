@@ -6913,14 +6913,8 @@ calculateScore() {
 					}
 				}
 				if (speakBingoAfter) {
-					// small gap then bingo
-					setTimeout(async () => {
-						if (typeof this.speakBingo === 'function') {
-							// speakBingo will still attempt TTS and visuals
-							try { this.speakBingo(source); } catch (e) { console.warn('speakBingo call failed', e); }
-						}
-						setTimeout(resolve, 500);
-					}, 180);
+					// Bingo already announced with first word, just resolve
+					setTimeout(resolve, 500);
 				} else {
 					resolve();
 				}

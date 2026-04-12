@@ -5250,11 +5250,30 @@ formedWords.forEach((wordInfo) => {
 		try {
 			const response = await fetch('./spanish_words_list.json');
 			const words = await response.json();
+			
+			// Helper function to normalize Spanish accents
+			const normalizeSpanish = (word) => {
+				return word
+					.normalize('NFD')
+					.replace(/[\u0301\u0300\u0308\u0302\u0303\u0327]/g, '') // Remove accents, umlaut, tilde, cedilla
+					.toLowerCase();
+			};
+			
 			const cleanedWords = words
 				.filter(w => w && !w.startsWith('-') && w.length > 1)
 				.map(w => w.split(',')[0].trim())
 				.filter(w => w.length > 0);
-			this.dictionary = new Set(cleanedWords);
+			
+			// Add both original and normalized versions for better matching
+			const allWords = new Set(cleanedWords);
+			cleanedWords.forEach(word => {
+				const normalized = normalizeSpanish(word);
+				if (normalized !== word.toLowerCase()) {
+					allWords.add(normalized);
+				}
+			});
+			
+			this.dictionary = allWords;
 			console.log("Spanish dictionary loaded from JSON. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.warn("Failed to load Spanish dictionary from JSON:", error);
@@ -5646,6 +5665,7 @@ formedWords.forEach((wordInfo) => {
 						value: 0,
 						id: tile.id,
 						isBlank: true,
+						originalLetter: "*", // Preserve original letter for proper restoration
 					};
 
 					this.board[row][col] = placedTile;
@@ -5874,12 +5894,21 @@ formedWords.forEach((wordInfo) => {
             return false;
         }
 
+        // Helper function to normalize Spanish accents
+        const normalizeSpanish = (word) => {
+            return word
+                .normalize('NFD')
+                .replace(/[\u0301\u0300\u0308\u0302\u0303\u0327]/g, '') // Remove accents, umlaut, tilde, cedilla
+                .toLowerCase();
+        };
+
         // Validate each word
         let allWordsValid = true;
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
-            if (!this.dictionary.has(word)) {
-                console.log(`Invalid word: ${word}`);
+            const normalizedWord = normalizeSpanish(word);
+            if (!this.dictionary.has(word) && !this.dictionary.has(normalizedWord)) {
+                console.log(`Invalid word: ${word} (normalized: ${normalizedWord})`);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
@@ -6851,14 +6880,8 @@ calculateScore() {
 					}
 				}
 				if (speakBingoAfter) {
-					// small gap then bingo
-					setTimeout(async () => {
-						if (typeof this.speakBingo === 'function') {
-							// speakBingo will still attempt TTS and visuals
-							try { this.speakBingo(source); } catch (e) { console.warn('speakBingo call failed', e); }
-						}
-						setTimeout(resolve, 500);
-					}, 180);
+					// Bingo already announced with first word, just resolve
+					setTimeout(resolve, 500);
 				} else {
 					resolve();
 				}
@@ -7162,14 +7185,32 @@ calculateScore() {
 				}
 			} else {
 				// Show an animated toast for invalid words
+				const toastMsg = TRANSLATIONS.invalidWord;
+				const speakMsg = 'Palabra no válida. Por favor intenta de nuevo.';
 				try { 
 					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
+						this.showAnimatedToast(toastMsg, 'error');
 					} else if (this.showToast) {
-						this.showToast(TRANSLATIONS.invalidWord);
+						this.showToast(toastMsg);
 					}
 				} catch(e) { 
 					console.warn('Toast display failed:', e);
+				}
+
+				// Also speak the invalid-word message out loud for accessibility.
+				// Clear any queued speech (e.g., bingo/bonus announcements) so only the invalid-word message plays.
+				try {
+					if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+						window.speechSynthesis.cancel();
+						this._submitStartedSpeak = false;
+						this._inlineSpeakPromise = null;
+						this._speakWithRetry(speakMsg, { lang: 'es-ES' }).catch(() => {
+							// Fallback to basic speakWord if robust path fails
+							try { this.speakWord(speakMsg); } catch(e2) {}
+						});
+					}
+				} catch (e) {
+					console.warn('Invalid-word TTS failed', e);
 				}
 				this.resetPlacedTiles();
 			}
