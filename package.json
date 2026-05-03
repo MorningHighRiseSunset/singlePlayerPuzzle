@@ -1,0 +1,17 @@
+{
+  "name": "single-player-puzzle",
+  "version": "1.0.0",
+  "description": "Single player puzzle game with multiple languages",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build required'",
+    "lint": "echo 'No linting configured'"
+  },
+  "keywords": ["puzzle", "game", "multilingual"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/analytics": "^1.4.1"
+  }
+}
