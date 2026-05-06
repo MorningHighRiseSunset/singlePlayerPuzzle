@@ -1162,6 +1162,7 @@ class ScrabbleGame {
 
 	setupHintSystem() {
 		const hints = [
+			"Hint : Skip turn by forcing computer to go first - click in hamburger button",
 			"Triple Word Score (TW) squares multiply the entire word score by 3!",
 			"Triple Letter Score (TL) squares multiply just that letter's score by 3!",
 			"Double Word Score (DW) squares double your entire word score.",

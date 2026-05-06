@@ -19,6 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const lang = this.dataset.lang;
             const targetUrl = languageMap[lang];
             
+            // Track language selection with Vercel Analytics
+            if (typeof va !== 'undefined') {
+                va('track', 'language_selected', { language: lang });
+            }
+            
             if (targetUrl) {
                 // Fade to white and redirect
                 const fadeDiv = document.createElement("div");
@@ -44,6 +49,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     playBtn.addEventListener("click", function (e) {
         e.preventDefault();
+        
+        // Track play button click with Vercel Analytics
+        if (typeof va !== 'undefined') {
+            va('track', 'play_button_clicked');
+        }
 
         // Remove any previous animation
         document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());

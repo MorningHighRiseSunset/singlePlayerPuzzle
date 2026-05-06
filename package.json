@@ -1,0 +1,32 @@
+{
+  "name": "singleplayer-puzzle",
+  "version": "1.0.0",
+  "description": "Single player puzzle game with multiple languages",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "build": "echo 'Static build complete'",
+    "start": "python -m http.server 3000",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "vercel": "^37.0.0",
+    "jsdom": "^27.0.1"
+  },
+  "keywords": [
+    "puzzle",
+    "game",
+    "scrabble",
+    "multilingual"
+  ],
+  "author": "",
+  "license": "MIT"
+}
