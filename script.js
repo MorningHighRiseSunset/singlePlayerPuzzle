@@ -619,21 +619,38 @@ class ScrabbleGame {
 				}
 			}
 
-			// If no valid play found, exchange tiles
-			updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
-			await new Promise(res => setTimeout(res, 1500));
-			thinkingMessage.style.opacity = "0";
-			setTimeout(() => {
-				thinkingMessage.remove();
-				this.unblockHintBox();
-				this.handleAIExchange();
-			}, 600);
+			// If no valid play found, check if we can exchange or must skip
+			if (this.tiles.length > 0) {
+				updateThinkingText("AI is dumbfounded and decides to exchange tiles...");
+				await new Promise(res => setTimeout(res, 1500));
+				thinkingMessage.style.opacity = "0";
+				setTimeout(() => {
+					thinkingMessage.remove();
+					this.unblockHintBox();
+					this.handleAIExchange();
+				}, 600);
+			} else {
+				// No tiles left to exchange, must skip
+				updateThinkingText("AI has no moves and no tiles to exchange. Skipping turn...");
+				await new Promise(res => setTimeout(res, 1500));
+				thinkingMessage.style.opacity = "0";
+				setTimeout(() => {
+					thinkingMessage.remove();
+					this.unblockHintBox();
+					this.skipAITurn();
+				}, 600);
+			}
 
 		} catch (error) {
 			console.error("Error in AI turn:", error);
 			thinkingMessage.remove();
 			this.unblockHintBox();
-			this.handleAIExchange();
+			// On error, try to exchange if tiles available, otherwise skip
+			if (this.tiles.length > 0) {
+				this.handleAIExchange();
+			} else {
+				this.skipAITurn();
+			}
 		}
 
 		this.aiValidationLogSet = new Set();
