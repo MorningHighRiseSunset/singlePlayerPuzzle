@@ -2460,48 +2460,11 @@ class ScrabbleGame {
 	}
 
 	async getWordDefinition(word) {
-		// Skip special moves and compound words
-		if (
-			word === "SKIP" ||
-			word === "EXCHANGE" ||
-			word === "QUIT" ||
-			word.includes("&")
-		) {
-			return null;
+		const definition = await fetchWordDefinition(word, "es");
+		if (!definition && this.showAIDebug) {
+			console.log(`${TRANSLATIONS.noDefinitionFound} ${word.split("(")[0].trim()}`);
 		}
-
-		// Clean up the word - remove scores and parentheses
-		const cleanWord = word.split("(")[0].trim();
-
-		try {
-			// Fetch from the dictionary API
-			const response = await fetch(
-				`https://api.dictionaryapi.dev/api/v2/entries/es/${cleanWord.toLowerCase()}`,
-			);
-
-			// Handle API errors
-			if (!response.ok) {
-						if (this.showAIDebug) console.log(`No definition found for: ${cleanWord}`);
-				return null;
-			}
-
-			const data = await response.json();
-
-			// Extract and format the definitions
-			if (data && data[0] && data[0].meanings) {
-				return data[0].meanings.map((meaning) => ({
-					partOfSpeech: meaning.partOfSpeech,
-					definitions: meaning.definitions
-						.slice(0, 2) // Limit to first 2 definitions per part of speech
-						.map((def) => def.definition),
-				}));
-			}
-
-			return null;
-		} catch (error) {
-			console.error(`Error fetching definition for ${word}:`, error);
-			return null;
-		}
+		return definition;
 	}
 
 	// Modify the generatePrintContent method to handle undefined words
@@ -5260,9 +5223,9 @@ formedWords.forEach((wordInfo) => {
 			};
 			
 			const cleanedWords = words
-				.filter(w => w && !w.startsWith('-') && w.length > 1)
-				.map(w => w.split(',')[0].trim())
-				.filter(w => w.length > 0);
+				.filter(w => w && typeof w === 'string' && w.length >= 2)
+				.map(w => w.split(',')[0].trim().toLowerCase())
+				.filter(w => /^[a-zñü\-']+$/.test(w));
 			
 			// Add both original and normalized versions for better matching
 			const allWords = new Set(cleanedWords);

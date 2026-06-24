@@ -2555,48 +2555,11 @@ class ScrabbleGame {
 	}
 
 	async getWordDefinition(word) {
-		// Skip special moves and compound words
-		if (
-			word === "SKIP" ||
-			word === "EXCHANGE" ||
-			word === "QUIT" ||
-			word.includes("&")
-		) {
-			return null;
+		const definition = await fetchWordDefinition(word, "zh");
+		if (!definition && this.showAIDebug) {
+			console.log(`${TRANSLATIONS.noDefinitionFound} ${word.split("(")[0].trim()}`);
 		}
-
-		// Clean up the word - remove scores and parentheses
-		const cleanWord = word.split("(")[0].trim();
-
-		try {
-			// Fetch from the dictionary API
-			const response = await fetch(
-				`https://api.dictionaryapi.dev/api/v2/entries/zh/${cleanWord.toLowerCase()}`,
-			);
-
-			// Handle API errors
-			if (!response.ok) {
-						if (this.showAIDebug) console.log(`No definition found for: ${cleanWord}`);
-				return null;
-			}
-
-			const data = await response.json();
-
-			// Extract and format the definitions
-			if (data && data[0] && data[0].meanings) {
-				return data[0].meanings.map((meaning) => ({
-					partOfSpeech: meaning.partOfSpeech,
-					definitions: meaning.definitions
-						.slice(0, 2) // Limit to first 2 definitions per part of speech
-						.map((def) => def.definition),
-				}));
-			}
-
-			return null;
-		} catch (error) {
-			console.error(`Error fetching definition for ${word}:`, error);
-			return null;
-		}
+		return definition;
 	}
 
 	// Modify the generatePrintContent method to handle undefined words
@@ -5346,8 +5309,9 @@ formedWords.forEach((wordInfo) => {
 			const response = await fetch('./mandarin_words_list.json');
 			const words = await response.json();
 			const cleanedWords = words
-				.filter(w => w && w.length > 0)
-				.filter(w => w.length > 0);
+				.filter(w => w && typeof w === 'string' && w.length >= 2 && w.length <= 7)
+				.map(w => w.trim())
+				.filter(w => /^[\u4e00-\u9fff]+$/.test(w));
 			this.dictionary = new Set(cleanedWords);
 			console.log("Mandarin dictionary loaded from JSON. Word count:", this.dictionary.size);
 		} catch (error) {
