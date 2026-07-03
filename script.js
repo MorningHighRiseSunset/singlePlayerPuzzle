@@ -233,9 +233,9 @@ class ScrabbleGame {
 			return;
 		}
 
-		// --- TEMPORARILY add placed tiles to board for ghost preview on first move ---
+		// --- TEMPORARILY add placed tiles to board for ghost preview ---
 		let tempPlaced = [];
-		if (this.isFirstMove && this.placedTiles.length > 0) {
+		if (this.placedTiles.length > 0) {
 			for (const {tile, row, col} of this.placedTiles) {
 				if (!this.board[row][col]) {
 					this.board[row][col] = tile;
@@ -245,7 +245,7 @@ class ScrabbleGame {
 		}
 
 		const aiPlays = this.findAIPossiblePlays();
-	if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
+		if (this.showAIDebug) console.log("AI ghost possible plays:", aiPlays);
 
 		// --- REMOVE temp placed tiles after preview ---
 		if (tempPlaced.length > 0) {
@@ -255,9 +255,18 @@ class ScrabbleGame {
 		}
 
 		if (aiPlays && aiPlays.length > 0) {
-			this.showAIGhostMove(aiPlays[0]);
+			// Select best play based on score and quality, preferring longer words
+			const bestPlay = aiPlays.reduce((best, current) => {
+				const currentScore = current.score + (current.quality || 0) * 0.1;
+				const bestScore = best.score + (best.quality || 0) * 0.1;
+				if (currentScore > bestScore) return current;
+				if (currentScore === bestScore && current.word.length > best.word.length) return current;
+				return best;
+			}, aiPlays[0]);
+			
+			this.showAIGhostMove(bestPlay);
 			this.ghostAIMove = {
-				...aiPlays[0],
+				...bestPlay,
 				rackSnapshot: this.aiRack.map(t => t.letter).sort().join(''),
 				boardSnapshot: JSON.stringify(this.board)
 			};
@@ -2012,22 +2021,120 @@ class ScrabbleGame {
 	evaluateWordQuality(word, row, col, horizontal) {
 		let quality = 0;
 
-		// Give massive bonus for longer words
-		quality += Math.pow(word.length, 3) * 10; // Cubic scaling for length
+		// Give massive bonus for longer words (cubic scaling)
+		quality += Math.pow(word.length, 3) * 10;
 
 		// Bonus for using premium squares
 		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
 		quality += premiumSquares * 15;
 
-		// Small bonus for cross-words (but less important than length)
+		// Bonus for cross-words (parallel word formation)
 		const crossWords = this.countIntersections(row, col, horizontal, word);
-		quality += crossWords * 10;
+		quality += crossWords * 20; // Increased importance
 
-		// Minor bonus for balanced letter usage
+		// Bonus for using high-value letters strategically
+		const highValueBonus = this.evaluateHighValueUsage(word, row, col, horizontal);
+		quality += highValueBonus;
+
+		// Bonus for leaving good rack balance
+		const rackBalance = this.evaluateRackBalanceAfter(word);
+		quality += rackBalance * 15;
+
+		// Minor bonus for balanced letter usage in the word itself
 		const letterBalance = this.evaluateLetterBalance(word);
 		quality += letterBalance * 5;
 
+		// Bonus for opening up new premium squares for future plays
+		const opensPremium = this.opensPremiumSquares(row, col, horizontal, word);
+		quality += opensPremium * 10;
+
 		return quality;
+	}
+	
+	evaluateHighValueUsage(word, row, col, horizontal) {
+		let bonus = 0;
+		const highValueLetters = ['J', 'Q', 'X', 'Z', 'K'];
+		
+		for (let i = 0; i < word.length; i++) {
+			const letter = word[i];
+			if (highValueLetters.includes(letter)) {
+				const tileRow = horizontal ? row : row + i;
+				const tileCol = horizontal ? col + i : col;
+				const premium = this.getPremiumSquareType(tileRow, tileCol);
+				
+				// Big bonus for placing high-value letters on premium squares
+				if (premium === 'tl') bonus += 25;
+				if (premium === 'dl') bonus += 15;
+				if (premium === 'tw') bonus += 20;
+				if (premium === 'dw') bonus += 10;
+				
+				// Small bonus just for using high-value letters
+				bonus += 5;
+			}
+		}
+		
+		return bonus;
+	}
+	
+	evaluateRackBalanceAfter(word) {
+		// Simulate removing the word letters from AI rack
+		const tempRack = [...this.aiRack];
+		const wordLetters = word.toUpperCase().split('');
+		
+		for (const letter of wordLetters) {
+			const idx = tempRack.findIndex(t => t.letter === letter);
+			if (idx !== -1) tempRack.splice(idx, 1);
+		}
+		
+		// Evaluate remaining rack balance
+		let balance = 0;
+		const remainingLetters = tempRack.map(t => t.letter);
+		
+		// Bonus for having good vowel/consonant ratio
+		const vowels = remainingLetters.filter(l => 'AEIOU'.includes(l)).length;
+		const consonants = remainingLetters.length - vowels;
+		const ratio = vowels / (consonants || 1);
+		if (ratio >= 0.4 && ratio <= 0.6) balance += 10;
+		
+		// Penalty for having too many of one letter
+		const letterCounts = {};
+		for (const letter of remainingLetters) {
+			letterCounts[letter] = (letterCounts[letter] || 0) + 1;
+		}
+		for (const count of Object.values(letterCounts)) {
+			if (count > 2) balance -= 5;
+		}
+		
+		// Bonus for keeping useful letters (S, E, R, T, A, etc.)
+		const usefulLetters = ['S', 'E', 'R', 'T', 'A', 'I', 'N', 'O'];
+		const usefulCount = remainingLetters.filter(l => usefulLetters.includes(l)).length;
+		balance += usefulCount * 2;
+		
+		return balance;
+	}
+	
+	opensPremiumSquares(row, col, horizontal, word) {
+		let opens = 0;
+		const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+		
+		for (let i = 0; i < word.length; i++) {
+			const tileRow = horizontal ? row : row + i;
+			const tileCol = horizontal ? col + i : col;
+			
+			// Check adjacent squares for premium squares that become accessible
+			for (const [dx, dy] of directions) {
+				const newRow = tileRow + dx;
+				const newCol = tileCol + dy;
+				if (this.isValidPosition(newRow, newCol) && !this.board[newRow][newCol]) {
+					const premium = this.getPremiumSquareType(newRow, newCol);
+					if (premium && (premium === 'tw' || premium === 'dw' || premium === 'tl')) {
+						opens++;
+					}
+				}
+			}
+		}
+		
+		return opens;
 	}
 
 	evaluateCrossWordPotential(word, row, col, horizontal) {
@@ -2457,18 +2564,67 @@ class ScrabbleGame {
 			}];
 		}
 
-		// Find all positions adjacent to existing tiles
+		// Find all positions adjacent to existing tiles, prioritized by strategic value
 		for (let row = 0; row < 15; row++) {
 			for (let col = 0; col < 15; col++) {
 				if (!this.board[row][col] && this.hasAdjacentTile(row, col)) {
+					// Calculate strategic value of this anchor
+					const strategicValue = this.evaluateAnchorStrategicValue(row, col);
 					anchors.push({
 						row,
-						col
+						col,
+						strategicValue
 					});
 				}
 			}
 		}
-		return anchors;
+		
+		// Sort anchors by strategic value (descending) and return top 50 for performance
+		return anchors
+			.sort((a, b) => b.strategicValue - a.strategicValue)
+			.slice(0, 50);
+	}
+	
+	evaluateAnchorStrategicValue(row, col) {
+		let value = 0;
+		
+		// Bonus for being near premium squares
+		const premium = this.getPremiumSquareType(row, col);
+		if (premium === 'tw') value += 30;
+		if (premium === 'dw') value += 20;
+		if (premium === 'tl') value += 15;
+		if (premium === 'dl') value += 10;
+		
+		// Bonus for having multiple adjacent tiles (more connection opportunities)
+		let adjacentCount = 0;
+		const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+		for (const [dx, dy] of directions) {
+			const newRow = row + dx;
+			const newCol = col + dy;
+			if (this.isValidPosition(newRow, newCol) && this.board[newRow][newCol]) {
+				adjacentCount++;
+			}
+		}
+		value += adjacentCount * 5;
+		
+		// Bonus for positions that can extend existing words in both directions
+		const canExtendHorizontal = this.canExtendWord(row, col, true);
+		const canExtendVertical = this.canExtendWord(row, col, false);
+		if (canExtendHorizontal && canExtendVertical) value += 25;
+		
+		// Small penalty for edge positions
+		if (row === 0 || row === 14 || col === 0 || col === 14) value -= 5;
+		
+		return value;
+	}
+	
+	canExtendWord(row, col, horizontal) {
+		// Check if there's space to extend in both directions along the axis
+		if (horizontal) {
+			return (col > 0 && !this.board[row][col - 1]) || (col < 14 && !this.board[row][col + 1]);
+		} else {
+			return (row > 0 && !this.board[row - 1][col]) || (row < 14 && !this.board[row + 1][col]);
+		}
 	}
 
 	hasAdjacentTile(row, col) {
@@ -3139,7 +3295,7 @@ async executeAIPlay(play) {
 
                     // Create animated tile element
                     const animatedTile = document.createElement("div");
-                    animatedTile.className = "tile";
+                    animatedTile.className = "tile owner-computer";
                     animatedTile.innerHTML = `
                       ${tile.letter}
                       <span class="points">${tile.value}</span>
@@ -5658,22 +5814,14 @@ formedWords.forEach((wordInfo) => {
 				button.addEventListener("click", async () => {
 					const selectedLetter = button.textContent;
 
-					// Create a new tile object with the selected letter but keep point value as 0
-					const blankTile = {
-						...tile,
-						letter: selectedLetter,
-						originalLetter: "*",
-						value: 0,
-					};
-
 					// Create proper tile object for the board
-					const placedTile = {
-						letter: selectedLetter,
-						value: 0,
-						id: tile.id,
-						isBlank: true,
-						originalLetter: "*", // Preserve original letter for proper restoration
-					};
+					// Use the original tile object to preserve identity for proper reversion
+					tile.letter = selectedLetter;
+					tile.value = 0;
+					tile.isBlank = true;
+					tile.originalLetter = "*";
+					
+					const placedTile = tile;
 
 					this.board[row][col] = placedTile;
 
@@ -6044,6 +6192,10 @@ formedWords.forEach((wordInfo) => {
 
 			for (let col = 0; col < 15; col++) {
 				if (this.board[row][col]) {
+					// Update start position when we encounter the first tile of a word
+					if (word === "") {
+						startCol = col;
+					}
 					word += this.board[row][col].letter;
 					// Check if this position contains a newly placed tile
 					if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
@@ -6079,6 +6231,10 @@ formedWords.forEach((wordInfo) => {
 
 			for (let row = 0; row < 15; row++) {
 				if (this.board[row][col]) {
+					// Update start position when we encounter the first tile of a word
+					if (word === "") {
+						startRow = row;
+					}
 					word += this.board[row][col].letter;
 					// Check if this position contains a newly placed tile
 					if (this.placedTiles.some((t) => t.row === row && t.col === col)) {
@@ -6506,14 +6662,9 @@ calculateScore() {
 	}
 
 	getPremiumSquareType(row, col) {
-		const cell = document.querySelector(
-			`[data-row="${row}"][data-col="${col}"]`,
-		);
-		if (cell.classList.contains("tw")) return "tw";
-		if (cell.classList.contains("dw")) return "dw";
-		if (cell.classList.contains("tl")) return "tl";
-		if (cell.classList.contains("dl")) return "dl";
-		return null;
+		const premiumSquares = this.getPremiumSquares();
+		const key = `${row},${col}`;
+		return premiumSquares[key] || null;
 	}
 
 	countPremiumSquaresUsed(row, col, horizontal, word) {
