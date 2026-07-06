@@ -5575,7 +5575,7 @@ formedWords.forEach((wordInfo) => {
 		const letter = (tile.letter || '').toUpperCase();
 		if (letter === '*') return 0;
 		if (tile.isBlank || tile.originalLetter === '*') {
-			return this.tileValues[letter] || 0;
+			return 0;
 		}
 		return tile.value ?? this.tileValues[letter] ?? 0;
 	}
