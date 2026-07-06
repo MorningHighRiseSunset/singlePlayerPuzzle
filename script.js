@@ -3259,6 +3259,7 @@ async executeAIPlay(play) {
         }
     }
     this.placedTiles = aiPlacedTiles;
+    const scoringPlacements = this.buildNewlyPlacedSet();
 
     return new Promise(async (resolve) => {
         // Start placing tiles with animation
@@ -3420,12 +3421,18 @@ async executeAIPlay(play) {
                 }
 
                 this._letterPremiumInfo = [];
-                const wordScore = this.calculateWordScore(
-                    word,
-                    startPos.row,
-                    startPos.col,
-                    direction === "horizontal"
-                );
+                let wordScore = 0;
+                try {
+                    this._scoringNewlyPlacedSet = scoringPlacements;
+                    wordScore = this.calculateWordScore(
+                        word,
+                        startPos.row,
+                        startPos.col,
+                        direction === "horizontal"
+                    );
+                } finally {
+                    this._scoringNewlyPlacedSet = null;
+                }
                 totalScore += wordScore;
                 wordsList.push({
                     word,
@@ -3508,9 +3515,22 @@ async executeAIPlay(play) {
     });
 }
 
+	getLetterScoreBase(tile) {
+		if (!tile) return 0;
+		if (tile.isBlank) return 0;
+		const letter = (tile.letter || '').toUpperCase();
+		if (tile.value != null && !Number.isNaN(tile.value)) {
+			return tile.value;
+		}
+		return this.tileValues[letter] ?? 0;
+	}
+
+	buildNewlyPlacedSet() {
+		return new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+	}
+
 	calculateWordScore(word, startRow, startCol, isHorizontal) {
-		// Modernized: accept an optional set of newly placed positions for deterministic scoring
-		const newlyPlacedSet = this._scoringNewlyPlacedSet || new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+		const newlyPlacedSet = this._scoringNewlyPlacedSet ?? this.buildNewlyPlacedSet();
 		let wordScore = 0;
 		let wordMultiplier = 1;
 		
@@ -3521,36 +3541,35 @@ async executeAIPlay(play) {
 			const row = isHorizontal ? startRow : startRow + i;
 			const col = isHorizontal ? startCol + i : startCol;
 			const boardTile = this.board[row][col];
-			// If the tile is already on the permanent board use its value; otherwise check newly placed tiles
 			let letterScoreBase = 0;
 			let letterChar = null;
+
 			if (boardTile) {
-				letterScoreBase = boardTile.value || 0;
+				letterScoreBase = this.getLetterScoreBase(boardTile);
 				letterChar = boardTile.letter;
 			} else {
-				// find placed tile info (temporary placedTiles array)
-				const placed = (this.placedTiles || []).find(t => t.row === row && t.col === col);
-				if (placed) {
-					letterScoreBase = placed.value || this.tileValues[(placed.letter || '').toUpperCase()] || 0;
-					letterChar = placed.letter || null;
+				const placedEntry = (this.placedTiles || []).find(t => t.row === row && t.col === col);
+				if (placedEntry) {
+					const placedTile = placedEntry.tile || placedEntry;
+					letterScoreBase = this.getLetterScoreBase(placedTile);
+					letterChar = placedTile.letter || null;
 				} else {
-					// fallback: try previousBoard or tileValues by reading board letter if available
 					letterChar = (boardTile && boardTile.letter) || null;
-					letterScoreBase = (letterChar && this.tileValues[letterChar.toUpperCase()]) || 0;
+					letterScoreBase = letterChar ? (this.tileValues[letterChar.toUpperCase()] || 0) : 0;
 				}
 			}
 
 			let letterScore = letterScoreBase;
 			const key = `${row},${col}`;
-			let premiumType = null;
 			if (newlyPlacedSet.has(key)) {
-				premiumType = this.getPremiumSquareType(row, col);
+				const premiumType = this.getPremiumSquareType(row, col);
 				if (premiumType === 'dl') letterScore *= 2;
 				if (premiumType === 'tl') letterScore *= 3;
 				if (premiumType === 'dw') wordMultiplier *= 2;
 				if (premiumType === 'tw') wordMultiplier *= 3;
-				// Track premium info for display with position index
-				this._letterPremiumInfo.push({ index: i, letter: letterChar, premium: premiumType });
+				if (premiumType) {
+					this._letterPremiumInfo.push({ index: i, letter: letterChar, premium: premiumType });
+				}
 			}
 
 			wordScore += letterScore;
@@ -6437,7 +6456,7 @@ calculateScore() {
 
 
 		// Build set of newly placed tiles for scoring rules
-		this._scoringNewlyPlacedSet = new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+		this._scoringNewlyPlacedSet = this.buildNewlyPlacedSet();
 		// Clear premium info for this word
 		this._letterPremiumInfo = [];
 		try {
@@ -7231,7 +7250,7 @@ calculateScore() {
 					// Fallback: compute score directly (ensure newly placed set is available)
 					if (scoreForWord === null) {
 						try {
-							this._scoringNewlyPlacedSet = new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+							this._scoringNewlyPlacedSet = this.buildNewlyPlacedSet();
 							scoreForWord = this.calculateWordScore(wordInfo.word, wordInfo.startPos.row, wordInfo.startPos.col, wordInfo.direction === 'horizontal');
 						} catch (e) {
 							console.warn('Failed to compute per-word score fallback', e);
