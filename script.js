@@ -3298,7 +3298,7 @@ async executeAIPlay(play) {
                     animatedTile.className = "tile owner-computer";
                     animatedTile.innerHTML = `
                       ${tile.letter}
-                      <span class="points">${tile.value}</span>
+                      <span class="points">${this.getTileDisplayValue(tile)}</span>
                       ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                   `;
 
@@ -3352,7 +3352,7 @@ async executeAIPlay(play) {
                               `;
                                 permanentTile.innerHTML = `
                                   ${tile.letter}
-                                  <span class="points" style="color: #000;">${tile.value}</span>
+                                  <span class="points" style="color: #000;">${this.getTileDisplayValue(tile)}</span>
                                   ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                               `;
 
@@ -3419,6 +3419,7 @@ async executeAIPlay(play) {
                     return;
                 }
 
+                this._letterPremiumInfo = [];
                 const wordScore = this.calculateWordScore(
                     word,
                     startPos.row,
@@ -3428,7 +3429,8 @@ async executeAIPlay(play) {
                 totalScore += wordScore;
                 wordsList.push({
                     word,
-                    score: wordScore
+                    score: wordScore,
+                    premiumInfo: [...this._letterPremiumInfo]
                 });
 				if (this.showAIDebug) console.log(`[AI] Word formed: ${word} for ${wordScore} points`);
             });
@@ -3480,7 +3482,7 @@ async executeAIPlay(play) {
 
 				this.currentTurn = "player";
 				// Prefer structured words (word + score) when available
-				this.addToMoveHistory("Computer", wordsList.length ? wordsList.map(w => ({ word: w.word, score: w.score })) : (this._lastScoredWords || []), totalScore);
+				this.addToMoveHistory("Computer", wordsList.length ? wordsList : (this._lastScoredWords || []), totalScore);
 
 				// Clear the placed tiles array after scoring
 				this.placedTiles = [];
@@ -3511,6 +3513,9 @@ async executeAIPlay(play) {
 		const newlyPlacedSet = this._scoringNewlyPlacedSet || new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
 		let wordScore = 0;
 		let wordMultiplier = 1;
+		
+		// Track letter premium info for display
+		this._letterPremiumInfo = this._letterPremiumInfo || [];
 
 		for (let i = 0; i < word.length; i++) {
 			const row = isHorizontal ? startRow : startRow + i;
@@ -3537,12 +3542,15 @@ async executeAIPlay(play) {
 
 			let letterScore = letterScoreBase;
 			const key = `${row},${col}`;
+			let premiumType = null;
 			if (newlyPlacedSet.has(key)) {
-				const premium = this.getPremiumSquareType(row, col);
-				if (premium === 'dl') letterScore *= 2;
-				if (premium === 'tl') letterScore *= 3;
-				if (premium === 'dw') wordMultiplier *= 2;
-				if (premium === 'tw') wordMultiplier *= 3;
+				premiumType = this.getPremiumSquareType(row, col);
+				if (premiumType === 'dl') letterScore *= 2;
+				if (premiumType === 'tl') letterScore *= 3;
+				if (premiumType === 'dw') wordMultiplier *= 2;
+				if (premiumType === 'tw') wordMultiplier *= 3;
+				// Track premium info for display with position index
+				this._letterPremiumInfo.push({ index: i, letter: letterChar, premium: premiumType });
 			}
 
 			wordScore += letterScore;
@@ -5297,7 +5305,7 @@ formedWords.forEach((wordInfo) => {
 				);
 				cell.innerHTML = `
                             ${tile.letter}
-                            <span class="points">${tile.value}</span>
+                            <span class="points">${this.getTileDisplayValue(tile)}</span>
                         `;
 			}
 		}
@@ -5543,6 +5551,16 @@ formedWords.forEach((wordInfo) => {
 		}
 	}
 
+	getTileDisplayValue(tile) {
+		if (!tile) return 0;
+		const letter = (tile.letter || '').toUpperCase();
+		if (letter === '*') return 0;
+		if (tile.isBlank || tile.originalLetter === '*') {
+			return this.tileValues[letter] || 0;
+		}
+		return tile.value ?? this.tileValues[letter] ?? 0;
+	}
+
 	renderRack() {
 		const rack = document.getElementById("tile-rack");
 		rack.innerHTML = "";
@@ -5554,7 +5572,7 @@ formedWords.forEach((wordInfo) => {
 			tileElement.dataset.id = tile.id;
 			tileElement.innerHTML = `
                 ${tile.letter}
-                <span class="points">${tile.value}</span>
+                <span class="points">${this.getTileDisplayValue(tile)}</span>
                 ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
             `;
 			// DO NOT set draggable or add any drag/touch logic
@@ -5570,7 +5588,7 @@ formedWords.forEach((wordInfo) => {
 		tileElement.dataset.id = tile.id;
 		tileElement.innerHTML = `
                     ${tile.letter}
-                    <span class="points">${tile.value}</span>
+                    <span class="points">${this.getTileDisplayValue(tile)}</span>
                     ${tile.letter === "*" ? '<span class="blank-indicator">★</span>' : ""}
                 `;
 		return tileElement;
@@ -5832,7 +5850,7 @@ formedWords.forEach((wordInfo) => {
 					tileElement.dataset.id = tile.id;
 					tileElement.innerHTML = `
 						${selectedLetter}
-						<span class="points">0</span>
+						<span class="points">${this.getTileDisplayValue(tile)}</span>
 						<span class="blank-indicator">★</span>
 					`;
 
@@ -6420,11 +6438,15 @@ calculateScore() {
 
 		// Build set of newly placed tiles for scoring rules
 		this._scoringNewlyPlacedSet = new Set((this.placedTiles || []).map(t => `${t.row},${t.col}`));
+		// Clear premium info for this word
+		this._letterPremiumInfo = [];
 		try {
 			const computed = this.calculateWordScore(word, startPos.row, startPos.col, direction === 'horizontal');
 			wordScore = computed;
 			// Add to total score
 			totalScore += wordScore;
+			// Store premium info with this word immediately after scoring
+			wordInfo.premiumInfo = [...this._letterPremiumInfo];
 		} finally {
 			// clear temporary set
 			this._scoringNewlyPlacedSet = null;
@@ -6435,6 +6457,7 @@ calculateScore() {
             JSON.stringify({
                 word: word,
                 score: wordScore,
+                premiumInfo: wordInfo.premiumInfo || [],
             }),
         );
     });
@@ -6453,12 +6476,18 @@ calculateScore() {
         formedWords.forEach(w => this.wordsPlayed.add(w.word.toUpperCase()));
     }
 
-	// Store last scored words (array of {word, score}) for callers to use in move history
+	// Store last scored words (array of {word, score, premiumInfo}) for callers to use in move history
 	try {
 		this._lastScoredWords = Array.from(words).map(s => JSON.parse(s));
+		// Ensure premium info is preserved from formedWords
+		this._lastScoredWords.forEach((scoredWord, i) => {
+			if (formedWords[i] && formedWords[i].premiumInfo) {
+				scoredWord.premiumInfo = formedWords[i].premiumInfo;
+			}
+		});
 	} catch (e) {
 		// If something unexpected happened, fallback to formedWords with null scores
-		this._lastScoredWords = formedWords.map(f => ({ word: f.word, score: null }));
+		this._lastScoredWords = formedWords.map(f => ({ word: f.word, score: null, premiumInfo: f.premiumInfo || [] }));
 	}
 
 	return totalScore;
@@ -7212,7 +7241,7 @@ calculateScore() {
 						}
 					}
 
-					wordDescriptions.push({ word: wordInfo.word, score: scoreForWord });
+					wordDescriptions.push({ word: wordInfo.word, score: scoreForWord, premiumInfo: wordInfo.premiumInfo || [] });
 				}
 
 		// Add bonus when the player actually used 7 or more newly placed tiles for a word
@@ -7377,7 +7406,11 @@ calculateScore() {
 
 		if (Array.isArray(words)) {
 			// Structured words with individual scores
-			entry.words = words.map(w => ({ word: w.word, score: typeof w.score === 'number' ? w.score : null }));
+			entry.words = words.map(w => ({
+				word: w.word,
+				score: typeof w.score === 'number' ? w.score : null,
+				premiumInfo: Array.isArray(w.premiumInfo) ? w.premiumInfo : []
+			}));
 			// compute total if score not provided
 			entry.score = typeof score === 'number' ? score : entry.words.reduce((s, w) => s + (w.score || 0), 0);
 		} else {
@@ -7390,13 +7423,58 @@ calculateScore() {
 		this.updateMoveHistory();
 	}
 
+	formatWordForHistory(word, premiumInfo) {
+		const letters = word.split('');
+		const premiumByIndex = {};
+		if (Array.isArray(premiumInfo)) {
+			premiumInfo.forEach(p => {
+				if (typeof p.index === 'number') premiumByIndex[p.index] = p.premium;
+			});
+		}
+
+		return letters.map((letter, i) => {
+			const premium = premiumByIndex[i];
+			const cls = premium ? `history-letter ${premium}` : 'history-letter';
+			return `<span class="${cls}">${letter}</span>`;
+		}).join('');
+	}
+
 	updateMoveHistory() {
 		// Update mobile, desktop, and desktop drawer move history containers
 		const mobileHistoryDisplay = document.getElementById("move-history");
 		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
 		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
 		
-		const historyContent = "<h3>Move History</h3>" +
+		// Premium square legend
+		const legendHtml = `
+			<div class="premium-legend">
+				<h4>Premium Squares</h4>
+				<div class="legend-items">
+					<div class="legend-item">
+						<span class="legend-color legend-color-normal"></span>
+						<span class="legend-text">Normal (1x)</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color dl"></span>
+						<span class="legend-text">DL - Double Letter (2x)</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color tl"></span>
+						<span class="legend-text">TL - Triple Letter (3x)</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color dw"></span>
+						<span class="legend-text">DW - Double Word (2x)</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color tw"></span>
+						<span class="legend-text">TW - Triple Word (3x)</span>
+					</div>
+				</div>
+			</div>
+		`;
+		
+		const historyContent = "<h3>Move History</h3>" + legendHtml +
 			this.moveHistory
 			.slice(-50)
 			.map((move) => {
@@ -7407,8 +7485,10 @@ calculateScore() {
 						if (w.word === "BINGO BONUS") {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
-						if (typeof w.score === 'number') return `${w.word} (${w.score})`;
-						return `${w.word}`;
+						const formattedWord = this.formatWordForHistory(w.word, w.premiumInfo);
+						
+						if (typeof w.score === 'number') return `${formattedWord} (${w.score})`;
+						return formattedWord;
 					});
 					const formatted = parts.join(" & ");
 					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
@@ -7427,7 +7507,8 @@ calculateScore() {
 
 				// Fallback: single word string
 				if (move.word) {
-					return `<div class="move">${move.player}: "${move.word}" for ${move.score} points</div>`;
+					const formattedWord = this.formatWordForHistory(move.word, []);
+					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points</div>`;
 				}
 
 				// Unknown format
@@ -8083,7 +8164,7 @@ calculateScore() {
 			tileElement.className = "tile";
 			tileElement.innerHTML = `
                 ${tile.letter}
-                <span class="points">${tile.value}</span>
+                <span class="points">${this.getTileDisplayValue(tile)}</span>
             `;
 			rack.appendChild(tileElement);
 		});
@@ -8578,7 +8659,7 @@ calculateScore() {
 			tileElement.className = "tile new-tile";
 			tileElement.innerHTML = `
                     ${tile.letter}
-                    <span class="points">${tile.value}</span>
+                    <span class="points">${this.getTileDisplayValue(tile)}</span>
                 `;
 			newTilesContainer.appendChild(tileElement);
 
@@ -9755,7 +9836,7 @@ calculateScore() {
 					tileDiv.className = "tile";
 					tileDiv.innerHTML = `
                     ${tile.letter}
-                    <span class="points">${tile.value}</span>
+                    <span class="points">${this.getTileDisplayValue(tile)}</span>
                     ${tile.isBlank ? '<span class="blank-indicator">★</span>' : ""}
                 `;
 					cell.appendChild(tileDiv);
@@ -9779,6 +9860,9 @@ function preventScrolling(e) {
 document.addEventListener("DOMContentLoaded", () => {
     const game = new ScrabbleGame();
     window.game = game; // <-- Add this line
+
+	// Initialize move history display with legend
+	game.updateMoveHistory();
 
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
 	const primeSpeech = () => {
