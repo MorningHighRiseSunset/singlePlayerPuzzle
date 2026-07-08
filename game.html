@@ -37,7 +37,7 @@
           border-radius: 50%;
           margin: 0;
           border: none;
-          background: linear-gradient(145deg, #1a237e, #151d69);
+          background: var(--button-bg);
           color: #fff;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
           display: flex;
@@ -80,7 +80,7 @@
           align-items: center;
           display: flex;
           white-space: nowrap;
-          background: linear-gradient(145deg, #1a237e, #151d69);
+          background: var(--button-bg);
           color: #fff;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
           border: none;
@@ -102,7 +102,7 @@
           align-items: center;
           justify-content: center;
           white-space: nowrap;
-          background: linear-gradient(145deg, #1a237e, #151d69);
+          background: var(--button-bg);
           color: #fff;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
           border: none;
@@ -146,7 +146,7 @@
           border-radius: 50%;
           margin: 0;
           border: none;
-          background: linear-gradient(145deg, #1a237e, #151d69);
+          background: var(--button-bg);
           color: #fff;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           display: flex;
@@ -158,7 +158,7 @@
 
         #desktop-menu-toggle:hover,
         #play-word-desktop-bottom:hover {
-          background: linear-gradient(145deg, #151d69, #0d1428);
+          background: var(--button-hover);
           transform: translateY(-2px);
           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
@@ -194,7 +194,7 @@
           align-items: center;
           justify-content: center;
           white-space: nowrap;
-          background: linear-gradient(145deg, #1a237e, #151d69);
+          background: var(--button-bg);
           color: #fff;
           border: none;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -425,6 +425,16 @@
         </aside>
         <aside class="info-panel">
           <h2 data-i18n="game-info">Game Info</h2>
+          <div class="theme-selector">
+            <h4>Theme</h4>
+            <div class="theme-options">
+              <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+              <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+              <button class="theme-option emerald" data-theme="emerald" onclick="setTheme('emerald')">Emerald</button>
+              <button class="theme-option royal" data-theme="royal" onclick="setTheme('royal')">Royal</button>
+              <button class="theme-option crimson" data-theme="crimson" onclick="setTheme('crimson')">Crimson</button>
+            </div>
+          </div>
           <div class="score-box">
             <h3 data-i18n="scores">Scores</h3>
             <p><span data-i18n="player">Player:</span> <span id="player-score">0</span>
@@ -492,6 +502,13 @@
         </aside>
         <aside class="info-panel">
           <h2 data-i18n="game-info">Game Info</h2>
+          <div class="theme-selector">
+            <h4>Theme</h4>
+            <div class="theme-options">
+              <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+              <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+            </div>
+          </div>
           <div class="score-box">
             <h3 data-i18n="scores">Scores</h3>
             <p><span data-i18n="player">Player:</span> <span id="player-score-desktop-drawer">0</span>
@@ -574,6 +591,13 @@
       <!-- Desktop Info Panel -->
       <aside class="info-panel">
         <h2 data-i18n="game-info">Game Info</h2>
+        <div class="theme-selector">
+          <h4>Theme</h4>
+          <div class="theme-options">
+            <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+            <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+          </div>
+        </div>
         <div class="score-box">
           <h3 data-i18n="scores">Scores</h3>
           <p><span data-i18n="player">Player:</span> <span id="player-score-desktop">0</span>
@@ -622,6 +646,41 @@
       <button id="return-tiles-desktop-bottom" class="return-tiles-desktop-bottom" title="Return Tiles" data-i18n="return-tiles">Return Tiles</button>
     </div>
     <script>
+      // Theme switching logic
+      function setTheme(theme) {
+        console.log('Setting theme to:', theme);
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('gameTheme', theme);
+
+        // Update active state
+        document.querySelectorAll('.theme-option').forEach(btn => {
+          btn.classList.remove('active');
+          if (btn.getAttribute('data-theme') === theme) {
+            btn.classList.add('active');
+          }
+        });
+      }
+
+      function initThemeSwitcher() {
+        // Load saved theme from localStorage
+        const savedTheme = localStorage.getItem('gameTheme') || 'chess';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Update active state of theme buttons
+        document.querySelectorAll('.theme-option').forEach(btn => {
+          btn.classList.remove('active');
+          if (btn.getAttribute('data-theme') === savedTheme) {
+            btn.classList.add('active');
+          }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', initThemeSwitcher);
+      // Also try immediately in case DOM is already loaded
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initThemeSwitcher();
+      }
+
       // Hamburger drawer logic
       document.addEventListener('DOMContentLoaded', function() {
         // Mobile drawer logic

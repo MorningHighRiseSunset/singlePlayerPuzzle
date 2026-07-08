@@ -5434,7 +5434,7 @@ formedWords.forEach((wordInfo) => {
 			[14, 14],
 		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
-		// Double Word Scores (pink squares)
+		// Triple Word Scores (pink squares)
 		[
 			[1, 1],
 			[1, 13],
@@ -5452,7 +5452,7 @@ formedWords.forEach((wordInfo) => {
 			[12, 12],
 			[13, 1],
 			[13, 13],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "dw"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
 		// Triple Letter Scores (dark blue squares)
 		[
@@ -5470,7 +5470,7 @@ formedWords.forEach((wordInfo) => {
 			[13, 9],
 		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
-		// Double Letter Scores (light blue squares)
+		// Triple Letter Scores (light blue squares)
 		[
 			[0, 3],
 			[0, 11],
@@ -5496,7 +5496,7 @@ formedWords.forEach((wordInfo) => {
 			[12, 8],
 			[14, 3],
 			[14, 11],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
 		return premium;
 	}
@@ -5521,13 +5521,7 @@ formedWords.forEach((wordInfo) => {
 			//     console.error("Error loading additional words:", error);
 			// }
 
-			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
-			
-			// Test if some common words are in the dictionary
-			const testWords = ["hello", "world", "scrabble", "game", "play", "inverse", "side"];
-			testWords.forEach(word => {
-				console.log(`Dictionary contains "${word}": ${this.dictionary.has(word.toLowerCase())}`);
-			});
+			// console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
 			// More comprehensive fallback dictionary
@@ -7474,16 +7468,8 @@ calculateScore() {
 						<span class="legend-text">Normal (1x)</span>
 					</div>
 					<div class="legend-item">
-						<span class="legend-color dl"></span>
-						<span class="legend-text">DL - Double Letter (2x)</span>
-					</div>
-					<div class="legend-item">
 						<span class="legend-color tl"></span>
 						<span class="legend-text">TL - Triple Letter (3x)</span>
-					</div>
-					<div class="legend-item">
-						<span class="legend-color dw"></span>
-						<span class="legend-text">DW - Double Word (2x)</span>
 					</div>
 					<div class="legend-item">
 						<span class="legend-color tw"></span>

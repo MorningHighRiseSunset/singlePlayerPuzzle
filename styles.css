@@ -1,18 +1,115 @@
 /* --- Root Variables --- */
 :root {
-  --primary: #1a237e;
-  --secondary: #534bae;
-  --light: #e6e6e6;
-  --board-border: #222;
-  --tile-bg: #fff;
-  --tile-shadow: 2px 2px 0 #999;
-  --tw: #0a2472;
-  --dw: #1565c0;
-  --tl: #1976d2;
-  --dl: #64b5f6;
+  --primary: #8b7355;
+  --secondary: #f5deb3;
+  --light: #d2b48c;
+  --board-border: #8b7355;
+  --tile-bg: #f5deb3;
+  --tile-shadow: 2px 2px 0 #8b7355;
+  --tw: #8b7355;
+  --tl: #d2b48c;
   --accent: #ffd700;
-  --danger: #e53935;
-  --exchange-glow: #42a5f5;
+  --danger: #dc143c;
+  --exchange-glow: #8b7355;
+  --board-bg-1: #f5deb3;
+  --board-bg-2: #deb887;
+  --button-bg: #8b7355;
+  --button-hover: #6b5344;
+}
+
+/* Theme: Chess (Default) */
+[data-theme="chess"] {
+  --primary: #8b7355;
+  --secondary: #f5deb3;
+  --light: #d2b48c;
+  --board-border: #8b7355;
+  --tile-bg: #f5deb3;
+  --tile-shadow: 2px 2px 0 #8b7355;
+  --tw: #8b7355;
+  --tl: #d2b48c;
+  --accent: #ffd700;
+  --danger: #dc143c;
+  --exchange-glow: #8b7355;
+  --board-bg-1: #f5deb3;
+  --board-bg-2: #deb887;
+  --button-bg: #8b7355;
+  --button-hover: #6b5344;
+}
+
+/* Theme: Midnight */
+[data-theme="midnight"] {
+  --primary: #1e3a5f;
+  --secondary: #2d5a87;
+  --light: #0f172a;
+  --board-border: #1e3a5f;
+  --tile-bg: #f8fafc;
+  --tile-shadow: 2px 2px 0 #1e3a5f;
+  --tw: #1e3a5f;
+  --tl: #2d5a87;
+  --accent: #fbbf24;
+  --danger: #ef4444;
+  --exchange-glow: #38bdf8;
+  --board-bg-1: #f8fafc;
+  --board-bg-2: #e2e8f0;
+  --button-bg: #1e3a5f;
+  --button-hover: #0f2847;
+}
+
+/* Theme: Emerald */
+[data-theme="emerald"] {
+  --primary: #047857;
+  --secondary: #10b981;
+  --light: #ecfdf5;
+  --board-border: #047857;
+  --tile-bg: #ffffff;
+  --tile-shadow: 2px 2px 0 #047857;
+  --tw: #047857;
+  --tl: #10b981;
+  --accent: #f59e0b;
+  --danger: #b91c1c;
+  --exchange-glow: #10b981;
+  --board-bg-1: #ecfdf5;
+  --board-bg-2: #d1fae5;
+  --button-bg: #047857;
+  --button-hover: #065f46;
+}
+
+/* Theme: Royal */
+[data-theme="royal"] {
+  --primary: #4c1d95;
+  --secondary: #7c3aed;
+  --light: #f5f3ff;
+  --board-border: #4c1d95;
+  --tile-bg: #ffffff;
+  --tile-shadow: 2px 2px 0 #4c1d95;
+  --tw: #4c1d95;
+  --tl: #7c3aed;
+  --accent: #fbbf24;
+  --danger: #dc2626;
+  --exchange-glow: #8b5cf6;
+  --board-bg-1: #f5f3ff;
+  --board-bg-2: #ede9fe;
+  --button-bg: #4c1d95;
+  --button-hover: #3b0f7a;
+}
+
+/* Theme: Crimson */
+[data-theme="crimson"] {
+  --primary: #991b1b;
+  --secondary: #dc2626;
+  --light: #fef2f2;
+  --board-border: #991b1b;
+  --tile-bg: #ffffff;
+  --tile-shadow: 2px 2px 0 #991b1b;
+  --tw: #991b1b;
+  --tl: #dc2626;
+  --accent: #fbbf24;
+  --danger: #b91c1c;
+  --exchange-glow: #dc2626;
+  --board-bg-1: #fef2f2;
+  --board-bg-2: #fee2e2;
+  --button-bg: #991b1b;
+  --button-hover: #7f1d1d;
 }
 
 /* --- Premium Legend --- */
@@ -22,6 +119,82 @@
   border-radius: 5px;
   margin-bottom: 10px;
   border: 1px solid #ddd;
+}
+
+/* --- Theme Selector --- */
+.theme-selector {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+}
+
+.theme-selector h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.theme-option {
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.2s;
+  background: #fff;
+  color: #333;
+}
+
+.theme-option:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.theme-option.active {
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-width: 3px;
+}
+
+.theme-option.chess {
+  background: linear-gradient(135deg, #8b7355, #d2b48c);
+  color: #fff;
+  border-color: #8b7355;
+}
+
+.theme-option.midnight {
+  background: linear-gradient(135deg, #1e3a5f, #e2e8f0);
+  color: #fff;
+  border-color: #1e3a5f;
+}
+
+.theme-option.emerald {
+  background: linear-gradient(135deg, #047857, #d1fae5);
+  color: #fff;
+  border-color: #047857;
+}
+
+.theme-option.royal {
+  background: linear-gradient(135deg, #4c1d95, #ede9fe);
+  color: #fff;
+  border-color: #4c1d95;
+}
+
+.theme-option.crimson {
+  background: linear-gradient(135deg, #991b1b, #fee2e2);
+  color: #fff;
+  border-color: #991b1b;
 }
 
 .premium-legend h4 {
@@ -58,10 +231,8 @@
   background: #fff;
 }
 
-.legend-color.dl { background: var(--dl); }
 .legend-color.tl { background: var(--tl); }
 .legend-color.tw { background: var(--tw); }
-.legend-color.dw { background: var(--dw); }
 
 .history-letter {
   padding: 2px 4px;
@@ -76,9 +247,7 @@
 }
 
 .history-letter.tl { background: var(--tl); color: #fff; border-color: var(--tl); }
-.history-letter.dl { background: var(--dl); color: #fff; border-color: var(--dl); }
 .history-letter.tw { background: var(--tw); color: #fff; border-color: var(--tw); }
-.history-letter.dw { background: var(--dw); color: #fff; border-color: var(--dw); }
 
 /* --- Layout --- */
 body {
@@ -213,8 +382,8 @@ body {
 }
 
 .board-cell {
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--board-bg-1);
+  border: 1px solid var(--board-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -228,12 +397,32 @@ body {
   box-sizing: border-box;
 }
 
+.board-cell:nth-child(even) {
+  background: var(--board-bg-2);
+}
+
 /* Premium Squares */
-.board-cell.tw { background: var(--tw); color: #fff; }
-.board-cell.dw { background: var(--dw); color: #fff; }
-.board-cell.tl { background: var(--tl); color: #fff; }
-.board-cell.dl { background: var(--dl); color: #fff; }
-.board-cell.tw:empty, .board-cell.dw:empty, .board-cell.tl:empty, .board-cell.dl:empty { color: #fff; }
+.board-cell.tw { background: var(--tw) !important; color: #fff; }
+.board-cell.tl { background: var(--tl) !important; color: #fff; }
+.board-cell.tw:empty, .board-cell.tl:empty { color: #fff; }
+
+/* Premium square labels */
+.board-cell.tw::before {
+  content: "TW";
+  position: absolute;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+.board-cell.tl::before {
+  content: "TL";
+  position: absolute;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
 
 .center-star {
   position: absolute;
@@ -247,7 +436,7 @@ body {
 /* --- Tile Rack --- */
 .tile-rack {
   margin: 6px auto 6px auto; /* Further reduced margin */
-  background: linear-gradient(145deg, var(--primary), #151d69);
+  background: var(--button-bg);
   padding: 8px; /* Reduced from 10px */
   border-radius: 8px; /* Reduced from 10px */
   display: flex;
@@ -261,7 +450,7 @@ body {
 /* AI Rack - Use same styling as regular tile rack */
 .ai-rack {
   display: flex;
-  background: linear-gradient(145deg, var(--primary), #151d69);
+  background: var(--button-bg);
   padding: 8px;
   border-radius: 8px;
   gap: 8px;
@@ -276,7 +465,7 @@ body {
 @media (min-width: 769px) {
   .ai-rack {
     display: flex !important;
-    background: linear-gradient(145deg, var(--primary), #151d69);
+    background: var(--button-bg);
     padding: 8px;
     border-radius: 8px;
     gap: 8px;
@@ -466,7 +655,7 @@ body {
 /* --- Buttons --- */
 button, .language-button,
 #play-word-mobile, .play-word-mobile {
-  background: linear-gradient(145deg, var(--primary), #151d69);
+  background: var(--button-bg);
   color: #fff;
   border: none;
   padding: 12px 18px;
@@ -528,7 +717,7 @@ button:active:after, .language-button:active:after,
 }
 button:hover, .language-button:hover,
 #play-word-mobile:hover, .play-word-mobile:hover {
-  background: linear-gradient(145deg, var(--secondary), #403991);
+  background: var(--button-hover);
   transform: translateY(-2px) scale(1.03);
   box-shadow: 0 4px 16px var(--accent), 0 2px 8px rgba(0,0,0,0.12), 0 0 16px 2px #ffd70055;
 }
@@ -544,7 +733,7 @@ button:active,
 /* --- Submit Button Cooldown --- */
 button.cooldown,
 #play-word-mobile.cooldown, .play-word-mobile.cooldown {
-  background: linear-gradient(145deg, #666, #444);
+  background: var(--button-hover);
   color: #ccc;
   cursor: not-allowed;
   transform: none;
@@ -554,7 +743,7 @@ button.cooldown,
 
 button.cooldown:hover,
 #play-word-mobile.cooldown:hover, .play-word-mobile.cooldown:hover {
-  background: linear-gradient(145deg, #666, #444);
+  background: var(--button-hover);
   transform: none;
   box-shadow: none;
 }
