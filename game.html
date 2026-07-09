@@ -428,8 +428,8 @@
           <div class="theme-selector">
             <h4>Theme</h4>
             <div class="theme-options">
-              <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
-              <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+              <button class="theme-option chess" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+              <button class="theme-option midnight active" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
               <button class="theme-option emerald" data-theme="emerald" onclick="setTheme('emerald')">Emerald</button>
               <button class="theme-option royal" data-theme="royal" onclick="setTheme('royal')">Royal</button>
               <button class="theme-option crimson" data-theme="crimson" onclick="setTheme('crimson')">Crimson</button>
@@ -505,8 +505,11 @@
           <div class="theme-selector">
             <h4>Theme</h4>
             <div class="theme-options">
-              <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
-              <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+              <button class="theme-option chess" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+              <button class="theme-option midnight active" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+              <button class="theme-option emerald" data-theme="emerald" onclick="setTheme('emerald')">Emerald</button>
+              <button class="theme-option royal" data-theme="royal" onclick="setTheme('royal')">Royal</button>
+              <button class="theme-option crimson" data-theme="crimson" onclick="setTheme('crimson')">Crimson</button>
             </div>
           </div>
           <div class="score-box">
@@ -594,8 +597,11 @@
         <div class="theme-selector">
           <h4>Theme</h4>
           <div class="theme-options">
-            <button class="theme-option chess active" data-theme="chess" onclick="setTheme('chess')">Chess</button>
-            <button class="theme-option midnight" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+            <button class="theme-option chess" data-theme="chess" onclick="setTheme('chess')">Chess</button>
+            <button class="theme-option midnight active" data-theme="midnight" onclick="setTheme('midnight')">Midnight</button>
+            <button class="theme-option emerald" data-theme="emerald" onclick="setTheme('emerald')">Emerald</button>
+            <button class="theme-option royal" data-theme="royal" onclick="setTheme('royal')">Royal</button>
+            <button class="theme-option crimson" data-theme="crimson" onclick="setTheme('crimson')">Crimson</button>
           </div>
         </div>
         <div class="score-box">
@@ -663,7 +669,7 @@
 
       function initThemeSwitcher() {
         // Load saved theme from localStorage
-        const savedTheme = localStorage.getItem('gameTheme') || 'chess';
+        const savedTheme = localStorage.getItem('gameTheme') || 'midnight';
         document.documentElement.setAttribute('data-theme', savedTheme);
 
         // Update active state of theme buttons
