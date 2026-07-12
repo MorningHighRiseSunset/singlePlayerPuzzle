@@ -5459,16 +5459,12 @@ formedWords.forEach((wordInfo) => {
 			[1, 5],
 			[1, 9],
 			[5, 1],
-			[5, 5],
-			[5, 9],
 			[5, 13],
 			[9, 1],
-			[9, 5],
-			[9, 9],
 			[9, 13],
 			[13, 5],
 			[13, 9],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
 		// Triple Letter Scores (light blue squares)
 		[
@@ -5480,14 +5476,10 @@ formedWords.forEach((wordInfo) => {
 			[3, 7],
 			[3, 14],
 			[6, 2],
-			[6, 6],
-			[6, 8],
 			[6, 12],
 			[7, 3],
 			[7, 11],
 			[8, 2],
-			[8, 6],
-			[8, 8],
 			[8, 12],
 			[11, 0],
 			[11, 7],
@@ -5496,6 +5488,18 @@ formedWords.forEach((wordInfo) => {
 			[12, 8],
 			[14, 3],
 			[14, 11],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+
+		// Triple Word Scores (closest to center)
+		[
+			[5, 5],
+			[5, 9],
+			[9, 5],
+			[9, 9],
+			[6, 6],
+			[6, 8],
+			[8, 6],
+			[8, 8],
 		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
 		return premium;
