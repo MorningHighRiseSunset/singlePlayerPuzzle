@@ -1,162 +1,153 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const playBtn = document.querySelector(".start-btn");
-    const board = document.querySelector(".mini-scrabble-board");
-    const homeContainer = document.querySelector(".home-container");
-
-    // Language button mappings
-    const languageMap = {
-        english: "game.html",
-        spanish: "spanish.html",
-        french: "french.html",
-        hindi: "hindi.html",
-        mandarin: "mandarin.html"
-    };
-
-    // Language button click handlers
-    document.querySelectorAll(".lang-btn").forEach(btn => {
-        btn.addEventListener("click", function (e) {
-            e.preventDefault();
-            const lang = this.dataset.lang;
-            const targetUrl = languageMap[lang];
-            
-            // Track language selection with Vercel Analytics
-            if (typeof va !== 'undefined') {
-                va('track', 'language_selected', { language: lang });
-            }
-            
-            if (targetUrl) {
-                // Fade to white and redirect
-                const fadeDiv = document.createElement("div");
-                fadeDiv.style.position = "fixed";
-                fadeDiv.style.left = 0;
-                fadeDiv.style.top = 0;
-                fadeDiv.style.width = "100vw";
-                fadeDiv.style.height = "100vh";
-                fadeDiv.style.background = "#fff";
-                fadeDiv.style.opacity = "0";
-                fadeDiv.style.zIndex = 10000;
-                fadeDiv.style.transition = "opacity 0.7s";
-                document.body.appendChild(fadeDiv);
-                setTimeout(() => {
-                    fadeDiv.style.opacity = "1";
-                }, 10);
-                setTimeout(() => {
-                    window.location.href = targetUrl;
-                }, 800);
+    // Set chess theme for white background
+    document.documentElement.setAttribute('data-theme', 'chess');
+    
+    // Add sidebar navigation
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    sidebarItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const page = item.getAttribute('data-page');
+            if (page === 'how-to-play') {
+                window.location.href = 'how-to-play.html';
+            } else if (page === 'how-to-play-friend') {
+                window.location.href = 'how-to-play-friend.html';
             }
         });
     });
+    
+    // Create 15x15 board using exact game logic
+    const board = document.getElementById('scrabble-board');
+    if (board) {
+        const premiumSquares = getPremiumSquares();
 
-    playBtn.addEventListener("click", function (e) {
-        e.preventDefault();
-        
-        // Track play button click with Vercel Analytics
-        if (typeof va !== 'undefined') {
-            va('track', 'play_button_clicked');
+        for (let i = 0; i < 15; i++) {
+            for (let j = 0; j < 15; j++) {
+                const cell = document.createElement("div");
+                cell.className = "board-cell";
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+
+                // Add center star symbol
+                if (i === 7 && j === 7) {
+                    const centerStar = document.createElement("span");
+                    centerStar.textContent = "⚜";
+                    centerStar.className = "center-star";
+                    cell.appendChild(centerStar);
+                }
+
+                const key = `${i},${j}`;
+                if (premiumSquares[key]) {
+                    cell.classList.add(premiumSquares[key]);
+                }
+
+                board.appendChild(cell);
+            }
         }
 
-        // Remove any previous animation
-        document.querySelectorAll(".puzzle-tile").forEach(el => el.remove());
-
-        // Responsive tile size for mobile/desktop
-        const isMobile = window.innerWidth <= 600;
-        const tileSize = isMobile ? 32 : 48;
-        const fontSize = isMobile ? "1.2rem" : "2rem";
-
-        // Get all cells in the true center row (row 4, 0-based, the 5th row)
-        const centerRow = board.querySelectorAll(".mini-row")[4];
-        const cells = centerRow.querySelectorAll(".mini-cell");
-
-        // Letters and their target cells (PUZZLE, 6 letters, centered)
-        // Use cells 2,3,4,5,6,7 (indices) so "Z" and "Z" straddle the center fleur-de-lis
-        const letters = [
-            { letter: "P", cell: cells[2] },
-            { letter: "U", cell: cells[3] },
-            { letter: "Z", cell: cells[4] },
-            { letter: "Z", cell: cells[5] },
-            { letter: "L", cell: cells[6] },
-            { letter: "E", cell: cells[7] }
+        // Add "join now" tiles to the board
+        // Place "join" at row 6, cols 5-8 (J at 6,5; O at 6,6; I at 6,7; N at 6,8)
+        // Place "now" at row 7, cols 7-9 (N at 7,7; O at 7,8; W at 7,9)
+        const tiles = [
+            { letter: 'J', row: 6, col: 5 },
+            { letter: 'O', row: 6, col: 6 },
+            { letter: 'I', row: 6, col: 7 },
+            { letter: 'N', row: 6, col: 8 },
+            { letter: 'N', row: 7, col: 7 },
+            { letter: 'O', row: 7, col: 8 },
+            { letter: 'W', row: 7, col: 9 }
         ];
 
-        letters.forEach((l, i) => {
-            const tile = document.createElement("div");
-            tile.className = "puzzle-tile";
-            tile.textContent = l.letter;
-            document.body.appendChild(tile);
-
-            // Start at play button
-            const btnRect = playBtn.getBoundingClientRect();
-            tile.style.position = "fixed";
-            tile.style.left = `${btnRect.left + btnRect.width / 2 - tileSize / 2}px`;
-            tile.style.top = `${btnRect.top + btnRect.height / 2 - tileSize / 2}px`;
-            tile.style.width = `${tileSize}px`;
-            tile.style.height = `${tileSize}px`;
-            tile.style.background = "linear-gradient(145deg, #e3eafc 70%, #b6c7e6 100%)";
-            tile.style.border = "3px solid #1976d2";
-            tile.style.borderRadius = "8px";
-            tile.style.boxShadow = "0 8px 24px #00338077, 0 2px 0 #fff8";
-            tile.style.color = "#003380";
-            tile.style.fontWeight = "bold";
-            tile.style.fontSize = fontSize;
-            tile.style.display = "flex";
-            tile.style.alignItems = "center";
-            tile.style.justifyContent = "center";
-            tile.style.zIndex = 9999;
-            tile.style.opacity = "0";
-            tile.style.transition = "all 0.7s cubic-bezier(.68,-0.55,.27,1.55)";
-
-            // Animate to the center row cell
-            setTimeout(() => {
-                const cellRect = l.cell.getBoundingClientRect();
-                tile.style.opacity = "1";
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1.1)`;
-            }, 100 + i * 120);
-
-            // Add a little bounce
-            setTimeout(() => {
-                tile.style.transform += " scale(1.25)";
-            }, 700 + i * 120);
-
-            // Settle back to normal scale (but stay on board)
-            setTimeout(() => {
-                const cellRect = l.cell.getBoundingClientRect();
-                tile.style.transform = `translate(${cellRect.left - (btnRect.left + btnRect.width / 2 - tileSize / 2)}px, ${cellRect.top - (btnRect.top + btnRect.height / 2 - tileSize / 2)}px) scale(1)`;
-            }, 1000 + i * 120);
+        tiles.forEach(tile => {
+            const cellIndex = tile.row * 15 + tile.col;
+            const cell = board.children[cellIndex];
+            if (cell) {
+                const tileDiv = document.createElement('div');
+                tileDiv.className = 'tile';
+                tileDiv.textContent = tile.letter;
+                cell.appendChild(tileDiv);
+            }
         });
-
-        // --- SPEECH: Enthusiastic "Puzzle!" immediately ---
-        window.speechSynthesis.cancel();
-        const voices = window.speechSynthesis.getVoices();
-        const femaleVoice = voices.find(v => v.name.toLowerCase().includes("female") || v.gender === "female" || v.name.toLowerCase().includes("woman") || v.name.toLowerCase().includes("girl"));
-        const enFemale = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("female"));
-        const chosenVoice = femaleVoice || enFemale || null;
-
-        const utter = new SpeechSynthesisUtterance("Puzzle!");
-        utter.rate = 1.25;
-        utter.pitch = 1.3;
-        utter.volume = 1.0;
-        if (chosenVoice) utter.voice = chosenVoice;
-        window.speechSynthesis.speak(utter);
-
-        // Fade to white after 4 seconds, then redirect
-        setTimeout(() => {
-            const fadeDiv = document.createElement("div");
-            fadeDiv.style.position = "fixed";
-            fadeDiv.style.left = 0;
-            fadeDiv.style.top = 0;
-            fadeDiv.style.width = "100vw";
-            fadeDiv.style.height = "100vh";
-            fadeDiv.style.background = "#fff";
-            fadeDiv.style.opacity = "0";
-            fadeDiv.style.zIndex = 10000;
-            fadeDiv.style.transition = "opacity 0.7s";
-            document.body.appendChild(fadeDiv);
-            setTimeout(() => {
-                fadeDiv.style.opacity = "1";
-            }, 10);
-            setTimeout(() => {
-                window.location.href = "game.html";
-            }, 800);
-        }, 4000);
-    });
+    }
 });
+
+function getPremiumSquares() {
+    const premium = {};
+
+    // Triple Word Scores (red squares)
+    [
+        [0, 0],
+        [0, 7],
+        [0, 14],
+        [7, 0],
+        [7, 14],
+        [14, 0],
+        [14, 7],
+        [14, 14],
+    ].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+
+    // Triple Word Scores (pink squares)
+    [
+        [1, 1],
+        [1, 13],
+        [2, 2],
+        [2, 12],
+        [3, 3],
+        [3, 11],
+        [4, 4],
+        [4, 10],
+        [10, 4],
+        [10, 10],
+        [11, 3],
+        [11, 11],
+        [12, 2],
+        [12, 12],
+        [13, 1],
+        [13, 13],
+    ].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+
+    // Triple Letter Scores (dark blue squares)
+    [
+        [1, 5],
+        [1, 9],
+        [5, 1],
+        [5, 5],
+        [5, 9],
+        [5, 13],
+        [9, 1],
+        [9, 5],
+        [9, 9],
+        [9, 13],
+        [13, 5],
+        [13, 9],
+    ].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+
+    // Triple Letter Scores (light blue squares)
+    [
+        [0, 3],
+        [0, 11],
+        [2, 6],
+        [2, 8],
+        [3, 0],
+        [3, 7],
+        [3, 14],
+        [6, 2],
+        [6, 6],
+        [6, 8],
+        [6, 12],
+        [7, 3],
+        [7, 11],
+        [8, 2],
+        [8, 6],
+        [8, 8],
+        [8, 12],
+        [11, 0],
+        [11, 7],
+        [11, 14],
+        [12, 6],
+        [12, 8],
+        [14, 3],
+        [14, 11],
+    ].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+
+    return premium;
+}

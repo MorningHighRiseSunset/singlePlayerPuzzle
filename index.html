@@ -16,126 +16,76 @@
     <meta charset="UTF-8">
     <title>Puzzle Home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="Puzzle Image.png">
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="homeScreen.css">
   </head>
   <body>
-    <div class="home-container">
-      <h1 style="margin-bottom: 14px; letter-spacing: 0.08em; font-size: 1.8em;">PUZZLE</h1>
-      <div class="mini-board-container">
-        <div class="mini-scrabble-board">
-          <!-- 9x9 Mini Board, center cell has fleur-de-lis -->
-          <!-- You can adjust the number of rows/cells as needed -->
-          <!-- Center row is row 4 (0-based), center cell is cell 4 -->
-          <!-- Premium squares: tw, dw, tl, dl, center-symbol -->
-          <!-- Example layout for a 9x9 board -->
-          <div class="mini-row">
-            <div class="mini-cell tw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tw"></div>
+    <div class="main-layout">
+      <aside class="sidebar">
+        <div class="logo-container" onclick="window.location.href='index.html'">
+          <img src="Puzzle Image.png" alt="Puzzle Logo" class="puzzle-logo">
+        </div>
+      </aside>
+      <main class="main-content">
+        <div class="game-layout">
+          <div class="board-section">
+            <div class="board-display-container">
+              <div id="scrabble-board" class="home-board"></div>
+            </div>
           </div>
-          <div class="mini-row">
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell tw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dw center-symbol"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tw"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tl"></div>
-            <div class="mini-cell"></div>
-          </div>
-          <div class="mini-row">
-            <div class="mini-cell tw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tw"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell dl"></div>
-            <div class="mini-cell"></div>
-            <div class="mini-cell tw"></div>
+          <div class="logo-and-buttons-section">
+            <div class="large-logo-container">
+              <img src="Puzzle Large Image.png" alt="Puzzle Large" class="center-puzzle-image">
+            </div>
+            <div class="play-options">
+              <div class="play-option-container" onclick="window.location.href='game.html'">
+                <p class="play-option-text">Play the computer</p>
+              </div>
+              <div class="play-option-container">
+                <p class="play-option-text">Play vs. a friend</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="language-buttons-container">
-        <button class="lang-btn" data-lang="english">🇺🇸 English</button>
-        <button class="lang-btn" data-lang="spanish">🇪🇸 Spanish</button>
-        <button class="lang-btn" data-lang="french">🇫🇷 French</button>
-        <button class="lang-btn" data-lang="hindi">🇮🇳 Hindi</button>
-        <button class="lang-btn" data-lang="mandarin">🇨🇳 Mandarin</button>
-      </div>
+        
+        <div class="features-section">
+          <div class="feature-card">
+            <div class="feature-image">
+              <img src="Puzzle Large Image.png" alt="Word Finder" class="feature-img">
+            </div>
+            <div class="feature-content">
+              <div class="feature-icon">🔍</div>
+              <h3>Puzzle Word Finder</h3>
+              <p class="feature-badge">W.I.P</p>
+              <p class="feature-description">Find the best words for your puzzle game with our advanced word finder tool. Perfect for improving your vocabulary and winning strategies.</p>
+            </div>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-image">
+              <img src="Puzzle Large Image.png" alt="Dictionary Viewer" class="feature-img">
+            </div>
+            <div class="feature-content">
+              <div class="feature-icon">📚</div>
+              <h3>Official Dictionary Viewer</h3>
+              <p class="feature-badge">W.I.P</p>
+              <p class="feature-description">Browse through official Scrabble dictionaries with ease. Check word validity, definitions, and point values instantly.</p>
+            </div>
+          </div>
+          
+          <div class="feature-card">
+            <div class="feature-image">
+              <img src="Puzzle Large Image.png" alt="Learn Mode" class="feature-img">
+            </div>
+            <div class="feature-content">
+              <div class="feature-icon">🌍</div>
+              <h3>Puzzle Learn Mode</h3>
+              <p class="feature-description">Learn new languages while playing! Switch between different language dictionaries and expand your linguistic skills through interactive gameplay.</p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
     <script src="homeScreen.js"></script>
     <!-- Vercel Analytics -->

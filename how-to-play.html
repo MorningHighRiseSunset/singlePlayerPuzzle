@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>How to Play Puzzle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="Puzzle Image.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="homeScreen.css">
+  </head>
+  <body>
+    <div class="main-layout">
+      <aside class="sidebar">
+        <div class="logo-container" onclick="window.location.href='index.html'">
+          <img src="Puzzle Image.png" alt="Puzzle Logo" class="puzzle-logo">
+        </div>
+        <div class="sidebar-item" data-page="how-to-play">
+          <span class="sidebar-icon">�</span>
+          <span class="sidebar-text">How to Play</span>
+        </div>
+      </aside>
+      <main class="main-content">
+        <div class="instructions-container">
+          <h1>How to Play Puzzle</h1>
+          <div class="instruction-section">
+            <h2>Objective</h2>
+            <p>Create words on the board using letter tiles to score points. The player with the highest score wins!</p>
+          </div>
+          <div class="instruction-section">
+            <h2>Game Setup</h2>
+            <p>Each player starts with 7 letter tiles. The board is a 15x15 grid with special premium squares that multiply your word or letter scores.</p>
+          </div>
+          <div class="instruction-section">
+            <h2>Taking Turns</h2>
+            <p>On your turn, place tiles on the board to form a word. All words must connect to existing words on the board (except for the first word, which must cover the center star).</p>
+          </div>
+          <div class="instruction-section">
+            <h2>Scoring</h2>
+            <ul>
+              <li><strong>Triple Word (TW):</strong> Triples the entire word score</li>
+              <li><strong>Triple Letter (TL):</strong> Triples the letter score</li>
+              <li><strong>Double Word (DW):</strong> Doubles the entire word score</li>
+              <li><strong>Double Letter (DL):</strong> Doubles the letter score</li>
+            </ul>
+          </div>
+          <div class="instruction-section">
+            <h2>Winning</h2>
+            <p>The game ends when all tiles have been used and one player has no tiles left, or when no more moves are possible. The player with the highest score wins!</p>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="homeScreen.js"></script>
+  </body>
+</html>

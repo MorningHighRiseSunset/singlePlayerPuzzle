@@ -5468,7 +5468,7 @@ formedWords.forEach((wordInfo) => {
 			[9, 13],
 			[13, 5],
 			[13, 9],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
 		// Triple Letter Scores (light blue squares)
 		[
@@ -5496,7 +5496,7 @@ formedWords.forEach((wordInfo) => {
 			[12, 8],
 			[14, 3],
 			[14, 11],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
 
 		return premium;
 	}
