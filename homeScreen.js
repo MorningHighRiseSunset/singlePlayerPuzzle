@@ -2,6 +2,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
     
+    // Start Game button handler
+    const startGameBtn = document.getElementById('start-game-btn');
+    if (startGameBtn) {
+        startGameBtn.addEventListener('click', () => {
+            window.location.href = 'game.html';
+        });
+    }
+    
     // Add sidebar navigation
     const sidebarItems = document.querySelectorAll('.sidebar-item');
     sidebarItems.forEach(item => {
