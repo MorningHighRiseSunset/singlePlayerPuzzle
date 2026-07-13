@@ -5496,11 +5496,15 @@ formedWords.forEach((wordInfo) => {
 			[5, 9],
 			[9, 5],
 			[9, 9],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+
+		// Triple Letter Scores (closest to center - replacing TW)
+		[
 			[6, 6],
 			[6, 8],
 			[8, 6],
 			[8, 8],
-		].forEach(([row, col]) => (premium[`${row},${col}`] = "tw"));
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
 		return premium;
 	}

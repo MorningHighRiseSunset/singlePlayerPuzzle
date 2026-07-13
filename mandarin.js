@@ -5282,14 +5282,10 @@ formedWords.forEach((wordInfo) => {
 			[3, 7],
 			[3, 14],
 			[6, 2],
-			[6, 6],
-			[6, 8],
 			[6, 12],
 			[7, 3],
 			[7, 11],
 			[8, 2],
-			[8, 6],
-			[8, 8],
 			[8, 12],
 			[11, 0],
 			[11, 7],
@@ -5299,6 +5295,14 @@ formedWords.forEach((wordInfo) => {
 			[14, 3],
 			[14, 11],
 		].forEach(([row, col]) => (premium[`${row},${col}`] = "dl"));
+
+		// Triple Letter Scores (closest to center - replacing DL)
+		[
+			[6, 6],
+			[6, 8],
+			[8, 6],
+			[8, 8],
+		].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
 		return premium;
 	}

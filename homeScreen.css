@@ -188,7 +188,6 @@ body {
 /* Remove all text labels for a clean, authentic look */
 .mini-cell.tw::before,
 .mini-cell.dw::before,
-.mini-cell.tl::before,
 .mini-cell.dl::before {
     content: "";
 }
