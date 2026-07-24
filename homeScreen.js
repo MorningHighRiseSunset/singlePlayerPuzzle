@@ -9,9 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const language = button.getAttribute('data-language');
             const href = button.getAttribute('data-href');
             
+            console.log('Language button clicked:', language);
+            console.log('window.va available:', typeof window.va);
+            
             // Track language button click event using Vercel Analytics
             if (window.va) {
+                console.log('Sending event to Vercel Analytics');
                 window.va('event', 'language_button_clicked', { language });
+            } else {
+                console.log('window.va not available');
             }
             
             // Navigate to the language page
