@@ -2,6 +2,23 @@ document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
     
+    // Language button tracking with Vercel Analytics
+    const langButtons = document.querySelectorAll('.lang-btn');
+    langButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const language = button.getAttribute('data-language');
+            const href = button.getAttribute('data-href');
+            
+            // Track language button click event using Vercel Analytics
+            if (window.va) {
+                window.va('event', 'language_button_clicked', { language });
+            }
+            
+            // Navigate to the language page
+            window.location.href = href;
+        });
+    });
+    
     // Start Game button handler
     const startGameBtn = document.getElementById('start-game-btn');
     if (startGameBtn) {
