@@ -1368,6 +1368,22 @@ class ScrabbleGame {
 				}
 			}
 
+			// Mid-end game fallback: if limited plays found, try open space strategy
+			if (possiblePlays.length < 5 && !this.isFirstMove) {
+				const openSpacePlays = this.findOpenSpacePlays(rack, seen);
+				for (const play of openSpacePlays) {
+					possiblePlays.push(play);
+				}
+			}
+
+			// Desperation mode: if still no plays, try any valid placement
+			if (possiblePlays.length === 0 && !this.isFirstMove) {
+				const desperationPlays = this.findDesperationPlays(rack, seen);
+				for (const play of desperationPlays) {
+					possiblePlays.push(play);
+				}
+			}
+
 			// Sort by: score, then word quality, then word length (all descending)
 			return possiblePlays
 				.sort((a, b) => {
@@ -2021,24 +2037,24 @@ class ScrabbleGame {
 	evaluateWordQuality(word, row, col, horizontal) {
 		let quality = 0;
 
-		// Give massive bonus for longer words (cubic scaling)
-		quality += Math.pow(word.length, 3) * 10;
+		// Give massive bonus for longer words (cubic scaling) - increased for more aggression
+		quality += Math.pow(word.length, 3) * 15;
 
-		// Bonus for using premium squares
+		// Bonus for using premium squares - increased weight
 		const premiumSquares = this.countPremiumSquaresUsed(row, col, horizontal, word);
-		quality += premiumSquares * 15;
+		quality += premiumSquares * 25;
 
-		// Bonus for cross-words (parallel word formation)
+		// Bonus for cross-words (parallel word formation) - significantly increased
 		const crossWords = this.countIntersections(row, col, horizontal, word);
-		quality += crossWords * 20; // Increased importance
+		quality += crossWords * 35;
 
-		// Bonus for using high-value letters strategically
+		// Bonus for using high-value letters strategically - increased
 		const highValueBonus = this.evaluateHighValueUsage(word, row, col, horizontal);
-		quality += highValueBonus;
+		quality += highValueBonus * 1.5;
 
-		// Bonus for leaving good rack balance
+		// Bonus for leaving good rack balance - slightly reduced to prioritize immediate scoring
 		const rackBalance = this.evaluateRackBalanceAfter(word);
-		quality += rackBalance * 15;
+		quality += rackBalance * 10;
 
 		// Minor bonus for balanced letter usage in the word itself
 		const letterBalance = this.evaluateLetterBalance(word);
@@ -2046,7 +2062,32 @@ class ScrabbleGame {
 
 		// Bonus for opening up new premium squares for future plays
 		const opensPremium = this.opensPremiumSquares(row, col, horizontal, word);
-		quality += opensPremium * 10;
+		quality += opensPremium * 15;
+
+		// NEW: Bonus for playing near center in early game (strategic positioning)
+		const centerDistance = Math.abs(row - 7) + Math.abs(col - 7);
+		if (centerDistance < 5 && this.getTotalTilesOnBoard() < 50) {
+			quality += (5 - centerDistance) * 10;
+		}
+
+		// NEW: Penalty for leaving isolated tiles that are hard to connect
+		if (this.createsIsolatedTile(row, col, horizontal, word)) {
+			quality -= 30;
+		}
+
+		// NEW: End-game strategy - massive bonus for going out (using all tiles)
+		if (this.canGoOut(word)) {
+			quality += 500; // Huge bonus for ending the game
+		}
+
+		// NEW: End-game strategy - bonus for using difficult letters when tile bag is low
+		if (this.isEndGame()) {
+			const difficultLetters = ['Q', 'X', 'Z', 'J'];
+			const usesDifficult = difficultLetters.some(letter => word.includes(letter));
+			if (usesDifficult) {
+				quality += 50; // Bonus for dumping high-value letters late game
+			}
+		}
 
 		return quality;
 	}
@@ -2579,10 +2620,10 @@ class ScrabbleGame {
 			}
 		}
 		
-		// Sort anchors by strategic value (descending) and return top 50 for performance
+		// Sort anchors by strategic value (descending) and return top 100 for better coverage
 		return anchors
 			.sort((a, b) => b.strategicValue - a.strategicValue)
-			.slice(0, 50);
+			.slice(0, 100);
 	}
 	
 	evaluateAnchorStrategicValue(row, col) {
@@ -2667,7 +2708,256 @@ class ScrabbleGame {
 				}
 			}
 		}
+		return plays;
+	}
 
+	// Fallback strategy for mid-end game: find plays in open spaces near existing tiles
+	findOpenSpacePlays(rack, seen) {
+		const plays = [];
+		const startTime = Date.now();
+		const maxDuration = 2000; // 2 second timeout for this function
+		
+		// Pre-generate all possible words from rack once (performance optimization)
+		const possibleWords = this.trie.findWordsFromRack(rack, 2, Math.min(rack.length, 15));
+		if (possibleWords.length === 0) return plays;
+		
+		// Collect candidate cells first (near existing tiles)
+		const candidateCells = [];
+		for (let row = 0; row < 15; row++) {
+			for (let col = 0; col < 15; col++) {
+				if (!this.board[row][col] && this.isNearExistingTile(row, col, 2)) {
+					candidateCells.push({ row, col });
+				}
+			}
+		}
+		
+		// Limit to top 30 candidate cells by strategic value for performance (reduced from 50)
+		candidateCells.sort((a, b) => {
+			const valueA = this.evaluateAnchorStrategicValue(a.row, a.col);
+			const valueB = this.evaluateAnchorStrategicValue(b.row, b.col);
+			return valueB - valueA;
+		});
+		const topCells = candidateCells.slice(0, 30);
+		
+		// Limit words to top 50 by length for performance
+		const topWords = possibleWords.sort((a, b) => b.length - a.length).slice(0, 50);
+		
+		// Try each candidate cell with each possible word
+		for (const { row, col } of topCells) {
+			// Check timeout
+			if (Date.now() - startTime > maxDuration) {
+				console.log("findOpenSpacePlays timeout reached, returning early");
+				break;
+			}
+			
+			for (const isHorizontal of [true, false]) {
+				for (const word of topWords) {
+					// Calculate valid start positions for this word at this cell
+					const validPositions = [];
+					
+					if (isHorizontal) {
+						for (let wordPos = 0; wordPos < word.length; wordPos++) {
+							const startCol = col - wordPos;
+							if (startCol >= 0 && startCol + word.length <= 15) {
+								validPositions.push({ row, col: startCol });
+							}
+						}
+					} else {
+						for (let wordPos = 0; wordPos < word.length; wordPos++) {
+							const startRow = row - wordPos;
+							if (startRow >= 0 && startRow + word.length <= 15) {
+								validPositions.push({ row: startRow, col });
+							}
+						}
+					}
+					
+					// Check each valid position
+					for (const startPos of validPositions) {
+						const key = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
+						if (seen.has(key)) continue;
+						
+						if (this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
+							const score = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
+							if (score > 0) {
+								seen.add(key);
+								plays.push({
+									word,
+									startPos: startPos,
+									isHorizontal,
+									score,
+									quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
+								});
+								
+								// Early exit if we found enough good plays
+								if (plays.length >= 10) return plays;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return plays;
+	}
+
+	isNearExistingTile(row, col, maxDistance) {
+		for (let dr = -maxDistance; dr <= maxDistance; dr++) {
+			for (let dc = -maxDistance; dc <= maxDistance; dc++) {
+				if (dr === 0 && dc === 0) continue;
+				const newRow = row + dr;
+				const newCol = col + dc;
+				if (this.isValidPosition(newRow, newCol) && this.board[newRow][newCol]) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	getTotalTilesOnBoard() {
+		let count = 0;
+		for (let row = 0; row < 15; row++) {
+			for (let col = 0; col < 15; col++) {
+				if (this.board[row][col]) count++;
+			}
+		}
+		return count;
+	}
+
+	createsIsolatedTile(row, col, horizontal, word) {
+		// Check if placing this word would create tiles that are hard to connect to
+		for (let i = 0; i < word.length; i++) {
+			const tileRow = horizontal ? row : row + i;
+			const tileCol = horizontal ? col + i : col;
+			
+			// Skip if this cell already has a tile
+			if (this.board[tileRow][tileCol]) continue;
+			
+			// Check if this new tile will have adjacent tiles after placement
+			let hasAdjacent = false;
+			const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+			
+			for (const [dx, dy] of directions) {
+				const adjRow = tileRow + dx;
+				const adjCol = tileCol + dy;
+				if (this.isValidPosition(adjRow, adjCol)) {
+					// Check if there's already a tile adjacent
+					if (this.board[adjRow][adjCol]) {
+						hasAdjacent = true;
+						break;
+					}
+					// Check if another letter in the same word will be adjacent
+					for (let j = 0; j < word.length; j++) {
+						if (i === j) continue;
+						const otherRow = horizontal ? row : row + j;
+						const otherCol = horizontal ? col + j : col;
+						if (adjRow === otherRow && adjCol === otherCol) {
+							hasAdjacent = true;
+							break;
+						}
+					}
+				}
+				if (hasAdjacent) break;
+			}
+			
+			if (!hasAdjacent) return true; // Found an isolated tile
+		}
+		return false;
+	}
+
+	canGoOut(word) {
+		// Check if playing this word would use all tiles in AI's rack
+		const rackLetters = this.aiRack.map(t => t.letter);
+		const wordLetters = word.toUpperCase().split('');
+		
+		// Count letters needed for the word
+		const neededLetters = {};
+		for (const letter of wordLetters) {
+			neededLetters[letter] = (neededLetters[letter] || 0) + 1;
+		}
+		
+		// Check if rack has all needed letters
+		for (const letter of rackLetters) {
+			if (neededLetters[letter] > 0) {
+				neededLetters[letter]--;
+			}
+		}
+		
+		// If all needed letters are satisfied, this uses all tiles
+		return Object.values(neededLetters).every(count => count === 0);
+	}
+
+	isEndGame() {
+		// Consider it end game when tile bag has fewer than 10 tiles
+		return this.tileBag.length < 10;
+	}
+
+	// Desperation mode: try any valid placement when completely stuck
+	findDesperationPlays(rack, seen) {
+		const plays = [];
+		const startTime = Date.now();
+		const maxDuration = 1000; // 1 second timeout for desperation mode
+		
+		// Generate all possible words from rack
+		const possibleWords = this.trie.findWordsFromRack(rack, 2, Math.min(rack.length, 15));
+		if (possibleWords.length === 0) return plays;
+		
+		// Limit to top 30 words by length for performance
+		const topWords = possibleWords.sort((a, b) => b.length - a.length).slice(0, 30);
+		
+		// Try every empty cell on the board
+		for (let row = 0; row < 15; row++) {
+			// Check timeout
+			if (Date.now() - startTime > maxDuration) {
+				console.log("findDesperationPlays timeout reached, returning early");
+				break;
+			}
+			
+			for (let col = 0; col < 15; col++) {
+				if (this.board[row][col]) continue;
+				
+				// Try both directions
+				for (const isHorizontal of [true, false]) {
+					for (const word of topWords) {
+						// Calculate valid start positions
+						let validPositions = [];
+						
+						if (isHorizontal) {
+							if (col >= 0 && col + word.length <= 15) {
+								validPositions.push({ row, col });
+							}
+						} else {
+							if (row >= 0 && row + word.length <= 15) {
+								validPositions.push({ row, col });
+							}
+						}
+						
+						for (const startPos of validPositions) {
+							const key = `${word}:${startPos.row}:${startPos.col}:${isHorizontal}`;
+							if (seen.has(key)) continue;
+							
+							if (this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
+								const score = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
+								if (score > 0) {
+									seen.add(key);
+									plays.push({
+										word,
+										startPos: startPos,
+										isHorizontal,
+										score,
+										quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
+									});
+									
+									// Early exit if we found any valid play
+									if (plays.length >= 1) return plays;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
 		return plays;
 	}
 
@@ -8743,14 +9033,21 @@ calculateScore() {
 				return;
 			}
 
-			// Return tiles to bag
-			for (let i = 0; i < exchangeCount; i++) {
-				this.tiles.push(this.aiRack.pop());
+			// Smart tile selection: exchange worst tiles, keep best ones
+			const tilesToExchange = this.selectTilesToExchange(exchangeCount);
+			
+			// Remove selected tiles from rack
+			for (const tile of tilesToExchange) {
+				const index = this.aiRack.findIndex(t => t.letter === tile.letter);
+				if (index !== -1) {
+					this.aiRack.splice(index, 1);
+					this.tiles.push(tile);
+				}
 			}
 			this.shuffleTiles();
 
 			// Draw new tiles
-			for (let i = 0; i < exchangeCount; i++) {
+			for (let i = 0; i < tilesToExchange.length; i++) {
 				if (this.tiles.length > 0) {
 					this.aiRack.push(this.tiles.pop());
 				}
@@ -8770,12 +9067,54 @@ calculateScore() {
 
 			console.log("AI exchange complete:", {
 				oldTiles: oldTiles.map((t) => t.letter),
+				exchanged: tilesToExchange.map((t) => t.letter),
 				newTiles: this.aiRack.map((t) => t.letter),
 			});
 
 			// Check for game end
 			this.checkGameEnd();
 		});
+	}
+
+	selectTilesToExchange(count) {
+		// Score each tile based on its value and strategic importance
+		const scoredTiles = this.aiRack.map(tile => {
+			let score = 0;
+			
+			// Keep high-value letters (they're hard to use but valuable)
+			if (['Q', 'Z', 'X', 'J', 'K'].includes(tile.letter)) {
+				score -= 20; // Penalty for exchanging high-value letters
+			}
+			
+			// Keep vowels for balance
+			if ('AEIOU'.includes(tile.letter)) {
+				score -= 10;
+			}
+			
+			// Keep common consonants
+			if ('RSTLN'.includes(tile.letter)) {
+				score -= 5;
+			}
+			
+			// Exchange blanks (they're versatile but low value)
+			if (tile.letter === '*') {
+				score += 15;
+			}
+			
+			// Exchange duplicate letters
+			const duplicateCount = this.aiRack.filter(t => t.letter === tile.letter).length;
+			if (duplicateCount > 1) {
+				score += duplicateCount * 10;
+			}
+			
+			return { tile, score };
+		});
+		
+		// Sort by score (higher = worse tile to keep)
+		scoredTiles.sort((a, b) => b.score - a.score);
+		
+		// Return the worst tiles to exchange
+		return scoredTiles.slice(0, count).map(item => item.tile);
 	}
 
 	async showAIExchangeAnimation() {
