@@ -3383,6 +3383,7 @@ class ScrabbleGame {
 		// List of variant spellings or non-English words to exclude
 		const excludedVariants = new Set([
 			"atropin", // German spelling, not valid in English Scrabble
+			"gooneys", // Misspelling of "goonies" (albatross)
 			// Add more known variants as needed
 		]);
 
