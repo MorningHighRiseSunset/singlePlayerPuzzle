@@ -2715,7 +2715,10 @@ class ScrabbleGame {
 	findOpenSpacePlays(rack, seen) {
 		const plays = [];
 		const startTime = Date.now();
-		const maxDuration = 2000; // 2 second timeout for this function
+		
+		// Use longer timeout in endgame
+		const isEndGame = this.tilesRemaining <= 10;
+		const maxDuration = isEndGame ? 4000 : 2000; // 4 seconds in endgame, 2 seconds normally
 		
 		// Pre-generate all possible words from rack once (performance optimization)
 		const possibleWords = this.trie.findWordsFromRack(rack, 2, Math.min(rack.length, 15));
@@ -2731,16 +2734,18 @@ class ScrabbleGame {
 			}
 		}
 		
-		// Limit to top 30 candidate cells by strategic value for performance (reduced from 50)
+		// In endgame, check more cells; otherwise limit for performance
 		candidateCells.sort((a, b) => {
 			const valueA = this.evaluateAnchorStrategicValue(a.row, a.col);
 			const valueB = this.evaluateAnchorStrategicValue(b.row, b.col);
 			return valueB - valueA;
 		});
-		const topCells = candidateCells.slice(0, 30);
+		const topCells = isEndGame ? candidateCells.slice(0, 60) : candidateCells.slice(0, 30);
 		
-		// Limit words to top 50 by length for performance
-		const topWords = possibleWords.sort((a, b) => b.length - a.length).slice(0, 50);
+		// In endgame, check more words; otherwise limit for performance
+		const topWords = isEndGame 
+			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 100)
+			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 50);
 		
 		// Try each candidate cell with each possible word
 		for (const { row, col } of topCells) {
@@ -2896,14 +2901,19 @@ class ScrabbleGame {
 	findDesperationPlays(rack, seen) {
 		const plays = [];
 		const startTime = Date.now();
-		const maxDuration = 1000; // 1 second timeout for desperation mode
+		
+		// Use longer timeout in endgame (when few tiles remain)
+		const isEndGame = this.tilesRemaining <= 10;
+		const maxDuration = isEndGame ? 3000 : 1000; // 3 seconds in endgame, 1 second normally
 		
 		// Generate all possible words from rack
 		const possibleWords = this.trie.findWordsFromRack(rack, 2, Math.min(rack.length, 15));
 		if (possibleWords.length === 0) return plays;
 		
-		// Limit to top 30 words by length for performance
-		const topWords = possibleWords.sort((a, b) => b.length - a.length).slice(0, 30);
+		// In endgame, check more words; otherwise limit for performance
+		const topWords = isEndGame 
+			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 100)
+			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 30);
 		
 		// Try every empty cell on the board
 		for (let row = 0; row < 15; row++) {
@@ -2948,8 +2958,8 @@ class ScrabbleGame {
 										quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
 									});
 									
-									// Early exit if we found any valid play
-									if (plays.length >= 1) return plays;
+									// In endgame, collect all plays to find best; otherwise early exit
+									if (!isEndGame && plays.length >= 1) return plays;
 								}
 							}
 						}
