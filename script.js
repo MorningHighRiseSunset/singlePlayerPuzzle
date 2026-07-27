@@ -5802,10 +5802,11 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
-			// Use a working SOWPODS mirror
-			let response = await fetch("https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt");
+			// Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
+			// Contains ~279,000 words including more plural forms than SOWPODS
+			let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
 			let text = await response.text();
-			// SOWPODS is all uppercase, one word per line
+			// CSW21 format: one word per line, mixed case
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 
 			// Datamuse fetch removed to prevent CORS errors and speed up loading

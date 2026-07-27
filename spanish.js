@@ -5215,8 +5215,9 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		console.log("Loading Spanish dictionary...");
 		try {
-			const response = await fetch('./spanish_words_list.json');
-			const words = await response.json();
+			// Use FISE2009 - Official Spanish Scrabble dictionary
+			const response = await fetch('https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/Spanish/FISE2009.txt');
+			const text = await response.text();
 			
 			// Helper function to normalize Spanish accents
 			const normalizeSpanish = (word) => {
@@ -5226,9 +5227,12 @@ formedWords.forEach((wordInfo) => {
 					.toLowerCase();
 			};
 			
-			const cleanedWords = words
-				.filter(w => w && typeof w === 'string' && w.length >= 2)
-				.map(w => w.split(',')[0].trim().toLowerCase())
+			// FISE2009 format: one word per line
+			const cleanedWords = text
+				.split('\n')
+				.map(w => w.trim())
+				.filter(w => w && w.length >= 2)
+				.map(w => w.toLowerCase())
 				.filter(w => /^[a-zñü\-']+$/.test(w));
 			
 			// Add both original and normalized versions for better matching
