@@ -5818,6 +5818,8 @@ formedWords.forEach((wordInfo) => {
 			let text = await response.text();
 			// CSW21 format: one word per line, mixed case
 			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
+			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
+			console.log("Testing dictionary - 'cutie' present:", this.dictionary.has("cutie"));
 
 			// Datamuse fetch removed to prevent CORS errors and speed up loading
 			// try {
