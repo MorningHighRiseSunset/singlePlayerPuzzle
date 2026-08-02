@@ -697,16 +697,5 @@
     <script src="translations.js"></script>
     <script src="word-definitions.js"></script>
     <script src="hindi.js"></script>
-    <!-- Vercel Analytics - Only load on Vercel, not local development -->
-    <script>
-      if (window.location.hostname.includes('vercel.app')) {
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-        var script = document.createElement('script');
-        script.defer = true;
-        script.src = '/_vercel/insights/script.js';
-        script.onerror = function() { console.warn('Vercel Analytics not available'); };
-        document.head.appendChild(script);
-      }
-    </script>
   </body>
 </html>
