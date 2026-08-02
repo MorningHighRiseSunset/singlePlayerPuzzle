@@ -146,7 +146,7 @@ class ScrabbleGame {
 		this.aiRack = [];
 		this.playerScore = 0;
 		this.aiScore = 0;
-		this.dictionary = new Set();
+				this.dictionary = new Set();
 		this.currentTurn = "player";
 		this.placedTiles = [];
 		this.gameEnded = false;
@@ -668,6 +668,11 @@ class ScrabbleGame {
 	shouldExchangeTiles() {
 		// Only exchange if there are truly no valid moves
 		const plays = this.findAIPossiblePlays();
+		console.log("🤖 AI found", plays.length, "possible plays");
+		if (plays.length === 0) {
+			console.log("AI rack:", this.aiRack.map(t => t.letter));
+			console.log("Is first move:", this.isFirstMove);
+		}
 		return plays.length === 0;
 	}
 
@@ -1275,6 +1280,8 @@ class ScrabbleGame {
 		this.showNextHint = showNextHint;
 	}
 
+
+
 	findAIPossiblePlays() {
 		try {
 			const possiblePlays = [];
@@ -1320,16 +1327,13 @@ class ScrabbleGame {
 
 							const score = this.calculatePotentialScore(word, startRow, startCol, isHorizontal);
 
-							// Only consider plays that touch at least one anchor
-							if (score > 0) {
-								possiblePlays.push({
-									word,
-									startPos: { row: startRow, col: startCol },
-									isHorizontal,
-									score,
-									quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
-								});
-							}
+							possiblePlays.push({
+								word,
+								startPos: { row: startRow, col: startCol },
+								isHorizontal,
+								score,
+								quality: this.evaluateWordQuality(word, startRow, startCol, isHorizontal)
+							});
 						}
 					}
 				}
@@ -2740,12 +2744,12 @@ class ScrabbleGame {
 			const valueB = this.evaluateAnchorStrategicValue(b.row, b.col);
 			return valueB - valueA;
 		});
-		const topCells = isEndGame ? candidateCells.slice(0, 60) : candidateCells.slice(0, 30);
+		const topCells = isEndGame ? candidateCells.slice(0, 120) : candidateCells.slice(0, 80);
 		
 		// In endgame, check more words; otherwise limit for performance
 		const topWords = isEndGame 
-			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 100)
-			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 50);
+			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 200)
+			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 150);
 		
 		// Try each candidate cell with each possible word
 		for (const { row, col } of topCells) {
@@ -2783,19 +2787,17 @@ class ScrabbleGame {
 						
 						if (this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
 							const score = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
-							if (score > 0) {
-								seen.add(key);
-								plays.push({
-									word,
-									startPos: startPos,
-									isHorizontal,
-									score,
-									quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
-								});
-								
-								// Early exit if we found enough good plays
-								if (plays.length >= 10) return plays;
-							}
+							seen.add(key);
+							plays.push({
+								word,
+								startPos: startPos,
+								isHorizontal,
+								score,
+								quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
+							});
+
+							// Early exit if we found enough good plays
+							if (plays.length >= 25) return plays;
 						}
 					}
 				}
@@ -2912,8 +2914,8 @@ class ScrabbleGame {
 		
 		// In endgame, check more words; otherwise limit for performance
 		const topWords = isEndGame 
-			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 100)
-			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 30);
+			? possibleWords.sort((a, b) => b.length - a.length).slice(0, 200)
+			: possibleWords.sort((a, b) => b.length - a.length).slice(0, 100);
 		
 		// Try every empty cell on the board
 		for (let row = 0; row < 15; row++) {
@@ -2948,19 +2950,17 @@ class ScrabbleGame {
 							
 							if (this.isValidAIPlacement(word, startPos.row, startPos.col, isHorizontal)) {
 								const score = this.calculatePotentialScore(word, startPos.row, startPos.col, isHorizontal);
-								if (score > 0) {
-									seen.add(key);
-									plays.push({
-										word,
-										startPos: startPos,
-										isHorizontal,
-										score,
-										quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
-									});
-									
-									// In endgame, collect all plays to find best; otherwise early exit
-									if (!isEndGame && plays.length >= 1) return plays;
-								}
+								seen.add(key);
+								plays.push({
+									word,
+									startPos: startPos,
+									isHorizontal,
+									score,
+									quality: this.evaluateWordQuality(word, startPos.row, startPos.col, isHorizontal)
+								});
+
+								// In endgame, collect all plays to find best; otherwise early exit
+								if (!isEndGame && plays.length >= 5) return plays;
 							}
 						}
 					}
@@ -3342,11 +3342,11 @@ class ScrabbleGame {
 		}
 
 		// For subsequent moves
-		if (!word.includes(prefix) || !word.includes(suffix)) {
+		if (!word.startsWith(prefix) || !word.endsWith(suffix)) {
 			return false;
 		}
 
-		const neededPart = word.replace(prefix, "").replace(suffix, "").split("");
+		const neededPart = word.slice(prefix.length, word.length - suffix.length).split("");
 
 		// Track which letters we'll use blanks for (prefer high-value letters)
 		const letterValues = neededPart.map(letter => ({
@@ -3470,7 +3470,7 @@ async executeAIPlay(play) {
             `❌ AI triple-check failed: would have formed invalid word(s): ${validity.invalidWords.join(", ")}. Retrying...`
         );
         console.warn("[AI Triple Check] Move rejected due to invalid words:", validity.invalidWords);
-        setTimeout(() => this.aiTurn(), 1000);
+        setTimeout(async () => this.aiTurn(), 1000);
         return;
     }
 
@@ -3529,7 +3529,7 @@ async executeAIPlay(play) {
             `🤦 Oops! AI made a blunder: would have formed invalid word(s): ${invalidWords.join(", ")}. Trying again...`
         );
 	if (this.showAIDebug) console.log(`[AI Ghost Check] Move rejected due to invalid words:`, invalidWords);
-        setTimeout(() => this.aiTurn(), 1000);
+        setTimeout(async () => this.aiTurn(), 1000);
         return;
     }
 
@@ -5812,35 +5812,28 @@ formedWords.forEach((wordInfo) => {
 
 	async loadDictionary() {
 		try {
+			this.dictionary = new Set();
+			
 			// Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
 			// Contains ~279,000 words including more plural forms than SOWPODS
 			let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
 			let text = await response.text();
 			// CSW21 format: one word per line, mixed case
-			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
-			console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
-			console.log("Testing dictionary - 'cutie' present:", this.dictionary.has("cutie"));
+			// CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
+			this.dictionary = new Set(
+				text.split("\n")
+					.map(line => {
+						const match = line.match(/^([A-Z]+)/);
+						return match ? match[1].toLowerCase() : null;
+					})
+					.filter(Boolean)
+			);
+			console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
 
-			// Datamuse fetch removed to prevent CORS errors and speed up loading
-			// try {
-			//     const additionalWords = await this.loadAdditionalWords();
-			//     additionalWords.forEach(word => {
-			//         if (word.length >= 2) {
-			//             this.dictionary.add(word.toLowerCase());
-			//         }
-			//     });
-			// } catch (error) {
-			//     console.error("Error loading additional words:", error);
-			// }
-
-			// console.log("Dictionary loaded successfully. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
-			// More comprehensive fallback dictionary
-			this.dictionary = new Set([
-				"scrabble", "game", "play", "word", "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new", "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say", "she", "too", "use"
-			]);
-			console.warn("Using fallback dictionary with limited words");
+			alert("Failed to load dictionary. Please check your internet connection and refresh the page.");
+			this.dictionary = new Set();
 		}
 	}
 
@@ -6758,10 +6751,7 @@ calculateScore() {
         }
         if (this.wordsPlayed && this.wordsPlayed.has(wordUpper) || existedBefore) {
             return;
-        }
-
-
-		// Build set of newly placed tiles for scoring rules
+        }		// Build set of newly placed tiles for scoring rules
 		this._scoringNewlyPlacedSet = this.buildNewlyPlacedSet();
 		// Clear premium info for this word
 		this._letterPremiumInfo = [];
@@ -7675,7 +7665,7 @@ calculateScore() {
 
 				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
 				if (!this.checkGameEnd()) {
-					await this.aiTurn();
+					this.aiTurn();
 				}
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
@@ -8258,10 +8248,7 @@ calculateScore() {
 			}, 4200 + Math.random()*1200);
 			try { this.appendConsoleMessage && this.appendConsoleMessage('[Confetti] emoji scheduled removal'); } catch(e){}
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
-	}
-
-
-	// Function removed - player bingo now uses createConfettiEffect directly like computer bingo
+	}	// Function removed - player bingo now uses createConfettiEffect directly like computer bingo
 
 	// Safe wrapper used when a bingo is detected for the player or AI.
 	// This function triggers player visuals and guards against rapid reentrancy.
@@ -9028,7 +9015,7 @@ calculateScore() {
 
 		// Check for game end or continue with AI turn
 		if (!this.checkGameEnd()) {
-			await this.aiTurn();
+			this.aiTurn();
 		}
 	}
 
@@ -10215,10 +10202,7 @@ calculateScore() {
 		// Re-attach drag-and-drop listeners after re-rendering
 		this.setupDropListeners();
 	}
-}
-
-
-function preventScrolling(e) {
+}function preventScrolling(e) {
 	e.preventDefault();
 }
 

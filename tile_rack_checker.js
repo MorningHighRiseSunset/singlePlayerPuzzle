@@ -1,8 +1,10 @@
 /**
  * Tile Rack Integrity Checker
  * Monitors and ensures player rack never exceeds 7 tiles
+ * COMMENTED OUT - Disabled for performance
  */
 
+/*
 class TileRackChecker {
     constructor() {
         this.game = null;
@@ -372,3 +374,4 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, 2000);
 });
+*/
