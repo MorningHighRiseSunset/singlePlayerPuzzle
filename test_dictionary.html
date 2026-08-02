@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictionary Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        #test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #test-button:hover {
+            background-color: #0056b3;
+        }
+        #results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dictionary Loading Test</h1>
+        <p>This page tests the dictionary loading functionality with the new sources:</p>
+        <ul>
+            <li>Local files: 2of12inf.txt, 3esl.txt, 6of12.txt</li>
+            <li>GitHub: en-wl/wordlist scowl-pre.txt</li>
+            <li>Fallback: CSW21 dictionary</li>
+        </ul>
+        <button id="test-button">Test Dictionary Loading</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        document.getElementById('test-button').addEventListener('click', async function() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="info">Testing dictionary loading...</div>';
+            
+            const dictionary = new Set();
+            let testResults = [];
+            
+            // Test local files
+            const localFiles = ['2of12inf.txt', '3esl.txt', '6of12.txt'];
+            
+            for (const file of localFiles) {
+                try {
+                    let response = await fetch(file);
+                    if (!response.ok) {
+                        testResults.push(`<div class="error">Failed to load ${file}: ${response.status}</div>`);
+                        continue;
+                    }
+                    let text = await response.text();
+                    const words = text.split("\n")
+                        .map(line => line.trim().toLowerCase())
+                        .filter(word => word.length >= 2 && /^[a-z]+$/.test(word));
+                    words.forEach(word => dictionary.add(word));
+                    testResults.push(`<div class="success">Loaded ${words.length} words from ${file}</div>`);
+                } catch (error) {
+                    testResults.push(`<div class="error">Error loading ${file}: ${error.message}</div>`);
+                }
+            }
+            
+            // Test GitHub en-wl/wordlist
+            try {
+                let response = await fetch("https://raw.githubusercontent.com/en-wl/wordlist/v2/data/scowl-pre.txt");
+                if (response.ok) {
+                    let text = await response.text();
+                    const words = text.match(/[a-zA-Z]{2,}/g) || [];
+                    let scowlWordCount = 0;
+                    for (const word of words) {
+                        const lowerWord = word.toLowerCase();
+                        if (/^[a-z]{2,}$/.test(lowerWord)) {
+                            dictionary.add(lowerWord);
+                            scowlWordCount++;
+                        }
+                    }
+                    testResults.push(`<div class="success">Loaded ${scowlWordCount} words from GitHub en-wl/wordlist scowl-pre.txt</div>`);
+                } else {
+                    testResults.push(`<div class="error">Failed to load GitHub en-wl/wordlist: ${response.status}</div>`);
+                }
+            } catch (error) {
+                testResults.push(`<div class="error">Error loading GitHub en-wl/wordlist: ${error.message}</div>`);
+            }
+            
+            // Test fallback if needed
+            if (dictionary.size < 10000) {
+                try {
+                    let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
+                    let text = await response.text();
+                    const csw21Words = text.split("\n")
+                        .map(line => {
+                            const match = line.match(/^([A-Z]+)/);
+                            return match ? match[1].toLowerCase() : null;
+                        })
+                        .filter(Boolean);
+                    csw21Words.forEach(word => dictionary.add(word));
+                    testResults.push(`<div class="info">Loaded ${csw21Words.length} words from CSW21 fallback</div>`);
+                } catch (error) {
+                    testResults.push(`<div class="error">Error loading CSW21 fallback: ${error.message}</div>`);
+                }
+            }
+            
+            // Test sample words
+            const sampleWords = ["the", "and", "cutie", "word", "play", "hello", "world"];
+            let wordTests = [];
+            sampleWords.forEach(word => {
+                const present = dictionary.has(word);
+                wordTests.push(`<span style="color: ${present ? 'green' : 'red'}">${word}: ${present ? '✓' : '✗'}</span>`);
+            });
+            
+            // Display results
+            testResults.push(`<div class="info">Total dictionary size: ${dictionary.size} words</div>`);
+            testResults.push(`<div class="info">Sample word tests: ${wordTests.join(', ')}</div>`);
+            
+            resultsDiv.innerHTML = testResults.join('');
+        });
+    </script>
+</body>
+</html>

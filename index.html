@@ -138,10 +138,16 @@
       </div>
     </div>
     <script src="homeScreen.js"></script>
-    <!-- Vercel Analytics - DISABLED -->
-    <!-- <script>
-      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    <!-- Vercel Analytics - Only load on Vercel, not local development -->
+    <script>
+      if (window.location.hostname.includes('vercel.app')) {
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+        var script = document.createElement('script');
+        script.defer = true;
+        script.src = '/_vercel/insights/script.js';
+        script.onerror = function() { console.warn('Vercel Analytics not available'); };
+        document.head.appendChild(script);
+      }
     </script>
-    <script defer src="/_vercel/insights/script.js"></script> -->
   </body>
 </html>

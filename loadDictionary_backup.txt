@@ -1,0 +1,24 @@
+async loadDictionary() {
+	try {
+		// Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
+		// Contains ~279,000 words including more plural forms than SOWPODS
+		let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
+		let text = await response.text();
+		// CSW21 format: one word per line, mixed case
+		// CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
+		this.dictionary = new Set(
+			text.split("\n")
+				.map(line => {
+					const match = line.match(/^([A-Z]+)/);
+					return match ? match[1].toLowerCase() : null;
+				})
+				.filter(Boolean)
+		);
+		console.log("Dictionary loaded successfully. Total word count:", this.dictionary.size);
+
+	} catch (error) {
+		console.error("Error loading dictionary:", error);
+		alert("Failed to load dictionary. Please check your internet connection and refresh the page.");
+		this.dictionary = new Set();
+	}
+}
