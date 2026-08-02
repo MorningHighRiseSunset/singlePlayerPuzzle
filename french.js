@@ -5291,17 +5291,21 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		console.log("Loading French dictionary...");
 		try {
-			const response = await fetch('./french_words_list.json');
-			const words = await response.json();
+			// Use ODS5 - Official French Scrabble dictionary (latest version)
+			const response = await fetch('https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/French/ODS5.txt');
+			const text = await response.text();
 
 			const normalizeFrench = (word) => word
 				.normalize('NFD')
 				.replace(/[\u0300-\u036f]/g, '')
 				.toLowerCase();
 
-			const cleanedWords = words
-				.filter(w => w && typeof w === 'string' && w.length >= 2)
-				.map(w => w.trim().toLowerCase())
+			// ODS5 format: one word per line
+			const cleanedWords = text
+				.split('\n')
+				.map(w => w.trim())
+				.filter(w => w && w.length >= 2)
+				.map(w => w.toLowerCase())
 				.filter(w => /^[a-zàâäéèêëïîôöùûüÿç\-']+$/.test(w));
 
 			const allWords = new Set(cleanedWords);
@@ -5313,7 +5317,7 @@ formedWords.forEach((wordInfo) => {
 			});
 
 			this.dictionary = allWords;
-			console.log("French dictionary loaded from JSON. Word count:", this.dictionary.size);
+			console.log("French dictionary loaded from ODS5. Word count:", this.dictionary.size);
 		} catch (error) {
 			console.warn("Failed to load French dictionary from JSON:", error);
 			// Fallback: minimal dictionary
