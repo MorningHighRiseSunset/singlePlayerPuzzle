@@ -7665,7 +7665,7 @@ calculateScore() {
 
 				// --- GHOST PREVIEW: Show AI's next move as ghost tiles ---
 				if (!this.checkGameEnd()) {
-					this.aiTurn();
+					setTimeout(() => this.aiTurn(), 10);
 				}
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
@@ -9538,7 +9538,7 @@ calculateScore() {
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
-					this.aiTurn();
+					setTimeout(() => this.aiTurn(), 10);
 				}
 			}
 		});
@@ -9553,7 +9553,7 @@ calculateScore() {
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
-					this.aiTurn();
+					setTimeout(() => this.aiTurn(), 10);
 				}
 			}
 		});
@@ -9853,7 +9853,7 @@ calculateScore() {
 				this.updateGameState();
 				this.highlightValidPlacements();
 				if (!this.checkGameEnd()) {
-					this.aiTurn();
+					setTimeout(() => this.aiTurn(), 10);
 				}
 			}
 		});
