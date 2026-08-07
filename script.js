@@ -483,6 +483,7 @@ class ScrabbleGame {
 	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
+		this.ghostAIMove = null; // Clear ghost move at start of AI turn
 
 		let thinkingMessage = document.createElement("div");
 		thinkingMessage.className = "ai-thinking-message";
