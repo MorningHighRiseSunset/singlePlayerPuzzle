@@ -5881,6 +5881,10 @@ formedWords.forEach((wordInfo) => {
 
 	renderRack() {
 		const rack = document.getElementById("tile-rack");
+		if (!rack) {
+			console.error("Tile rack element not found");
+			return;
+		}
 		rack.innerHTML = "";
 
 		this.playerRack.forEach((tile, index) => {
