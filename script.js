@@ -5814,22 +5814,29 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		try {
 			this.dictionary = new Set();
-			
-			// Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
-			// Contains ~279,000 words including more plural forms than SOWPODS
-			let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
-			let text = await response.text();
-			// CSW21 format: one word per line, mixed case
-			// CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
-			this.dictionary = new Set(
-				text.split("\n")
-					.map(line => {
-						const match = line.match(/^([A-Z]+)/);
-						return match ? match[1].toLowerCase() : null;
-					})
-					.filter(Boolean)
-			);
+
+			// Use NWL2023 - Official North American tournament dictionary (latest)
+			const response = await fetch('https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/North-American/NWL2023.txt');
+			const text = await response.text();
+			// NWL2023 format: one word per line, mixed case
+			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
 			console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
+
+			// // Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
+			// // Contains ~279,000 words including more plural forms than SOWPODS
+			// let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
+			// let text = await response.text();
+			// // CSW21 format: one word per line, mixed case
+			// // CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
+			// this.dictionary = new Set(
+			// 	text.split("\n")
+			// 		.map(line => {
+			// 			const match = line.match(/^([A-Z]+)/);
+			// 			return match ? match[1].toLowerCase() : null;
+			// 		})
+			// 		.filter(Boolean)
+			// );
+			// console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
 
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
