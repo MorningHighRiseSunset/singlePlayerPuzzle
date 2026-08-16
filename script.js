@@ -76,6 +76,18 @@ class Trie {
     }
 }
 
+// NWL2023 lines look like: "FLINT a hard gray rock [n FLINTS]"
+function parseNwlDictionary(text) {
+    return new Set(
+        text.split("\n")
+            .map(line => {
+                const match = line.trim().match(/^([A-Z]+)/);
+                return match ? match[1].toLowerCase() : null;
+            })
+            .filter(Boolean)
+    );
+}
+
 class ScrabbleGame {
 	constructor() {
 		this.board = Array(15)
@@ -5677,13 +5689,15 @@ formedWords.forEach((wordInfo) => {
 
 	async init() {
 		await this.loadDictionary();
+		this.buildDictionaryTrie();
 		this.createBoard();
 		this.fillRacks();
 		this.setupTapPlacement();
 		this.setupEventListeners();
 		this.updateGameState();
+	}
 
-		// --- Build the Trie for pro-level AI word generation ---
+	buildDictionaryTrie() {
 		this.trie = new Trie();
 		for (const word of this.dictionary) {
 			this.trie.insert(word.toUpperCase());
@@ -5818,25 +5832,14 @@ formedWords.forEach((wordInfo) => {
 			// Use NWL2023 - Official North American tournament dictionary (latest)
 			const response = await fetch('https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/North-American/NWL2023.txt');
 			const text = await response.text();
-			// NWL2023 format: one word per line, mixed case
-			this.dictionary = new Set(text.split("\n").map(w => w.trim().toLowerCase()).filter(Boolean));
-			console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
+			this.dictionary = parseNwlDictionary(text);
 
-			// // Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
-			// // Contains ~279,000 words including more plural forms than SOWPODS
-			// let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
-			// let text = await response.text();
-			// // CSW21 format: one word per line, mixed case
-			// // CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
-			// this.dictionary = new Set(
-			// 	text.split("\n")
-			// 		.map(line => {
-			// 			const match = line.match(/^([A-Z]+)/);
-			// 			return match ? match[1].toLowerCase() : null;
-			// 		})
-			// 		.filter(Boolean)
-			// );
-			// console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
+			const sampleWords = ["aa", "flint", "za", "qi", "jo"];
+			const foundSamples = sampleWords.filter(word => this.dictionary.has(word));
+			console.log(
+				`📚 NWL2023 loaded: ${this.dictionary.size.toLocaleString()} words` +
+				` (${foundSamples.length}/${sampleWords.length} spot-checks: ${foundSamples.join(", ")})`
+			);
 
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
