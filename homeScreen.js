@@ -2,8 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
     
-    // Don't play animation on load - it's redundant
-    // playPuzzleAnimation('PUZZLE');
+    // Play puzzle animation on load
+    playPuzzleAnimation('PUZZLE');
     
     // Store selected language for multiplayer
     let selectedMultiplayerLanguage = 'english';
