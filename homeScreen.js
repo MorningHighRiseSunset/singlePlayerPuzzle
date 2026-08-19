@@ -23,6 +23,29 @@ document.addEventListener("DOMContentLoaded", () => {
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
     
+    // Initialize Pusher for real-time multiplayer
+    let pusher = null;
+    let currentChannel = null;
+    let currentGame = null;
+    
+    // Initialize Pusher when needed
+    function initPusher() {
+        if (pusher) return pusher;
+        
+        // You'll need to replace these with your actual Pusher credentials
+        // For now, we'll use a placeholder that will fall back to localStorage
+        try {
+            pusher = new Pusher('your_app_key', {
+                cluster: 'us2',
+                forceTLS: true
+            });
+            return pusher;
+        } catch (e) {
+            console.log('Pusher not configured, falling back to localStorage');
+            return null;
+        }
+    }
+    
     // Show main menu after animation completes (6 letters * 150ms each + 600ms animation + buffer)
     setTimeout(() => {
         if (mainMenu) mainMenu.style.display = 'flex';
@@ -53,6 +76,24 @@ document.addEventListener("DOMContentLoaded", () => {
             // Track multiplayer button click
             if (window.va) {
                 window.va('event', { name: 'multiplayer_click', data: { type: 'mode_selection' } });
+            }
+            
+            // Initialize Pusher and subscribe to lobby channel
+            const pusherInstance = initPusher();
+            if (pusherInstance) {
+                const lobbyChannel = pusherInstance.subscribe('lobby');
+                
+                // Listen for new games being created
+                lobbyChannel.bind('client-game-created', (data) => {
+                    console.log('New game created:', data.game);
+                    // Add to active games if not already present
+                    if (!activeGames.find(g => g.id === data.game.id)) {
+                        activeGames.push(data.game);
+                        updateGamesList();
+                    }
+                });
+                
+                console.log('Subscribed to lobby channel for real-time game updates');
             }
             
             // Play multiplayer animation
@@ -166,6 +207,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Generate a unique game ID
         const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         
+        // Initialize Pusher
+        const pusherInstance = initPusher();
+        
         // Create game object
         const newGame = {
             id: gameId,
@@ -176,18 +220,46 @@ document.addEventListener("DOMContentLoaded", () => {
             language: language,
             createdAt: new Date(),
             hostId: getPlayerId(),
-            playerIds: [getPlayerId()],
-            // For online play, this would need to be stored in a real database
-            isLocal: true // Flag to indicate this is a local test game
+            playerIds: [getPlayerId()]
         };
         
-        // Add to active games
-        activeGames.push(newGame);
+        currentGame = newGame;
         
-        console.log('Game created locally. For online play, this would be stored in a database and synced via WebSocket.');
-        
-        // Save to localStorage
-        saveGamesToStorage();
+        if (pusherInstance) {
+            // Subscribe to game channel for real-time updates
+            const channelName = `game-${gameId}`;
+            currentChannel = pusherInstance.subscribe(channelName);
+            
+            // Listen for player join events
+            currentChannel.bind('player-joined', (data) => {
+                console.log('Player joined:', data);
+                if (currentGame) {
+                    currentGame.players = data.players;
+                    currentGame.playerIds = data.playerIds;
+                    updateGameLobbyUI(currentGame);
+                }
+            });
+            
+            // Listen for game start events
+            currentChannel.bind('game-started', (data) => {
+                console.log('Game started by host');
+                navigateToGame(currentGame.language);
+            });
+            
+            // Announce game creation to a lobby channel
+            const lobbyChannel = pusherInstance.subscribe('lobby');
+            lobbyChannel.trigger('client-game-created', {
+                game: newGame
+            });
+            
+            console.log('Game created with Pusher real-time sync');
+        } else {
+            // Fallback to localStorage for local testing
+            newGame.isLocal = true;
+            activeGames.push(newGame);
+            saveGamesToStorage();
+            console.log('Game created locally (Pusher not configured)');
+        }
         
         // Navigate to the specific game lobby
         showGameLobby(newGame);
@@ -274,10 +346,113 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (window.va) {
                         window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
                     }
-                    alert('Starting game! (This would navigate to the actual game page)');
+                    
+                    const pusherInstance = initPusher();
+                    
+                    if (pusherInstance && currentChannel) {
+                        // Broadcast game start to all players in the channel
+                        currentChannel.trigger('client-game-started', {
+                            gameId: game.id,
+                            language: game.language
+                        });
+                        console.log('Game start broadcasted via Pusher');
+                    } else {
+                        // Fallback for local testing
+                        console.log('Starting game locally');
+                    }
+                    
+                    // Navigate host to the game
+                    navigateToGame(game.language);
                 };
             }
         }, 0);
+    }
+    
+    // Function to update game lobby UI dynamically
+    function updateGameLobbyUI(game) {
+        const gameLobbyScreen = document.getElementById('gameLobbyScreen');
+        if (!gameLobbyScreen) return;
+        
+        const currentPlayerId = getPlayerId();
+        const isHost = game.hostId === currentPlayerId;
+        
+        gameLobbyScreen.innerHTML = `
+            <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
+            <h2>Puzzle Game Queue</h2>
+            <div class="game-lobby-info">
+                <div class="lobby-game-id">Game ID: ${game.id}</div>
+                <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
+                <div class="lobby-players">
+                    <div class="player-slot">
+                        <span class="player-avatar">👤</span>
+                        <span class="player-name">${isHost ? 'You (Host)' : 'Player 1'}</span>
+                    </div>
+                    <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
+                        <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
+                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : 'Player 2'}</span>
+                    </div>
+                </div>
+                <div class="lobby-status">Status: ${game.status}</div>
+                <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
+                    ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
+                </button>
+            </div>
+        `;
+        
+        // Re-attach event listeners
+        setTimeout(() => {
+            const backToLobbyBtn = document.getElementById('backToLobbyBtn');
+            const startGameBtn = document.getElementById('startGameBtn');
+            
+            if (backToLobbyBtn) {
+                backToLobbyBtn.onclick = () => {
+                    gameLobbyScreen.style.display = 'none';
+                    playPuzzleAnimation('PLAYER VERSUS PLAYER');
+                    setTimeout(() => {
+                        document.querySelector('.home-container').classList.add('lobby-layout');
+                        if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                        if (mainMenu) mainMenu.style.display = 'none';
+                        const miniBoardContainer = document.querySelector('.mini-board-container');
+                        if (miniBoardContainer) miniBoardContainer.style.display = 'block';
+                        updateGamesList();
+                    }, 2800);
+                };
+            }
+            
+            if (startGameBtn && !startGameBtn.disabled) {
+                startGameBtn.onclick = () => {
+                    if (window.va) {
+                        window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
+                    }
+                    
+                    const pusherInstance = initPusher();
+                    
+                    if (pusherInstance && currentChannel) {
+                        currentChannel.trigger('client-game-started', {
+                            gameId: game.id,
+                            language: game.language
+                        });
+                        console.log('Game start broadcasted via Pusher');
+                    }
+                    
+                    navigateToGame(game.language);
+                };
+            }
+        }, 0);
+    }
+    
+    // Function to navigate to the appropriate game page
+    function navigateToGame(language) {
+        const gamePages = {
+            'english': 'game.html',
+            'french': 'french.html',
+            'hindi': 'hindi.html',
+            'mandarin': 'mandarin.html',
+            'spanish': 'spanish.html'
+        };
+        
+        const gamePage = gamePages[language] || 'game.html';
+        window.location.href = gamePage;
     }
     
     // Function to update the games list display
@@ -343,12 +518,38 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             if (game.players < game.maxPlayers) {
-                game.players++;
-                game.playerIds = game.playerIds || [];
-                game.playerIds.push(playerId);
-                game.status = 'in progress';
-                saveGamesToStorage();
-                updateGamesList();
+                const pusherInstance = initPusher();
+                
+                if (pusherInstance) {
+                    // Subscribe to game channel
+                    const channelName = `game-${gameId}`;
+                    currentChannel = pusherInstance.subscribe(channelName);
+                    
+                    // Listen for game start events
+                    currentChannel.bind('game-started', (data) => {
+                        console.log('Game started by host');
+                        navigateToGame(game.language);
+                    });
+                    
+                    // Notify the host that a player joined
+                    currentChannel.trigger('client-player-joined', {
+                        playerId: playerId,
+                        players: game.players + 1,
+                        playerIds: [...game.playerIds, playerId]
+                    });
+                    
+                    console.log('Joined game via Pusher');
+                } else {
+                    // Fallback to localStorage
+                    game.players++;
+                    game.playerIds = game.playerIds || [];
+                    game.playerIds.push(playerId);
+                    game.status = 'in progress';
+                    saveGamesToStorage();
+                    updateGamesList();
+                }
+                
+                currentGame = game;
                 
                 // Navigate to game lobby immediately without annoying popup
                 showGameLobby(game);
@@ -379,21 +580,28 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Function to load active games
     function loadActiveGames() {
-        // Reload from localStorage to get latest games from other tabs
-        loadGamesFromStorage();
-        updateGamesList();
+        const pusherInstance = initPusher();
         
-        // Set up polling to check for new games every 2 seconds
-        if (!window.gamePollingInterval) {
-            window.gamePollingInterval = setInterval(() => {
-                loadGamesFromStorage();
-                updateGamesList();
-            }, 2000);
+        if (pusherInstance) {
+            // With Pusher, we don't need polling - real-time updates are handled by events
+            console.log('Using Pusher for real-time game updates');
+        } else {
+            // Fallback to localStorage polling for local testing
+            loadGamesFromStorage();
+            updateGamesList();
+            
+            // Set up polling to check for new games every 2 seconds
+            if (!window.gamePollingInterval) {
+                window.gamePollingInterval = setInterval(() => {
+                    loadGamesFromStorage();
+                    updateGamesList();
+                }, 2000);
+            }
+            
+            console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
+            console.log('ONLINE MULTIPLAYER: Requires Pusher credentials for actual online play.');
+            console.log('JOINING: Players join directly from Active Games list - no codes needed.');
         }
-        
-        console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
-        console.log('ONLINE MULTIPLAYER: Requires WebSocket server + real-time database for actual online play.');
-        console.log('JOINING: Players join directly from Active Games list - no codes needed.');
     }
     
     // Stop polling when leaving lobby
