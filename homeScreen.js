@@ -245,6 +245,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (currentGame) {
                     currentGame.players = data.players;
                     currentGame.playerIds = data.playerIds;
+                    // Update the game in activeGames array
+                    const gameIndex = activeGames.findIndex(g => g.id === currentGame.id);
+                    if (gameIndex !== -1) {
+                        activeGames[gameIndex] = currentGame;
+                    }
+                    saveGamesToStorage();
                     updateGameLobbyUI(currentGame);
                 }
             });
@@ -268,6 +274,21 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Navigate to the specific game lobby
         showGameLobby(newGame);
+        
+        // Set up polling for host to listen for player joins from localStorage
+        if (!window.gameLobbyPollingInterval) {
+            window.gameLobbyPollingInterval = setInterval(() => {
+                loadGamesFromStorage();
+                const updatedGame = activeGames.find(g => g.id === newGame.id);
+                if (updatedGame && (updatedGame.players !== newGame.players || 
+                    JSON.stringify(updatedGame.playerIds) !== JSON.stringify(newGame.playerIds))) {
+                    newGame.players = updatedGame.players;
+                    newGame.playerIds = updatedGame.playerIds;
+                    currentGame = newGame;
+                    updateGameLobbyUI(newGame);
+                }
+            }, 500);
+        }
     }
     
     // Generate a simple player ID
@@ -326,6 +347,22 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.style.display = 'flex';
         
+        // Set up polling to listen for game updates from localStorage
+        if (!window.gameLobbyPollingInterval) {
+            window.gameLobbyPollingInterval = setInterval(() => {
+                loadGamesFromStorage();
+                const updatedGame = activeGames.find(g => g.id === game.id);
+                if (updatedGame && (updatedGame.players !== game.players || 
+                    JSON.stringify(updatedGame.playerIds) !== JSON.stringify(game.playerIds))) {
+                    game.players = updatedGame.players;
+                    game.playerIds = updatedGame.playerIds;
+                    game.hostId = updatedGame.hostId;
+                    currentGame = game;
+                    updateGameLobbyUI(game);
+                }
+            }, 500);
+        }
+        
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
             const backToLobbyBtn = document.getElementById('backToLobbyBtn');
@@ -349,6 +386,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
+                    }
+                    
+                    // Stop polling when leaving lobby
+                    if (window.gameLobbyPollingInterval) {
+                        clearInterval(window.gameLobbyPollingInterval);
+                        window.gameLobbyPollingInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -448,6 +491,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
+                    }
+                    
+                    // Stop polling when leaving lobby
+                    if (window.gameLobbyPollingInterval) {
+                        clearInterval(window.gameLobbyPollingInterval);
+                        window.gameLobbyPollingInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -556,8 +605,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (game) {
             const playerId = getPlayerId();
             
+            console.log('JOIN GAME - Game ID:', gameId);
+            console.log('JOIN GAME - Current Player ID:', playerId);
+            console.log('JOIN GAME - Game Host ID:', game.hostId);
+            console.log('JOIN GAME - Game Players:', game.players);
+            console.log('JOIN GAME - Game Player IDs:', game.playerIds);
+            
             // Check if player is already in this game
             if (game.playerIds && game.playerIds.includes(playerId)) {
+                console.log('JOIN GAME - Player already in game, showing lobby');
                 showGameLobby(game);
                 return;
             }
@@ -567,6 +623,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Preserve the original hostId
                 const originalHostId = game.hostId;
+                
+                // Update game object with new player BEFORE showing lobby
+                game.players = game.players + 1;
+                game.playerIds = [...game.playerIds, playerId];
+                game.hostId = originalHostId;
+                
+                console.log('JOIN GAME - After update - Game Host ID:', game.hostId);
+                console.log('JOIN GAME - After update - Game Players:', game.players);
+                console.log('JOIN GAME - After update - Game Player IDs:', game.playerIds);
+                
+                // Update the game in activeGames array
+                const gameIndex = activeGames.findIndex(g => g.id === gameId);
+                if (gameIndex !== -1) {
+                    activeGames[gameIndex] = game;
+                }
+                
+                // Save to localStorage so other tabs see the update
+                saveGamesToStorage();
+                updateGamesList();
                 
                 if (pusherInstance) {
                     // Subscribe to game channel
@@ -606,27 +681,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Notify the host that a player joined
                     currentChannel.trigger('client-player-joined', {
                         playerId: playerId,
-                        players: game.players + 1,
-                        playerIds: [...game.playerIds, playerId]
+                        players: game.players,
+                        playerIds: game.playerIds
                     });
                     
                     console.log('Joined game via Pusher');
-                } else {
-                    // Fallback to localStorage
-                    game.players++;
-                    game.playerIds = game.playerIds || [];
-                    game.playerIds.push(playerId);
-                    game.status = 'in progress';
-                    // Ensure hostId is preserved
-                    game.hostId = originalHostId;
-                    saveGamesToStorage();
-                    updateGamesList();
                 }
-                
-                // Update game object with preserved hostId
-                game.hostId = originalHostId;
-                game.players = game.players + 1;
-                game.playerIds = [...game.playerIds, playerId];
                 
                 currentGame = game;
                 
