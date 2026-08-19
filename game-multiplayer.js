@@ -113,6 +113,27 @@ function updateGameUIForMultiplayer() {
         title.textContent = 'Multiplayer Puzzle Game';
     }
     
+    // Rename ai-rack to opponent-rack for multiplayer
+    const aiRack = document.getElementById('ai-rack');
+    if (aiRack) {
+        aiRack.id = 'opponent-rack';
+        aiRack.classList.remove('ai-rack');
+        aiRack.classList.add('opponent-rack');
+    }
+    
+    // Rename computer-score to opponent-score
+    const computerScores = document.querySelectorAll('[id^="computer-score"]');
+    computerScores.forEach(el => {
+        el.id = el.id.replace('computer-score', 'opponent-score');
+    });
+    
+    // Update labels
+    const computerLabels = document.querySelectorAll('[data-i18n="computer"]');
+    computerLabels.forEach(el => {
+        el.setAttribute('data-i18n', 'opponent');
+        el.textContent = 'Opponent';
+    });
+    
     // Add turn indicator
     const boardContainer = document.querySelector('.board-container');
     if (boardContainer) {
