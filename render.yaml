@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: puzzle-multiplayer-backend
-    env: node
-    buildCommand: npm install
-    startCommand: node server.js
-    envVars:
-      - key: FRONTEND_URL
-        value: https://single-player-puzzle.vercel.app

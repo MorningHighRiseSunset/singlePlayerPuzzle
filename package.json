@@ -11,6 +11,9 @@
     "test:ui": "vitest --ui",
     "deploy": "vercel --prod"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "canvas-confetti": "^1.9.4",
