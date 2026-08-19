@@ -5,8 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Play puzzle animation on load
     playPuzzleAnimation('PUZZLE');
     
-    // Store selected language for multiplayer
-    let selectedMultiplayerLanguage = 'english';
+    // Multiplayer is English only
+    const selectedMultiplayerLanguage = 'english';
     
     // Screen navigation elements
     const mainMenu = document.getElementById('mainMenu');
@@ -803,20 +803,14 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener('click', (e) => {
             const language = button.getAttribute('data-language');
             const href = button.getAttribute('data-href');
-            const isMultiplayer = button.classList.contains('multiplayer-lang-btn');
             
             // Track language button click event using Vercel Analytics
             if (window.va) {
-                if (isMultiplayer) {
-                    window.va('event', { name: 'Multiplayer: ' + language, data: { type: 'language_selection' } });
-                    selectedMultiplayerLanguage = language;
-                } else {
-                    window.va('event', { name: 'Singleplayer: ' + language, data: { type: 'language_selection' } });
-                }
+                window.va('event', { name: 'Singleplayer: ' + language, data: { type: 'language_selection' } });
             }
             
-            // Only navigate for single player language buttons
-            if (!isMultiplayer && href) {
+            // Navigate to the game page
+            if (href) {
                 window.location.href = href;
             }
         });
