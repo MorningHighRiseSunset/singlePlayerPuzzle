@@ -10,17 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Screen navigation elements
     const mainMenu = document.getElementById('mainMenu');
-    const languageScreen = document.getElementById('languageScreen');
     const lobbyScreen = document.getElementById('lobbyScreen');
     const singlePlayerBtn = document.getElementById('singlePlayerBtn');
     const multiplayerBtn = document.getElementById('multiplayerBtn');
-    const backToMenuBtn = document.getElementById('backToMenuBtn');
     const backToMenuFromLobbyBtn = document.getElementById('backToMenuFromLobbyBtn');
     const createGameBtn = document.getElementById('createGameBtn');
     
     // Hide main menu initially, show after animation
     if (mainMenu) mainMenu.style.display = 'none';
-    if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
     
     // Initialize Pusher for real-time multiplayer
@@ -62,9 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
             playPuzzleAnimation('PUZZLE');
             
             setTimeout(() => {
-                if (mainMenu) mainMenu.style.display = 'none';
-                if (languageScreen) languageScreen.style.display = 'flex';
-                if (lobbyScreen) lobbyScreen.style.display = 'none';
+                window.location.href = 'game.html';
             }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
         });
     }
@@ -109,21 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Load active games (placeholder for now)
                 loadActiveGames();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
-        });
-    }
-    
-    // Back to menu from language screen
-    if (backToMenuBtn) {
-        backToMenuBtn.addEventListener('click', function handleBackToMenu() {
-            // Show mini board when returning to menu
-            const miniBoardContainer = document.querySelector('.mini-board-container');
-            if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
-            
-            setTimeout(() => {
-                if (mainMenu) mainMenu.style.display = 'flex';
-                if (languageScreen) languageScreen.style.display = 'none';
-                if (lobbyScreen) lobbyScreen.style.display = 'none';
-            }, 200); // Quick transition without animation
         });
     }
     
