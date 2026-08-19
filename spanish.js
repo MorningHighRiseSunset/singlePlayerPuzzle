@@ -9674,6 +9674,34 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
+	// Toggle background music
+	let isMusicPlaying = true;
+	const toggleMusicBtn = document.getElementById('toggle-music');
+	const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
+	
+	const toggleMusic = () => {
+		if (backgroundMusic) {
+			if (isMusicPlaying) {
+				backgroundMusic.pause();
+				isMusicPlaying = false;
+				if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music Off';
+				if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music Off';
+			} else {
+				backgroundMusic.play().catch(e => console.log('Music play failed:', e));
+				isMusicPlaying = true;
+				if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Toggle Music';
+				if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Toggle Music';
+			}
+		}
+	};
+	
+	if (toggleMusicBtn) {
+		toggleMusicBtn.addEventListener('click', toggleMusic);
+	}
+	if (toggleMusicBtnDesktop) {
+		toggleMusicBtnDesktop.addEventListener('click', toggleMusic);
+	}
+
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
 	const primeSpeech = () => {
 		try {
