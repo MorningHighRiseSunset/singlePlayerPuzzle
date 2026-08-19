@@ -263,7 +263,7 @@ io.on('connection', (socket) => {
                 players: game.players,
                 hostId: game.hostId,
                 status: game.status,
-                currentPlayerId: game.hostId, // Host goes first
+                currentPlayerId: game.currentPlayerId || game.hostId,
                 myTiles: game.playerTiles[playerId] || [],
                 allPlayerTiles: game.playerTiles, // Include all players' tiles for comparison
                 remainingTiles: game.tileBag.length,
@@ -285,48 +285,45 @@ io.on('connection', (socket) => {
         const playerId = socketToPlayer[socket.id];
         const game = games[gameId];
         
-        if (game) {
-            console.log('Player move:', playerId, 'in game:', gameId);
-            
-            // Update board state
-            if (move.placements) {
-                move.placements.forEach(placement => {
-                    const { row, col, letter, isBlank } = placement;
-                    const cellKey = `${row}_${col}`;
-                    game.board[cellKey] = {
-                        letter: letter,
-                        isBlank: isBlank,
-                        playerId: playerId,
-                        timestamp: Date.now()
-                    };
-                });
-            }
-            
-            // Broadcast move to opponent with board state
-            socket.to(gameId).emit('opponent-move', {
-                playerId: playerId,
-                move: move,
-                board: game.board
-            });
-            
-            // Toggle turn
-            const playerIds = game.playerIds;
-            const currentPlayerIndex = playerIds.indexOf(playerId);
-            const nextPlayerIndex = (currentPlayerIndex + 1) % playerIds.length;
-            const nextPlayerId = playerIds[nextPlayerIndex];
-            game.currentPlayerId = nextPlayerId;
-            
-            io.to(gameId).emit('turn-change', {
-                currentPlayerId: nextPlayerId
-            });
-            
-            // Broadcast updated board state to all players
-            io.to(gameId).emit('board-state', {
-                board: game.board
-            });
-            
-            saveGames();
+        if (!game || !move) {
+            console.warn('player-move ignored; game or move missing', { gameId, playerId });
+            return;
         }
+
+        console.log('Player move:', playerId, 'in game:', gameId);
+
+        if (move.placements) {
+            move.placements.forEach(placement => {
+                const { row, col, letter, isBlank } = placement;
+                const cellKey = `${row}_${col}`;
+                game.board[cellKey] = {
+                    letter: letter,
+                    isBlank: isBlank,
+                    playerId: playerId,
+                    timestamp: Date.now()
+                };
+            });
+        }
+
+        const playerIds = game.playerIds || [];
+        const opponentId = playerIds.find(id => id && id !== playerId) || playerIds[0];
+        game.currentPlayerId = opponentId || playerId;
+
+        socket.to(gameId).emit('opponent-move', {
+            playerId: playerId,
+            move: move,
+            board: game.board
+        });
+
+        io.to(gameId).emit('turn-change', {
+            currentPlayerId: game.currentPlayerId
+        });
+
+        io.to(gameId).emit('board-state', {
+            board: game.board
+        });
+
+        saveGames();
     });
 
     // Player updates tile count

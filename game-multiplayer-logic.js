@@ -7555,6 +7555,33 @@ calculateScore() {
 				// Use the robust scoring logic
 				const totalScore = this.calculateScore();
 
+				// Notify multiplayer immediately — do not wait for TTS or post-submit hooks.
+				if (typeof this.onValidMultiplayerMove === 'function') {
+					const placements = this.placedTiles.map(p => ({
+						row: p.row,
+						col: p.col,
+						letter: p.tile?.letter ?? p.letter,
+						isBlank: !!(p.tile?.isBlank || p.isBlank)
+					}));
+					try {
+						this.onValidMultiplayerMove({ placements, score: totalScore });
+					} catch (e) {
+						console.warn('onValidMultiplayerMove failed', e);
+					}
+				} else if (typeof window.commitMultiplayerMove === 'function') {
+					const placements = this.placedTiles.map(p => ({
+						row: p.row,
+						col: p.col,
+						letter: p.tile?.letter ?? p.letter,
+						isBlank: !!(p.tile?.isBlank || p.isBlank)
+					}));
+					try {
+						window.commitMultiplayerMove({ placements, score: totalScore });
+					} catch (e) {
+						console.warn('commitMultiplayerMove failed', e);
+					}
+				}
+
 				// Get all formed words for move description and attach per-word scores
 				const formedWords = this.getFormedWords();
 				let wordDescriptions = [];

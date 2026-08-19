@@ -125,7 +125,8 @@ function initMultiplayerSocket() {
         if (data.players) {
             console.log('Game has', data.players, 'players');
             // Set initial turn - host goes first
-            isMyTurn = data.hostId === myPlayerId;
+            const currentId = data.currentPlayerId || data.hostId;
+            isMyTurn = currentId === myPlayerId;
             if (gameInstance) {
                 gameInstance.currentTurn = isMyTurn ? 'player' : 'ai';
             }
@@ -166,10 +167,36 @@ function initMultiplayerSocket() {
 
 // Send move to opponent
 function sendMoveToOpponent(moveData) {
-    if (socket) {
-        socket.emit('player-move', moveData);
+    if (!socket || !socket.connected) {
+        console.warn('Cannot send move; socket not connected');
+        return;
     }
+    console.log('Sending move to opponent:', moveData);
+    socket.emit('player-move', moveData);
 }
+
+function commitMultiplayerMove({ placements, score }) {
+    if (!placements || !placements.length) return;
+
+    const gameId = new URLSearchParams(window.location.search).get('gameId');
+    sendMoveToOpponent({
+        gameId,
+        move: { placements, score: score || 0 }
+    });
+
+    if (gameInstance) {
+        socket.emit('update-tiles', {
+            gameId,
+            tileCount: gameInstance.playerRack.length
+        });
+        gameInstance.currentTurn = 'ai';
+    }
+
+    isMyTurn = false;
+    updateTurnIndicator();
+}
+
+window.commitMultiplayerMove = commitMultiplayerMove;
 
 // Handle opponent's move
 function handleOpponentMove(data) {
@@ -299,7 +326,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 isHost = urlParams.get('isHost') === 'true';
                 
                 // Set initial turn based on host status
-                isMyTurn = isHost;
+                if (pendingGameState) {
+                    const currentId = pendingGameState.currentPlayerId || pendingGameState.hostId;
+                    isMyTurn = currentId === myPlayerId;
+                } else {
+                    isMyTurn = isHost;
+                }
                 gameInstance.currentTurn = isMyTurn ? 'player' : 'ai';
                 updateTurnIndicator();
                 console.log('Initial turn set - isHost:', isHost, 'isMyTurn:', isMyTurn);
@@ -319,44 +351,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.renderRack();
                 };
                 
-                // Hook into playWord (Submit) to send the move and end the turn
+                gameInstance.onValidMultiplayerMove = commitMultiplayerMove;
+
                 const originalPlayWord = gameInstance.playWord.bind(gameInstance);
                 gameInstance.playWord = async function() {
                     if (!isMyTurn) {
                         console.log('Submit ignored — not your turn');
                         return;
                     }
-
-                    const placements = this.placedTiles.map(p => ({
-                        row: p.row,
-                        col: p.col,
-                        letter: p.tile?.letter ?? p.letter,
-                        isBlank: !!(p.tile?.isBlank || p.isBlank)
-                    }));
-                    const scoreBefore = this.playerScore;
-
-                    await originalPlayWord();
-
-                    const moveSucceeded = placements.length > 0 && this.placedTiles.length === 0;
-                    if (!moveSucceeded) return;
-
-                    const gameId = new URLSearchParams(window.location.search).get('gameId');
-                    sendMoveToOpponent({
-                        gameId,
-                        move: {
-                            placements,
-                            score: this.playerScore - scoreBefore
-                        }
-                    });
-
-                    socket.emit('update-tiles', {
-                        gameId,
-                        tileCount: this.playerRack.length
-                    });
-
-                    isMyTurn = false;
-                    this.currentTurn = 'ai';
-                    updateTurnIndicator();
+                    return originalPlayWord();
                 };
             }
         }, 1000);
