@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
             currentChannel = pusherInstance.subscribe(channelName);
             
             // Listen for player join events
-            currentChannel.bind('player-joined', (data) => {
+            currentChannel.bind('client-player-joined', (data) => {
                 console.log('=== PUSHER EVENT: player-joined ===');
                 console.log('Received data:', data);
                 console.log('Current Game ID:', currentGame?.id);
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             
             // Listen for game start events
-            currentChannel.bind('game-started', (data) => {
+            currentChannel.bind('client-game-started', (data) => {
                 console.log('Game started by host');
                 navigateToGame(currentGame.language);
             });
@@ -723,13 +723,34 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentChannel = pusherInstance.subscribe(channelName);
                     
                     // Listen for game start events
-                    currentChannel.bind('game-started', (data) => {
+                    currentChannel.bind('client-game-started', (data) => {
                         console.log('Game started by host');
                         navigateToGame(game.language);
                     });
                     
                     // Listen for host leaving
-                    currentChannel.bind('host-left', (data) => {
+                    currentChannel.bind('client-host-left', (data) => {
+                        console.log('Host left the game');
+                        // If current player is not the host, redirect back to lobby
+                        if (currentGame && currentGame.hostId !== playerId) {
+                            const gameLobbyScreen = document.getElementById('gameLobbyScreen');
+                            if (gameLobbyScreen) {
+                                gameLobbyScreen.style.display = 'none';
+                                const errorMsg = document.createElement('div');
+                                errorMsg.className = 'error-message';
+                                errorMsg.textContent = 'Host left the game. Returning to lobby.';
+                                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                                document.querySelector('.home-container').appendChild(errorMsg);
+                                setTimeout(() => errorMsg.remove(), 3000);
+                            }
+                            // Show lobby screen
+                            if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                            // Remove game from active games
+                            activeGames = activeGames.filter(g => g.id !== gameId);
+                            saveGamesToStorage();
+                            updateGamesList();
+                        }
+                    });
                         console.log('Host left the game');
                         // If current player is not the host, redirect back to lobby
                         if (currentGame && currentGame.hostId !== playerId) {
