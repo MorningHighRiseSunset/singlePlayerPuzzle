@@ -125,6 +125,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     navigateToGame(data.language);
                 });
                 
+                // Listen for game-joined (initial game state when joining)
+                socketInstance.on('game-joined', (data) => {
+                    console.log('Game joined confirmation:', data);
+                    if (data.game) {
+                        currentGame = data.game;
+                        // Update activeGames if not already present
+                        const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
+                        if (gameIndex === -1) {
+                            activeGames.push(data.game);
+                        } else {
+                            activeGames[gameIndex] = data.game;
+                        }
+                    }
+                });
                 // Listen for host leaving
                 socketInstance.on('host-left', () => {
                     console.log('Host left the game');
@@ -671,13 +685,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             
-            // Wait for player-joined event which will update the game
-            socketInstance.once('player-joined', (data) => {
-                console.log('Successfully joined game');
-                const game = activeGames.find(g => g.id === gameId);
-                if (game) {
-                    currentGame = game;
-                    showGameLobby(game);
+            // Listen for game-joined (initial game state when joining)
+            socketInstance.once('game-joined', (data) => {
+                console.log('Game joined confirmation in joinGame:', data);
+                if (data.game) {
+                    currentGame = data.game;
+                    // Update activeGames if not already present
+                    const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
+                    if (gameIndex === -1) {
+                        activeGames.push(data.game);
+                    } else {
+                        activeGames[gameIndex] = data.game;
+                    }
+                    showGameLobby(currentGame);
                 }
             });
         }

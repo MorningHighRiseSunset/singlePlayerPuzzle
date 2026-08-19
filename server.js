@@ -129,7 +129,12 @@ io.on('connection', (socket) => {
         // Save to disk
         saveGames();
         
-        // Notify all players in the game
+        // Send current game state to the joining player
+        socket.emit('game-joined', {
+            game: game
+        });
+        
+        // Notify all players in the game (including the joiner)
         io.to(gameId).emit('player-joined', {
             playerId: playerId,
             players: game.players,
