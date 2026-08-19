@@ -87,6 +87,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Back to menu from lobby screen
     if (backToMenuFromLobbyBtn) {
         backToMenuFromLobbyBtn.addEventListener('click', function handleBackToMenuFromLobby() {
+            // Stop polling when leaving lobby
+            stopGamePolling();
+            
             // Play puzzle animation when returning to menu
             playPuzzleAnimation('PUZZLE');
             
@@ -111,8 +114,52 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Store active games locally (in a real app, this would be server-side)
+    // Store active games in localStorage for cross-tab persistence
     let activeGames = [];
+    let currentPlayerId = null;
+    
+    // Generate or get player ID
+    function getPlayerId() {
+        if (!currentPlayerId) {
+            let storedId = localStorage.getItem('playerId');
+            if (storedId) {
+                currentPlayerId = storedId;
+            } else {
+                currentPlayerId = generatePlayerId();
+                localStorage.setItem('playerId', currentPlayerId);
+            }
+        }
+        return currentPlayerId;
+    }
+    
+    // Load games from localStorage on page load
+    function loadGamesFromStorage() {
+        try {
+            const storedGames = localStorage.getItem('multiplayerGames');
+            if (storedGames) {
+                activeGames = JSON.parse(storedGames);
+                // Filter out games older than 1 hour
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                activeGames = activeGames.filter(game => new Date(game.createdAt) > oneHourAgo);
+                saveGamesToStorage();
+            }
+        } catch (e) {
+            console.log('Error loading games from storage:', e);
+        }
+    }
+    
+    // Save games to localStorage
+    function saveGamesToStorage() {
+        try {
+            localStorage.setItem('multiplayerGames', JSON.stringify(activeGames));
+        } catch (e) {
+            console.log('Error saving games to storage:', e);
+        }
+    }
+    
+    // Load games on page load
+    loadGamesFromStorage();
+    getPlayerId();
     
     // Function to create a new game
     function createNewGame(language = 'english') {
@@ -120,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         
         // Generate a random game name
-        const gameNames = ['Puzzle Masters', 'Word Warriors', 'Scrabble Stars', 'Tile Titans', 'Board Bosses'];
+        const gameNames = ['Puzzle Masters', 'Word Warriors', 'Puzzle Stars', 'Tile Titans', 'Board Bosses'];
         const randomName = gameNames[Math.floor(Math.random() * gameNames.length)];
         
         // Create game object
@@ -131,14 +178,28 @@ document.addEventListener("DOMContentLoaded", () => {
             maxPlayers: 2,
             status: 'waiting',
             language: language,
-            createdAt: new Date()
+            createdAt: new Date(),
+            hostId: getPlayerId(),
+            playerIds: [getPlayerId()],
+            // For online play, this would need to be stored in a real database
+            isLocal: true // Flag to indicate this is a local test game
         };
         
         // Add to active games
         activeGames.push(newGame);
         
+        console.log('Game created locally. For online play, this would be stored in a database and synced via WebSocket.');
+        
+        // Save to localStorage
+        saveGamesToStorage();
+        
         // Navigate to the specific game lobby
         showGameLobby(newGame);
+    }
+    
+    // Generate a simple player ID
+    function generatePlayerId() {
+        return 'PLAYER-' + Math.random().toString(36).substr(2, 9).toUpperCase();
     }
     
     // Function to show specific game lobby
@@ -148,6 +209,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Remove side-by-side layout for game lobby
         document.querySelector('.home-container').classList.remove('lobby-layout');
+        
+        // Hide main menu and mini board for game lobby
+        if (mainMenu) mainMenu.style.display = 'none';
+        const miniBoardContainer = document.querySelector('.mini-board-container');
+        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
         
         // Create or update game lobby screen
         let gameLobbyScreen = document.getElementById('gameLobbyScreen');
@@ -160,10 +226,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
-            <h2>Game Lobby</h2>
+            <h2>Puzzle Game Lobby</h2>
             <div class="game-lobby-info">
                 <div class="lobby-game-name">${game.name}</div>
                 <div class="lobby-game-id">Game ID: ${game.id}</div>
+                <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
@@ -176,7 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="lobby-status">Status: ${game.status}</div>
                 <button class="start-game-btn" id="startGameBtn" ${game.players < game.maxPlayers ? 'disabled' : ''}>
-                    ${game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Game'}
+                    ${game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
                 </button>
             </div>
         `;
@@ -264,27 +331,62 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Function to join a game (placeholder)
+    // Function to join a game
     function joinGame(gameId) {
         const game = activeGames.find(g => g.id === gameId);
         if (game) {
+            const playerId = getPlayerId();
+            
+            // Check if player is already in this game
+            if (game.playerIds && game.playerIds.includes(playerId)) {
+                alert('You are already in this game lobby!');
+                showGameLobby(game);
+                return;
+            }
+            
             if (game.players < game.maxPlayers) {
                 game.players++;
+                game.playerIds = game.playerIds || [];
+                game.playerIds.push(playerId);
                 game.status = 'in progress';
+                saveGamesToStorage();
                 updateGamesList();
-                alert(`Joined game "${game.name}"!`);
-                // In a real app, this would navigate to the game page
+                
+                // Navigate to game lobby immediately
+                showGameLobby(game);
             } else {
                 alert('This game is full!');
             }
+        } else {
+            alert('Game not found! It may have expired.');
         }
     }
     
-    // Function to load active games (placeholder)
+    // Function to load active games
     function loadActiveGames() {
-        // In a real app, this would fetch from a server
-        // For now, we'll use the local activeGames array
+        // Reload from localStorage to get latest games from other tabs
+        loadGamesFromStorage();
         updateGamesList();
+        
+        // Set up polling to check for new games every 2 seconds
+        if (!window.gamePollingInterval) {
+            window.gamePollingInterval = setInterval(() => {
+                loadGamesFromStorage();
+                updateGamesList();
+            }, 2000);
+        }
+        
+        console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
+        console.log('ONLINE MULTIPLAYER: Requires WebSocket server + real-time database for actual online play.');
+        console.log('JOINING: Players join directly from Active Games list - no codes needed.');
+    }
+    
+    // Stop polling when leaving lobby
+    function stopGamePolling() {
+        if (window.gamePollingInterval) {
+            clearInterval(window.gamePollingInterval);
+            window.gamePollingInterval = null;
+        }
     }
     
     // Language button tracking with Vercel Analytics
@@ -503,7 +605,7 @@ function playPuzzleAnimation(word = 'PUZZLE') {
             { letter: 'E', row: 1, col: 4 },
             { letter: 'R', row: 2, col: 4 },
             { letter: 'S', row: 3, col: 4 },
-            { letter: 'U', row: 4, col: 4 },
+            { letter: 'U', row: 4, col: 4, middle: true },
             { letter: 'S', row: 5, col: 4 },
             // PLAYER (intersects with VERSUS at R)
             { letter: 'P', row: 2, col: 2 },
@@ -551,8 +653,11 @@ function playPuzzleAnimation(word = 'PUZZLE') {
         return { ...letter, delay: animationDelays[delayIndex++] };
     });
     
-    // Shuffle the animation order for more interesting effect
-    const shuffledLetters = [...lettersWithDelays].sort(() => Math.random() - 0.5);
+    // Shuffle the animation order for more interesting effect, but ensure middle letter goes first
+    const middleLetter = lettersWithDelays.find(letter => letter.middle);
+    const otherLetters = lettersWithDelays.filter(letter => !letter.middle);
+    const shuffledOthers = [...otherLetters].sort(() => Math.random() - 0.5);
+    const shuffledLetters = middleLetter ? [middleLetter, ...shuffledOthers] : shuffledOthers;
     
     // Animate each letter appearing with staggered timing
     shuffledLetters.forEach((tile) => {
