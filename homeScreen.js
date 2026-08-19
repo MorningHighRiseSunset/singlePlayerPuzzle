@@ -49,6 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (mainMenu) mainMenu.style.display = 'none';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                // Add side-by-side layout class
+                document.querySelector('.home-container').classList.add('lobby-layout');
                 // Load active games (placeholder for now)
                 loadActiveGames();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
@@ -76,6 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
             playPuzzleAnimation('PUZZLE');
             
             setTimeout(() => {
+                // Remove side-by-side layout class
+                document.querySelector('.home-container').classList.remove('lobby-layout');
                 if (mainMenu) mainMenu.style.display = 'flex';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'none';
@@ -124,6 +128,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Hide lobby screen and show game lobby
         if (lobbyScreen) lobbyScreen.style.display = 'none';
         
+        // Remove side-by-side layout for game lobby
+        document.querySelector('.home-container').classList.remove('lobby-layout');
+        
         // Create or update game lobby screen
         let gameLobbyScreen = document.getElementById('gameLobbyScreen');
         if (!gameLobbyScreen) {
@@ -169,6 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Play player versus player animation when returning to lobby
                     playPuzzleAnimation('PLAYER VERSUS PLAYER');
                     setTimeout(() => {
+                        // Restore side-by-side layout
+                        document.querySelector('.home-container').classList.add('lobby-layout');
                         if (lobbyScreen) lobbyScreen.style.display = 'flex';
                         updateGamesList();
                     }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)

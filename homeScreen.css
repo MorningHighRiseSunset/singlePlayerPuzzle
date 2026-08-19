@@ -31,11 +31,30 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 420px; /* Reduced from 520px */
+    max-width: 1200px; /* Increased for side-by-side layout */
     margin: 24px auto; /* Reduced margin */
     position: relative;
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Side-by-side layout for lobby screen */
+.home-container.lobby-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+    padding: 24px;
+}
+
+.home-container.lobby-layout .mini-board-container {
+    width: 50%;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.home-container.lobby-layout .lobby-content {
+    width: 50%;
+    flex-shrink: 0;
 }
 
 .mini-board-container {
@@ -326,8 +345,8 @@ body {
     box-shadow: 0 4px 14px #00338055;
 }
 
-/* Lobby Container Styling */
-.lobby-container {
+/* Lobby Content Styling */
+.lobby-content {
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -632,6 +651,49 @@ body {
     }
 }
 
+/* Mobile responsiveness for lobby layout */
+@media (max-width: 768px) {
+    .home-container.lobby-layout {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+    }
+    
+    .home-container.lobby-layout .mini-board-container {
+        width: 100%;
+    }
+    
+    .home-container.lobby-layout .lobby-content {
+        width: 100%;
+    }
+    
+    .mini-scrabble-board {
+        transform: scale(0.7);
+    }
+    
+    .lobby-content h2 {
+        font-size: 1.2rem;
+    }
+    
+    .lobby-content h3 {
+        font-size: 1rem;
+    }
+    
+    .create-game-btn {
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+    
+    .active-games-container {
+        padding: 12px;
+    }
+    
+    .back-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+}
+
 /* Laptop-specific optimizations */
 @media (min-width: 769px) and (max-width: 1366px) {
     .home-container {
@@ -655,10 +717,10 @@ body {
         padding: 15px 20px;
         font-size: 1.15rem;
     }
-    .lobby-container h2 {
+    .lobby-content h2 {
         font-size: 1.4rem;
     }
-    .lobby-container h3 {
+    .lobby-content h3 {
         font-size: 1.15rem;
     }
     .create-game-btn {
@@ -742,10 +804,10 @@ body {
         gap: 16px;
         margin-top: 12px;
     }
-    .lobby-container h2 {
+    .lobby-content h2 {
         font-size: 1.3rem;
     }
-    .lobby-container h3 {
+    .lobby-content h3 {
         font-size: 1.1rem;
     }
     .create-game-btn {
