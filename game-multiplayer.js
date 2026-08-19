@@ -49,9 +49,9 @@ function initMultiplayerSocket() {
         updateOpponentTileCount(data.tileCount);
     });
     
-    socket.on('board-sync', (data) => {
-        // Sync board state from opponent
-        syncBoardState(data);
+    socket.on('board-state', (data) => {
+        console.log('Received board state update:', data);
+        syncBoardState(data.board);
     });
     
     socket.on('game-state', (data) => {
@@ -70,6 +70,26 @@ function initMultiplayerSocket() {
             gameInstance.playerRack = data.myTiles;
             gameInstance.tiles = []; // Empty local bag since server manages it
             gameInstance.renderRack();
+        }
+        
+        // Sync board state
+        if (data.board && gameInstance) {
+            console.log('Syncing initial board state with', Object.keys(data.board).length, 'tiles');
+            syncBoardState(data.board);
+        }
+    });
+    
+    socket.on('tiles-drawn', (data) => {
+        console.log('Received tiles from server:', data.tiles.map(t => t.letter).join(','));
+        if (gameInstance) {
+            gameInstance.playerRack = data.tiles;
+            gameInstance.renderRack();
+            
+            // Send tile count to opponent
+            socket.emit('update-tiles', {
+                gameId: new URLSearchParams(window.location.search).get('gameId'),
+                tileCount: gameInstance.playerRack.length
+            });
         }
     });
     
@@ -110,6 +130,11 @@ function handleOpponentMove(data) {
             }
         });
         
+        // Sync the full board state if provided
+        if (data.board) {
+            syncBoardState(data.board);
+        }
+        
         // Update opponent score
         if (data.score) {
             gameInstance.opponentScore += data.score;
@@ -118,10 +143,35 @@ function handleOpponentMove(data) {
     }
 }
 
-// Sync board state from opponent
-function syncBoardState(data) {
-    console.log('Syncing board state:', data);
-    // Implement board synchronization
+// Sync board state from server
+function syncBoardState(board) {
+    console.log('Syncing board state:', board);
+    
+    if (!gameInstance) return;
+    
+    // Clear existing tiles from board and redraw from server state
+    const cells = document.querySelectorAll('.grid-item');
+    cells.forEach(cell => {
+        cell.innerHTML = ''; // Clear all tiles
+    });
+    
+    // Place tiles from server board state
+    for (const [cellKey, tileData] of Object.entries(board)) {
+        const [row, col] = cellKey.split('_');
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        
+        if (cell) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.innerHTML = `
+                ${tileData.letter}
+                <span class="points">${gameInstance.getTileDisplayValue({ letter: tileData.letter, isBlank: tileData.isBlank })}</span>
+            `;
+            cell.appendChild(tile);
+        }
+    }
+    
+    console.log('Board synced with', Object.keys(board).length, 'tiles');
 }
 
 // Update turn indicator
@@ -207,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Hook into submit move to send to opponent
                 const originalSubmitMove = gameInstance.submitMove;
                 gameInstance.submitMove = function() {
+                    const score = this.calculateTotalScore();
                     const moveData = {
                         gameId: new URLSearchParams(window.location.search).get('gameId'),
                         move: {
@@ -216,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 letter: t.letter,
                                 isBlank: t.isBlank
                             })),
-                            score: this.calculateTotalScore()
+                            score: score
                         }
                     };
                     

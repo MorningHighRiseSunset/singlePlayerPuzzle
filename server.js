@@ -109,7 +109,8 @@ io.on('connection', (socket) => {
             hostSocketId: socket.id,
             tileBag: createTileBag(),
             playerTiles: {}, // Map playerId to their tiles
-            currentPlayerId: playerId
+            currentPlayerId: playerId,
+            board: {} // Board state: {row_col: {letter, playerId}}
         };
         
         // Give host their initial tiles
@@ -250,7 +251,7 @@ io.on('connection', (socket) => {
             socketToPlayer[socket.id] = playerId;
             socket.join(gameId);
             
-            // Send initial game state with turn info and player's tiles
+            // Send initial game state with turn info, player's tiles, and current board
             socket.emit('game-state', {
                 gameId: game.id,
                 players: game.players,
@@ -258,7 +259,8 @@ io.on('connection', (socket) => {
                 status: game.status,
                 currentPlayerId: game.hostId, // Host goes first
                 myTiles: game.playerTiles[playerId] || [],
-                remainingTiles: game.tileBag.length
+                remainingTiles: game.tileBag.length,
+                board: game.board // Current board state
             });
             
             // Notify other player
@@ -266,6 +268,7 @@ io.on('connection', (socket) => {
             
             console.log('Player joined game room:', gameId, 'as:', playerId, 'host is:', game.hostId);
             console.log('Sending tiles:', game.playerTiles[playerId]?.map(t => t.letter).join(',') || 'none');
+            console.log('Sending board state with', Object.keys(game.board).length, 'tiles');
         }
     });
 
@@ -276,10 +279,27 @@ io.on('connection', (socket) => {
         const game = games[gameId];
         
         if (game) {
-            // Broadcast move to opponent
+            console.log('Player move:', playerId, 'in game:', gameId);
+            
+            // Update board state
+            if (move.placements) {
+                move.placements.forEach(placement => {
+                    const { row, col, letter, isBlank } = placement;
+                    const cellKey = `${row}_${col}`;
+                    game.board[cellKey] = {
+                        letter: letter,
+                        isBlank: isBlank,
+                        playerId: playerId,
+                        timestamp: Date.now()
+                    };
+                });
+            }
+            
+            // Broadcast move to opponent with board state
             socket.to(gameId).emit('opponent-move', {
                 playerId: playerId,
-                move: move
+                move: move,
+                board: game.board
             });
             
             // Toggle turn
@@ -287,10 +307,18 @@ io.on('connection', (socket) => {
             const currentPlayerIndex = playerIds.indexOf(playerId);
             const nextPlayerIndex = (currentPlayerIndex + 1) % playerIds.length;
             const nextPlayerId = playerIds[nextPlayerIndex];
+            game.currentPlayerId = nextPlayerId;
             
             io.to(gameId).emit('turn-change', {
                 currentPlayerId: nextPlayerId
             });
+            
+            // Broadcast updated board state to all players
+            io.to(gameId).emit('board-state', {
+                board: game.board
+            });
+            
+            saveGames();
         }
     });
 
