@@ -145,8 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 200); // Quick transition without animation
         });
     }
-        });
-    }
     
     // Create game button handler
     if (createGameBtn) {
