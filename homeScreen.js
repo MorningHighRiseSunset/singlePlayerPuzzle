@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Initialize Pusher and subscribe to lobby channel
             const pusherInstance = initPusher();
             if (pusherInstance) {
-                const lobbyChannel = pusherInstance.subscribe('lobby');
+                const lobbyChannel = pusherInstance.subscribe('private-lobby');
                 
                 // Listen for new games being created
                 lobbyChannel.bind('client-game-created', (data) => {
@@ -244,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (pusherInstance) {
             // Subscribe to game channel for real-time updates
-            const channelName = `game-${gameId}`;
+            const channelName = `private-game-${gameId}`;
             currentChannel = pusherInstance.subscribe(channelName);
             
             // Listen for player join events
@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             
             // Announce game creation to a lobby channel
-            const lobbyChannel = pusherInstance.subscribe('lobby');
+            const lobbyChannel = pusherInstance.subscribe('private-lobby');
             lobbyChannel.trigger('client-game-created', {
                 game: newGame
             });
@@ -732,7 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (pusherInstance) {
                     // Subscribe to game channel
-                    const channelName = `game-${gameId}`;
+                    const channelName = `private-game-${gameId}`;
                     currentChannel = pusherInstance.subscribe(channelName);
                     
                     // Listen for game start events
