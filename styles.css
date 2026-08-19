@@ -479,14 +479,19 @@ body {
 
 /* Turn Indicator for Multiplayer */
 .turn-indicator {
-  text-align: center;
-  padding: 12px;
-  font-size: 1.2em;
+  display: none; /* Hidden by default, only for multiplayer */
+  background: white;
+  color: #222;
+  padding: 8px 16px;
+  font-size: 1.0em;
   font-weight: bold;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  background: var(--light);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border: none;
+  cursor: default;
+  white-space: nowrap;
+  min-width: 120px;
+  text-align: center;
 }
 
 .turn-indicator.your-turn {
@@ -506,6 +511,27 @@ body {
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+/* Position turn indicator at bottom left */
+.board-container .turn-indicator {
+  position: fixed;
+  bottom: 20px;
+  left: 280px; /* After return tiles button */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+}
+
+@media (max-width: 768px) {
+  .board-container .turn-indicator {
+    bottom: 12px;
+    left: 200px; /* Adjusted for mobile */
+    min-width: 100px;
+    font-size: 0.9em;
+    padding: 6px 12px;
   }
 }
 

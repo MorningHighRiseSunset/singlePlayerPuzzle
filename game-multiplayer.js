@@ -302,13 +302,9 @@ function updateGameUIForMultiplayer() {
         title.textContent = 'Multiplayer Puzzle Game';
     }
     
-    // Add turn indicator
-    const boardContainer = document.querySelector('.board-container');
-    if (boardContainer) {
-        const turnIndicator = document.createElement('div');
-        turnIndicator.id = 'turn-indicator';
-        turnIndicator.className = 'turn-indicator';
-        turnIndicator.textContent = 'Waiting for turn...';
-        boardContainer.insertBefore(turnIndicator, boardContainer.firstChild);
+    // Show turn indicator
+    const turnIndicator = document.getElementById('turn-indicator');
+    if (turnIndicator) {
+        turnIndicator.style.display = 'flex';
     }
 }
