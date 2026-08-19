@@ -48,6 +48,8 @@ function showOpponentPreviewTile(placement) {
 function clearOpponentPreviewTiles() {
     document.querySelectorAll('.tile.opponent-preview').forEach(el => el.remove());
 }
+
+function getOpponentEntry(allPlayerTiles, playerId) {
     if (!allPlayerTiles || !playerId) return null;
     for (const [id, tiles] of Object.entries(allPlayerTiles)) {
         if (id !== playerId) {
