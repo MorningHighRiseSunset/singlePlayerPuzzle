@@ -479,10 +479,10 @@ body {
 
 /* Turn Indicator for Multiplayer */
 .turn-indicator {
-  display: none; /* Hidden by default, only for multiplayer */
-  background: var(--button-bg); /* Blue to match Return Tiles */
+  display: none;
+  background: var(--button-bg);
   color: white;
-  padding: 8px 16px;
+  padding: 0 16px;
   font-size: 1.0em;
   font-weight: bold;
   border-radius: 24px;
@@ -490,49 +490,14 @@ body {
   border: none;
   cursor: default;
   white-space: nowrap;
-  min-width: 120px;
   text-align: center;
 }
 
-.turn-indicator.your-turn {
-  background: #10b981;
-  color: white;
-  animation: pulse 2s infinite;
-}
-
+.turn-indicator.your-turn,
 .turn-indicator.opponent-turn {
-  background: var(--danger);
+  background: var(--button-bg);
   color: white;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* Position turn indicator at bottom left */
-.board-container .turn-indicator {
-  position: fixed;
-  bottom: 20px;
-  left: 280px; /* After return tiles button */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4000;
-}
-
-@media (max-width: 768px) {
-  .board-container .turn-indicator {
-    bottom: 12px;
-    left: 200px; /* Adjusted for mobile */
-    min-width: 100px;
-    font-size: 0.9em;
-    padding: 6px 12px;
-  }
+  animation: none;
 }
 
 /* Tile count display for opponent */

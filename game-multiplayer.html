@@ -112,6 +112,23 @@
           transition: background 0.2s, transform 0.2s;
         }
 
+        #mobile-bottom-bar .turn-indicator {
+          height: 48px;
+          min-height: 48px;
+          padding: 0 14px;
+          border-radius: 24px;
+          font-size: 1.0em;
+          font-weight: bold;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+          background: var(--button-bg);
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+          border: none;
+        }
+
         .moves-panel,
         .info-panel {
           display: none !important;
@@ -202,6 +219,24 @@
           border: none;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           cursor: pointer;
+        }
+
+        #desktop-bottom-bar .turn-indicator {
+          height: 48px;
+          min-height: 48px;
+          max-height: 48px;
+          padding: 0 16px;
+          border-radius: 24px;
+          font-size: 1.1em;
+          font-weight: bold;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+          background: var(--button-bg);
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border: none;
         }
 
         .desktop-drawer {
@@ -617,7 +652,6 @@
         <div id="opponent-rack" class="tile-rack opponent-rack"></div>
         <div id="scrabble-board"></div>
         <div id="tile-rack" class="tile-rack"></div>
-        <div id="turn-indicator" class="turn-indicator"></div>
         <div id="hint-box">
           <span class="hint-icon">💡</span>
           <span id="hint-text"></span>
@@ -694,12 +728,14 @@
       <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Open menu">&#9776;</button>
       <button id="play-word-mobile" class="play-word-mobile" title="Submit Move" data-i18n="submit">Submit</button>
       <button id="return-tiles-mobile" class="return-tiles-mobile" title="Return Tiles" data-i18n="return-tiles">Return Tiles</button>
+      <div class="turn-indicator" style="display:none">Your Turn</div>
     </div>
     <!-- Desktop Bottom Bar: Hamburger + Submit + Return Tiles (Desktop Only) -->
     <div id="desktop-bottom-bar">
       <button id="desktop-menu-toggle" class="desktop-menu-toggle" aria-label="Open menu">&#9776;</button>
       <button id="play-word-desktop-bottom" class="play-word-desktop-bottom" title="Submit Move" data-i18n="submit">Submit</button>
       <button id="return-tiles-desktop-bottom" class="return-tiles-desktop-bottom" title="Return Tiles" data-i18n="return-tiles">Return Tiles</button>
+      <div class="turn-indicator" style="display:none">Your Turn</div>
     </div>
     <script>
       // Theme switching logic

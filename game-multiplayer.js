@@ -103,6 +103,9 @@ function initMultiplayerSocket() {
     
     socket.on('turn-change', (data) => {
         isMyTurn = data.currentPlayerId === myPlayerId;
+        if (gameInstance) {
+            gameInstance.currentTurn = isMyTurn ? 'player' : 'ai';
+        }
         updateTurnIndicator();
     });
     
@@ -123,6 +126,9 @@ function initMultiplayerSocket() {
             console.log('Game has', data.players, 'players');
             // Set initial turn - host goes first
             isMyTurn = data.hostId === myPlayerId;
+            if (gameInstance) {
+                gameInstance.currentTurn = isMyTurn ? 'player' : 'ai';
+            }
             updateTurnIndicator();
         }
         
@@ -168,84 +174,78 @@ function sendMoveToOpponent(moveData) {
 // Handle opponent's move
 function handleOpponentMove(data) {
     console.log('Opponent made a move:', data);
-    
-    if (gameInstance && data.move) {
-        // Place opponent's tiles on the board
+
+    if (!gameInstance || !data.move) return;
+
+    if (data.board) {
+        syncBoardState(data.board);
+    } else if (data.move.placements) {
         data.move.placements.forEach(placement => {
-            const { row, col, letter, isBlank } = placement;
-            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            if (cell) {
-                // Create tile element
-                const tile = document.createElement('div');
-                tile.className = 'tile';
-                tile.innerHTML = `
-                    ${letter}
-                    <span class="points">${gameInstance.getTileDisplayValue({ letter, isBlank })}</span>
-                `;
-                cell.appendChild(tile);
-            }
+            placeTileOnBoard(placement.row, placement.col, placement.letter, placement.isBlank);
         });
-        
-        // Sync the full board state if provided
-        if (data.board) {
-            syncBoardState(data.board);
-        }
-        
-        // Update opponent score
-        if (data.score) {
-            gameInstance.opponentScore += data.score;
-            gameInstance.updateGameState();
-        }
+        gameInstance.isFirstMove = false;
     }
+
+    if (data.move.score) {
+        gameInstance.opponentScore += data.move.score;
+        gameInstance.updateGameState();
+    }
+}
+
+function placeTileOnBoard(row, col, letter, isBlank) {
+    if (!gameInstance) return;
+
+    const value = gameInstance.getTileDisplayValue({ letter, isBlank });
+    gameInstance.board[row][col] = { letter, isBlank, value };
+
+    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    if (!cell) return;
+
+    const existingTile = cell.querySelector('.tile');
+    if (existingTile) existingTile.remove();
+    const star = cell.querySelector('.center-star');
+    if (star) star.remove();
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.innerHTML = `
+        ${letter}
+        <span class="points">${value}</span>
+    `;
+    cell.appendChild(tile);
 }
 
 // Sync board state from server
 function syncBoardState(board) {
     console.log('Syncing board state:', board);
-    
-    if (!gameInstance) return;
-    
-    // Clear existing tiles from board and redraw from server state
-    const cells = document.querySelectorAll('.grid-item');
-    cells.forEach(cell => {
-        cell.innerHTML = ''; // Clear all tiles
-    });
-    
-    // Place tiles from server board state
+
+    if (!gameInstance || !board) return;
+
+    gameInstance.board = Array(15).fill(null).map(() => Array(15).fill(null));
+    document.querySelectorAll('.board-cell .tile').forEach(el => el.remove());
+
     for (const [cellKey, tileData] of Object.entries(board)) {
-        const [row, col] = cellKey.split('_');
-        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        
-        if (cell) {
-            const tile = document.createElement('div');
-            tile.className = 'tile';
-            tile.innerHTML = `
-                ${tileData.letter}
-                <span class="points">${gameInstance.getTileDisplayValue({ letter: tileData.letter, isBlank: tileData.isBlank })}</span>
-            `;
-            cell.appendChild(tile);
-        }
+        const [row, col] = cellKey.split('_').map(Number);
+        placeTileOnBoard(row, col, tileData.letter, tileData.isBlank);
     }
-    
+
+    gameInstance.isFirstMove = Object.keys(board).length === 0;
     console.log('Board synced with', Object.keys(board).length, 'tiles');
 }
 
 // Update turn indicator
 function updateTurnIndicator() {
-    const turnIndicator = document.getElementById('turn-indicator');
-    if (turnIndicator) {
-        turnIndicator.textContent = isMyTurn ? 'Your Turn' : "Opponent's Turn";
-        turnIndicator.className = isMyTurn ? 'your-turn' : 'opponent-turn';
-    }
+    document.querySelectorAll('.turn-indicator').forEach(el => {
+        el.textContent = isMyTurn ? 'Your Turn' : "Opponent's Turn";
+        el.classList.toggle('your-turn', isMyTurn);
+        el.classList.toggle('opponent-turn', !isMyTurn);
+        el.style.display = 'flex';
+    });
 }
 
 // Update opponent tile count
 function updateOpponentTileCount(count) {
-    const opponentRack = document.getElementById('opponent-rack');
-    if (opponentRack) {
-        // Show tile count without revealing actual tiles
-        opponentRack.innerHTML = `<div class="tile-count">Opponent has ${count} tiles</div>`;
-    }
+    console.log('Opponent tile count:', count);
 }
 
 // Handle game end
@@ -300,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Set initial turn based on host status
                 isMyTurn = isHost;
+                gameInstance.currentTurn = isMyTurn ? 'player' : 'ai';
                 updateTurnIndicator();
                 console.log('Initial turn set - isHost:', isHost, 'isMyTurn:', isMyTurn);
                 
@@ -318,33 +319,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.renderRack();
                 };
                 
-                // Hook into submit move to send to opponent
-                const originalSubmitMove = gameInstance.submitMove;
-                gameInstance.submitMove = function() {
-                    const score = this.calculateTotalScore();
-                    const moveData = {
-                        gameId: new URLSearchParams(window.location.search).get('gameId'),
+                // Hook into playWord (Submit) to send the move and end the turn
+                const originalPlayWord = gameInstance.playWord.bind(gameInstance);
+                gameInstance.playWord = async function() {
+                    if (!isMyTurn) {
+                        console.log('Submit ignored — not your turn');
+                        return;
+                    }
+
+                    const placements = this.placedTiles.map(p => ({
+                        row: p.row,
+                        col: p.col,
+                        letter: p.tile?.letter ?? p.letter,
+                        isBlank: !!(p.tile?.isBlank || p.isBlank)
+                    }));
+                    const scoreBefore = this.playerScore;
+
+                    await originalPlayWord();
+
+                    const moveSucceeded = placements.length > 0 && this.placedTiles.length === 0;
+                    if (!moveSucceeded) return;
+
+                    const gameId = new URLSearchParams(window.location.search).get('gameId');
+                    sendMoveToOpponent({
+                        gameId,
                         move: {
-                            placements: this.placedTiles.map(t => ({
-                                row: t.row,
-                                col: t.col,
-                                letter: t.letter,
-                                isBlank: t.isBlank
-                            })),
-                            score: score
+                            placements,
+                            score: this.playerScore - scoreBefore
                         }
-                    };
-                    
-                    sendMoveToOpponent(moveData);
-                    
-                    // Send tile count update
+                    });
+
                     socket.emit('update-tiles', {
-                        gameId: moveData.gameId,
+                        gameId,
                         tileCount: this.playerRack.length
                     });
-                    
-                    // Call original submit
-                    return originalSubmitMove.call(this);
+
+                    isMyTurn = false;
+                    this.currentTurn = 'ai';
+                    updateTurnIndicator();
                 };
             }
         }, 1000);
@@ -360,8 +372,7 @@ function updateGameUIForMultiplayer() {
     }
     
     // Show turn indicator
-    const turnIndicator = document.getElementById('turn-indicator');
-    if (turnIndicator) {
-        turnIndicator.style.display = 'flex';
-    }
+    document.querySelectorAll('.turn-indicator').forEach(el => {
+        el.style.display = 'flex';
+    });
 }
