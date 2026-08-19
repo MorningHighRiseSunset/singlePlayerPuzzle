@@ -132,7 +132,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (backToMenuFromLobbyBtn) {
         backToMenuFromLobbyBtn.addEventListener('click', function handleBackToMenuFromLobby() {
             // Stop polling when leaving lobby
-            stopGamePolling();
+            if (window.gamePollingInterval) {
+                clearInterval(window.gamePollingInterval);
+                window.gamePollingInterval = null;
+            }
             
             // Show mini board when returning to menu
             const miniBoardContainer = document.querySelector('.mini-board-container');
@@ -603,13 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('JOINING: Players join directly from Active Games list - no codes needed.');
     }
     
-    // Stop polling when leaving lobby
-    function stopGamePolling() {
-        if (window.gamePollingInterval) {
-            clearInterval(window.gamePollingInterval);
-            window.gamePollingInterval = null;
-        }
-    }
+
     
     // Language button tracking with Vercel Analytics
     const langButtons = document.querySelectorAll('.lang-btn');
