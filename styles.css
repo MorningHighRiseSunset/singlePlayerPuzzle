@@ -449,8 +449,8 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12); /* Reduced shadow */
 }
 
-/* AI Rack - Use same styling as regular tile rack */
-.ai-rack {
+/* Opponent Rack - Use same styling as regular tile rack */
+.opponent-rack {
   display: flex;
   background: var(--button-bg);
   padding: 8px;
@@ -506,7 +506,7 @@ body {
 
 /* Desktop AI rack styles */
 @media (min-width: 769px) {
-  .ai-rack {
+  .opponent-rack {
     display: flex !important;
     background: var(--button-bg);
     padding: 8px;
@@ -596,7 +596,7 @@ body {
   }
   
   /* Mobile AI rack styles */
-  .ai-rack {
+  .opponent-rack {
     margin: 2px auto 2px auto !important;
     padding: 4px !important;
     gap: 6px !important;
@@ -606,7 +606,7 @@ body {
   }
   
   /* AI rack tiles match board tile size on mobile */
-  .ai-rack .tile {
+  .opponent-rack .tile {
     width: calc(100vw / 15 - 1.5px) !important;  /* 15 tiles per row, minus gap */
     height: calc(100vw / 15 - 1.5px) !important;
     min-width: 0 !important;

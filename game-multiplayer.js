@@ -77,7 +77,7 @@ function updateTurnIndicator() {
 
 // Update opponent tile count
 function updateOpponentTileCount(count) {
-    const opponentRack = document.getElementById('ai-rack');
+    const opponentRack = document.getElementById('opponent-rack');
     if (opponentRack) {
         // Show tile count without revealing actual tiles
         opponentRack.innerHTML = `<div class="tile-count">Opponent has ${count} tiles</div>`;
@@ -107,12 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Update UI elements for multiplayer
 function updateGameUIForMultiplayer() {
-    // Change "Computer" to "Opponent" in score display
-    const computerScoreElements = document.querySelectorAll('[data-i18n="computer"]');
-    computerScoreElements.forEach(el => {
-        el.textContent = 'Opponent';
-    });
-    
     // Update game title
     const title = document.querySelector('title');
     if (title) {
