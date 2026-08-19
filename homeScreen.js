@@ -35,7 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             pusher = new Pusher('6d8cbaf0731b74524092', {
                 cluster: 'us3',
-                forceTLS: true
+                forceTLS: true,
+                authEndpoint: '/api/pusher-auth'
             });
             
             // Log connection state
