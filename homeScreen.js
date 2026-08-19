@@ -588,7 +588,9 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         
         const gamePage = gamePages[language] || 'game.html';
-        window.location.href = gamePage;
+        // Add multiplayer parameter and game ID
+        const multiplayerUrl = `${gamePage}?multiplayer=true&gameId=${currentGame.id}`;
+        window.location.href = multiplayerUrl;
     }
     
     // Function to update the games list display

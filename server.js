@@ -197,6 +197,68 @@ io.on('connection', (socket) => {
         socket.emit('game-list', Object.values(games));
     });
 
+    // Join game room for gameplay
+    socket.on('join-game-room', (data) => {
+        const { gameId, playerId } = data;
+        const game = games[gameId];
+        
+        if (game) {
+            socketToPlayer[socket.id] = playerId;
+            socket.join(gameId);
+            
+            // Send initial game state
+            socket.emit('game-state', {
+                gameId: game.id,
+                players: game.players,
+                hostId: game.hostId,
+                status: game.status
+            });
+            
+            // Notify other player
+            socket.to(gameId).emit('player-reconnected', { playerId });
+        }
+    });
+
+    // Player makes a move
+    socket.on('player-move', (data) => {
+        const { gameId, move } = data;
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (game) {
+            // Broadcast move to opponent
+            socket.to(gameId).emit('opponent-move', {
+                playerId: playerId,
+                move: move
+            });
+            
+            // Toggle turn
+            const playerIds = game.playerIds;
+            const currentPlayerIndex = playerIds.indexOf(playerId);
+            const nextPlayerIndex = (currentPlayerIndex + 1) % playerIds.length;
+            const nextPlayerId = playerIds[nextPlayerIndex];
+            
+            io.to(gameId).emit('turn-change', {
+                currentPlayerId: nextPlayerId
+            });
+        }
+    });
+
+    // Player updates tile count
+    socket.on('update-tiles', (data) => {
+        const { gameId, tileCount } = data;
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (game) {
+            // Broadcast tile count to opponent
+            socket.to(gameId).emit('opponent-tiles', {
+                playerId: playerId,
+                tileCount: tileCount
+            });
+        }
+    });
+
     socket.on('disconnect', () => {
         const playerId = socketToPlayer[socket.id];
         console.log('Client disconnected:', socket.id, 'player:', playerId);

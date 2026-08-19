@@ -463,6 +463,47 @@ body {
   margin: 6px auto 6px auto;
 }
 
+/* Turn Indicator for Multiplayer */
+.turn-indicator {
+  text-align: center;
+  padding: 12px;
+  font-size: 1.2em;
+  font-weight: bold;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: var(--light);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.turn-indicator.your-turn {
+  background: #10b981;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.turn-indicator.opponent-turn {
+  background: var(--danger);
+  color: white;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Tile count display for opponent */
+.tile-count {
+  color: white;
+  font-size: 0.9em;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+
 /* Desktop AI rack styles */
 @media (min-width: 769px) {
   .ai-rack {
