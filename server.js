@@ -35,6 +35,7 @@ app.use(express.static(path.join(__dirname)));
 // Game state storage
 const games = {};
 const GAMES_FILE = path.join(__dirname, 'games.json');
+const socketToPlayer = {}; // Map socket.id to playerId
 
 // Load games from disk on startup
 function loadGames() {
@@ -67,6 +68,9 @@ io.on('connection', (socket) => {
 
     // Create a new game
     socket.on('create-game', (data) => {
+        const playerId = data.playerId;
+        socketToPlayer[socket.id] = playerId;
+        
         const gameId = generateGameId();
         const game = {
             id: gameId,
@@ -76,15 +80,15 @@ io.on('connection', (socket) => {
             status: 'waiting',
             language: data.language || 'english',
             createdAt: new Date(),
-            hostId: socket.id,
-            playerIds: [socket.id],
-            hostPlayerId: data.playerId
+            hostId: playerId,
+            playerIds: [playerId],
+            hostSocketId: socket.id
         };
         
         games[gameId] = game;
         socket.join(gameId);
         
-        console.log('Game created:', gameId, 'by:', socket.id);
+        console.log('Game created:', gameId, 'by:', playerId);
         
         // Save to disk
         saveGames();
@@ -111,13 +115,16 @@ io.on('connection', (socket) => {
             return;
         }
         
+        // Map socket to player
+        socketToPlayer[socket.id] = playerId;
+        
         // Add player to game
         game.players += 1;
-        game.playerIds.push(socket.id);
+        game.playerIds.push(playerId);
         
         socket.join(gameId);
         
-        console.log('Player joined:', socket.id, 'to game:', gameId);
+        console.log('Player joined:', playerId, 'to game:', gameId);
         
         // Save to disk
         saveGames();
@@ -127,7 +134,7 @@ io.on('connection', (socket) => {
             playerId: playerId,
             players: game.players,
             playerIds: game.playerIds,
-            hostId: game.hostPlayerId
+            hostId: game.hostId
         });
         
         // Update game list
@@ -138,10 +145,11 @@ io.on('connection', (socket) => {
     socket.on('start-game', (data) => {
         const { gameId } = data;
         const game = games[gameId];
+        const playerId = socketToPlayer[socket.id];
         
         if (!game) return;
         
-        if (game.hostId !== socket.id) {
+        if (game.hostId !== playerId) {
             socket.emit('error', { message: 'Only host can start the game' });
             return;
         }
@@ -161,18 +169,19 @@ io.on('connection', (socket) => {
     socket.on('leave-game', (data) => {
         const { gameId } = data;
         const game = games[gameId];
+        const playerId = socketToPlayer[socket.id];
         
         if (game) {
             socket.leave(gameId);
             
             // Notify others if host left
-            if (game.hostId === socket.id) {
+            if (game.hostId === playerId) {
                 io.to(gameId).emit('host-left');
                 delete games[gameId];
             } else {
                 // Remove player
                 game.players -= 1;
-                game.playerIds = game.playerIds.filter(id => id !== socket.id);
+                game.playerIds = game.playerIds.filter(id => id !== playerId);
                 io.to(gameId).emit('player-left', { players: game.players, playerIds: game.playerIds });
             }
             
@@ -189,11 +198,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
+        const playerId = socketToPlayer[socket.id];
+        console.log('Client disconnected:', socket.id, 'player:', playerId);
+        
+        // Clean up socket mapping
+        delete socketToPlayer[socket.id];
         
         // Clean up games where this player was host
         for (const [gameId, game] of Object.entries(games)) {
-            if (game.hostId === socket.id) {
+            if (game.hostId === playerId) {
                 io.to(gameId).emit('host-left');
                 delete games[gameId];
                 saveGames();
