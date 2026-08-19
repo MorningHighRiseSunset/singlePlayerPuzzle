@@ -336,11 +336,12 @@ body {
     box-shadow: 0 2px 8px #00338033;
     transition: background 0.2s, color 0.2s, box-shadow 0.2s;
     letter-spacing: 0.02em;
-    position: relative;
-    z-index: 2;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
     outline: none;
     width: fit-content;
-    margin-bottom: 16px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }

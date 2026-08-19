@@ -2,8 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
     
-    // Play puzzle tile animation on mini board
-    playPuzzleAnimation('PUZZLE');
+    // Don't play animation on load - it's redundant
+    // playPuzzleAnimation('PUZZLE');
     
     // Store selected language for multiplayer
     let selectedMultiplayerLanguage = 'english';
@@ -85,10 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Listen for new games being created
                 lobbyChannel.bind('client-game-created', (data) => {
-                    console.log('New game created:', data.game);
+                    console.log('New game created via Pusher:', data.game);
                     // Add to active games if not already present
                     if (!activeGames.find(g => g.id === data.game.id)) {
                         activeGames.push(data.game);
+                        saveGamesToStorage();
                         updateGamesList();
                     }
                 });
@@ -119,14 +120,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const miniBoardContainer = document.querySelector('.mini-board-container');
             if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
             
-            // Play puzzle animation when returning to menu
-            playPuzzleAnimation('PUZZLE');
-            
             setTimeout(() => {
                 if (mainMenu) mainMenu.style.display = 'flex';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'none';
-            }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
+            }, 200); // Quick transition without animation
         });
     }
     
@@ -140,14 +138,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const miniBoardContainer = document.querySelector('.mini-board-container');
             if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
             
-            // Play puzzle animation when returning to menu
-            playPuzzleAnimation('PUZZLE');
-            
             setTimeout(() => {
                 if (mainMenu) mainMenu.style.display = 'flex';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'none';
-            }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
+            }, 200); // Quick transition without animation
+        });
+    }
         });
     }
     
@@ -232,6 +229,10 @@ document.addEventListener("DOMContentLoaded", () => {
         
         currentGame = newGame;
         
+        // Always save to localStorage for local tab sync (works even without Pusher)
+        activeGames.push(newGame);
+        saveGamesToStorage();
+        
         if (pusherInstance) {
             // Subscribe to game channel for real-time updates
             const channelName = `game-${gameId}`;
@@ -261,11 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             console.log('Game created with Pusher real-time sync');
         } else {
-            // Fallback to localStorage for local testing
-            newGame.isLocal = true;
-            activeGames.push(newGame);
-            saveGamesToStorage();
-            console.log('Game created locally (Pusher not configured)');
+            console.log('Game created with localStorage sync (Pusher not configured)');
         }
         
         // Navigate to the specific game lobby
@@ -591,28 +588,21 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Function to load active games
     function loadActiveGames() {
-        const pusherInstance = initPusher();
+        // Always use localStorage for local tab sync (works with or without Pusher)
+        loadGamesFromStorage();
+        updateGamesList();
         
-        if (pusherInstance) {
-            // With Pusher, we don't need polling - real-time updates are handled by events
-            console.log('Using Pusher for real-time game updates');
-        } else {
-            // Fallback to localStorage polling for local testing
-            loadGamesFromStorage();
-            updateGamesList();
-            
-            // Set up polling to check for new games every 2 seconds
-            if (!window.gamePollingInterval) {
-                window.gamePollingInterval = setInterval(() => {
-                    loadGamesFromStorage();
-                    updateGamesList();
-                }, 2000);
-            }
-            
-            console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
-            console.log('ONLINE MULTIPLAYER: Requires Pusher credentials for actual online play.');
-            console.log('JOINING: Players join directly from Active Games list - no codes needed.');
+        // Set up polling to check for new games every 2 seconds
+        if (!window.gamePollingInterval) {
+            window.gamePollingInterval = setInterval(() => {
+                loadGamesFromStorage();
+                updateGamesList();
+            }, 2000);
         }
+        
+        console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
+        console.log('ONLINE MULTIPLAYER: Requires Pusher credentials for actual online play.');
+        console.log('JOINING: Players join directly from Active Games list - no codes needed.');
     }
     
     // Stop polling when leaving lobby
