@@ -7,6 +7,68 @@ let opponentPlayerId = null;
 let isMyTurn = false;
 let isHost = false;
 let gameInstance = null;
+let pendingGameState = null;
+
+function formatTileLetters(tiles) {
+    if (!tiles || !tiles.length) return '(empty)';
+    return tiles.map(t => t.letter).join(',');
+}
+
+function getOpponentEntry(allPlayerTiles, playerId) {
+    if (!allPlayerTiles || !playerId) return null;
+    for (const [id, tiles] of Object.entries(allPlayerTiles)) {
+        if (id !== playerId) {
+            return { opponentId: id, tiles };
+        }
+    }
+    return null;
+}
+
+function logTileInfo(myTiles, allPlayerTiles) {
+    console.log('=== MY TILES ===');
+    console.log('My player ID:', myPlayerId);
+    console.log('My tiles:', formatTileLetters(myTiles));
+
+    const opponent = getOpponentEntry(allPlayerTiles, myPlayerId);
+    console.log('Opponent tiles:', opponent ? formatTileLetters(opponent.tiles) : '(waiting for opponent)');
+
+    if (gameInstance && typeof gameInstance.appendConsoleMessage === 'function') {
+        gameInstance.appendConsoleMessage('My tiles: ' + formatTileLetters(myTiles));
+        gameInstance.appendConsoleMessage('Opponent tiles: ' + (opponent ? formatTileLetters(opponent.tiles) : '(waiting for opponent)'));
+    }
+}
+
+function applyServerTileState(data) {
+    if (!data) return;
+
+    if (data.myTiles) {
+        sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
+    }
+    if (data.allPlayerTiles) {
+        sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
+    }
+
+    const myTiles = data.myTiles || JSON.parse(sessionStorage.getItem('myTiles') || '[]');
+    const allPlayerTiles = data.allPlayerTiles || JSON.parse(sessionStorage.getItem('allPlayerTiles') || '{}');
+
+    logTileInfo(myTiles, allPlayerTiles);
+
+    if (!gameInstance || !data.myTiles) return;
+
+    gameInstance.playerRack = data.myTiles;
+    gameInstance.tiles = [];
+
+    const opponent = getOpponentEntry(allPlayerTiles, myPlayerId);
+    if (opponent) {
+        opponentPlayerId = opponent.opponentId;
+        gameInstance.opponentRack = opponent.tiles;
+        if (typeof gameInstance.renderAIRack === 'function') {
+            gameInstance.renderAIRack();
+        }
+    }
+
+    gameInstance.renderRack();
+}
 
 // Initialize Socket.io for multiplayer
 function initMultiplayerSocket() {
@@ -64,41 +126,9 @@ function initMultiplayerSocket() {
             updateTurnIndicator();
         }
         
-        // Use server-provided tiles
-        if (data.myTiles && gameInstance) {
-            console.log('=== RECEIVED TILES FROM SERVER ===');
-            console.log('My player ID:', myPlayerId);
-            console.log('Tiles received:', data.myTiles.map(t => t.letter).join(','));
-            
-            console.log('=== ALL PLAYERS TILES ===');
-            if (data.allPlayerTiles) {
-                for (const [playerId, tiles] of Object.entries(data.allPlayerTiles)) {
-                    console.log(`Player ${playerId}:`, tiles.map(t => t.letter).join(','));
-                }
-            }
-            
-            console.log('Setting player rack to server tiles');
-            gameInstance.playerRack = data.myTiles;
-            gameInstance.tiles = []; // Empty local bag since server manages it
-            
-            // Force render immediately
-            gameInstance.renderRack();
-            
-            // Double-check by logging what renderRack will display
-            console.log('Rack tiles after render:', gameInstance.playerRack.map(t => t.letter).join(','));
-            
-            // If still wrong, force clear and re-render
-            setTimeout(() => {
-                const rackElement = document.getElementById('tile-rack');
-                if (rackElement) {
-                    rackElement.innerHTML = '';
-                    gameInstance.renderRack();
-                    console.log('Force re-rendered rack');
-                }
-            }, 100);
-        }
-        
-        // Sync board state
+        pendingGameState = data;
+        applyServerTileState(data);
+
         if (data.board && gameInstance) {
             console.log('Syncing initial board state with', Object.keys(data.board).length, 'tiles');
             syncBoardState(data.board);
@@ -246,53 +276,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Opponent rack:', gameInstance.opponentRack);
                 console.log('Local tiles bag:', gameInstance.tiles.length);
                 
-                // Use tiles from sessionStorage (provided by server)
-                const storedTiles = sessionStorage.getItem('myTiles');
-                const storedAllTiles = sessionStorage.getItem('allPlayerTiles');
-                if (storedTiles) {
-                    const myTiles = JSON.parse(storedTiles);
-                    console.log('=== MY TILES FROM SESSIONSTORAGE ===');
-                    console.log('My player ID:', myPlayerId);
-                    console.log('My tiles:', myTiles.map(t => t.letter).join(','));
-                    
-                    if (storedAllTiles) {
-                        const allTiles = JSON.parse(storedAllTiles);
-                        console.log('=== ALL PLAYERS TILES ===');
-                        for (const [playerId, tiles] of Object.entries(allTiles)) {
-                            console.log(`Player ${playerId}:`, tiles.map(t => t.letter).join(','));
-                        }
+                // Apply tiles from pending game-state (preferred) or sessionStorage
+                if (pendingGameState) {
+                    applyServerTileState(pendingGameState);
+                    if (pendingGameState.board) {
+                        syncBoardState(pendingGameState.board);
                     }
-                    
-                    // Completely replace the game's tile bag with my tiles
-                    gameInstance.playerRack = myTiles;
-                    gameInstance.tiles = []; // Empty local bag since server manages it
-                    
-                    console.log('Player rack AFTER override:', gameInstance.playerRack.map(t => t.letter).join(','));
-                    
-                    // Force render immediately
-                    gameInstance.renderRack();
-                    
-                    // Force clear and re-render to ensure it sticks
-                    setTimeout(() => {
-                        const rackElement = document.getElementById('tile-rack');
-                        if (rackElement) {
-                            console.log('Force clearing rack element');
-                            rackElement.innerHTML = '';
-                            gameInstance.renderRack();
-                            console.log('Rack after force re-render:', rackElement.innerHTML);
-                        }
-                    }, 50);
-                    
-                    // Force again after more time
-                    setTimeout(() => {
-                        const rackElement = document.getElementById('tile-rack');
-                        if (rackElement) {
-                            console.log('Final force re-render');
-                            rackElement.innerHTML = '';
-                            gameInstance.renderRack();
-                            console.log('Final rack content:', rackElement.innerHTML);
-                        }
-                    }, 200);
+                } else {
+                    const storedTiles = sessionStorage.getItem('myTiles');
+                    const storedAllTiles = sessionStorage.getItem('allPlayerTiles');
+                    if (storedTiles) {
+                        applyServerTileState({
+                            myTiles: JSON.parse(storedTiles),
+                            allPlayerTiles: storedAllTiles ? JSON.parse(storedAllTiles) : {}
+                        });
+                    }
                 }
                 
                 // Determine if I'm the host
