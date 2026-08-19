@@ -415,8 +415,6 @@
       }
     </style>
     <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="runtime-config.js"></script>
   </head>
   <body>
     <!-- Background Music -->
@@ -847,15 +845,6 @@
     <script src="translations.js"></script>
     <script src="tile_rack_checker.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script>
-      // Check if multiplayer and load appropriate script
-      const urlParams = new URLSearchParams(window.location.search);
-      const isMultiplayer = urlParams.get('multiplayer') === 'true';
-      
-      if (isMultiplayer) {
-        document.write('<script src="game-multiplayer.js"><\/script>');
-      }
-    </script>
     <script src="script.js"></script>
   </body>
 </html>

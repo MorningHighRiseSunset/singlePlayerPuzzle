@@ -594,14 +594,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Function to navigate to the appropriate game page
     function navigateToGame(language) {
         const gamePages = {
-            'english': 'game.html',
-            'french': 'french.html',
-            'hindi': 'hindi.html',
-            'mandarin': 'mandarin.html',
-            'spanish': 'spanish.html'
+            'english': 'game-multiplayer.html',
+            'french': 'game-multiplayer.html',
+            'hindi': 'game-multiplayer.html',
+            'mandarin': 'game-multiplayer.html',
+            'spanish': 'game-multiplayer.html'
         };
         
-        const gamePage = gamePages[language] || 'game.html';
+        const gamePage = gamePages[language] || 'game-multiplayer.html';
         // Add multiplayer parameter and game ID
         const multiplayerUrl = `${gamePage}?multiplayer=true&gameId=${currentGame.id}`;
         window.location.href = multiplayerUrl;
