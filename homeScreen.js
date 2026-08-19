@@ -103,8 +103,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (mainMenu) mainMenu.style.display = 'none';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                // Add side-by-side layout class
-                document.querySelector('.home-container').classList.add('lobby-layout');
+                // Hide mini board in lobby
+                const miniBoardContainer = document.querySelector('.mini-board-container');
+                if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                 // Load active games (placeholder for now)
                 loadActiveGames();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
@@ -114,6 +115,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Back to menu from language screen
     if (backToMenuBtn) {
         backToMenuBtn.addEventListener('click', function handleBackToMenu() {
+            // Show mini board when returning to menu
+            const miniBoardContainer = document.querySelector('.mini-board-container');
+            if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
+            
             // Play puzzle animation when returning to menu
             playPuzzleAnimation('PUZZLE');
             
@@ -131,12 +136,14 @@ document.addEventListener("DOMContentLoaded", () => {
             // Stop polling when leaving lobby
             stopGamePolling();
             
+            // Show mini board when returning to menu
+            const miniBoardContainer = document.querySelector('.mini-board-container');
+            if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
+            
             // Play puzzle animation when returning to menu
             playPuzzleAnimation('PUZZLE');
             
             setTimeout(() => {
-                // Remove side-by-side layout class
-                document.querySelector('.home-container').classList.remove('lobby-layout');
                 if (mainMenu) mainMenu.style.display = 'flex';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'none';
@@ -329,12 +336,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (backToLobbyBtn) {
                 backToLobbyBtn.onclick = () => {
                     gameLobbyScreen.style.display = 'none';
+                    // Show mini board again when returning to lobby
+                    const miniBoardContainer = document.querySelector('.mini-board-container');
+                    if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
                     // Play player versus player animation when returning to lobby
                     playPuzzleAnimation('PLAYER VERSUS PLAYER');
                     setTimeout(() => {
-                        // Restore side-by-side layout
-                        document.querySelector('.home-container').classList.add('lobby-layout');
                         if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                        // Hide mini board in lobby after animation
+                        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                         updateGamesList();
                     }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
                 };
@@ -407,13 +417,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (backToLobbyBtn) {
                 backToLobbyBtn.onclick = () => {
                     gameLobbyScreen.style.display = 'none';
+                    // Show mini board again when returning to lobby
+                    const miniBoardContainer = document.querySelector('.mini-board-container');
+                    if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
                     playPuzzleAnimation('PLAYER VERSUS PLAYER');
                     setTimeout(() => {
-                        document.querySelector('.home-container').classList.add('lobby-layout');
                         if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                        if (mainMenu) mainMenu.style.display = 'none';
-                        const miniBoardContainer = document.querySelector('.mini-board-container');
-                        if (miniBoardContainer) miniBoardContainer.style.display = 'block';
+                        // Hide mini board in lobby after animation
+                        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                         updateGamesList();
                     }, 2800);
                 };
@@ -823,20 +834,20 @@ function playPuzzleAnimation(word = 'PUZZLE') {
             { letter: 'E', row: 4, col: 7 }
         ],
         'PLAYER VERSUS PLAYER': [
-            // VERSUS (vertical)
+            // PLAYER (horizontal, centered with A in middle)
+            { letter: 'P', row: 4, col: 2 },
+            { letter: 'L', row: 4, col: 3 },
+            { letter: 'A', row: 4, col: 4, middle: true },
+            { letter: 'Y', row: 4, col: 5 },
+            { letter: 'E', row: 4, col: 6 },
+            { letter: 'R', row: 4, col: 7 },
+            // VERSUS (vertical, intersects at A)
             { letter: 'V', row: 0, col: 4 },
             { letter: 'E', row: 1, col: 4 },
             { letter: 'R', row: 2, col: 4 },
             { letter: 'S', row: 3, col: 4 },
-            { letter: 'U', row: 4, col: 4, middle: true },
-            { letter: 'S', row: 5, col: 4 },
-            // PLAYER (intersects with VERSUS at R)
-            { letter: 'P', row: 2, col: 2 },
-            { letter: 'L', row: 2, col: 3 },
-            { letter: 'A', row: 2, col: 4 },
-            { letter: 'Y', row: 2, col: 5 },
-            { letter: 'E', row: 2, col: 6 },
-            { letter: 'R', row: 2, col: 7 }
+            { letter: 'R', row: 5, col: 4 },
+            { letter: 'S', row: 6, col: 4 }
         ],
         'BATTLE': [
             { letter: 'B', row: 4, col: 1 },

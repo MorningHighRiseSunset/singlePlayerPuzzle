@@ -38,34 +38,25 @@ body {
     box-sizing: border-box;
 }
 
-/* Side-by-side layout for lobby screen */
+/* Side-by-side layout for lobby screen - REMOVED mini board from lobby */
 .home-container.lobby-layout {
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
-    gap: 32px;
+    gap: 16px;
     padding: 24px;
     justify-content: center;
 }
 
 .home-container.lobby-layout .mini-board-container {
-    width: 50%;
-    margin: 0;
-    flex-shrink: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 0;
+    display: none; /* Hide mini board in lobby */
 }
 
 .home-container.lobby-layout .mini-scrabble-board {
-    max-width: 100%;
-    transform: scale(0.8);
-    overflow: hidden;
+    display: none;
 }
 
 .home-container.lobby-layout .lobby-content {
-    width: 50%;
-    flex-shrink: 0;
+    width: 100%;
     max-width: 500px;
 }
 
@@ -746,8 +737,7 @@ body {
     }
     
     .home-container.lobby-layout .mini-scrabble-board {
-        transform: scale(0.6);
-        max-width: 100%;
+        display: none;
     }
     
     .home-container.lobby-layout .lobby-content {
