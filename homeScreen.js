@@ -247,37 +247,49 @@ document.addEventListener("DOMContentLoaded", () => {
             const channelName = `presence-game-${gameId}`;
             currentChannel = pusherInstance.subscribe(channelName);
             
-            // Listen for player join events
-            currentChannel.bind('client-player-joined', (data) => {
-                console.log('=== PUSHER EVENT: player-joined ===');
-                console.log('Received data:', data);
-                console.log('Current Game ID:', currentGame?.id);
-                console.log('Current Player ID:', getPlayerId());
-                if (currentGame) {
-                    currentGame.players = data.players;
-                    currentGame.playerIds = data.playerIds;
-                    console.log('Updated game players:', currentGame.players);
-                    console.log('Updated game player IDs:', currentGame.playerIds);
-                    // Update the game in activeGames array
-                    const gameIndex = activeGames.findIndex(g => g.id === currentGame.id);
-                    if (gameIndex !== -1) {
-                        activeGames[gameIndex] = currentGame;
+            // Wait for subscription to succeed
+            currentChannel.bind('pusher:subscription_succeeded', () => {
+                console.log('Host: Successfully subscribed to game channel');
+                
+                // Listen for player join events
+                currentChannel.bind('client-player-joined', (data) => {
+                    console.log('=== PUSHER EVENT: player-joined ===');
+                    console.log('Received data:', data);
+                    console.log('Current Game ID:', currentGame?.id);
+                    console.log('Current Player ID:', getPlayerId());
+                    if (currentGame) {
+                        currentGame.players = data.players;
+                        currentGame.playerIds = data.playerIds;
+                        console.log('Updated game players:', currentGame.players);
+                        console.log('Updated game player IDs:', currentGame.playerIds);
+                        // Update the game in activeGames array
+                        const gameIndex = activeGames.findIndex(g => g.id === currentGame.id);
+                        if (gameIndex !== -1) {
+                            activeGames[gameIndex] = currentGame;
+                        }
+                        saveGamesToStorage();
+                        updateGameLobbyUI(currentGame);
                     }
-                    saveGamesToStorage();
-                    updateGameLobbyUI(currentGame);
-                }
+                });
+                
+                // Listen for game start events
+                currentChannel.bind('client-game-started', (data) => {
+                    console.log('Game started by host');
+                    navigateToGame(currentGame.language);
+                });
+                
+                // Announce game creation to a lobby channel
+                const lobbyChannel = pusherInstance.subscribe('presence-lobby');
+                lobbyChannel.bind('pusher:subscription_succeeded', () => {
+                    lobbyChannel.trigger('client-game-created', {
+                        game: newGame
+                    });
+                    console.log('Host: Announced game creation to lobby');
+                });
             });
             
-            // Listen for game start events
-            currentChannel.bind('client-game-started', (data) => {
-                console.log('Game started by host');
-                navigateToGame(currentGame.language);
-            });
-            
-            // Announce game creation to a lobby channel
-            const lobbyChannel = pusherInstance.subscribe('presence-lobby');
-            lobbyChannel.trigger('client-game-created', {
-                game: newGame
+            currentChannel.bind('pusher:subscription_error', (err) => {
+                console.log('Host: Subscription error:', err);
             });
             
             console.log('Game created with Pusher real-time sync');
@@ -735,44 +747,53 @@ document.addEventListener("DOMContentLoaded", () => {
                     const channelName = `presence-game-${gameId}`;
                     currentChannel = pusherInstance.subscribe(channelName);
                     
-                    // Listen for game start events
-                    currentChannel.bind('client-game-started', (data) => {
-                        console.log('Game started by host');
-                        navigateToGame(game.language);
-                    });
-                    
-                    // Listen for host leaving
-                    currentChannel.bind('client-host-left', (data) => {
-                        console.log('Host left the game');
-                        // If current player is not the host, redirect back to lobby
-                        if (currentGame && currentGame.hostId !== playerId) {
-                            const gameLobbyScreen = document.getElementById('gameLobbyScreen');
-                            if (gameLobbyScreen) {
-                                gameLobbyScreen.style.display = 'none';
-                                const errorMsg = document.createElement('div');
-                                errorMsg.className = 'error-message';
-                                errorMsg.textContent = 'Host left the game. Returning to lobby.';
-                                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
-                                document.querySelector('.home-container').appendChild(errorMsg);
-                                setTimeout(() => errorMsg.remove(), 3000);
+                    // Wait for subscription to succeed before triggering events
+                    currentChannel.bind('pusher:subscription_succeeded', () => {
+                        console.log('Successfully subscribed to game channel');
+                        
+                        // Listen for game start events
+                        currentChannel.bind('client-game-started', (data) => {
+                            console.log('Game started by host');
+                            navigateToGame(game.language);
+                        });
+                        
+                        // Listen for host leaving
+                        currentChannel.bind('client-host-left', (data) => {
+                            console.log('Host left the game');
+                            // If current player is not the host, redirect back to lobby
+                            if (currentGame && currentGame.hostId !== playerId) {
+                                const gameLobbyScreen = document.getElementById('gameLobbyScreen');
+                                if (gameLobbyScreen) {
+                                    gameLobbyScreen.style.display = 'none';
+                                    const errorMsg = document.createElement('div');
+                                    errorMsg.className = 'error-message';
+                                    errorMsg.textContent = 'Host left the game. Returning to lobby.';
+                                    errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                                    document.querySelector('.home-container').appendChild(errorMsg);
+                                    setTimeout(() => errorMsg.remove(), 3000);
+                                }
+                                // Show lobby screen
+                                if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                                // Remove game from active games
+                                activeGames = activeGames.filter(g => g.id !== gameId);
+                                saveGamesToStorage();
+                                updateGamesList();
                             }
-                            // Show lobby screen
-                            if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                            // Remove game from active games
-                            activeGames = activeGames.filter(g => g.id !== gameId);
-                            saveGamesToStorage();
-                            updateGamesList();
-                        }
+                        });
+                        
+                        // Notify the host that a player joined
+                        currentChannel.trigger('client-player-joined', {
+                            playerId: playerId,
+                            players: game.players,
+                            playerIds: game.playerIds
+                        });
+                        
+                        console.log('Sent player-joined event via Pusher');
                     });
                     
-                    // Notify the host that a player joined
-                    currentChannel.trigger('client-player-joined', {
-                        playerId: playerId,
-                        players: game.players,
-                        playerIds: game.playerIds
+                    currentChannel.bind('pusher:subscription_error', (err) => {
+                        console.log('Subscription error:', err);
                     });
-                    
-                    console.log('Sent player-joined event via Pusher');
                 }
                 
                 currentGame = game;
