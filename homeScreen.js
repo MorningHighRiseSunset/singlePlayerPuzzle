@@ -37,6 +37,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 cluster: 'us3',
                 forceTLS: true
             });
+            
+            // Log connection state
+            pusher.connection.bind('connected', () => {
+                console.log('PUSHER: Connected successfully');
+            });
+            
+            pusher.connection.bind('disconnected', () => {
+                console.log('PUSHER: Disconnected');
+            });
+            
+            pusher.connection.bind('error', (err) => {
+                console.log('PUSHER: Connection error:', err);
+            });
+            
             console.log('Pusher initialized successfully');
             return pusher;
         } catch (e) {
