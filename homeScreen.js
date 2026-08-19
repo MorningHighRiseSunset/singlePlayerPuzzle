@@ -160,12 +160,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Generate or get player ID
     function getPlayerId() {
         if (!currentPlayerId) {
-            let storedId = localStorage.getItem('playerId');
+            let storedId = sessionStorage.getItem('playerId');
             if (storedId) {
                 currentPlayerId = storedId;
+                console.log('Retrieved existing player ID from sessionStorage:', currentPlayerId);
             } else {
                 currentPlayerId = generatePlayerId();
-                localStorage.setItem('playerId', currentPlayerId);
+                sessionStorage.setItem('playerId', currentPlayerId);
+                console.log('Generated new player ID and saved to sessionStorage:', currentPlayerId);
             }
         }
         return currentPlayerId;
@@ -208,6 +210,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // Initialize Pusher
         const pusherInstance = initPusher();
         
+        const hostPlayerId = getPlayerId();
+        
+        console.log('=== CREATE NEW GAME ===');
+        console.log('Game ID:', gameId);
+        console.log('Host Player ID:', hostPlayerId);
+        console.log('Language:', language);
+        
         // Create game object
         const newGame = {
             id: gameId,
@@ -217,8 +226,8 @@ document.addEventListener("DOMContentLoaded", () => {
             status: 'waiting',
             language: language,
             createdAt: new Date(),
-            hostId: getPlayerId(),
-            playerIds: [getPlayerId()]
+            hostId: hostPlayerId,
+            playerIds: [hostPlayerId]
         };
         
         currentGame = newGame;
@@ -234,10 +243,15 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Listen for player join events
             currentChannel.bind('player-joined', (data) => {
-                console.log('Player joined:', data);
+                console.log('=== PUSHER EVENT: player-joined ===');
+                console.log('Received data:', data);
+                console.log('Current Game ID:', currentGame?.id);
+                console.log('Current Player ID:', getPlayerId());
                 if (currentGame) {
                     currentGame.players = data.players;
                     currentGame.playerIds = data.playerIds;
+                    console.log('Updated game players:', currentGame.players);
+                    console.log('Updated game player IDs:', currentGame.playerIds);
                     // Update the game in activeGames array
                     const gameIndex = activeGames.findIndex(g => g.id === currentGame.id);
                     if (gameIndex !== -1) {
@@ -302,7 +316,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-info">
-                <div class="lobby-game-id">Game ID: ${game.id}</div>
                 <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
                 <div class="lobby-players">
                     <div class="player-slot">
@@ -320,6 +333,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 </button>
             </div>
         `;
+        
+        console.log('=== GAME LOBBY (showGameLobby) ===');
+        console.log('Game ID:', game.id);
+        console.log('Current Player ID:', currentPlayerId);
+        console.log('Host ID:', game.hostId);
+        console.log('Is Host:', isHost);
+        console.log('Players:', game.players);
+        console.log('Player IDs:', game.playerIds);
         
         gameLobbyScreen.style.display = 'flex';
         
@@ -403,7 +424,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-info">
-                <div class="lobby-game-id">Game ID: ${game.id}</div>
                 <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
                 <div class="lobby-players">
                     <div class="player-slot">
@@ -421,6 +441,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 </button>
             </div>
         `;
+        
+        console.log('=== GAME LOBBY (updateGameLobbyUI) ===');
+        console.log('Game ID:', game.id);
+        console.log('Current Player ID:', currentPlayerId);
+        console.log('Host ID:', game.hostId);
+        console.log('Is Host:', isHost);
+        console.log('Players:', game.players);
+        console.log('Player IDs:', game.playerIds);
         
         // Re-attach event listeners
         setTimeout(() => {
@@ -553,8 +581,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (game) {
             const playerId = getPlayerId();
             
+            console.log('=== JOIN GAME ===');
+            console.log('Game ID:', gameId);
+            console.log('Joining Player ID:', playerId);
+            console.log('Game Host ID:', game.hostId);
+            console.log('Game Players Before:', game.players);
+            console.log('Game Player IDs Before:', game.playerIds);
+            
             // Check if player is already in this game
             if (game.playerIds && game.playerIds.includes(playerId)) {
+                console.log('Player already in this game, showing lobby');
                 showGameLobby(game);
                 return;
             }
@@ -569,6 +605,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 game.players = game.players + 1;
                 game.playerIds = [...game.playerIds, playerId];
                 game.hostId = originalHostId;
+                
+                console.log('Game Players After:', game.players);
+                console.log('Game Player IDs After:', game.playerIds);
+                console.log('Preserved Host ID:', game.hostId);
                 
                 // Update the game in activeGames array
                 const gameIndex = activeGames.findIndex(g => g.id === gameId);
@@ -622,7 +662,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         playerIds: game.playerIds
                     });
                     
-                    console.log('Joined game via Pusher');
+                    console.log('Sent player-joined event via Pusher');
                 }
                 
                 currentGame = game;
