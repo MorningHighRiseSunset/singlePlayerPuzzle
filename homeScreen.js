@@ -172,9 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const storedGames = localStorage.getItem('multiplayerGames');
             if (storedGames) {
                 activeGames = JSON.parse(storedGames);
-                // Filter out games older than 1 hour
-                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-                activeGames = activeGames.filter(game => new Date(game.createdAt) > oneHourAgo);
+                // Filter out games older than 5 minutes
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                activeGames = activeGames.filter(game => new Date(game.createdAt) > fiveMinutesAgo);
                 saveGamesToStorage();
             }
         } catch (e) {
@@ -310,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-info">
                 <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
+                <div class="lobby-countdown" id="lobbyCountdown">Expires in 5:00</div>
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
@@ -337,6 +338,51 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.style.display = 'flex';
         
+        // Start countdown timer
+        const countdownElement = document.getElementById('lobbyCountdown');
+        if (countdownElement && window.lobbyCountdownInterval) {
+            clearInterval(window.lobbyCountdownInterval);
+        }
+        
+        const gameCreatedAt = new Date(game.createdAt);
+        const expiryTime = new Date(gameCreatedAt.getTime() + 5 * 60 * 1000); // 5 minutes
+        
+        window.lobbyCountdownInterval = setInterval(() => {
+            const now = new Date();
+            const timeLeft = expiryTime - now;
+            
+            if (timeLeft <= 0) {
+                clearInterval(window.lobbyCountdownInterval);
+                countdownElement.textContent = 'Expired';
+                countdownElement.style.color = '#ff6b6b';
+                
+                // Remove game and redirect to lobby
+                activeGames = activeGames.filter(g => g.id !== game.id);
+                saveGamesToStorage();
+                updateGamesList();
+                
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Game expired. Returning to lobby.';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                document.querySelector('.home-container').appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+                
+                gameLobbyScreen.style.display = 'none';
+                if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                
+                return;
+            }
+            
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            countdownElement.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft < 60000) {
+                countdownElement.style.color = '#ff6b6b';
+            }
+        }, 1000);
+        
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
             const backToLobbyBtn = document.getElementById('backToLobbyBtn');
@@ -360,6 +406,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
+                    }
+                    
+                    // Clear countdown interval when leaving
+                    if (window.lobbyCountdownInterval) {
+                        clearInterval(window.lobbyCountdownInterval);
+                        window.lobbyCountdownInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -418,6 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-info">
                 <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
+                <div class="lobby-countdown" id="lobbyCountdown">Expires in 5:00</div>
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
@@ -443,6 +496,51 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Players:', game.players);
         console.log('Player IDs:', game.playerIds);
         
+        // Restart countdown timer
+        const countdownElement = document.getElementById('lobbyCountdown');
+        if (countdownElement && window.lobbyCountdownInterval) {
+            clearInterval(window.lobbyCountdownInterval);
+        }
+        
+        const gameCreatedAt = new Date(game.createdAt);
+        const expiryTime = new Date(gameCreatedAt.getTime() + 5 * 60 * 1000); // 5 minutes
+        
+        window.lobbyCountdownInterval = setInterval(() => {
+            const now = new Date();
+            const timeLeft = expiryTime - now;
+            
+            if (timeLeft <= 0) {
+                clearInterval(window.lobbyCountdownInterval);
+                countdownElement.textContent = 'Expired';
+                countdownElement.style.color = '#ff6b6b';
+                
+                // Remove game and redirect to lobby
+                activeGames = activeGames.filter(g => g.id !== game.id);
+                saveGamesToStorage();
+                updateGamesList();
+                
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Game expired. Returning to lobby.';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                document.querySelector('.home-container').appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+                
+                gameLobbyScreen.style.display = 'none';
+                if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                
+                return;
+            }
+            
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            countdownElement.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft < 60000) {
+                countdownElement.style.color = '#ff6b6b';
+            }
+        }, 1000);
+        
         // Re-attach event listeners
         setTimeout(() => {
             const backToLobbyBtn = document.getElementById('backToLobbyBtn');
@@ -466,6 +564,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
+                    }
+                    
+                    // Clear countdown interval when leaving
+                    if (window.lobbyCountdownInterval) {
+                        clearInterval(window.lobbyCountdownInterval);
+                        window.lobbyCountdownInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
