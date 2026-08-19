@@ -6,6 +6,7 @@ let myPlayerId = null;
 let opponentPlayerId = null;
 let isMyTurn = false;
 let isHost = false;
+let gameInstance = null;
 
 // Initialize Socket.io for multiplayer
 function initMultiplayerSocket() {
@@ -33,7 +34,7 @@ function initMultiplayerSocket() {
     });
     
     socket.on('opponent-move', (data) => {
-        // Handle opponent's move
+        // Handle opponent's move - place tiles on board
         handleOpponentMove(data);
     });
     
@@ -45,6 +46,11 @@ function initMultiplayerSocket() {
     socket.on('opponent-tiles', (data) => {
         // Update opponent's tile count (not the actual tiles for security)
         updateOpponentTileCount(data.tileCount);
+    });
+    
+    socket.on('board-sync', (data) => {
+        // Sync board state from opponent
+        syncBoardState(data);
     });
     
     socket.on('game-ended', (data) => {
@@ -61,9 +67,37 @@ function sendMoveToOpponent(moveData) {
 
 // Handle opponent's move
 function handleOpponentMove(data) {
-    // Place opponent's tiles on the board
-    // This will be implemented based on the game logic
     console.log('Opponent made a move:', data);
+    
+    if (gameInstance && data.move) {
+        // Place opponent's tiles on the board
+        data.move.placements.forEach(placement => {
+            const { row, col, letter, isBlank } = placement;
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cell) {
+                // Create tile element
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.innerHTML = `
+                    ${letter}
+                    <span class="points">${gameInstance.getTileDisplayValue({ letter, isBlank })}</span>
+                `;
+                cell.appendChild(tile);
+            }
+        });
+        
+        // Update opponent score
+        if (data.score) {
+            gameInstance.opponentScore += data.score;
+            gameInstance.updateGameState();
+        }
+    }
+}
+
+// Sync board state from opponent
+function syncBoardState(data) {
+    console.log('Syncing board state:', data);
+    // Implement board synchronization
 }
 
 // Update turn indicator
@@ -102,6 +136,59 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Initialize socket
         initMultiplayerSocket();
+        
+        // Hook into game instance after it's created
+        setTimeout(() => {
+            if (window.game) {
+                gameInstance = window.game;
+                
+                // Override the AI turn to prevent it from running
+                const originalAITurn = gameInstance.aiTurn;
+                gameInstance.aiTurn = function() {
+                    console.log('AI turn disabled in multiplayer');
+                    return Promise.resolve();
+                };
+                
+                // Override fillRacks to not fill opponent rack
+                const originalFillRacks = gameInstance.fillRacks;
+                gameInstance.fillRacks = function(playerFirst = false) {
+                    // Only fill player rack in multiplayer
+                    while (this.playerRack.length < 7 && this.tiles.length > 0) {
+                        const tile = this.tiles.pop();
+                        this.playerRack.push(tile);
+                    }
+                    this.renderRack();
+                };
+                
+                // Hook into submit move to send to opponent
+                const originalSubmitMove = gameInstance.submitMove;
+                gameInstance.submitMove = function() {
+                    const moveData = {
+                        gameId: new URLSearchParams(window.location.search).get('gameId'),
+                        move: {
+                            placements: this.placedTiles.map(t => ({
+                                row: t.row,
+                                col: t.col,
+                                letter: t.letter,
+                                isBlank: t.isBlank
+                            })),
+                            score: this.calculateTotalScore()
+                        }
+                    };
+                    
+                    sendMoveToOpponent(moveData);
+                    
+                    // Send tile count update
+                    socket.emit('update-tiles', {
+                        gameId: moveData.gameId,
+                        tileCount: this.playerRack.length
+                    });
+                    
+                    // Call original submit
+                    return originalSubmitMove.call(this);
+                };
+            }
+        }, 1000);
     }
 });
 
