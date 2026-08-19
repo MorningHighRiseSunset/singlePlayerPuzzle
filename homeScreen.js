@@ -455,26 +455,26 @@ function playPuzzleAnimation(word = 'PUZZLE') {
         ],
         'PLAYER VERSUS PLAYER': [
             // First PLAYER (top row)
-            { letter: 'P', row: 0, col: 1 },
-            { letter: 'L', row: 0, col: 2 },
-            { letter: 'A', row: 0, col: 3 },
-            { letter: 'Y', row: 0, col: 4 },
-            { letter: 'E', row: 0, col: 5 },
-            { letter: 'R', row: 0, col: 6 },
-            // VERSUS (vertical through center, intersecting at Y)
+            { letter: 'P', row: 0, col: 0 },
+            { letter: 'L', row: 0, col: 1 },
+            { letter: 'A', row: 0, col: 2 },
+            { letter: 'Y', row: 0, col: 3 },
+            { letter: 'E', row: 0, col: 4 },
+            { letter: 'R', row: 0, col: 5 },
+            // VERSUS (vertical, intersects with first PLAYER at E and second PLAYER at R)
             { letter: 'V', row: 1, col: 4 },
             { letter: 'E', row: 2, col: 4 },
             { letter: 'R', row: 3, col: 4 },
             { letter: 'S', row: 4, col: 4 },
             { letter: 'U', row: 5, col: 4 },
             { letter: 'S', row: 6, col: 4 },
-            // Second PLAYER (bottom row)
-            { letter: 'P', row: 7, col: 1 },
-            { letter: 'L', row: 7, col: 2 },
-            { letter: 'A', row: 7, col: 3 },
-            { letter: 'Y', row: 7, col: 4 },
-            { letter: 'E', row: 7, col: 5 },
-            { letter: 'R', row: 7, col: 6 }
+            // Second PLAYER (middle row, intersects with VERSUS at R)
+            { letter: 'P', row: 3, col: 2 },
+            { letter: 'L', row: 3, col: 3 },
+            { letter: 'A', row: 3, col: 4 },
+            { letter: 'Y', row: 3, col: 5 },
+            { letter: 'E', row: 3, col: 6 },
+            { letter: 'R', row: 3, col: 7 }
         ],
         'BATTLE': [
             { letter: 'B', row: 4, col: 1 },
@@ -501,7 +501,7 @@ function playPuzzleAnimation(word = 'PUZZLE') {
     const tileSize = Math.max(cellSize - 14, 18); // Even smaller for larger crossword
     
     // Calculate delays based on word length for consistent timing
-    const baseDelay = 120; // Further reduced delay for 18 letters
+    const baseDelay = 120; // Adjusted delay for 18 letters
     const lettersToAnimate = puzzleLetters.filter(letter => letter.letter !== ' ');
     const animationDelays = lettersToAnimate.map((_, index) => index * baseDelay);
     
