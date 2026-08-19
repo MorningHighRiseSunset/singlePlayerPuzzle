@@ -7908,18 +7908,18 @@ calculateScore() {
 	updateScores() {
 		// Update mobile, desktop, and desktop drawer score displays
 		const playerScoreMobile = document.getElementById("player-score");
-		const computerScoreMobile = document.getElementById("computer-score");
+		const opponentScoreMobile = document.getElementById("opponent-score");
 		const playerScoreDesktop = document.getElementById("player-score-desktop");
-		const computerScoreDesktop = document.getElementById("computer-score-desktop");
+		const opponentScoreDesktop = document.getElementById("opponent-score-desktop");
 		const playerScoreDesktopDrawer = document.getElementById("player-score-desktop-drawer");
-		const computerScoreDesktopDrawer = document.getElementById("computer-score-desktop-drawer");
+		const opponentScoreDesktopDrawer = document.getElementById("opponent-score-desktop-drawer");
 		
 		if (playerScoreMobile) playerScoreMobile.textContent = this.playerScore;
-		if (computerScoreMobile) computerScoreMobile.textContent = this.opponentScore;
+		if (opponentScoreMobile) opponentScoreMobile.textContent = this.opponentScore;
 		if (playerScoreDesktop) playerScoreDesktop.textContent = this.playerScore;
-		if (computerScoreDesktop) computerScoreDesktop.textContent = this.opponentScore;
+		if (opponentScoreDesktop) opponentScoreDesktop.textContent = this.opponentScore;
 		if (playerScoreDesktopDrawer) playerScoreDesktopDrawer.textContent = this.playerScore;
-		if (computerScoreDesktopDrawer) computerScoreDesktopDrawer.textContent = this.opponentScore;
+		if (opponentScoreDesktopDrawer) opponentScoreDesktopDrawer.textContent = this.opponentScore;
 	}
 
 	updateTilesCount() {

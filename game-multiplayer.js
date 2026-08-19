@@ -277,12 +277,17 @@ function placeTileOnBoard(row, col, letter, isBlank) {
     if (star) star.remove();
 
     const tile = document.createElement('div');
-    tile.className = 'tile';
+    tile.className = 'tile tile-placed';
     tile.innerHTML = `
         ${letter}
         <span class="points">${value}</span>
     `;
     cell.appendChild(tile);
+    
+    // Remove animation class after animation completes
+    setTimeout(() => {
+        tile.classList.remove('tile-placed');
+    }, 500);
 }
 
 // Sync board state from server
