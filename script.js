@@ -10345,49 +10345,72 @@ document.addEventListener("DOMContentLoaded", () => {
 		// Set volume to 30% (adjustable)
 		backgroundMusic.volume = 0.3;
 		
-		// Play music on first user interaction (browser requirement)
-		const playMusic = () => {
-			backgroundMusic.play().catch(e => {
-				console.log('Background music autoplay prevented:', e);
-			});
-			document.removeEventListener('pointerdown', playMusic, true);
-			document.removeEventListener('click', playMusic, true);
+		// Music playlist - add more songs to this array
+		const musicPlaylist = [
+			'backgroundMusic/Background Audio.m4a'
+			// Add more instrumental songs here:
+			// 'backgroundMusic/song2.mp3',
+			// 'backgroundMusic/song3.mp3',
+			// etc.
+		];
+		
+		let currentTrackIndex = 0;
+		let isMusicPlaying = false; // Start with music OFF
+		
+		// Shuffle array for random playback
+		const shuffleArray = (array) => {
+			for (let i = array.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[array[i], array[j]] = [array[j], array[i]];
+			}
+			return array;
 		};
 		
-		// Try to play immediately, but if blocked, wait for user interaction
-		backgroundMusic.play().catch(() => {
-			console.log('Background music waiting for user interaction');
-			document.addEventListener('pointerdown', playMusic, true);
-			document.addEventListener('click', playMusic, true);
-		});
-	}
-
-	// Toggle background music
-	let isMusicPlaying = true;
-	const toggleMusicBtn = document.getElementById('toggle-music');
-	const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
-	
-	const toggleMusic = () => {
-		if (backgroundMusic) {
-			if (isMusicPlaying) {
-				backgroundMusic.pause();
-				isMusicPlaying = false;
-				if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music Off';
-				if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music Off';
-			} else {
-				backgroundMusic.play().catch(e => console.log('Music play failed:', e));
-				isMusicPlaying = true;
-				if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Toggle Music';
-				if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Toggle Music';
+		// Get shuffled playlist
+		let shuffledPlaylist = shuffleArray([...musicPlaylist]);
+		
+		// Play next track when current one ends
+		backgroundMusic.addEventListener('ended', () => {
+			if (isMusicPlaying && musicPlaylist.length > 1) {
+				currentTrackIndex = (currentTrackIndex + 1) % shuffledPlaylist.length;
+				backgroundMusic.src = shuffledPlaylist[currentTrackIndex];
+				backgroundMusic.play().catch(e => console.log('Next track play failed:', e));
 			}
+		});
+		
+		// Set initial track
+		if (shuffledPlaylist.length > 0) {
+			backgroundMusic.src = shuffledPlaylist[0];
 		}
-	};
-	
-	if (toggleMusicBtn) {
-		toggleMusicBtn.addEventListener('click', toggleMusic);
-	}
-	if (toggleMusicBtnDesktop) {
-		toggleMusicBtnDesktop.addEventListener('click', toggleMusic);
+		
+		// Toggle background music
+		const toggleMusicBtn = document.getElementById('toggle-music');
+		const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
+		
+		const toggleMusic = () => {
+			if (backgroundMusic) {
+				if (isMusicPlaying) {
+					backgroundMusic.pause();
+					isMusicPlaying = false;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music Off';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music Off';
+				} else {
+					backgroundMusic.play().catch(e => console.log('Music play failed:', e));
+					isMusicPlaying = true;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music On';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music On';
+				}
+			}
+		};
+		
+		if (toggleMusicBtn) {
+			toggleMusicBtn.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtn.addEventListener('click', toggleMusic);
+		}
+		if (toggleMusicBtnDesktop) {
+			toggleMusicBtnDesktop.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtnDesktop.addEventListener('click', toggleMusic);
+		}
 	}
 
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
