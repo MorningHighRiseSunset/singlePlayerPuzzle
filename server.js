@@ -121,6 +121,8 @@ io.on('connection', (socket) => {
         
         console.log('Game created:', gameId, 'by:', playerId);
         console.log('Host tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
+        console.log('Remaining tiles in bag:', game.tileBag.length);
+        console.log('All player tiles:', JSON.stringify(game.playerTiles, null, 2));
         
         // Save to disk
         saveGames();
@@ -164,6 +166,8 @@ io.on('connection', (socket) => {
         
         console.log('Player joined:', playerId, 'to game:', gameId);
         console.log('Player tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
+        console.log('Remaining tiles in bag:', game.tileBag.length);
+        console.log('All player tiles:', JSON.stringify(game.playerTiles, null, 2));
         
         // Save to disk
         saveGames();

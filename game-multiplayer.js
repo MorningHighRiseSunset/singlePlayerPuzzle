@@ -66,7 +66,11 @@ function initMultiplayerSocket() {
         
         // Use server-provided tiles
         if (data.myTiles && gameInstance) {
-            console.log('Setting player tiles from server:', data.myTiles.map(t => t.letter).join(','));
+            console.log('=== RECEIVED TILES FROM SERVER ===');
+            console.log('My player ID:', myPlayerId);
+            console.log('Tiles received:', data.myTiles.map(t => t.letter).join(','));
+            console.log('Tiles raw:', JSON.stringify(data.myTiles, null, 2));
+            console.log('Setting player rack to server tiles');
             gameInstance.playerRack = data.myTiles;
             gameInstance.tiles = []; // Empty local bag since server manages it
             gameInstance.renderRack();
@@ -223,7 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storedTiles = sessionStorage.getItem('myTiles');
                 if (storedTiles) {
                     const myTiles = JSON.parse(storedTiles);
-                    console.log('Using stored tiles from server:', myTiles.map(t => t.letter).join(','));
+                    console.log('=== MY TILES ===');
+                    console.log('My player ID:', myPlayerId);
+                    console.log('My tiles from server:', myTiles.map(t => t.letter).join(','));
+                    console.log('My tiles raw:', JSON.stringify(myTiles, null, 2));
                     gameInstance.playerRack = myTiles;
                     gameInstance.tiles = []; // Empty local bag since server manages it
                     gameInstance.renderRack();
