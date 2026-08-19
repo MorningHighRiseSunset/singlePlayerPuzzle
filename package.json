@@ -12,14 +12,16 @@
     "deploy": "vercel --prod"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1"
+    "@vercel/analytics": "^2.0.1",
+    "canvas-confetti": "^1.9.4",
+    "pusher-js": "^8.6.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "vitest": "^1.0.0",
     "@testing-library/jest-dom": "^6.0.0",
+    "jsdom": "^27.0.1",
+    "typescript": "^5.0.0",
     "vercel": "^37.0.0",
-    "jsdom": "^27.0.1"
+    "vitest": "^1.0.0"
   },
   "keywords": [
     "puzzle",

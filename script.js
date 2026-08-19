@@ -8050,10 +8050,12 @@ calculateScore() {
 			winOverlay.classList.add("active");
 			messageBox.classList.add("celebrate");
 			if (!isDraw) {
-				if (typeof this.showBingoBonusEffect === 'function') {
-					try { this.showBingoBonusEffect(); } catch (e) { console.warn('showBingoBonusEffect failed', e); }
-				} else {
-					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				// Special confetti effect for winning the game
+				try {
+					this.createWinConfetti();
+				} catch (e) {
+					console.warn('Win confetti failed, falling back to standard', e);
+					try { this.createConfettiEffect({ variant: 'gold' }); } catch (e2) { console.warn('Fallback confetti failed', e2); }
 				}
 			}
 		});
@@ -8063,28 +8065,57 @@ calculateScore() {
 		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
 		options = options || {};
 		const variant = options.variant || 'standard';
-		// Just run ONE confetti effect - no staggering or multiple animations
-		// Use DOM confetti as it's the most reliable
-		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 
 		try {
-			// Use DOM confetti for all cases (simplest and most reliable)
-			if (typeof this.createDOMConfetti === 'function') {
-				const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-				const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-				this.createDOMConfetti({ count, variant });
+			// Use canvas-confetti library for professional confetti effects
+			if (typeof confetti !== 'undefined') {
+				const duration = variant === 'gold' ? 3000 : variant === 'silver' ? 2500 : 2000;
+				const particleCount = variant === 'gold' ? 150 : variant === 'silver' ? 100 : 80;
+				
+				// Different colors based on variant
+				const colors = variant === 'gold' 
+					? ['#FFD700', '#FFC107', '#FFAB40', '#FF4081', '#7C4DFF']
+					: variant === 'silver'
+					? ['#C0C0C0', '#90A4AE', '#448AFF', '#FFAB40', '#00E676']
+					: ['#FFD700', '#FF4081', '#00E676', '#448AFF', '#FFAB40', '#8E44AD', '#FF5722'];
+
+				// Launch confetti from both sides
+				confetti({
+					particleCount: particleCount,
+					spread: 70,
+					origin: { x: 0, y: 0.8 },
+					colors: colors,
+					disableForReducedMotion: true,
+					zIndex: 100000
+				});
+
+				confetti({
+					particleCount: particleCount,
+					spread: 70,
+					origin: { x: 1, y: 0.8 },
+					colors: colors,
+					disableForReducedMotion: true,
+					zIndex: 100000
+				});
+
+				// For gold variant, add extra burst from center
+				if (variant === 'gold') {
+					setTimeout(() => {
+						confetti({
+							particleCount: 80,
+							spread: 100,
+							origin: { x: 0.5, y: 0.5 },
+							colors: colors,
+							disableForReducedMotion: true,
+							zIndex: 100000
+						});
+					}, 200);
+				}
+
 				return;
 			}
 
-			// Fallback: try emoji confetti if DOM not available
-			if (typeof this.createEmojiConfetti === 'function') {
-				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
-				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
-				return;
-			}
-
-			// Ultimate fallback: white flash overlay
+			// Fallback: white flash overlay if confetti library not available
 			const overlay = document.createElement('div');
 			overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
 			document.body.appendChild(overlay);
@@ -8093,6 +8124,85 @@ calculateScore() {
 			setTimeout(() => overlay.remove(), 520);
 
 		} catch (e) { console.warn('createConfettiEffect failed', e); }
+	}
+
+	// Special confetti effect for winning the game - more spectacular than bingo
+	createWinConfetti() {
+		try {
+			if (typeof confetti !== 'undefined') {
+				const colors = ['#FFD700', '#FF4081', '#00E676', '#448AFF', '#FFAB40', '#8E44AD', '#FF5722', '#7C4DFF'];
+				
+				// Multiple bursts from different angles
+				const duration = 5000;
+				const end = Date.now() + duration;
+
+				// First burst - from bottom center
+				confetti({
+					particleCount: 100,
+					spread: 80,
+					origin: { x: 0.5, y: 1 },
+					colors: colors,
+					zIndex: 100000
+				});
+
+				// Second burst - from left
+				setTimeout(() => {
+					confetti({
+						particleCount: 80,
+						spread: 60,
+						origin: { x: 0, y: 0.6 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 200);
+
+				// Third burst - from right
+				setTimeout(() => {
+					confetti({
+						particleCount: 80,
+						spread: 60,
+						origin: { x: 1, y: 0.6 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 400);
+
+				// Continuous smaller bursts
+				const interval = setInterval(() => {
+					const timeLeft = end - Date.now();
+					if (timeLeft <= 0) {
+						return clearInterval(interval);
+					}
+
+					const particleCount = 50 * (timeLeft / duration);
+					confetti({
+						particleCount: Math.max(10, particleCount),
+						spread: 55,
+						origin: { x: Math.random(), y: Math.random() * 0.5 + 0.5 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 300);
+
+				// Final grand burst
+				setTimeout(() => {
+					confetti({
+						particleCount: 150,
+						spread: 120,
+						origin: { x: 0.5, y: 0.5 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 1500);
+
+				return;
+			}
+
+			// Fallback to standard confetti
+			this.createConfettiEffect({ variant: 'gold' });
+		} catch (e) {
+			console.warn('createWinConfetti failed', e);
+		}
 	}
 
 	// Canvas-based confetti: lightweight particle simulation drawn into a single canvas.
