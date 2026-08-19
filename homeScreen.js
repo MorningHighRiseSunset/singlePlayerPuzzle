@@ -166,14 +166,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Generate a unique game ID
         const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         
-        // Generate a random game name
-        const gameNames = ['Puzzle Masters', 'Word Warriors', 'Puzzle Stars', 'Tile Titans', 'Board Bosses'];
-        const randomName = gameNames[Math.floor(Math.random() * gameNames.length)];
-        
         // Create game object
         const newGame = {
             id: gameId,
-            name: randomName + ' ' + Math.floor(Math.random() * 1000),
+            name: 'Puzzle Game',
             players: 1, // Creator is the first player
             maxPlayers: 2,
             status: 'waiting',
@@ -215,6 +211,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const miniBoardContainer = document.querySelector('.mini-board-container');
         if (miniBoardContainer) miniBoardContainer.style.display = 'none';
         
+        // Check if current player is the host
+        const currentPlayerId = getPlayerId();
+        const isHost = game.hostId === currentPlayerId;
+        
         // Create or update game lobby screen
         let gameLobbyScreen = document.getElementById('gameLobbyScreen');
         if (!gameLobbyScreen) {
@@ -226,24 +226,23 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
-            <h2>Puzzle Game Lobby</h2>
+            <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-info">
-                <div class="lobby-game-name">${game.name}</div>
                 <div class="lobby-game-id">Game ID: ${game.id}</div>
                 <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
-                        <span class="player-name">You (Host)</span>
+                        <span class="player-name">${isHost ? 'You (Host)' : 'Player 1'}</span>
                     </div>
-                    <div class="player-slot empty">
-                        <span class="player-avatar">➕</span>
-                        <span class="player-name">Waiting for player...</span>
+                    <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
+                        <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
+                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : 'Player 2'}</span>
                     </div>
                 </div>
                 <div class="lobby-status">Status: ${game.status}</div>
-                <button class="start-game-btn" id="startGameBtn" ${game.players < game.maxPlayers ? 'disabled' : ''}>
-                    ${game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
+                <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
+                    ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
                 </button>
             </div>
         `;
@@ -339,7 +338,6 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Check if player is already in this game
             if (game.playerIds && game.playerIds.includes(playerId)) {
-                alert('You are already in this game lobby!');
                 showGameLobby(game);
                 return;
             }
@@ -352,13 +350,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveGamesToStorage();
                 updateGamesList();
                 
-                // Navigate to game lobby immediately
+                // Navigate to game lobby immediately without annoying popup
                 showGameLobby(game);
             } else {
-                alert('This game is full!');
+                // Use inline message instead of alert
+                const gamesList = document.getElementById('gamesList');
+                if (gamesList) {
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message';
+                    errorMsg.textContent = 'This game is full!';
+                    errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                    gamesList.insertBefore(errorMsg, gamesList.firstChild);
+                    setTimeout(() => errorMsg.remove(), 3000);
+                }
             }
         } else {
-            alert('Game not found! It may have expired.');
+            const gamesList = document.getElementById('gamesList');
+            if (gamesList) {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Game not found! It may have expired.';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                gamesList.insertBefore(errorMsg, gamesList.firstChild);
+                setTimeout(() => errorMsg.remove(), 3000);
+            }
         }
     }
     
