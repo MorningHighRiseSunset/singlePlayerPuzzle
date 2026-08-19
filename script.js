@@ -10339,6 +10339,29 @@ document.addEventListener("DOMContentLoaded", () => {
 	// Initialize move history display with legend
 	game.updateMoveHistory();
 
+	// Initialize background music
+	const backgroundMusic = document.getElementById('backgroundMusic');
+	if (backgroundMusic) {
+		// Set volume to 30% (adjustable)
+		backgroundMusic.volume = 0.3;
+		
+		// Play music on first user interaction (browser requirement)
+		const playMusic = () => {
+			backgroundMusic.play().catch(e => {
+				console.log('Background music autoplay prevented:', e);
+			});
+			document.removeEventListener('pointerdown', playMusic, true);
+			document.removeEventListener('click', playMusic, true);
+		};
+		
+		// Try to play immediately, but if blocked, wait for user interaction
+		backgroundMusic.play().catch(() => {
+			console.log('Background music waiting for user interaction');
+			document.addEventListener('pointerdown', playMusic, true);
+			document.addEventListener('click', playMusic, true);
+		});
+	}
+
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
 	const primeSpeech = () => {
 		try {
