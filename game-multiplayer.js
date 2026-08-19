@@ -14,7 +14,40 @@ function formatTileLetters(tiles) {
     return tiles.map(t => t.letter).join(',');
 }
 
-function getOpponentEntry(allPlayerTiles, playerId) {
+function getGameId() {
+    return new URLSearchParams(window.location.search).get('gameId');
+}
+
+function broadcastTilePreview(placement) {
+    if (!socket || !socket.connected) return;
+    socket.emit('tile-preview', { gameId: getGameId(), placement });
+}
+
+function broadcastTilePreviewClear() {
+    if (!socket || !socket.connected) return;
+    socket.emit('tile-preview-clear', { gameId: getGameId() });
+}
+
+function showOpponentPreviewTile(placement) {
+    if (!placement) return;
+    const { row, col, letter, isBlank } = placement;
+    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    if (!cell) return;
+    const existing = cell.querySelector('.tile');
+    if (existing && !existing.classList.contains('opponent-preview')) return;
+    if (existing) existing.remove();
+    const value = gameInstance
+        ? gameInstance.getTileDisplayValue({ letter, isBlank })
+        : 0;
+    const tile = document.createElement('div');
+    tile.className = 'tile opponent-preview';
+    tile.innerHTML = `${letter}<span class="points">${value}</span>`;
+    cell.appendChild(tile);
+}
+
+function clearOpponentPreviewTiles() {
+    document.querySelectorAll('.tile.opponent-preview').forEach(el => el.remove());
+}
     if (!allPlayerTiles || !playerId) return null;
     for (const [id, tiles] of Object.entries(allPlayerTiles)) {
         if (id !== playerId) {
@@ -156,8 +189,12 @@ function initMultiplayerSocket() {
         }
     });
     
-    socket.on('player-reconnected', (data) => {
-        console.log('Opponent reconnected:', data);
+    socket.on('tile-preview', (data) => {
+        showOpponentPreviewTile(data.placement);
+    });
+
+    socket.on('tile-preview-clear', () => {
+        clearOpponentPreviewTiles();
     });
     
     socket.on('game-ended', (data) => {
@@ -172,7 +209,12 @@ function sendMoveToOpponent(moveData) {
         return;
     }
     console.log('Sending move to opponent:', moveData);
-    socket.emit('player-move', moveData);
+    socket.emit('player-move', moveData, (ack) => {
+        console.log('Move ack from server:', ack);
+        if (!ack || !ack.ok) {
+            console.warn('Server did not accept the move', ack);
+        }
+    });
 }
 
 function commitMultiplayerMove({ placements, score }) {
