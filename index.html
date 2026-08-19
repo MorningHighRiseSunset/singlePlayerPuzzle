@@ -17,6 +17,12 @@
     <title>Puzzle Home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="homeScreen.css">
+    <!-- Redirect from old URL to new URL -->
+    <script>
+      if (window.location.hostname === 'single-player-puzzle.vercel.app') {
+        window.location.href = 'https://single-player-puzzle-seven.vercel.app/';
+      }
+    </script>
   </head>
   <body>
     <div class="home-container">
@@ -129,12 +135,35 @@
           </div>
         </div>
       </div>
-      <div class="language-buttons-container">
+      <!-- Main Menu Buttons -->
+      <div class="mode-buttons-container" id="mainMenu" style="display: none;">
+        <button class="mode-btn" id="singlePlayerBtn">👤 Single Player</button>
+        <button class="mode-btn" id="multiplayerBtn">👥 Multiplayer</button>
+      </div>
+
+      <!-- Language Selection Screen (Hidden by default) -->
+      <div class="language-buttons-container" id="languageScreen" style="display: none;">
+        <button class="back-btn" id="backToMenuBtn">← Back</button>
         <button class="lang-btn" data-language="english" data-href="game.html">🇺🇸 English</button>
         <button class="lang-btn" data-language="french" data-href="french.html">🇫🇷 French</button>
         <button class="lang-btn" data-language="hindi" data-href="hindi.html">🇮🇳 Hindi</button>
         <button class="lang-btn" data-language="mandarin" data-href="mandarin.html">🇨🇳 Mandarin</button>
         <button class="lang-btn" data-language="spanish" data-href="spanish.html">🇪🇸 Spanish</button>
+      </div>
+
+      <!-- Multiplayer Lobby Screen (Hidden by default) -->
+      <div class="lobby-container" id="lobbyScreen" style="display: none;">
+        <button class="back-btn" id="backToMenuFromLobbyBtn">← Back</button>
+        <h2>Multiplayer Lobby</h2>
+        <div class="create-game-container">
+          <button class="create-game-btn" id="createGameBtn">🎮 Create Game</button>
+        </div>
+        <div class="active-games-container">
+          <h3>Active Games</h3>
+          <div class="games-list" id="gamesList">
+            <p class="no-games-message">No active games available</p>
+          </div>
+        </div>
       </div>
     </div>
     <script src="homeScreen.js"></script>

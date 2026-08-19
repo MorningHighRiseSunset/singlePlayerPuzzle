@@ -2,6 +2,254 @@ document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
     
+    // Play puzzle tile animation on mini board
+    playPuzzleAnimation('PUZZLE');
+    
+    // Screen navigation elements
+    const mainMenu = document.getElementById('mainMenu');
+    const languageScreen = document.getElementById('languageScreen');
+    const lobbyScreen = document.getElementById('lobbyScreen');
+    const singlePlayerBtn = document.getElementById('singlePlayerBtn');
+    const multiplayerBtn = document.getElementById('multiplayerBtn');
+    const backToMenuBtn = document.getElementById('backToMenuBtn');
+    const backToMenuFromLobbyBtn = document.getElementById('backToMenuFromLobbyBtn');
+    const createGameBtn = document.getElementById('createGameBtn');
+    
+    // Hide main menu initially, show after animation
+    if (mainMenu) mainMenu.style.display = 'none';
+    if (languageScreen) languageScreen.style.display = 'none';
+    if (lobbyScreen) lobbyScreen.style.display = 'none';
+    
+    // Show main menu after animation completes (6 letters * 150ms each + 600ms animation + buffer)
+    setTimeout(() => {
+        if (mainMenu) mainMenu.style.display = 'flex';
+    }, 1600); // Wait for animation to complete
+    
+    // Single Player button handler
+    if (singlePlayerBtn) {
+        singlePlayerBtn.addEventListener('click', function handleSinglePlayer() {
+            // Play puzzle animation
+            playPuzzleAnimation('PUZZLE');
+            
+            setTimeout(() => {
+                if (mainMenu) mainMenu.style.display = 'none';
+                if (languageScreen) languageScreen.style.display = 'flex';
+                if (lobbyScreen) lobbyScreen.style.display = 'none';
+            }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
+        });
+    }
+    
+    // Multiplayer button handler
+    if (multiplayerBtn) {
+        multiplayerBtn.addEventListener('click', function handleMultiplayer() {
+            // Play multiplayer animation
+            playPuzzleAnimation('PLAYER VERSUS PLAYER');
+            
+            setTimeout(() => {
+                if (mainMenu) mainMenu.style.display = 'none';
+                if (languageScreen) languageScreen.style.display = 'none';
+                if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                // Load active games (placeholder for now)
+                loadActiveGames();
+            }, 3500); // Wait for animation to complete (18 letters * 120ms + 600ms animation + buffer)
+        });
+    }
+    
+    // Back to menu from language screen
+    if (backToMenuBtn) {
+        backToMenuBtn.addEventListener('click', function handleBackToMenu() {
+            // Play puzzle animation when returning to menu
+            playPuzzleAnimation('PUZZLE');
+            
+            setTimeout(() => {
+                if (mainMenu) mainMenu.style.display = 'flex';
+                if (languageScreen) languageScreen.style.display = 'none';
+                if (lobbyScreen) lobbyScreen.style.display = 'none';
+            }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
+        });
+    }
+    
+    // Back to menu from lobby screen
+    if (backToMenuFromLobbyBtn) {
+        backToMenuFromLobbyBtn.addEventListener('click', function handleBackToMenuFromLobby() {
+            // Play puzzle animation when returning to menu
+            playPuzzleAnimation('PUZZLE');
+            
+            setTimeout(() => {
+                if (mainMenu) mainMenu.style.display = 'flex';
+                if (languageScreen) languageScreen.style.display = 'none';
+                if (lobbyScreen) lobbyScreen.style.display = 'none';
+            }, 1600); // Wait for animation to complete (6 letters * 150ms + 600ms animation + buffer)
+        });
+    }
+    
+    // Create game button handler
+    if (createGameBtn) {
+        createGameBtn.addEventListener('click', () => {
+            createNewGame();
+        });
+    }
+    
+    // Store active games locally (in a real app, this would be server-side)
+    let activeGames = [];
+    
+    // Function to create a new game
+    function createNewGame() {
+        // Generate a unique game ID
+        const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        
+        // Generate a random game name
+        const gameNames = ['Puzzle Masters', 'Word Warriors', 'Scrabble Stars', 'Tile Titans', 'Board Bosses'];
+        const randomName = gameNames[Math.floor(Math.random() * gameNames.length)];
+        
+        // Create game object
+        const newGame = {
+            id: gameId,
+            name: randomName + ' ' + Math.floor(Math.random() * 1000),
+            players: 1, // Creator is the first player
+            maxPlayers: 2,
+            status: 'waiting',
+            createdAt: new Date()
+        };
+        
+        // Add to active games
+        activeGames.push(newGame);
+        
+        // Navigate to the specific game lobby
+        showGameLobby(newGame);
+    }
+    
+    // Function to show specific game lobby
+    function showGameLobby(game) {
+        // Hide lobby screen and show game lobby
+        if (lobbyScreen) lobbyScreen.style.display = 'none';
+        
+        // Create or update game lobby screen
+        let gameLobbyScreen = document.getElementById('gameLobbyScreen');
+        if (!gameLobbyScreen) {
+            gameLobbyScreen = document.createElement('div');
+            gameLobbyScreen.id = 'gameLobbyScreen';
+            gameLobbyScreen.className = 'game-lobby-container';
+            document.querySelector('.home-container').appendChild(gameLobbyScreen);
+        }
+        
+        gameLobbyScreen.innerHTML = `
+            <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
+            <h2>Game Lobby</h2>
+            <div class="game-lobby-info">
+                <div class="lobby-game-name">${game.name}</div>
+                <div class="lobby-game-id">Game ID: ${game.id}</div>
+                <div class="lobby-players">
+                    <div class="player-slot">
+                        <span class="player-avatar">👤</span>
+                        <span class="player-name">You (Host)</span>
+                    </div>
+                    <div class="player-slot empty">
+                        <span class="player-avatar">➕</span>
+                        <span class="player-name">Waiting for player...</span>
+                    </div>
+                </div>
+                <div class="lobby-status">Status: ${game.status}</div>
+                <button class="start-game-btn" id="startGameBtn" ${game.players < game.maxPlayers ? 'disabled' : ''}>
+                    ${game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Game'}
+                </button>
+            </div>
+        `;
+        
+        gameLobbyScreen.style.display = 'flex';
+        
+        // Add event listeners with setTimeout to ensure DOM is updated
+        setTimeout(() => {
+            const backToLobbyBtn = document.getElementById('backToLobbyBtn');
+            const startGameBtn = document.getElementById('startGameBtn');
+            
+            if (backToLobbyBtn) {
+                backToLobbyBtn.onclick = () => {
+                    gameLobbyScreen.style.display = 'none';
+                    // Play player versus player animation when returning to lobby
+                    playPuzzleAnimation('PLAYER VERSUS PLAYER');
+                    setTimeout(() => {
+                        if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                        updateGamesList();
+                    }, 3500); // Wait for animation to complete (18 letters * 120ms + 600ms animation + buffer)
+                };
+            }
+            
+            if (startGameBtn && !startGameBtn.disabled) {
+                startGameBtn.onclick = () => {
+                    alert('Starting game! (This would navigate to the actual game page)');
+                };
+            }
+        }, 0);
+    }
+    
+    // Function to update the games list display
+    function updateGamesList() {
+        const gamesList = document.getElementById('gamesList');
+        if (!gamesList) return;
+        
+        if (activeGames.length === 0) {
+            gamesList.innerHTML = '<p class="no-games-message">No active games available</p>';
+            return;
+        }
+        
+        // Clear current list
+        gamesList.innerHTML = '';
+        
+        // Add each game to the list
+        activeGames.forEach(game => {
+            const gameItem = document.createElement('div');
+            gameItem.className = 'game-item';
+            
+            const gameInfo = document.createElement('div');
+            gameInfo.className = 'game-info';
+            
+            const gameName = document.createElement('div');
+            gameName.className = 'game-name';
+            gameName.textContent = game.name;
+            
+            const gameDetails = document.createElement('div');
+            gameDetails.className = 'game-details';
+            gameDetails.textContent = `${game.players}/${game.maxPlayers} players • ${game.status}`;
+            
+            gameInfo.appendChild(gameName);
+            gameInfo.appendChild(gameDetails);
+            
+            const joinBtn = document.createElement('button');
+            joinBtn.className = 'join-game-btn';
+            joinBtn.textContent = 'Join';
+            joinBtn.addEventListener('click', () => joinGame(game.id));
+            
+            gameItem.appendChild(gameInfo);
+            gameItem.appendChild(joinBtn);
+            
+            gamesList.appendChild(gameItem);
+        });
+    }
+    
+    // Function to join a game (placeholder)
+    function joinGame(gameId) {
+        const game = activeGames.find(g => g.id === gameId);
+        if (game) {
+            if (game.players < game.maxPlayers) {
+                game.players++;
+                game.status = 'in progress';
+                updateGamesList();
+                alert(`Joined game "${game.name}"!`);
+                // In a real app, this would navigate to the game page
+            } else {
+                alert('This game is full!');
+            }
+        }
+    }
+    
+    // Function to load active games (placeholder)
+    function loadActiveGames() {
+        // In a real app, this would fetch from a server
+        // For now, we'll use the local activeGames array
+        updateGamesList();
+    }
+    
     // Language button tracking with Vercel Analytics
     const langButtons = document.querySelectorAll('.lang-btn');
     langButtons.forEach(button => {
@@ -182,4 +430,143 @@ function getPremiumSquares() {
     ].forEach(([row, col]) => (premium[`${row},${col}`] = "tl"));
 
     return premium;
+}
+
+// Function to play puzzle tile animation on mini board
+function playPuzzleAnimation(word = 'PUZZLE') {
+    const miniBoard = document.querySelector('.mini-scrabble-board');
+    if (!miniBoard) return;
+    
+    const miniRows = miniBoard.querySelectorAll('.mini-row');
+    if (miniRows.length === 0) return;
+    
+    // Clear any existing tiles on the mini board
+    miniBoard.querySelectorAll('.mini-tile').forEach(tile => tile.remove());
+    
+    // Define word positions on the 9x9 mini board (center row is row 4)
+    const wordLayouts = {
+        'PUZZLE': [
+            { letter: 'P', row: 4, col: 2 },
+            { letter: 'U', row: 4, col: 3 },
+            { letter: 'Z', row: 4, col: 4 },
+            { letter: 'Z', row: 4, col: 5 },
+            { letter: 'L', row: 4, col: 6 },
+            { letter: 'E', row: 4, col: 7 }
+        ],
+        'PLAYER VERSUS PLAYER': [
+            // First PLAYER (top row)
+            { letter: 'P', row: 0, col: 1 },
+            { letter: 'L', row: 0, col: 2 },
+            { letter: 'A', row: 0, col: 3 },
+            { letter: 'Y', row: 0, col: 4 },
+            { letter: 'E', row: 0, col: 5 },
+            { letter: 'R', row: 0, col: 6 },
+            // VERSUS (vertical through center, intersecting at Y)
+            { letter: 'V', row: 1, col: 4 },
+            { letter: 'E', row: 2, col: 4 },
+            { letter: 'R', row: 3, col: 4 },
+            { letter: 'S', row: 4, col: 4 },
+            { letter: 'U', row: 5, col: 4 },
+            { letter: 'S', row: 6, col: 4 },
+            // Second PLAYER (bottom row)
+            { letter: 'P', row: 7, col: 1 },
+            { letter: 'L', row: 7, col: 2 },
+            { letter: 'A', row: 7, col: 3 },
+            { letter: 'Y', row: 7, col: 4 },
+            { letter: 'E', row: 7, col: 5 },
+            { letter: 'R', row: 7, col: 6 }
+        ],
+        'BATTLE': [
+            { letter: 'B', row: 4, col: 1 },
+            { letter: 'A', row: 4, col: 2 },
+            { letter: 'T', row: 4, col: 3 },
+            { letter: 'T', row: 4, col: 4 },
+            { letter: 'L', row: 4, col: 5 },
+            { letter: 'E', row: 4, col: 6 }
+        ],
+        'DUEL': [
+            { letter: 'D', row: 4, col: 3 },
+            { letter: 'U', row: 4, col: 4 },
+            { letter: 'E', row: 4, col: 5 },
+            { letter: 'L', row: 4, col: 6 }
+        ]
+    };
+    
+    const puzzleLetters = wordLayouts[word] || wordLayouts['PUZZLE'];
+    
+    // Get cell size from the first cell to match responsive sizing
+    const firstCell = miniBoard.querySelector('.mini-cell');
+    const cellSize = firstCell ? firstCell.offsetWidth : 32;
+    // Make tiles even smaller for larger crossword layout
+    const tileSize = Math.max(cellSize - 14, 18); // Even smaller for larger crossword
+    
+    // Calculate delays based on word length for consistent timing
+    const baseDelay = 120; // Further reduced delay for 18 letters
+    const lettersToAnimate = puzzleLetters.filter(letter => letter.letter !== ' ');
+    const animationDelays = lettersToAnimate.map((_, index) => index * baseDelay);
+    
+    // Add delays to each letter (skip spaces)
+    let delayIndex = 0;
+    const lettersWithDelays = puzzleLetters.map((letter) => {
+        if (letter.letter === ' ') {
+            return { ...letter, delay: 0 };
+        }
+        return { ...letter, delay: animationDelays[delayIndex++] };
+    });
+    
+    // Shuffle the animation order for more interesting effect
+    const shuffledLetters = [...lettersWithDelays].sort(() => Math.random() - 0.5);
+    
+    // Animate each letter appearing with staggered timing
+    shuffledLetters.forEach((tile) => {
+        setTimeout(() => {
+            const row = miniRows[tile.row];
+            if (row) {
+                const cells = row.querySelectorAll('.mini-cell');
+                const cell = cells[tile.col];
+                if (cell) {
+                    // Skip if letter is a space
+                    if (tile.letter === ' ') return;
+                    
+                    const tileDiv = document.createElement('div');
+                    tileDiv.className = 'mini-tile animating';
+                    tileDiv.textContent = tile.letter;
+                    tileDiv.style.cssText = `
+                        position: absolute;
+                        background: linear-gradient(145deg, #42a5f5, #1976d2);
+                        color: white;
+                        width: ${tileSize}px;
+                        height: ${tileSize}px;
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: ${tileSize * 0.5}px;
+                        box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5), 0 0 20px rgba(66, 165, 245, 0.3);
+                        z-index: 10;
+                        left: 50%;
+                        top: 50%;
+                        transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+                        opacity: 0;
+                    `;
+                    cell.style.position = 'relative';
+                    cell.appendChild(tileDiv);
+                    
+                    // Trigger animation after a small delay
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            tileDiv.style.transform = 'translate(-50%, -50%) scale(1) rotate(0deg)';
+                            tileDiv.style.opacity = '1';
+                            
+                            // Remove animating class after animation completes to enable hover effects
+                            setTimeout(() => {
+                                tileDiv.classList.remove('animating');
+                            }, 600);
+                        }, 50);
+                    });
+                }
+            }
+        }, tile.delay);
+    });
 }
