@@ -59,6 +59,9 @@ function initMultiplayerSocket() {
         // Handle initial game state
         if (data.players) {
             console.log('Game has', data.players, 'players');
+            // Set initial turn - host goes first
+            isMyTurn = data.hostId === myPlayerId;
+            updateTurnIndicator();
         }
     });
     
@@ -158,6 +161,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Player rack:', gameInstance.playerRack);
                 console.log('Opponent rack:', gameInstance.opponentRack);
                 
+                // Determine if I'm the host
+                const urlParams = new URLSearchParams(window.location.search);
+                const gameId = urlParams.get('gameId');
+                isHost = urlParams.get('isHost') === 'true';
+                
+                // Set initial turn based on host status
+                isMyTurn = isHost;
+                updateTurnIndicator();
+                console.log('Initial turn set - isHost:', isHost, 'isMyTurn:', isMyTurn);
+                
                 // Override the AI turn to prevent it from running
                 const originalAITurn = gameInstance.aiTurn;
                 gameInstance.aiTurn = function() {
@@ -170,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameInstance.fillRacks = function(playerFirst = false) {
                     console.log('fillRacks called in multiplayer mode');
                     console.log('Player rack before:', this.playerRack.length);
+                    console.log('Opponent rack before:', this.opponentRack.length);
                     console.log('Tiles remaining:', this.tiles.length);
                     
                     // Only fill player rack in multiplayer
@@ -179,7 +193,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     console.log('Player rack after:', this.playerRack.length);
+                    console.log('Player rack tiles:', this.playerRack.map(t => t.letter).join(', '));
                     this.renderRack();
+                    
+                    // Send tile count to opponent
+                    if (socket) {
+                        const gameId = new URLSearchParams(window.location.search).get('gameId');
+                        socket.emit('update-tiles', {
+                            gameId: gameId,
+                            tileCount: this.playerRack.length
+                        });
+                    }
                 };
                 
                 // Hook into submit move to send to opponent

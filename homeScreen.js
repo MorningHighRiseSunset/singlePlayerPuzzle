@@ -602,8 +602,9 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         
         const gamePage = gamePages[language] || 'game-multiplayer.html';
-        // Add multiplayer parameter and game ID
-        const multiplayerUrl = `${gamePage}?multiplayer=true&gameId=${currentGame.id}`;
+        // Add multiplayer parameter, game ID, and host status
+        const isHost = currentGame.hostId === getPlayerId();
+        const multiplayerUrl = `${gamePage}?multiplayer=true&gameId=${currentGame.id}&isHost=${isHost}`;
         window.location.href = multiplayerUrl;
     }
     

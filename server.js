@@ -211,16 +211,19 @@ io.on('connection', (socket) => {
             socketToPlayer[socket.id] = playerId;
             socket.join(gameId);
             
-            // Send initial game state
+            // Send initial game state with turn info
             socket.emit('game-state', {
                 gameId: game.id,
                 players: game.players,
                 hostId: game.hostId,
-                status: game.status
+                status: game.status,
+                currentPlayerId: game.hostId // Host goes first
             });
             
             // Notify other player
             socket.to(gameId).emit('player-reconnected', { playerId });
+            
+            console.log('Player joined game room:', gameId, 'as:', playerId, 'host is:', game.hostId);
         }
     });
 
