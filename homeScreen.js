@@ -23,7 +23,42 @@ document.addEventListener("DOMContentLoaded", () => {
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
     
-    // No Pusher - using localStorage for cross-tab synchronization
+    // Socket.io for real-time multiplayer
+    let socket = null;
+    let currentGame = null;
+    
+    // Initialize Socket.io when needed
+    function initSocket() {
+        if (socket) return socket;
+        
+        try {
+            const socketUrl = window.RUNTIME_CONFIG?.SOCKET_SERVER_URL || window.location.origin;
+            socket = io(socketUrl, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
+            
+            socket.on('connect', () => {
+                console.log('SOCKET: Connected successfully to', socketUrl);
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('SOCKET: Disconnected');
+            });
+            
+            socket.on('error', (err) => {
+                console.log('SOCKET: Error:', err);
+            });
+            
+            console.log('Socket.io initialized successfully');
+            return socket;
+        } catch (e) {
+            console.log('Socket.io initialization failed:', e);
+            return null;
+        }
+    }
     
     // Show main menu after animation completes (6 letters * 150ms each + 600ms animation + buffer)
     setTimeout(() => {
@@ -57,6 +92,60 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.va('event', { name: 'multiplayer_click', data: { type: 'mode_selection' } });
             }
             
+            // Initialize Socket.io
+            const socketInstance = initSocket();
+            if (socketInstance) {
+                // Listen for game list updates
+                socketInstance.on('game-list-updated', (games) => {
+                    activeGames = games;
+                    updateGamesList();
+                });
+                
+                // Listen for initial game list
+                socketInstance.on('game-list', (games) => {
+                    activeGames = games;
+                    updateGamesList();
+                });
+                
+                // Listen for player joining (host perspective)
+                socketInstance.on('player-joined', (data) => {
+                    console.log('=== SOCKET EVENT: player-joined ===');
+                    console.log('Received data:', data);
+                    if (currentGame) {
+                        currentGame.players = data.players;
+                        currentGame.playerIds = data.playerIds;
+                        currentGame.hostId = data.hostId;
+                        updateGameLobbyUI(currentGame);
+                    }
+                });
+                
+                // Listen for game started
+                socketInstance.on('game-started', (data) => {
+                    console.log('Game started by host');
+                    navigateToGame(data.language);
+                });
+                
+                // Listen for host leaving
+                socketInstance.on('host-left', () => {
+                    console.log('Host left the game');
+                    const gameLobbyScreen = document.getElementById('gameLobbyScreen');
+                    if (gameLobbyScreen) {
+                        gameLobbyScreen.style.display = 'none';
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'error-message';
+                        errorMsg.textContent = 'Host left the game. Returning to lobby.';
+                        errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                        document.querySelector('.home-container').appendChild(errorMsg);
+                        setTimeout(() => errorMsg.remove(), 3000);
+                    }
+                    if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                    currentGame = null;
+                });
+                
+                // Request current game list
+                socketInstance.emit('get-games');
+            }
+            
             // Play multiplayer animation
             playPuzzleAnimation('PLAYER VERSUS PLAYER');
             
@@ -66,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Hide mini board in lobby
                 const miniBoardContainer = document.querySelector('.mini-board-container');
                 if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                // Load active games
+                // Load active games (Socket.io will update this)
                 loadActiveGames();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
         });
@@ -126,42 +215,23 @@ document.addEventListener("DOMContentLoaded", () => {
         return currentPlayerId;
     }
     
-    // Load games from localStorage on page load
-    function loadGamesFromStorage() {
-        try {
-            const storedGames = localStorage.getItem('multiplayerGames');
-            if (storedGames) {
-                activeGames = JSON.parse(storedGames);
-                // Filter out games older than 5 minutes
-                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-                activeGames = activeGames.filter(game => new Date(game.createdAt) > fiveMinutesAgo);
-                saveGamesToStorage();
-            }
-        } catch (e) {
-            console.log('Error loading games from storage:', e);
+    // Generate player ID (stored in sessionStorage for tab uniqueness)
+    function getPlayerId() {
+        let playerId = sessionStorage.getItem('playerId');
+        if (!playerId) {
+            playerId = generatePlayerId();
+            sessionStorage.setItem('playerId', playerId);
         }
+        return playerId;
     }
     
-    // Save games to localStorage
-    function saveGamesToStorage() {
-        try {
-            localStorage.setItem('multiplayerGames', JSON.stringify(activeGames));
-        } catch (e) {
-            console.log('Error saving games to storage:', e);
-        }
-    }
-    
-    // Load games on page load
-    loadGamesFromStorage();
+    // Initialize player ID on page load
     getPlayerId();
     
     // Function to create a new game
     function createNewGame(language = 'english') {
         // Generate a unique game ID
         const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        
-        // Initialize Pusher
-        const pusherInstance = initPusher();
         
         const hostPlayerId = getPlayerId();
         
@@ -170,29 +240,20 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Host Player ID:', hostPlayerId);
         console.log('Language:', language);
         
-        // Create game object
-        const newGame = {
-            id: gameId,
-            name: 'Puzzle Game',
-            players: 1, // Creator is the first player
-            maxPlayers: 2,
-            status: 'waiting',
-            language: language,
-            createdAt: new Date(),
-            hostId: hostPlayerId,
-            playerIds: [hostPlayerId]
-        };
-        
-        currentGame = newGame;
-        
-        // Save to localStorage
-        activeGames.push(newGame);
-        saveGamesToStorage();
-        
-        console.log('Game created with localStorage sync');
-        
-        // Navigate to the specific game lobby
-        showGameLobby(newGame);
+        // Create game via Socket.io
+        const socketInstance = initSocket();
+        if (socketInstance) {
+            socketInstance.emit('create-game', {
+                language: language,
+                playerId: hostPlayerId
+            });
+            
+            // Listen for game created confirmation
+            socketInstance.once('game-created', (game) => {
+                currentGame = game;
+                showGameLobby(game);
+            });
+        }
     }
     
     // Generate a simple player ID
@@ -279,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Remove game and redirect to lobby
                 activeGames = activeGames.filter(g => g.id !== game.id);
-                saveGamesToStorage();
+
                 updateGamesList();
                 
                 const errorMsg = document.createElement('div');
@@ -316,16 +377,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     // If host is leaving, notify other players and close the game
                     if (isHost) {
-                        const pusherInstance = initPusher();
-                        if (pusherInstance && currentChannel) {
-                            currentChannel.trigger('client-host-left', {
-                                gameId: game.id
-                            });
+                        const socketInstance = initSocket();
+                        if (socketInstance && currentGame) {
+                            socketInstance.emit('leave-game', { gameId: currentGame.id });
                             console.log('Host notified other players of leaving');
                         }
                         // Remove game from active games
                         activeGames = activeGames.filter(g => g.id !== game.id);
-                        saveGamesToStorage();
+        
                         updateGamesList();
                     }
                     
@@ -357,18 +416,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
                     }
                     
-                    const pusherInstance = initPusher();
+                    const socketInstance = initSocket();
                     
-                    if (pusherInstance && currentChannel) {
-                        // Broadcast game start to all players in the channel
-                        currentChannel.trigger('client-game-started', {
-                            gameId: game.id,
-                            language: game.language
-                        });
-                        console.log('Game start broadcasted via Pusher');
-                    } else {
-                        // Fallback for local testing
-                        console.log('Starting game locally');
+                    if (socketInstance && currentGame) {
+                        // Broadcast game start to all players
+                        socketInstance.emit('start-game', { gameId: currentGame.id });
+                        console.log('Game start broadcasted via Socket.io');
                     }
                     
                     // Navigate host to the game
@@ -437,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Remove game and redirect to lobby
                 activeGames = activeGames.filter(g => g.id !== game.id);
-                saveGamesToStorage();
+
                 updateGamesList();
                 
                 const errorMsg = document.createElement('div');
@@ -474,16 +527,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     // If host is leaving, notify other players and close the game
                     if (isHost) {
-                        const pusherInstance = initPusher();
-                        if (pusherInstance && currentChannel) {
-                            currentChannel.trigger('client-host-left', {
-                                gameId: game.id
-                            });
+                        const socketInstance = initSocket();
+                        if (socketInstance && currentGame) {
+                            socketInstance.emit('leave-game', { gameId: currentGame.id });
                             console.log('Host notified other players of leaving');
                         }
                         // Remove game from active games
                         activeGames = activeGames.filter(g => g.id !== game.id);
-                        saveGamesToStorage();
+        
                         updateGamesList();
                     }
                     
@@ -513,14 +564,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
                     }
                     
-                    const pusherInstance = initPusher();
+                    const socketInstance = initSocket();
                     
-                    if (pusherInstance && currentChannel) {
-                        currentChannel.trigger('client-game-started', {
-                            gameId: game.id,
-                            language: game.language
-                        });
-                        console.log('Game start broadcasted via Pusher');
+                    if (socketInstance && currentGame) {
+                        socketInstance.emit('start-game', { gameId: currentGame.id });
+                        console.log('Game start broadcasted via Socket.io');
                     }
                     
                     navigateToGame(game.language);
@@ -595,100 +643,48 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Function to join a game
     function joinGame(gameId) {
-        const game = activeGames.find(g => g.id === gameId);
-        if (game) {
-            const playerId = getPlayerId();
+        const playerId = getPlayerId();
+        
+        console.log('=== JOIN GAME ===');
+        console.log('Game ID:', gameId);
+        console.log('Joining Player ID:', playerId);
+        
+        const socketInstance = initSocket();
+        if (socketInstance) {
+            socketInstance.emit('join-game', {
+                gameId: gameId,
+                playerId: playerId
+            });
             
-            console.log('=== JOIN GAME ===');
-            console.log('Game ID:', gameId);
-            console.log('Joining Player ID:', playerId);
-            console.log('Game Host ID:', game.hostId);
-            console.log('Game Players Before:', game.players);
-            console.log('Game Player IDs Before:', game.playerIds);
-            
-            // Check if player is already in this game
-            if (game.playerIds && game.playerIds.includes(playerId)) {
-                console.log('Player already in this game, showing lobby');
-                showGameLobby(game);
-                return;
-            }
-            
-            if (game.players < game.maxPlayers) {
-                // Preserve the original hostId
-                const originalHostId = game.hostId;
-                
-                // Update game object with new player BEFORE showing lobby
-                game.players = game.players + 1;
-                game.playerIds = [...game.playerIds, playerId];
-                game.hostId = originalHostId;
-                
-                console.log('Game Players After:', game.players);
-                console.log('Game Player IDs After:', game.playerIds);
-                console.log('Preserved Host ID:', game.hostId);
-                
-                // Update the game in activeGames array
-                const gameIndex = activeGames.findIndex(g => g.id === gameId);
-                if (gameIndex !== -1) {
-                    activeGames[gameIndex] = game;
-                }
-                
-                // Save to localStorage so other tabs see the update
-                saveGamesToStorage();
-                updateGamesList();
-                
-                currentGame = game;
-                
-                // Navigate to game lobby immediately
-                showGameLobby(game);
-            } else {
-                // Use inline message instead of alert
+            // Listen for errors
+            socketInstance.once('error', (data) => {
                 const gamesList = document.getElementById('gamesList');
                 if (gamesList) {
                     const errorMsg = document.createElement('div');
                     errorMsg.className = 'error-message';
-                    errorMsg.textContent = 'This game is full!';
+                    errorMsg.textContent = data.message;
                     errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
                     gamesList.insertBefore(errorMsg, gamesList.firstChild);
                     setTimeout(() => errorMsg.remove(), 3000);
                 }
-            }
-        } else {
-            const gamesList = document.getElementById('gamesList');
-            if (gamesList) {
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-message';
-                errorMsg.textContent = 'Game not found! It may have expired.';
-                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
-                gamesList.insertBefore(errorMsg, gamesList.firstChild);
-                setTimeout(() => errorMsg.remove(), 3000);
-            }
+            });
+            
+            // Wait for player-joined event which will update the game
+            socketInstance.once('player-joined', (data) => {
+                console.log('Successfully joined game');
+                const game = activeGames.find(g => g.id === gameId);
+                if (game) {
+                    currentGame = game;
+                    showGameLobby(game);
+                }
+            });
         }
     }
     
     // Function to load active games
     function loadActiveGames() {
-        // Load games from localStorage for the games list display
-        loadGamesFromStorage();
+        // Socket.io will update the game list automatically
         updateGamesList();
-        
-        // Set up polling to check for game updates every 1 second
-        if (!window.gamePollingInterval) {
-            window.gamePollingInterval = setInterval(() => {
-                loadGamesFromStorage();
-                updateGamesList();
-                
-                // Check if current game lobby needs updating
-                if (currentGame) {
-                    const updatedGame = activeGames.find(g => g.id === currentGame.id);
-                    if (updatedGame && (updatedGame.players !== currentGame.players || 
-                        JSON.stringify(updatedGame.playerIds) !== JSON.stringify(currentGame.playerIds))) {
-                        currentGame.players = updatedGame.players;
-                        currentGame.playerIds = updatedGame.playerIds;
-                        updateGameLobbyUI(currentGame);
-                    }
-                }
-            }, 1000);
-        }
     }
     
     // Language button tracking with Vercel Analytics
@@ -711,10 +707,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     
     // Start Game button handler
-    const startGameBtn = document.getElementById('start-game-btn');
+    const startGameBtn = document.getElementById('startGameBtn');
     if (startGameBtn) {
         startGameBtn.addEventListener('click', () => {
-            window.location.href = 'game.html';
+            if (currentGame) {
+                const socketInstance = initSocket();
+                if (socketInstance) {
+                    socketInstance.emit('start-game', { gameId: currentGame.id });
+                }
+            }
         });
     }
     

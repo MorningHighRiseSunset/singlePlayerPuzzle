@@ -3,3 +3,4 @@ script.checkpoint.js
 .vercel
 .env*.local
 node_modules
+games.json

@@ -4,9 +4,9 @@
   "description": "Single player puzzle game with multiple languages",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 3000",
+    "dev": "node server.js",
     "build": "echo 'Static build complete'",
-    "start": "python -m http.server 3000",
+    "start": "node server.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "deploy": "vercel --prod"
@@ -14,7 +14,8 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "canvas-confetti": "^1.9.4",
-    "pusher-js": "^8.6.0"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.0.0",
