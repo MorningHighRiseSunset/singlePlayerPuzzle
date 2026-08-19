@@ -160,15 +160,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Generate or get player ID
     function getPlayerId() {
         if (!currentPlayerId) {
-            let storedId = sessionStorage.getItem('playerId');
-            if (storedId) {
-                currentPlayerId = storedId;
-                console.log('Retrieved existing player ID from sessionStorage:', currentPlayerId);
-            } else {
-                currentPlayerId = generatePlayerId();
-                sessionStorage.setItem('playerId', currentPlayerId);
-                console.log('Generated new player ID and saved to sessionStorage:', currentPlayerId);
-            }
+            currentPlayerId = generatePlayerId();
+            console.log('Generated new player ID (no storage):', currentPlayerId);
         }
         return currentPlayerId;
     }
