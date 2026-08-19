@@ -4,7 +4,7 @@
 window.RUNTIME_CONFIG = {
     // Socket.io server URL - change this to your deployed server URL
     // Example: 'https://your-backend.railway.app' or 'https://your-game.onrender.com'
-    SOCKET_SERVER_URL: 'https://your-backend-url.com',
+    SOCKET_SERVER_URL: 'https://singleplayerpuzzle.onrender.com',
     
     // Environment
     ENVIRONMENT: 'production'
