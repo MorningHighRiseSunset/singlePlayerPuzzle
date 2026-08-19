@@ -183,6 +183,9 @@ function initMultiplayerSocket() {
             gameInstance.playerRack = data.tiles;
             gameInstance.renderRack();
             
+            // Update sessionStorage
+            sessionStorage.setItem('myTiles', JSON.stringify(data.tiles));
+            
             // Send tile count to opponent
             socket.emit('update-tiles', {
                 gameId: new URLSearchParams(window.location.search).get('gameId'),
@@ -229,10 +232,6 @@ function commitMultiplayerMove({ placements, score }) {
     });
 
     if (gameInstance) {
-        socket.emit('update-tiles', {
-            gameId,
-            tileCount: gameInstance.playerRack.length
-        });
         gameInstance.currentTurn = 'ai';
     }
 

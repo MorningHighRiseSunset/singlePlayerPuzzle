@@ -324,6 +324,13 @@ io.on('connection', (socket) => {
 
         console.log('Player move:', playerId, 'in game:', gameId, 'placements:', move.placements?.length);
 
+        // Remove used tiles from player's rack
+        if (move.placements && game.playerTiles[playerId]) {
+            const tilesUsed = move.placements.length;
+            game.playerTiles[playerId] = game.playerTiles[playerId].slice(tilesUsed);
+            console.log('Removed', tilesUsed, 'tiles from player rack, remaining:', game.playerTiles[playerId].length);
+        }
+
         if (move.placements) {
             move.placements.forEach(placement => {
                 const { row, col, letter, isBlank } = placement;
@@ -335,6 +342,15 @@ io.on('connection', (socket) => {
                     timestamp: Date.now()
                 };
             });
+        }
+
+        // Draw new tiles to refill player's rack to 7
+        const tilesNeeded = 7 - (game.playerTiles[playerId]?.length || 0);
+        if (tilesNeeded > 0 && game.tileBag.length > 0) {
+            const newTiles = game.tileBag.splice(0, tilesNeeded);
+            game.playerTiles[playerId] = game.playerTiles[playerId] || [];
+            game.playerTiles[playerId].push(...newTiles);
+            console.log('Drew', newTiles.length, 'new tiles for player', playerId, ':', newTiles.map(t => t.letter).join(','));
         }
 
         const playerIds = game.playerIds || [];
@@ -353,6 +369,12 @@ io.on('connection', (socket) => {
         emitToGamePlayers(game, 'opponent-move', payload, socket.id);
         emitToGamePlayers(game, 'turn-change', { currentPlayerId: game.currentPlayerId });
         emitToGamePlayers(game, 'board-state', { board: game.board });
+        
+        // Send updated tiles to the player who made the move
+        socket.emit('tiles-drawn', {
+            tiles: game.playerTiles[playerId] || [],
+            remaining: game.tileBag.length
+        });
 
         saveGames();
         if (typeof ack === 'function') ack({ ok: true, board: game.board, currentPlayerId: game.currentPlayerId });
