@@ -37,6 +37,30 @@ const games = {};
 const GAMES_FILE = path.join(__dirname, 'games.json');
 const socketToPlayer = {}; // Map socket.id to playerId
 
+// Tile bag management
+function createTileBag() {
+    const tiles = [];
+    const distribution = {
+        'A': 9, 'B': 2, 'C': 2, 'D': 4, 'E': 12, 'F': 2, 'G': 3, 'H': 2, 'I': 9,
+        'J': 1, 'K': 1, 'L': 4, 'M': 2, 'N': 6, 'O': 8, 'P': 2, 'Q': 1, 'R': 6,
+        'S': 4, 'T': 6, 'U': 4, 'V': 2, 'W': 2, 'X': 1, 'Y': 2, 'Z': 1, '*': 2
+    };
+    
+    for (const [letter, count] of Object.entries(distribution)) {
+        for (let i = 0; i < count; i++) {
+            tiles.push({ letter, isBlank: letter === '*' });
+        }
+    }
+    
+    // Shuffle the bag
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    
+    return tiles;
+}
+
 // Load games from disk on startup
 function loadGames() {
     try {
@@ -82,19 +106,29 @@ io.on('connection', (socket) => {
             createdAt: new Date(),
             hostId: playerId,
             playerIds: [playerId],
-            hostSocketId: socket.id
+            hostSocketId: socket.id,
+            tileBag: createTileBag(),
+            playerTiles: {}, // Map playerId to their tiles
+            currentPlayerId: playerId
         };
+        
+        // Give host their initial tiles
+        game.playerTiles[playerId] = game.tileBag.splice(0, 7);
         
         games[gameId] = game;
         socket.join(gameId);
         
         console.log('Game created:', gameId, 'by:', playerId);
+        console.log('Host tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
         
         // Save to disk
         saveGames();
         
-        // Send game to client
-        socket.emit('game-created', game);
+        // Send game to client with their tiles
+        socket.emit('game-created', {
+            ...game,
+            myTiles: game.playerTiles[playerId]
+        });
         
         // Broadcast to lobby
         io.emit('game-list-updated', Object.values(games));
@@ -122,16 +156,21 @@ io.on('connection', (socket) => {
         game.players += 1;
         game.playerIds.push(playerId);
         
+        // Give joining player their tiles from the server's bag
+        game.playerTiles[playerId] = game.tileBag.splice(0, 7);
+        
         socket.join(gameId);
         
         console.log('Player joined:', playerId, 'to game:', gameId);
+        console.log('Player tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
         
         // Save to disk
         saveGames();
         
-        // Send current game state to the joining player
+        // Send current game state to the joining player with their tiles
         socket.emit('game-joined', {
-            game: game
+            game: game,
+            myTiles: game.playerTiles[playerId]
         });
         
         // Notify all players in the game (including the joiner)
@@ -211,19 +250,22 @@ io.on('connection', (socket) => {
             socketToPlayer[socket.id] = playerId;
             socket.join(gameId);
             
-            // Send initial game state with turn info
+            // Send initial game state with turn info and player's tiles
             socket.emit('game-state', {
                 gameId: game.id,
                 players: game.players,
                 hostId: game.hostId,
                 status: game.status,
-                currentPlayerId: game.hostId // Host goes first
+                currentPlayerId: game.hostId, // Host goes first
+                myTiles: game.playerTiles[playerId] || [],
+                remainingTiles: game.tileBag.length
             });
             
             // Notify other player
             socket.to(gameId).emit('player-reconnected', { playerId });
             
             console.log('Player joined game room:', gameId, 'as:', playerId, 'host is:', game.hostId);
+            console.log('Sending tiles:', game.playerTiles[playerId]?.map(t => t.letter).join(',') || 'none');
         }
     });
 
@@ -264,6 +306,28 @@ io.on('connection', (socket) => {
                 playerId: playerId,
                 tileCount: tileCount
             });
+        }
+    });
+
+    // Player draws new tiles from the bag
+    socket.on('draw-tiles', (data) => {
+        const { gameId, count } = data;
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (game) {
+            // Draw tiles from server's bag
+            const newTiles = game.tileBag.splice(0, count);
+            game.playerTiles[playerId] = newTiles;
+            
+            console.log('Player drew', count, 'tiles:', newTiles.map(t => t.letter).join(','));
+            
+            socket.emit('tiles-drawn', {
+                tiles: newTiles,
+                remaining: game.tileBag.length
+            });
+            
+            saveGames();
         }
     });
 

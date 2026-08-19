@@ -63,6 +63,14 @@ function initMultiplayerSocket() {
             isMyTurn = data.hostId === myPlayerId;
             updateTurnIndicator();
         }
+        
+        // Use server-provided tiles
+        if (data.myTiles && gameInstance) {
+            console.log('Setting player tiles from server:', data.myTiles.map(t => t.letter).join(','));
+            gameInstance.playerRack = data.myTiles;
+            gameInstance.tiles = []; // Empty local bag since server manages it
+            gameInstance.renderRack();
+        }
     });
     
     socket.on('player-reconnected', (data) => {
@@ -161,6 +169,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Player rack:', gameInstance.playerRack);
                 console.log('Opponent rack:', gameInstance.opponentRack);
                 
+                // Use tiles from sessionStorage (provided by server)
+                const storedTiles = sessionStorage.getItem('myTiles');
+                if (storedTiles) {
+                    const myTiles = JSON.parse(storedTiles);
+                    console.log('Using stored tiles from server:', myTiles.map(t => t.letter).join(','));
+                    gameInstance.playerRack = myTiles;
+                    gameInstance.tiles = []; // Empty local bag since server manages it
+                    gameInstance.renderRack();
+                }
+                
                 // Determine if I'm the host
                 const urlParams = new URLSearchParams(window.location.search);
                 const gameId = urlParams.get('gameId');
@@ -178,32 +196,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     return Promise.resolve();
                 };
                 
-                // Override fillRacks to not fill opponent rack
+                // Override fillRacks to use server tiles
                 const originalFillRacks = gameInstance.fillRacks;
                 gameInstance.fillRacks = function(playerFirst = false) {
-                    console.log('fillRacks called in multiplayer mode');
-                    console.log('Player rack before:', this.playerRack.length);
-                    console.log('Opponent rack before:', this.opponentRack.length);
-                    console.log('Tiles remaining:', this.tiles.length);
-                    
-                    // Only fill player rack in multiplayer
-                    while (this.playerRack.length < 7 && this.tiles.length > 0) {
-                        const tile = this.tiles.pop();
-                        this.playerRack.push(tile);
-                    }
-                    
-                    console.log('Player rack after:', this.playerRack.length);
-                    console.log('Player rack tiles:', this.playerRack.map(t => t.letter).join(', '));
+                    console.log('fillRacks called in multiplayer mode - skipping, using server tiles');
+                    // Don't do anything - tiles come from server
                     this.renderRack();
-                    
-                    // Send tile count to opponent
-                    if (socket) {
-                        const gameId = new URLSearchParams(window.location.search).get('gameId');
-                        socket.emit('update-tiles', {
-                            gameId: gameId,
-                            tileCount: this.playerRack.length
-                        });
-                    }
                 };
                 
                 // Hook into submit move to send to opponent

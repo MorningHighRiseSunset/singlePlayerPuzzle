@@ -130,6 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.log('Game joined confirmation:', data);
                     if (data.game) {
                         currentGame = data.game;
+                        // Store my tiles for when we navigate to the game
+                        sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
                         // Update activeGames if not already present
                         const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
                         if (gameIndex === -1) {
@@ -265,6 +267,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // Listen for game created confirmation
             socketInstance.once('game-created', (game) => {
                 currentGame = game;
+                // Store my tiles for when we navigate to the game
+                if (game.myTiles) {
+                    sessionStorage.setItem('myTiles', JSON.stringify(game.myTiles));
+                }
                 showGameLobby(game);
             });
         }
@@ -691,6 +697,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.log('Game joined confirmation in joinGame:', data);
                 if (data.game) {
                     currentGame = data.game;
+                    // Store my tiles for when we navigate to the game
+                    sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
                     // Update activeGames if not already present
                     const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
                     if (gameIndex === -1) {
