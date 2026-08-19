@@ -310,11 +310,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
-                        <span class="player-name">${isHost ? 'You (Host)' : 'Player 1'}</span>
+                        <span class="player-name">${isHost ? 'You (Host)' : 'Host'}</span>
                     </div>
                     <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
                         <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
-                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : 'Player 2'}</span>
+                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : (isHost ? 'Player 2' : 'You')}</span>
                     </div>
                 </div>
                 <div class="lobby-status">Status: ${game.status}</div>
@@ -333,6 +333,24 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (backToLobbyBtn) {
                 backToLobbyBtn.onclick = () => {
+                    const currentPlayerId = getPlayerId();
+                    const isHost = game.hostId === currentPlayerId;
+                    
+                    // If host is leaving, notify other players and close the game
+                    if (isHost) {
+                        const pusherInstance = initPusher();
+                        if (pusherInstance && currentChannel) {
+                            currentChannel.trigger('client-host-left', {
+                                gameId: game.id
+                            });
+                            console.log('Host notified other players of leaving');
+                        }
+                        // Remove game from active games
+                        activeGames = activeGames.filter(g => g.id !== game.id);
+                        saveGamesToStorage();
+                        updateGamesList();
+                    }
+                    
                     gameLobbyScreen.style.display = 'none';
                     // Show mini board again when returning to lobby
                     const miniBoardContainer = document.querySelector('.mini-board-container');
@@ -393,11 +411,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="lobby-players">
                     <div class="player-slot">
                         <span class="player-avatar">👤</span>
-                        <span class="player-name">${isHost ? 'You (Host)' : 'Player 1'}</span>
+                        <span class="player-name">${isHost ? 'You (Host)' : 'Host'}</span>
                     </div>
                     <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
                         <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
-                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : 'Player 2'}</span>
+                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : (isHost ? 'Player 2' : 'You')}</span>
                     </div>
                 </div>
                 <div class="lobby-status">Status: ${game.status}</div>
@@ -414,6 +432,24 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (backToLobbyBtn) {
                 backToLobbyBtn.onclick = () => {
+                    const currentPlayerId = getPlayerId();
+                    const isHost = game.hostId === currentPlayerId;
+                    
+                    // If host is leaving, notify other players and close the game
+                    if (isHost) {
+                        const pusherInstance = initPusher();
+                        if (pusherInstance && currentChannel) {
+                            currentChannel.trigger('client-host-left', {
+                                gameId: game.id
+                            });
+                            console.log('Host notified other players of leaving');
+                        }
+                        // Remove game from active games
+                        activeGames = activeGames.filter(g => g.id !== game.id);
+                        saveGamesToStorage();
+                        updateGamesList();
+                    }
+                    
                     gameLobbyScreen.style.display = 'none';
                     // Show mini board again when returning to lobby
                     const miniBoardContainer = document.querySelector('.mini-board-container');
@@ -529,6 +565,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (game.players < game.maxPlayers) {
                 const pusherInstance = initPusher();
                 
+                // Preserve the original hostId
+                const originalHostId = game.hostId;
+                
                 if (pusherInstance) {
                     // Subscribe to game channel
                     const channelName = `game-${gameId}`;
@@ -538,6 +577,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentChannel.bind('game-started', (data) => {
                         console.log('Game started by host');
                         navigateToGame(game.language);
+                    });
+                    
+                    // Listen for host leaving
+                    currentChannel.bind('host-left', (data) => {
+                        console.log('Host left the game');
+                        // If current player is not the host, redirect back to lobby
+                        if (currentGame && currentGame.hostId !== playerId) {
+                            const gameLobbyScreen = document.getElementById('gameLobbyScreen');
+                            if (gameLobbyScreen) {
+                                gameLobbyScreen.style.display = 'none';
+                                const errorMsg = document.createElement('div');
+                                errorMsg.className = 'error-message';
+                                errorMsg.textContent = 'Host left the game. Returning to lobby.';
+                                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                                document.querySelector('.home-container').appendChild(errorMsg);
+                                setTimeout(() => errorMsg.remove(), 3000);
+                            }
+                            // Show lobby screen
+                            if (lobbyScreen) lobbyScreen.style.display = 'flex';
+                            // Remove game from active games
+                            activeGames = activeGames.filter(g => g.id !== gameId);
+                            saveGamesToStorage();
+                            updateGamesList();
+                        }
                     });
                     
                     // Notify the host that a player joined
@@ -554,9 +617,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     game.playerIds = game.playerIds || [];
                     game.playerIds.push(playerId);
                     game.status = 'in progress';
+                    // Ensure hostId is preserved
+                    game.hostId = originalHostId;
                     saveGamesToStorage();
                     updateGamesList();
                 }
+                
+                // Update game object with preserved hostId
+                game.hostId = originalHostId;
+                game.players = game.players + 1;
+                game.playerIds = [...game.playerIds, playerId];
                 
                 currentGame = game;
                 
@@ -600,10 +670,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateGamesList();
             }, 2000);
         }
-        
-        console.log('LOCAL MULTIPLAYER: Testing enabled via localStorage. Open multiple tabs to test.');
-        console.log('ONLINE MULTIPLAYER: Requires Pusher credentials for actual online play.');
-        console.log('JOINING: Players join directly from Active Games list - no codes needed.');
     }
     
 
