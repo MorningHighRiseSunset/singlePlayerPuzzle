@@ -66,10 +66,17 @@ function initMultiplayerSocket() {
         
         // Use server-provided tiles
         if (data.myTiles && gameInstance) {
-            console.log('=== RECEIVED TILES FROM SERVER ===');
+            console.log('=== MY TILES ===');
             console.log('My player ID:', myPlayerId);
-            console.log('Tiles received:', data.myTiles.map(t => t.letter).join(','));
-            console.log('Tiles raw:', JSON.stringify(data.myTiles, null, 2));
+            console.log('My tiles:', data.myTiles.map(t => t.letter).join(','));
+            
+            console.log('=== ALL PLAYERS TILES ===');
+            if (data.allPlayerTiles) {
+                for (const [playerId, tiles] of Object.entries(data.allPlayerTiles)) {
+                    console.log(`Player ${playerId}:`, tiles.map(t => t.letter).join(','));
+                }
+            }
+            
             console.log('Setting player rack to server tiles');
             gameInstance.playerRack = data.myTiles;
             gameInstance.tiles = []; // Empty local bag since server manages it
@@ -225,12 +232,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Use tiles from sessionStorage (provided by server)
                 const storedTiles = sessionStorage.getItem('myTiles');
+                const storedAllTiles = sessionStorage.getItem('allPlayerTiles');
                 if (storedTiles) {
                     const myTiles = JSON.parse(storedTiles);
                     console.log('=== MY TILES ===');
                     console.log('My player ID:', myPlayerId);
-                    console.log('My tiles from server:', myTiles.map(t => t.letter).join(','));
-                    console.log('My tiles raw:', JSON.stringify(myTiles, null, 2));
+                    console.log('My tiles:', myTiles.map(t => t.letter).join(','));
+                    
+                    if (storedAllTiles) {
+                        const allTiles = JSON.parse(storedAllTiles);
+                        console.log('=== ALL PLAYERS TILES ===');
+                        for (const [playerId, tiles] of Object.entries(allTiles)) {
+                            console.log(`Player ${playerId}:`, tiles.map(t => t.letter).join(','));
+                        }
+                    }
+                    
                     gameInstance.playerRack = myTiles;
                     gameInstance.tiles = []; // Empty local bag since server manages it
                     gameInstance.renderRack();

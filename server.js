@@ -130,7 +130,8 @@ io.on('connection', (socket) => {
         // Send game to client with their tiles
         socket.emit('game-created', {
             ...game,
-            myTiles: game.playerTiles[playerId]
+            myTiles: game.playerTiles[playerId],
+            allPlayerTiles: game.playerTiles // Include all players' tiles for comparison
         });
         
         // Broadcast to lobby
@@ -175,7 +176,8 @@ io.on('connection', (socket) => {
         // Send current game state to the joining player with their tiles
         socket.emit('game-joined', {
             game: game,
-            myTiles: game.playerTiles[playerId]
+            myTiles: game.playerTiles[playerId],
+            allPlayerTiles: game.playerTiles // Include all players' tiles for comparison
         });
         
         // Notify all players in the game (including the joiner)
@@ -263,6 +265,7 @@ io.on('connection', (socket) => {
                 status: game.status,
                 currentPlayerId: game.hostId, // Host goes first
                 myTiles: game.playerTiles[playerId] || [],
+                allPlayerTiles: game.playerTiles, // Include all players' tiles for comparison
                 remainingTiles: game.tileBag.length,
                 board: game.board // Current board state
             });

@@ -480,8 +480,8 @@ body {
 /* Turn Indicator for Multiplayer */
 .turn-indicator {
   display: none; /* Hidden by default, only for multiplayer */
-  background: white;
-  color: #222;
+  background: var(--button-bg); /* Blue to match Return Tiles */
+  color: white;
   padding: 8px 16px;
   font-size: 1.0em;
   font-weight: bold;

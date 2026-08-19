@@ -132,6 +132,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         currentGame = data.game;
                         // Store my tiles for when we navigate to the game
                         sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
+                    if (data.allPlayerTiles) {
+                        sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
+                    }
+                        if (data.allPlayerTiles) {
+                            sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
+                        }
                         // Update activeGames if not already present
                         const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
                         if (gameIndex === -1) {
@@ -270,6 +276,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Store my tiles for when we navigate to the game
                 if (game.myTiles) {
                     sessionStorage.setItem('myTiles', JSON.stringify(game.myTiles));
+                }
+                if (game.allPlayerTiles) {
+                    sessionStorage.setItem('allPlayerTiles', JSON.stringify(game.allPlayerTiles));
                 }
                 showGameLobby(game);
             });
@@ -699,6 +708,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentGame = data.game;
                     // Store my tiles for when we navigate to the game
                     sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
+                    if (data.allPlayerTiles) {
+                        sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
+                    }
                     // Update activeGames if not already present
                     const gameIndex = activeGames.findIndex(g => g.id === data.game.id);
                     if (gameIndex === -1) {
