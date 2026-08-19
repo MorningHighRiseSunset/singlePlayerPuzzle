@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Play puzzle tile animation on mini board
     playPuzzleAnimation('PUZZLE');
     
+    // Store selected language for multiplayer
+    let selectedMultiplayerLanguage = 'english';
+    
     // Screen navigation elements
     const mainMenu = document.getElementById('mainMenu');
     const languageScreen = document.getElementById('languageScreen');
@@ -28,6 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Single Player button handler
     if (singlePlayerBtn) {
         singlePlayerBtn.addEventListener('click', function handleSinglePlayer() {
+            // Track single player button click
+            if (window.va) {
+                window.va('event', { name: 'single_player_click', data: { type: 'mode_selection' } });
+            }
+            
             // Play puzzle animation
             playPuzzleAnimation('PUZZLE');
             
@@ -42,6 +50,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Multiplayer button handler
     if (multiplayerBtn) {
         multiplayerBtn.addEventListener('click', function handleMultiplayer() {
+            // Track multiplayer button click
+            if (window.va) {
+                window.va('event', { name: 'multiplayer_click', data: { type: 'mode_selection' } });
+            }
+            
             // Play multiplayer animation
             playPuzzleAnimation('PLAYER VERSUS PLAYER');
             
@@ -90,7 +103,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Create game button handler
     if (createGameBtn) {
         createGameBtn.addEventListener('click', () => {
-            createNewGame();
+            // Track create game click
+            if (window.va) {
+                window.va('event', { name: 'create_game', data: { type: 'lobby_action', language: selectedMultiplayerLanguage } });
+            }
+            createNewGame(selectedMultiplayerLanguage);
         });
     }
     
@@ -98,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let activeGames = [];
     
     // Function to create a new game
-    function createNewGame() {
+    function createNewGame(language = 'english') {
         // Generate a unique game ID
         const gameId = 'GAME-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         
@@ -113,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
             players: 1, // Creator is the first player
             maxPlayers: 2,
             status: 'waiting',
+            language: language,
             createdAt: new Date()
         };
         
@@ -186,6 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
             
             if (startGameBtn && !startGameBtn.disabled) {
                 startGameBtn.onclick = () => {
+                    // Track start game click
+                    if (window.va) {
+                        window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
+                    }
                     alert('Starting game! (This would navigate to the actual game page)');
                 };
             }
@@ -219,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const gameDetails = document.createElement('div');
             gameDetails.className = 'game-details';
-            gameDetails.textContent = `${game.players}/${game.maxPlayers} players • ${game.status}`;
+            gameDetails.textContent = `${game.players}/${game.maxPlayers} players • ${game.language} • ${game.status}`;
             
             gameInfo.appendChild(gameName);
             gameInfo.appendChild(gameDetails);
@@ -227,7 +249,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const joinBtn = document.createElement('button');
             joinBtn.className = 'join-game-btn';
             joinBtn.textContent = 'Join';
-            joinBtn.addEventListener('click', () => joinGame(game.id));
+            joinBtn.addEventListener('click', () => {
+                // Track join game click
+                if (window.va) {
+                    window.va('event', { name: 'join_game', data: { type: 'lobby_action', gameId: game.id, language: game.language } });
+                }
+                joinGame(game.id);
+            });
             
             gameItem.appendChild(gameInfo);
             gameItem.appendChild(joinBtn);
@@ -265,6 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener('click', (e) => {
             const language = button.getAttribute('data-language');
             const href = button.getAttribute('data-href');
+            const isMultiplayer = button.classList.contains('multiplayer-lang-btn');
             
             console.log('Language button clicked:', language);
             console.log('Language value:', language);
@@ -272,14 +301,21 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Track language button click event using Vercel Analytics
             if (window.va) {
-                console.log('Sending event to Vercel Analytics:', language);
-                window.va('event', { name: language, data: { type: 'language_selection' } });
+                const eventName = isMultiplayer ? `multiplayer_${language}` : `single_player_${language}`;
+                console.log('Sending event to Vercel Analytics:', eventName);
+                window.va('event', { name: eventName, data: { type: 'language_selection' } });
+                
+                if (isMultiplayer) {
+                    selectedMultiplayerLanguage = language;
+                }
             } else {
                 console.log('window.va not available');
             }
             
-            // Navigate to the language page
-            window.location.href = href;
+            // Only navigate for single player language buttons
+            if (!isMultiplayer && href) {
+                window.location.href = href;
+            }
         });
     });
     

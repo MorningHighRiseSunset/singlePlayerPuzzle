@@ -355,6 +355,61 @@ body {
     align-items: center;
 }
 
+/* Language Selection Container in Lobby */
+.language-selection-container {
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 16px;
+    border-radius: 8px;
+    border: 2px solid #1976d2;
+    align-self: center;
+}
+
+.language-selection-container h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.2rem;
+    letter-spacing: 0.03em;
+    color: #e3eafc;
+}
+
+.language-buttons-container.multiplayer-languages {
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.multiplayer-lang-btn {
+    background: #42a5f5;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.02em;
+    position: relative;
+    z-index: 2;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.multiplayer-lang-btn:hover, .multiplayer-lang-btn:focus {
+    background: #1976d2;
+    color: white;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+}
+
+.multiplayer-lang-btn:active {
+    transform: scale(0.98);
+}
+
 .lobby-container h2 {
     margin: 0 0 10px 0;
     font-size: 1.5rem;
