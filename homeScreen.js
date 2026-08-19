@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (lobbyScreen) lobbyScreen.style.display = 'flex';
                 // Load active games (placeholder for now)
                 loadActiveGames();
-            }, 3500); // Wait for animation to complete (18 letters * 120ms + 600ms animation + buffer)
+            }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
         });
     }
     
@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     setTimeout(() => {
                         if (lobbyScreen) lobbyScreen.style.display = 'flex';
                         updateGamesList();
-                    }, 3500); // Wait for animation to complete (18 letters * 120ms + 600ms animation + buffer)
+                    }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
                 };
             }
             
@@ -454,27 +454,20 @@ function playPuzzleAnimation(word = 'PUZZLE') {
             { letter: 'E', row: 4, col: 7 }
         ],
         'PLAYER VERSUS PLAYER': [
-            // First PLAYER (top row)
-            { letter: 'P', row: 0, col: 0 },
-            { letter: 'L', row: 0, col: 1 },
-            { letter: 'A', row: 0, col: 2 },
-            { letter: 'Y', row: 0, col: 3 },
-            { letter: 'E', row: 0, col: 4 },
-            { letter: 'R', row: 0, col: 5 },
-            // VERSUS (vertical, intersects with first PLAYER at E and second PLAYER at R)
-            { letter: 'V', row: 1, col: 4 },
-            { letter: 'E', row: 2, col: 4 },
-            { letter: 'R', row: 3, col: 4 },
-            { letter: 'S', row: 4, col: 4 },
-            { letter: 'U', row: 5, col: 4 },
-            { letter: 'S', row: 6, col: 4 },
-            // Second PLAYER (middle row, intersects with VERSUS at R)
-            { letter: 'P', row: 3, col: 2 },
-            { letter: 'L', row: 3, col: 3 },
-            { letter: 'A', row: 3, col: 4 },
-            { letter: 'Y', row: 3, col: 5 },
-            { letter: 'E', row: 3, col: 6 },
-            { letter: 'R', row: 3, col: 7 }
+            // VERSUS (vertical)
+            { letter: 'V', row: 0, col: 4 },
+            { letter: 'E', row: 1, col: 4 },
+            { letter: 'R', row: 2, col: 4 },
+            { letter: 'S', row: 3, col: 4 },
+            { letter: 'U', row: 4, col: 4 },
+            { letter: 'S', row: 5, col: 4 },
+            // PLAYER (intersects with VERSUS at R)
+            { letter: 'P', row: 2, col: 2 },
+            { letter: 'L', row: 2, col: 3 },
+            { letter: 'A', row: 2, col: 4 },
+            { letter: 'Y', row: 2, col: 5 },
+            { letter: 'E', row: 2, col: 6 },
+            { letter: 'R', row: 2, col: 7 }
         ],
         'BATTLE': [
             { letter: 'B', row: 4, col: 1 },
@@ -501,7 +494,7 @@ function playPuzzleAnimation(word = 'PUZZLE') {
     const tileSize = Math.max(cellSize - 14, 18); // Even smaller for larger crossword
     
     // Calculate delays based on word length for consistent timing
-    const baseDelay = 120; // Adjusted delay for 18 letters
+    const baseDelay = 150; // Adjusted delay for 12 letters
     const lettersToAnimate = puzzleLetters.filter(letter => letter.letter !== ' ');
     const animationDelays = lettersToAnimate.map((_, index) => index * baseDelay);
     
