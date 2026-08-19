@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
         singlePlayerBtn.addEventListener('click', function handleSinglePlayer() {
             // Track single player button click
             if (window.va) {
-                window.va('event', { name: 'single_player_click', data: { type: 'mode_selection' } });
+                window.va('event', { name: 'button_click', data: { action: 'single_player' } });
             }
             
             // Play puzzle animation
@@ -301,12 +301,11 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Track language button click event using Vercel Analytics
             if (window.va) {
-                const eventName = isMultiplayer ? `multiplayer_${language}` : `single_player_${language}`;
-                console.log('Sending event to Vercel Analytics:', eventName);
-                window.va('event', { name: eventName, data: { type: 'language_selection' } });
-                
                 if (isMultiplayer) {
+                    window.va('event', { name: 'Multiplayer: ' + language, data: { type: 'language_selection' } });
                     selectedMultiplayerLanguage = language;
+                } else {
+                    window.va('event', { name: 'Singleplayer: ' + language, data: { type: 'language_selection' } });
                 }
             } else {
                 console.log('window.va not available');
