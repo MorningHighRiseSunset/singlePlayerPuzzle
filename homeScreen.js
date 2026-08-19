@@ -32,16 +32,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function initPusher() {
         if (pusher) return pusher;
         
-        // You'll need to replace these with your actual Pusher credentials
-        // For now, we'll use a placeholder that will fall back to localStorage
         try {
-            pusher = new Pusher('your_app_key', {
-                cluster: 'us2',
+            pusher = new Pusher('6d8cbaf0731b74524092', {
+                cluster: 'us3',
                 forceTLS: true
             });
+            console.log('Pusher initialized successfully');
             return pusher;
         } catch (e) {
-            console.log('Pusher not configured, falling back to localStorage');
+            console.log('Pusher initialization failed:', e);
             return null;
         }
     }
@@ -131,12 +130,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Back to menu from lobby screen
     if (backToMenuFromLobbyBtn) {
         backToMenuFromLobbyBtn.addEventListener('click', function handleBackToMenuFromLobby() {
-            // Stop polling when leaving lobby
-            if (window.gamePollingInterval) {
-                clearInterval(window.gamePollingInterval);
-                window.gamePollingInterval = null;
-            }
-            
             // Show mini board when returning to menu
             const miniBoardContainer = document.querySelector('.mini-board-container');
             if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
@@ -268,27 +261,10 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             
             console.log('Game created with Pusher real-time sync');
-        } else {
-            console.log('Game created with localStorage sync (Pusher not configured)');
         }
         
         // Navigate to the specific game lobby
         showGameLobby(newGame);
-        
-        // Set up polling for host to listen for player joins from localStorage
-        if (!window.gameLobbyPollingInterval) {
-            window.gameLobbyPollingInterval = setInterval(() => {
-                loadGamesFromStorage();
-                const updatedGame = activeGames.find(g => g.id === newGame.id);
-                if (updatedGame && (updatedGame.players !== newGame.players || 
-                    JSON.stringify(updatedGame.playerIds) !== JSON.stringify(newGame.playerIds))) {
-                    newGame.players = updatedGame.players;
-                    newGame.playerIds = updatedGame.playerIds;
-                    currentGame = newGame;
-                    updateGameLobbyUI(newGame);
-                }
-            }, 500);
-        }
     }
     
     // Generate a simple player ID
@@ -347,22 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.style.display = 'flex';
         
-        // Set up polling to listen for game updates from localStorage
-        if (!window.gameLobbyPollingInterval) {
-            window.gameLobbyPollingInterval = setInterval(() => {
-                loadGamesFromStorage();
-                const updatedGame = activeGames.find(g => g.id === game.id);
-                if (updatedGame && (updatedGame.players !== game.players || 
-                    JSON.stringify(updatedGame.playerIds) !== JSON.stringify(game.playerIds))) {
-                    game.players = updatedGame.players;
-                    game.playerIds = updatedGame.playerIds;
-                    game.hostId = updatedGame.hostId;
-                    currentGame = game;
-                    updateGameLobbyUI(game);
-                }
-            }, 500);
-        }
-        
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
             const backToLobbyBtn = document.getElementById('backToLobbyBtn');
@@ -386,12 +346,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
-                    }
-                    
-                    // Stop polling when leaving lobby
-                    if (window.gameLobbyPollingInterval) {
-                        clearInterval(window.gameLobbyPollingInterval);
-                        window.gameLobbyPollingInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -491,12 +445,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         activeGames = activeGames.filter(g => g.id !== game.id);
                         saveGamesToStorage();
                         updateGamesList();
-                    }
-                    
-                    // Stop polling when leaving lobby
-                    if (window.gameLobbyPollingInterval) {
-                        clearInterval(window.gameLobbyPollingInterval);
-                        window.gameLobbyPollingInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -605,15 +553,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (game) {
             const playerId = getPlayerId();
             
-            console.log('JOIN GAME - Game ID:', gameId);
-            console.log('JOIN GAME - Current Player ID:', playerId);
-            console.log('JOIN GAME - Game Host ID:', game.hostId);
-            console.log('JOIN GAME - Game Players:', game.players);
-            console.log('JOIN GAME - Game Player IDs:', game.playerIds);
-            
             // Check if player is already in this game
             if (game.playerIds && game.playerIds.includes(playerId)) {
-                console.log('JOIN GAME - Player already in game, showing lobby');
                 showGameLobby(game);
                 return;
             }
@@ -628,10 +569,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 game.players = game.players + 1;
                 game.playerIds = [...game.playerIds, playerId];
                 game.hostId = originalHostId;
-                
-                console.log('JOIN GAME - After update - Game Host ID:', game.hostId);
-                console.log('JOIN GAME - After update - Game Players:', game.players);
-                console.log('JOIN GAME - After update - Game Player IDs:', game.playerIds);
                 
                 // Update the game in activeGames array
                 const gameIndex = activeGames.findIndex(g => g.id === gameId);
@@ -719,17 +656,9 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Function to load active games
     function loadActiveGames() {
-        // Always use localStorage for local tab sync (works with or without Pusher)
+        // Load games from localStorage for the games list display
         loadGamesFromStorage();
         updateGamesList();
-        
-        // Set up polling to check for new games every 2 seconds
-        if (!window.gamePollingInterval) {
-            window.gamePollingInterval = setInterval(() => {
-                loadGamesFromStorage();
-                updateGamesList();
-            }, 2000);
-        }
     }
     
 
