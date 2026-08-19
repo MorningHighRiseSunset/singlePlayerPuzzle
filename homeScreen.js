@@ -23,42 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
     
-    // Initialize Pusher for real-time multiplayer
-    let pusher = null;
-    let currentChannel = null;
-    let currentGame = null;
-    
-    // Initialize Pusher when needed
-    function initPusher() {
-        if (pusher) return pusher;
-        
-        try {
-            pusher = new Pusher('6d8cbaf0731b74524092', {
-                cluster: 'us3',
-                forceTLS: true,
-                authEndpoint: '/api/pusher-auth'
-            });
-            
-            // Log connection state
-            pusher.connection.bind('connected', () => {
-                console.log('PUSHER: Connected successfully');
-            });
-            
-            pusher.connection.bind('disconnected', () => {
-                console.log('PUSHER: Disconnected');
-            });
-            
-            pusher.connection.bind('error', (err) => {
-                console.log('PUSHER: Connection error:', err);
-            });
-            
-            console.log('Pusher initialized successfully');
-            return pusher;
-        } catch (e) {
-            console.log('Pusher initialization failed:', e);
-            return null;
-        }
-    }
+    // No Pusher - using localStorage for cross-tab synchronization
     
     // Show main menu after animation completes (6 letters * 150ms each + 600ms animation + buffer)
     setTimeout(() => {
@@ -92,25 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.va('event', { name: 'multiplayer_click', data: { type: 'mode_selection' } });
             }
             
-            // Initialize Pusher and subscribe to lobby channel
-            const pusherInstance = initPusher();
-            if (pusherInstance) {
-                const lobbyChannel = pusherInstance.subscribe('presence-lobby');
-                
-                // Listen for new games being created
-                lobbyChannel.bind('client-game-created', (data) => {
-                    console.log('New game created via Pusher:', data.game);
-                    // Add to active games if not already present
-                    if (!activeGames.find(g => g.id === data.game.id)) {
-                        activeGames.push(data.game);
-                        saveGamesToStorage();
-                        updateGamesList();
-                    }
-                });
-                
-                console.log('Subscribed to lobby channel for real-time game updates');
-            }
-            
             // Play multiplayer animation
             playPuzzleAnimation('PLAYER VERSUS PLAYER');
             
@@ -120,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Hide mini board in lobby
                 const miniBoardContainer = document.querySelector('.mini-board-container');
                 if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                // Load active games (placeholder for now)
+                // Load active games
                 loadActiveGames();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
         });
@@ -239,62 +185,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         currentGame = newGame;
         
-        // Always save to localStorage for local tab sync (works even without Pusher)
+        // Save to localStorage
         activeGames.push(newGame);
         saveGamesToStorage();
         
-        if (pusherInstance) {
-            // Subscribe to game channel for real-time updates
-            const channelName = `presence-game-${gameId}`;
-            currentChannel = pusherInstance.subscribe(channelName);
-            
-            // Wait for subscription to succeed
-            currentChannel.bind('pusher:subscription_succeeded', () => {
-                console.log('Host: Successfully subscribed to game channel');
-                
-                // Listen for player join events
-                currentChannel.bind('client-player-joined', (data) => {
-                    console.log('=== PUSHER EVENT: player-joined ===');
-                    console.log('Received data:', data);
-                    console.log('Current Game ID:', currentGame?.id);
-                    console.log('Current Player ID:', getPlayerId());
-                    if (currentGame) {
-                        currentGame.players = data.players;
-                        currentGame.playerIds = data.playerIds;
-                        console.log('Updated game players:', currentGame.players);
-                        console.log('Updated game player IDs:', currentGame.playerIds);
-                        // Update the game in activeGames array
-                        const gameIndex = activeGames.findIndex(g => g.id === currentGame.id);
-                        if (gameIndex !== -1) {
-                            activeGames[gameIndex] = currentGame;
-                        }
-                        saveGamesToStorage();
-                        updateGameLobbyUI(currentGame);
-                    }
-                });
-                
-                // Listen for game start events
-                currentChannel.bind('client-game-started', (data) => {
-                    console.log('Game started by host');
-                    navigateToGame(currentGame.language);
-                });
-                
-                // Announce game creation to a lobby channel
-                const lobbyChannel = pusherInstance.subscribe('presence-lobby');
-                lobbyChannel.bind('pusher:subscription_succeeded', () => {
-                    lobbyChannel.trigger('client-game-created', {
-                        game: newGame
-                    });
-                    console.log('Host: Announced game creation to lobby');
-                });
-            });
-            
-            currentChannel.bind('pusher:subscription_error', (err) => {
-                console.log('Host: Subscription error:', err);
-            });
-            
-            console.log('Game created with Pusher real-time sync');
-        }
+        console.log('Game created with localStorage sync');
         
         // Navigate to the specific game lobby
         showGameLobby(newGame);
@@ -719,8 +614,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             if (game.players < game.maxPlayers) {
-                const pusherInstance = initPusher();
-                
                 // Preserve the original hostId
                 const originalHostId = game.hostId;
                 
@@ -743,63 +636,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 saveGamesToStorage();
                 updateGamesList();
                 
-                if (pusherInstance) {
-                    // Subscribe to game channel
-                    const channelName = `presence-game-${gameId}`;
-                    currentChannel = pusherInstance.subscribe(channelName);
-                    
-                    // Wait for subscription to succeed before triggering events
-                    currentChannel.bind('pusher:subscription_succeeded', () => {
-                        console.log('Successfully subscribed to game channel');
-                        
-                        // Listen for game start events
-                        currentChannel.bind('client-game-started', (data) => {
-                            console.log('Game started by host');
-                            navigateToGame(game.language);
-                        });
-                        
-                        // Listen for host leaving
-                        currentChannel.bind('client-host-left', (data) => {
-                            console.log('Host left the game');
-                            // If current player is not the host, redirect back to lobby
-                            if (currentGame && currentGame.hostId !== playerId) {
-                                const gameLobbyScreen = document.getElementById('gameLobbyScreen');
-                                if (gameLobbyScreen) {
-                                    gameLobbyScreen.style.display = 'none';
-                                    const errorMsg = document.createElement('div');
-                                    errorMsg.className = 'error-message';
-                                    errorMsg.textContent = 'Host left the game. Returning to lobby.';
-                                    errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
-                                    document.querySelector('.home-container').appendChild(errorMsg);
-                                    setTimeout(() => errorMsg.remove(), 3000);
-                                }
-                                // Show lobby screen
-                                if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                                // Remove game from active games
-                                activeGames = activeGames.filter(g => g.id !== gameId);
-                                saveGamesToStorage();
-                                updateGamesList();
-                            }
-                        });
-                        
-                        // Notify the host that a player joined
-                        currentChannel.trigger('client-player-joined', {
-                            playerId: playerId,
-                            players: game.players,
-                            playerIds: game.playerIds
-                        });
-                        
-                        console.log('Sent player-joined event via Pusher');
-                    });
-                    
-                    currentChannel.bind('pusher:subscription_error', (err) => {
-                        console.log('Subscription error:', err);
-                    });
-                }
-                
                 currentGame = game;
                 
-                // Navigate to game lobby immediately without annoying popup
+                // Navigate to game lobby immediately
                 showGameLobby(game);
             } else {
                 // Use inline message instead of alert
@@ -831,6 +670,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // Load games from localStorage for the games list display
         loadGamesFromStorage();
         updateGamesList();
+        
+        // Set up polling to check for game updates every 1 second
+        if (!window.gamePollingInterval) {
+            window.gamePollingInterval = setInterval(() => {
+                loadGamesFromStorage();
+                updateGamesList();
+                
+                // Check if current game lobby needs updating
+                if (currentGame) {
+                    const updatedGame = activeGames.find(g => g.id === currentGame.id);
+                    if (updatedGame && (updatedGame.players !== currentGame.players || 
+                        JSON.stringify(updatedGame.playerIds) !== JSON.stringify(currentGame.playerIds))) {
+                        currentGame.players = updatedGame.players;
+                        currentGame.playerIds = updatedGame.playerIds;
+                        updateGameLobbyUI(currentGame);
+                    }
+                }
+            }, 1000);
+        }
     }
     
     // Language button tracking with Vercel Analytics
