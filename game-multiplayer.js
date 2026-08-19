@@ -25,6 +25,7 @@ function initMultiplayerSocket() {
         // Join the game room
         const gameId = new URLSearchParams(window.location.search).get('gameId');
         if (gameId) {
+            console.log('Joining game room:', gameId, 'as player:', myPlayerId);
             socket.emit('join-game-room', { gameId, playerId: myPlayerId });
         }
     });
@@ -51,6 +52,18 @@ function initMultiplayerSocket() {
     socket.on('board-sync', (data) => {
         // Sync board state from opponent
         syncBoardState(data);
+    });
+    
+    socket.on('game-state', (data) => {
+        console.log('Received game state:', data);
+        // Handle initial game state
+        if (data.players) {
+            console.log('Game has', data.players, 'players');
+        }
+    });
+    
+    socket.on('player-reconnected', (data) => {
+        console.log('Opponent reconnected:', data);
     });
     
     socket.on('game-ended', (data) => {
@@ -141,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             if (window.game) {
                 gameInstance = window.game;
+                console.log('Game instance found:', gameInstance);
+                console.log('Player rack:', gameInstance.playerRack);
+                console.log('Opponent rack:', gameInstance.opponentRack);
                 
                 // Override the AI turn to prevent it from running
                 const originalAITurn = gameInstance.aiTurn;
@@ -152,11 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Override fillRacks to not fill opponent rack
                 const originalFillRacks = gameInstance.fillRacks;
                 gameInstance.fillRacks = function(playerFirst = false) {
+                    console.log('fillRacks called in multiplayer mode');
+                    console.log('Player rack before:', this.playerRack.length);
+                    console.log('Tiles remaining:', this.tiles.length);
+                    
                     // Only fill player rack in multiplayer
                     while (this.playerRack.length < 7 && this.tiles.length > 0) {
                         const tile = this.tiles.pop();
                         this.playerRack.push(tile);
                     }
+                    
+                    console.log('Player rack after:', this.playerRack.length);
                     this.renderRack();
                 };
                 
