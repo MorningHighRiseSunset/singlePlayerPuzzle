@@ -66,9 +66,9 @@ function initMultiplayerSocket() {
         
         // Use server-provided tiles
         if (data.myTiles && gameInstance) {
-            console.log('=== MY TILES ===');
+            console.log('=== RECEIVED TILES FROM SERVER ===');
             console.log('My player ID:', myPlayerId);
-            console.log('My tiles:', data.myTiles.map(t => t.letter).join(','));
+            console.log('Tiles received:', data.myTiles.map(t => t.letter).join(','));
             
             console.log('=== ALL PLAYERS TILES ===');
             if (data.allPlayerTiles) {
@@ -80,7 +80,22 @@ function initMultiplayerSocket() {
             console.log('Setting player rack to server tiles');
             gameInstance.playerRack = data.myTiles;
             gameInstance.tiles = []; // Empty local bag since server manages it
+            
+            // Force render immediately
             gameInstance.renderRack();
+            
+            // Double-check by logging what renderRack will display
+            console.log('Rack tiles after render:', gameInstance.playerRack.map(t => t.letter).join(','));
+            
+            // If still wrong, force clear and re-render
+            setTimeout(() => {
+                const rackElement = document.getElementById('tile-rack');
+                if (rackElement) {
+                    rackElement.innerHTML = '';
+                    gameInstance.renderRack();
+                    console.log('Force re-rendered rack');
+                }
+            }, 100);
         }
         
         // Sync board state
@@ -229,13 +244,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Game instance found:', gameInstance);
                 console.log('Player rack:', gameInstance.playerRack);
                 console.log('Opponent rack:', gameInstance.opponentRack);
+                console.log('Local tiles bag:', gameInstance.tiles.length);
                 
                 // Use tiles from sessionStorage (provided by server)
                 const storedTiles = sessionStorage.getItem('myTiles');
                 const storedAllTiles = sessionStorage.getItem('allPlayerTiles');
                 if (storedTiles) {
                     const myTiles = JSON.parse(storedTiles);
-                    console.log('=== MY TILES ===');
+                    console.log('=== MY TILES FROM SESSIONSTORAGE ===');
                     console.log('My player ID:', myPlayerId);
                     console.log('My tiles:', myTiles.map(t => t.letter).join(','));
                     
@@ -247,9 +263,36 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
+                    // Completely replace the game's tile bag with my tiles
                     gameInstance.playerRack = myTiles;
                     gameInstance.tiles = []; // Empty local bag since server manages it
+                    
+                    console.log('Player rack AFTER override:', gameInstance.playerRack.map(t => t.letter).join(','));
+                    
+                    // Force render immediately
                     gameInstance.renderRack();
+                    
+                    // Force clear and re-render to ensure it sticks
+                    setTimeout(() => {
+                        const rackElement = document.getElementById('tile-rack');
+                        if (rackElement) {
+                            console.log('Force clearing rack element');
+                            rackElement.innerHTML = '';
+                            gameInstance.renderRack();
+                            console.log('Rack after force re-render:', rackElement.innerHTML);
+                        }
+                    }, 50);
+                    
+                    // Force again after more time
+                    setTimeout(() => {
+                        const rackElement = document.getElementById('tile-rack');
+                        if (rackElement) {
+                            console.log('Final force re-render');
+                            rackElement.innerHTML = '';
+                            gameInstance.renderRack();
+                            console.log('Final rack content:', rackElement.innerHTML);
+                        }
+                    }, 200);
                 }
                 
                 // Determine if I'm the host
@@ -269,10 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return Promise.resolve();
                 };
                 
-                // Override fillRacks to use server tiles
+                // Override fillRacks to skip local bag in multiplayer
                 const originalFillRacks = gameInstance.fillRacks;
                 gameInstance.fillRacks = function(playerFirst = false) {
-                    console.log('fillRacks called in multiplayer mode - skipping, using server tiles');
+                    console.log('fillRacks called in multiplayer mode - skipping local bag');
                     // Don't do anything - tiles come from server
                     this.renderRack();
                 };

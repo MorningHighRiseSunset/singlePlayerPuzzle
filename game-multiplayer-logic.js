@@ -1241,7 +1241,6 @@ class ScrabbleGame {
 			"Plan ahead: don't open up triple word squares for your opponent!",
 			"Try to form two or more words in one move for extra points.",
 			"The AI gets smarter as the game progresses—watch out!",
-			"You can click the 'Simulate Endgame' button to test the AI.",
 			"Words must be connected to existing tiles after the first move.",
 			"Use the 'Skip Turn' button if you can't play.",
 			"Good luck and have fun!"
@@ -3818,7 +3817,9 @@ async executeAIPlay(play) {
 				this.placedTiles = [];
 
 				// Refill racks and update display
-				this.fillRacks();
+				if (!IS_MULTIPLAYER) {
+					if (!IS_MULTIPLAYER) this.fillRacks();
+				}
 				this.showAIGhostIfPlayerMoveValid();
 				this.updateGameState();
 
@@ -5657,7 +5658,7 @@ formedWords.forEach((wordInfo) => {
 		this.isFirstMove = false;
 		this.currentTurn = "player";
 	this.addToMoveHistory("Computer", [{ word, score }], score);
-		this.fillRacks();
+		if (!IS_MULTIPLAYER) this.fillRacks();
 		this.updateGameState();
 	}
 
@@ -5700,7 +5701,12 @@ formedWords.forEach((wordInfo) => {
 		await this.loadDictionary();
 		this.buildDictionaryTrie();
 		this.createBoard();
-		this.fillRacks();
+		
+		// In multiplayer mode, don't fill racks - tiles come from server
+		if (!IS_MULTIPLAYER) {
+			if (!IS_MULTIPLAYER) this.fillRacks();
+		}
+		
 		this.setupTapPlacement();
 		this.setupEventListeners();
 		this.updateGameState();
@@ -8384,7 +8390,6 @@ calculateScore() {
 		} catch (e) { console.warn('createEmojiConfetti failed', e); this._emojiConfettiActive = false; }
 	}	// Function removed - player bingo now uses createConfettiEffect directly like computer bingo
 
-	// Safe wrapper used when a bingo is detected for the player or AI.
 	// This function triggers player visuals and guards against rapid reentrancy.
 	// variant: 'standard' | 'silver' | 'gold'
 	showBingoBonusEffect(force = false, variant = 'standard') {
@@ -8609,6 +8614,13 @@ calculateScore() {
 	}
 
 	fillRacks(playerFirst = false) {
+		// In multiplayer mode, don't do anything - tiles come from server
+		if (IS_MULTIPLAYER) {
+			console.log('fillRacks called in multiplayer mode - skipping');
+			this.renderRack();
+			return;
+		}
+		
 		// Define optimal letter distributions
 		const optimalDistribution = {
 			vowels: ['A', 'E', 'I', 'O', 'U'],
