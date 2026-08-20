@@ -17,15 +17,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const backToMenuFromLobbyBtn = document.getElementById('backToMenuFromLobbyBtn');
     const createGameBtn = document.getElementById('createGameBtn');
-    const helpBtn = document.getElementById('helpBtn');
-    const helpModal = document.getElementById('helpModal');
-    const closeHelpModal = document.getElementById('closeHelpModal');
     
     // Hide main menu initially, show after animation
     if (mainMenu) mainMenu.style.display = 'none';
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
-    if (helpModal) helpModal.style.display = 'none';
     
     // Socket.io for real-time multiplayer
     let socket = null;
@@ -183,6 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                 // Load active games (Socket.io will update this)
                 loadActiveGames();
+                // Start passing notifications
+                startNotifications();
             }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
         });
     }
@@ -228,31 +226,66 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Help button handler
-    if (helpBtn) {
-        helpBtn.addEventListener('click', () => {
-            if (helpModal) {
-                helpModal.style.display = 'flex';
-            }
-        });
+    // Passing notifications functionality
+    const notificationMessages = [
+        "🎮 Click 'Create Game' to start - friends can join via 'Active Games'!",
+        "👥 Play English player vs player - invite a friend!",
+        "📧 Contact Maurice13stu@gmail.com for questions, business, feedback",
+        "🎯 Create a game and share the excitement with friends!",
+        "⏰ Games expire in 5 minutes - don't keep your friend waiting!",
+        "🎲 Challenge your friends to a word battle!",
+        "📱 Works on both PC and mobile - play anywhere!"
+    ];
+    
+    function showPassingNotification() {
+        const container = document.getElementById('passing-notifications');
+        if (!container) return;
+        
+        const message = notificationMessages[Math.floor(Math.random() * notificationMessages.length)];
+        const notification = document.createElement('div');
+        notification.className = 'passing-notification';
+        notification.textContent = message;
+        
+        // Random vertical position and movement
+        const startY = Math.random() * 60 + 10; // 10% to 70% from top
+        const endY = (Math.random() - 0.5) * 20; // Slight vertical movement
+        notification.style.setProperty('--start-y', `${startY}vh`);
+        notification.style.setProperty('--end-y', `${endY}vh`);
+        notification.style.top = `${startY}vh`;
+        
+        container.appendChild(notification);
+        
+        // Remove after animation completes
+        setTimeout(() => {
+            notification.remove();
+        }, 4000);
     }
     
-    // Close help modal handler
-    if (closeHelpModal) {
-        closeHelpModal.addEventListener('click', () => {
-            if (helpModal) {
-                helpModal.style.display = 'none';
+    // Start showing notifications when lobby is visible
+    let notificationInterval = null;
+    
+    function startNotifications() {
+        if (notificationInterval) clearInterval(notificationInterval);
+        // Show first notification immediately
+        showPassingNotification();
+        // Then show random notifications every 6-10 seconds
+        notificationInterval = setInterval(() => {
+            if (lobbyScreen && lobbyScreen.style.display !== 'none') {
+                showPassingNotification();
             }
-        });
+        }, Math.random() * 4000 + 6000);
     }
     
-    // Close help modal when clicking outside
-    if (helpModal) {
-        helpModal.addEventListener('click', (e) => {
-            if (e.target === helpModal) {
-                helpModal.style.display = 'none';
-            }
-        });
+    function stopNotifications() {
+        if (notificationInterval) {
+            clearInterval(notificationInterval);
+            notificationInterval = null;
+        }
+    }
+    
+    // Stop notifications when leaving lobby
+    if (backToMenuFromLobbyBtn) {
+        backToMenuFromLobbyBtn.addEventListener('click', stopNotifications);
     }
     
     // Store active games in localStorage for cross-tab persistence
@@ -314,6 +347,9 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Function to show specific game lobby
     function showGameLobby(game) {
+        // Stop notifications when entering game lobby
+        stopNotifications();
+        
         // Hide lobby screen and show game lobby
         if (lobbyScreen) lobbyScreen.style.display = 'none';
         
@@ -456,6 +492,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Hide mini board in lobby after animation
                         if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                         updateGamesList();
+                        // Restart notifications when returning to lobby
+                        startNotifications();
                     }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
                 };
             }
