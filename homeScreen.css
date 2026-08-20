@@ -347,10 +347,9 @@ body {
 }
 
 .game-lobby-container .back-btn {
-    position: relative;
-    top: auto;
-    left: auto;
-    margin-bottom: 8px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
 }
 
 /* Passing Notifications Styling */
