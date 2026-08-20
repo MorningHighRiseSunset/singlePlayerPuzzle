@@ -7842,6 +7842,9 @@ calculateScore() {
 			this.moveHistory
 			.slice(-50)
 			.map((move) => {
+				// Determine CSS class based on player
+				const moveClass = move.player === 'Opponent' ? 'opponent-move' : 'player-move';
+				
 				// Structured entry with words array
 				if (move.words && Array.isArray(move.words)) {
 					// Check for bingo entries and format each word with its score if available
@@ -7855,28 +7858,28 @@ calculateScore() {
 						return formattedWord;
 					});
 					const formatted = parts.join(" & ");
-					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
+					return `<div class="move ${moveClass}">${move.player}: ${formatted} for total of ${move.score} points</div>`;
 				}
 
 				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
 				if (move.word === "SKIP") {
-					return `<div class="move">${move.player}: "SKIP" for ${move.score} points</div>`;
+					return `<div class="move ${moveClass}">${move.player}: "SKIP" for ${move.score} points</div>`;
 				}
 				if (move.word === "EXCHANGE") {
-					return `<div class="move">${move.player}: Exchanged tiles</div>`;
+					return `<div class="move ${moveClass}">${move.player}: Exchanged tiles</div>`;
 				}
 				if (move.word === "QUIT") {
-					return `<div class="move">${move.player}: "QUIT" for ${move.score} points</div>`;
+					return `<div class="move ${moveClass}">${move.player}: "QUIT" for ${move.score} points</div>`;
 				}
 
 				// Fallback: single word string
 				if (move.word) {
 					const formattedWord = this.formatWordForHistory(move.word, []);
-					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points</div>`;
+					return `<div class="move ${moveClass}">${move.player}: ${formattedWord} for ${move.score} points</div>`;
 				}
 
 				// Unknown format
-				return `<div class="move">${move.player}: (move) for ${move.score} points</div>`;
+				return `<div class="move ${moveClass}">${move.player}: (move) for ${move.score} points</div>`;
 			})
 			.join("");
 

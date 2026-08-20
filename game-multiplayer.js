@@ -260,6 +260,20 @@ function handleOpponentMove(data) {
         gameInstance.opponentScore += data.move.score;
         gameInstance.updateGameState();
     }
+
+    // Add opponent's move to history
+    if (data.move.placements && data.move.placements.length > 0) {
+        const word = data.move.placements.map(p => p.letter).join('');
+        const score = data.move.score || 0;
+        
+        if (gameInstance.moveHistory) {
+            gameInstance.addMoveToHistory({
+                player: 'Opponent',
+                words: [{ word, score }],
+                score: score
+            });
+        }
+    }
 }
 
 function placeTileOnBoard(row, col, letter, isBlank) {
