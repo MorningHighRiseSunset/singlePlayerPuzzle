@@ -246,13 +246,6 @@ document.addEventListener("DOMContentLoaded", () => {
         notification.className = 'passing-notification';
         notification.textContent = message;
         
-        // Random vertical position and movement
-        const startY = Math.random() * 60 + 10; // 10% to 70% from top
-        const endY = (Math.random() - 0.5) * 20; // Slight vertical movement
-        notification.style.setProperty('--start-y', `${startY}vh`);
-        notification.style.setProperty('--end-y', `${endY}vh`);
-        notification.style.top = `${startY}vh`;
-        
         container.appendChild(notification);
         
         // Remove after animation completes

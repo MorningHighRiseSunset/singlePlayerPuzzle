@@ -356,54 +356,62 @@ body {
 /* Passing Notifications Styling */
 .passing-notifications {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    top: 80px;
+    right: 20px;
     z-index: 1000;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
 }
 
 .passing-notification {
-    position: absolute;
     background: rgba(66, 165, 245, 0.95);
     color: white;
-    padding: 12px 20px;
+    padding: 16px 24px;
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    white-space: nowrap;
-    animation: passAcross 4s ease-in-out forwards;
-    max-width: 90vw;
+    max-width: 350px;
     text-align: center;
     backdrop-filter: blur(4px);
+    animation: fadeInOut 4s ease-in-out forwards;
+    pointer-events: auto;
 }
 
-@keyframes passAcross {
+@keyframes fadeInOut {
     0% {
         opacity: 0;
-        transform: translateX(-100%) translateY(var(--start-y));
+        transform: translateY(-20px);
     }
     10% {
         opacity: 1;
+        transform: translateY(0);
     }
-    90% {
+    80% {
         opacity: 1;
+        transform: translateY(0);
     }
     100% {
         opacity: 0;
-        transform: translateX(100vw) translateY(var(--end-y));
+        transform: translateY(-20px);
     }
 }
 
 /* Mobile responsive for passing notifications */
 @media (max-width: 600px) {
+    .passing-notifications {
+        top: 60px;
+        right: 10px;
+        left: 10px;
+        align-items: center;
+    }
+    
     .passing-notification {
-        font-size: 0.8rem;
-        padding: 10px 16px;
-        max-width: 85vw;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        max-width: 100%;
     }
 }
 
