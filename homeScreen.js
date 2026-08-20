@@ -175,20 +175,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 socketInstance.emit('get-games');
             }
             
-            // Play multiplayer animation
+            // Play animation then create game
             playPuzzleAnimation('PLAYER VERSUS PLAYER');
             
             setTimeout(() => {
-                if (mainMenu) mainMenu.style.display = 'none';
-                if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                // Hide mini board in lobby
-                const miniBoardContainer = document.querySelector('.mini-board-container');
-                if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                // Load active games (Socket.io will update this)
-                loadActiveGames();
-                // Start passing notifications
-                startNotifications();
-            }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
+                createNewGame(selectedMultiplayerLanguage);
+            }, 2800); // Wait for animation to complete
         });
     }
     
@@ -347,6 +339,31 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+    if (joinGameSubmitBtn) {
+        joinGameSubmitBtn.addEventListener('click', () => {
+            const gameCode = gameCodeInput.value.trim().toUpperCase();
+            if (gameCode.length >= 3) {
+                joinGameByCode(gameCode);
+            } else {
+                // Show error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Please enter a valid game code (at least 3 characters)';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                joinGameContainer.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            }
+        });
+    }
+    
+    // Allow Enter key to submit
+    if (gameCodeInput) {
+        gameCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinGameSubmitBtn.click();
+            }
+        });
+    }
     
     // Store active games in localStorage for cross-tab persistence
     let activeGames = [];
@@ -376,6 +393,11 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Game ID:', gameId);
         console.log('Host Player ID:', hostPlayerId);
         console.log('Language:', language);
+        
+        // Hide main menu and mini board
+        if (mainMenu) mainMenu.style.display = 'none';
+        const miniBoardContainer = document.querySelector('.mini-board-container');
+        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
         
         // Create game via Socket.io
         const socketInstance = initSocket();
@@ -412,6 +434,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Hide lobby screen and show game lobby
         if (lobbyScreen) lobbyScreen.style.display = 'none';
+        if (mainMenu) mainMenu.style.display = 'none';
         
         // Remove side-by-side layout for game lobby
         document.querySelector('.home-container').classList.remove('lobby-layout');
@@ -501,19 +524,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     
                     gameLobbyScreen.style.display = 'none';
-                    // Show mini board again when returning to lobby
+                    // Show mini board again when returning to menu
                     const miniBoardContainer = document.querySelector('.mini-board-container');
                     if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
-                    // Play player versus player animation when returning to lobby
-                    playPuzzleAnimation('PLAYER VERSUS PLAYER');
                     setTimeout(() => {
-                        if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                        // Hide mini board in lobby after animation
+                        if (mainMenu) mainMenu.style.display = 'flex';
+                        // Hide mini board after showing menu
                         if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                        updateGamesList();
-                        // Restart notifications when returning to lobby
-                        startNotifications();
-                    }, 2800); // Wait for animation to complete (12 letters * 150ms + 600ms animation + buffer)
+                    }, 200);
                 };
             }
             
@@ -612,16 +630,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     
                     gameLobbyScreen.style.display = 'none';
-                    // Show mini board again when returning to lobby
+                    // Show mini board again when returning to menu
                     const miniBoardContainer = document.querySelector('.mini-board-container');
                     if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
-                    playPuzzleAnimation('PLAYER VERSUS PLAYER');
                     setTimeout(() => {
-                        if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                        // Hide mini board in lobby after animation
+                        if (mainMenu) mainMenu.style.display = 'flex';
+                        // Hide mini board after showing menu
                         if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                        updateGamesList();
-                    }, 2800);
+                    }, 200);
                 };
             }
             
