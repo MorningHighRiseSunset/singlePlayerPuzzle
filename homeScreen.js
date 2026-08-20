@@ -496,14 +496,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             // No back button needed - game auto-expires or starts when player joins
         }, 0);
-        
-        // If game is full (2 players), navigate to game automatically
-        if (game.players >= 2) {
-            console.log('Game is full, navigating to game...');
-            setTimeout(() => {
-                navigateToGame(game.language || 'english');
-            }, 500);
-        }
     }
     
     // Function to update game lobby UI dynamically
@@ -554,14 +546,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             // No back button needed - game auto-expires or starts when player joins
         }, 0);
-        
-        // If game is full (2 players), navigate to game automatically
-        if (game.players >= 2) {
-            console.log('Game is full, navigating to game...');
-            setTimeout(() => {
-                navigateToGame(game.language || 'english');
-            }, 500);
-        }
     }
     
     // Function to navigate to the appropriate game page
@@ -722,14 +706,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Hide join container and show game lobby
                     if (joinGameContainer) joinGameContainer.style.display = 'none';
                     showGameLobby(currentGame);
-                    
-                    // If game is full (2 players), navigate to game automatically
-                    if (currentGame.players >= 2) {
-                        console.log('Game is full after joining, navigating to game...');
-                        setTimeout(() => {
-                            navigateToGame(currentGame.language || 'english');
-                        }, 500);
-                    }
+                }
+            });
+            
+            // Listen for game-started (server emits when game is full)
+            socketInstance.once('game-started', (data) => {
+                console.log('Game started by server, navigating to game...');
+                if (currentGame) {
+                    setTimeout(() => {
+                        navigateToGame(data.language || currentGame.language || 'english');
+                    }, 100);
                 }
             });
         }
