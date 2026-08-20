@@ -107,6 +107,25 @@ function saveGames() {
 // Load games on startup
 loadGames();
 
+// Game expiration check - run every 30 seconds
+setInterval(() => {
+    const now = new Date();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    for (const gameId in games) {
+        const game = games[gameId];
+        const gameAge = now - new Date(game.createdAt);
+        
+        // Remove games older than 5 minutes with only 1 player
+        if (gameAge > fiveMinutes && game.players < 2) {
+            console.log('Game expired and removed:', gameId);
+            delete games[gameId];
+            saveGames();
+            io.emit('game-list-updated', Object.values(games));
+        }
+    }
+}, 30000);
+
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
@@ -167,7 +186,7 @@ io.on('connection', (socket) => {
         const game = games[gameId];
         
         if (!game) {
-            socket.emit('error', { message: 'Game not found' });
+            socket.emit('error', { message: 'Game not found or expired' });
             return;
         }
         
@@ -215,6 +234,13 @@ io.on('connection', (socket) => {
         
         // Update game list
         io.emit('game-list-updated', Object.values(games));
+        
+        // If game is now full, automatically start it
+        if (game.players === game.maxPlayers) {
+            game.status = 'playing';
+            saveGames();
+            io.to(gameId).emit('game-started', { language: game.language });
+        }
     });
 
     // Start the game

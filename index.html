@@ -121,7 +121,19 @@
       <!-- Main Menu Buttons -->
       <div class="mode-buttons-container" id="mainMenu" style="display: none;">
         <button class="mode-btn" id="singlePlayerBtn">👤 Single Player</button>
-        <button class="mode-btn" id="multiplayerBtn">👥 Multiplayer</button>
+        <button class="mode-btn" id="createMultiplayerBtn">🎮 Create Multiplayer Game</button>
+        <button class="mode-btn" id="joinMultiplayerBtn">� Join Multiplayer Game</button>
+      </div>
+      
+      <!-- Join Multiplayer Game Input (Hidden by default) -->
+      <div class="join-game-container" id="joinGameContainer" style="display: none;">
+        <button class="back-btn" id="backToMenuFromJoinBtn">← Back</button>
+        <h2>Join Multiplayer Game</h2>
+        <div class="join-game-input-wrapper">
+          <p>Enter the game code your friend shared with you:</p>
+          <input type="text" id="gameCodeInput" class="game-code-input" placeholder="Enter game code (e.g., ABC123)" maxlength="9">
+          <button class="join-game-submit-btn" id="joinGameSubmitBtn">🔗 Join Game</button>
+        </div>
       </div>
 
       <!-- Language Selection Screen (Hidden by default) -->

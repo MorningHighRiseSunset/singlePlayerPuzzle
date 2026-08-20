@@ -421,6 +421,90 @@ body {
     box-shadow: 0 4px 14px #00338055;
 }
 
+/* Join Game Container Styling */
+.join-game-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    align-items: center;
+    text-align: center;
+}
+
+.join-game-input-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.join-game-input-wrapper p {
+    color: #e3eafc;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.game-code-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    border: 2px solid #1976d2;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    text-align: center;
+    letter-spacing: 0.1em;
+    font-family: monospace;
+    text-transform: uppercase;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.game-code-input::placeholder {
+    color: #b6c7e6;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.game-code-input:focus {
+    border-color: #42a5f5;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.join-game-submit-btn {
+    background: #42a5f5;
+    color: #fff;
+    border: none;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 12px #00338033;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.04em;
+    outline: none;
+    width: 100%;
+    max-width: 300px;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.join-game-submit-btn:hover, .join-game-submit-btn:focus {
+    background: #1976d2;
+    color: #fff;
+    box-shadow: 0 4px 18px #00338055;
+}
+
+.join-game-submit-btn:active {
+    transform: scale(0.98);
+}
+
 /* Lobby Content Styling */
 .lobby-content {
     display: flex;
@@ -640,6 +724,62 @@ body {
     font-size: 1.5rem;
     letter-spacing: 0.05em;
     text-align: center;
+}
+
+.game-lobby-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.lobby-instructions {
+    background: rgba(66, 165, 245, 0.15);
+    padding: 16px;
+    border-radius: 8px;
+    border: 2px solid #42a5f5;
+    text-align: left;
+}
+
+.lobby-instructions h3 {
+    margin: 0 0 12px 0;
+    color: #42a5f5;
+    font-size: 1.1rem;
+}
+
+.lobby-instructions p {
+    margin: 8px 0;
+    line-height: 1.4;
+    color: #e3eafc;
+}
+
+.lobby-instructions ol {
+    margin: 8px 0;
+    padding-left: 20px;
+    color: #e3eafc;
+}
+
+.lobby-instructions li {
+    margin: 4px 0;
+    line-height: 1.3;
+}
+
+.game-code {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #42a5f5;
+}
+
+.instruction-note {
+    color: #b6c7e6;
+    font-style: italic;
+    font-size: 0.9rem;
+    margin-top: 8px;
 }
 
 .game-lobby-info {
@@ -1110,6 +1250,21 @@ body {
         font-size: 0.8rem;
         margin-bottom: 10px;
     }
+    
+    .join-game-container {
+        padding: 0 5px;
+    }
+    
+    .game-code-input {
+        font-size: 0.9rem;
+        padding: 10px 12px;
+    }
+    
+    .join-game-submit-btn {
+        font-size: 0.9rem;
+        padding: 12px 16px;
+    }
+    
     .game-lobby-container {
         gap: 14px;
         margin-top: 10px;
@@ -1129,8 +1284,38 @@ body {
     .player-slot {
         padding: 8px;
     }
+    
+    .game-lobby-layout {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .lobby-instructions {
+        padding: 12px;
+    }
+    
+    .lobby-instructions h3 {
+        font-size: 1rem;
+    }
+    
+    .lobby-instructions p, .lobby-instructions li {
+        font-size: 0.85rem;
+    }
+    
+    .game-code {
+        font-size: 1rem;
+    }
+    
     .start-game-btn {
         padding: 12px 12px;
         font-size: 0.95rem;
+    }
+    
+    .lobby-instructions {
+        max-width: 100%;
+    }
+    
+    .game-lobby-layout {
+        max-width: 100%;
     }
 }

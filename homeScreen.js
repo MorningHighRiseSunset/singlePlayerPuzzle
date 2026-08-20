@@ -14,14 +14,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const lobbyScreen = document.getElementById('lobbyScreen');
     const singlePlayerBtn = document.getElementById('singlePlayerBtn');
     const multiplayerBtn = document.getElementById('multiplayerBtn');
+    const createMultiplayerBtn = document.getElementById('createMultiplayerBtn');
+    const joinMultiplayerBtn = document.getElementById('joinMultiplayerBtn');
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const backToMenuFromLobbyBtn = document.getElementById('backToMenuFromLobbyBtn');
+    const backToMenuFromJoinBtn = document.getElementById('backToMenuFromJoinBtn');
     const createGameBtn = document.getElementById('createGameBtn');
+    const joinGameContainer = document.getElementById('joinGameContainer');
+    const gameCodeInput = document.getElementById('gameCodeInput');
+    const joinGameSubmitBtn = document.getElementById('joinGameSubmitBtn');
     
     // Hide main menu initially, show after animation
     if (mainMenu) mainMenu.style.display = 'none';
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
+    if (joinGameContainer) joinGameContainer.style.display = 'none';
     
     // Socket.io for real-time multiplayer
     let socket = null;
@@ -84,12 +91,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // Multiplayer button handler
-    if (multiplayerBtn) {
-        multiplayerBtn.addEventListener('click', function handleMultiplayer() {
-            // Track multiplayer button click
+    // Create multiplayer button handler
+    if (createMultiplayerBtn) {
+        createMultiplayerBtn.addEventListener('click', function handleCreateMultiplayer() {
+            // Track create multiplayer button click
             if (window.va) {
-                window.va('event', { name: 'multiplayer_click', data: { type: 'mode_selection' } });
+                window.va('event', { name: 'create_multiplayer_click', data: { type: 'mode_selection' } });
             }
             
             // Initialize Socket.io
@@ -185,6 +192,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
+    // Join multiplayer button handler
+    if (joinMultiplayerBtn) {
+        joinMultiplayerBtn.addEventListener('click', function handleJoinMultiplayer() {
+            // Track join multiplayer button click
+            if (window.va) {
+                window.va('event', { name: 'join_multiplayer_click', data: { type: 'mode_selection' } });
+            }
+            
+            if (mainMenu) mainMenu.style.display = 'none';
+            if (joinGameContainer) joinGameContainer.style.display = 'flex';
+            // Hide mini board
+            const miniBoardContainer = document.querySelector('.mini-board-container');
+            if (miniBoardContainer) miniBoardContainer.style.display = 'none';
+        });
+    }
+    
     // Back to menu from language screen
     if (backToMenuBtn) {
         backToMenuBtn.addEventListener('click', function handleBackToMenu() {
@@ -207,10 +230,27 @@ document.addEventListener("DOMContentLoaded", () => {
             const miniBoardContainer = document.querySelector('.mini-board-container');
             if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
             
+            // Stop notifications
+            stopNotifications();
+            
             setTimeout(() => {
                 if (mainMenu) mainMenu.style.display = 'flex';
                 if (languageScreen) languageScreen.style.display = 'none';
                 if (lobbyScreen) lobbyScreen.style.display = 'none';
+            }, 200); // Quick transition without animation
+        });
+    }
+    
+    // Back to menu from join game screen
+    if (backToMenuFromJoinBtn) {
+        backToMenuFromJoinBtn.addEventListener('click', function handleBackToMenuFromJoin() {
+            // Show mini board when returning to menu
+            const miniBoardContainer = document.querySelector('.mini-board-container');
+            if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
+            
+            setTimeout(() => {
+                if (mainMenu) mainMenu.style.display = 'flex';
+                if (joinGameContainer) joinGameContainer.style.display = 'none';
             }, 200); // Quick transition without animation
         });
     }
@@ -279,6 +319,33 @@ document.addEventListener("DOMContentLoaded", () => {
     // Stop notifications when leaving lobby
     if (backToMenuFromLobbyBtn) {
         backToMenuFromLobbyBtn.addEventListener('click', stopNotifications);
+    }
+    
+    // Join game by code submit handler
+    if (joinGameSubmitBtn) {
+        joinGameSubmitBtn.addEventListener('click', () => {
+            const gameCode = gameCodeInput.value.trim().toUpperCase();
+            if (gameCode.length >= 3) {
+                joinGameByCode(gameCode);
+            } else {
+                // Show error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Please enter a valid game code (at least 3 characters)';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                joinGameContainer.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            }
+        });
+    }
+    
+    // Allow Enter key to submit
+    if (gameCodeInput) {
+        gameCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinGameSubmitBtn.click();
+            }
+        });
     }
     
     // Store active games in localStorage for cross-tab persistence
@@ -370,23 +437,33 @@ document.addEventListener("DOMContentLoaded", () => {
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <h2>Puzzle Game Queue</h2>
-            <div class="game-lobby-info">
-                <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
-                <div class="lobby-countdown" id="lobbyCountdown">Expires in 5:00</div>
-                <div class="lobby-players">
-                    <div class="player-slot">
-                        <span class="player-avatar">👤</span>
-                        <span class="player-name">${isHost ? 'You (Host)' : 'Host'}</span>
-                    </div>
-                    <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
-                        <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
-                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : (isHost ? 'Player 2' : 'You')}</span>
-                    </div>
+            <div class="game-lobby-layout">
+                <div class="lobby-instructions">
+                    <h3>📋 How Player 2 Can Join</h3>
+                    <p><strong>Game Code:</strong> <span class="game-code">${game.id.replace('GAME-', '')}</span></p>
+                    <p>Share this code with your friend. They can join by:</p>
+                    <ol>
+                        <li>Going to the main menu</li>
+                        <li>Clicking "Join Multiplayer Game"</li>
+                        <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
+                    </ol>
+                    <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
                 </div>
-                <div class="lobby-status">Status: ${game.status}</div>
-                <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
-                    ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
-                </button>
+                <div class="game-lobby-info">
+                    <div class="lobby-players">
+                        <div class="player-slot">
+                            <span class="player-avatar">👤</span>
+                            <span class="player-name">${isHost ? 'Player 1 (You)' : 'Player 1 (Host)'}</span>
+                        </div>
+                        <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
+                            <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
+                            <span class="player-name">${game.players < 2 ? 'Waiting for player 2 to join...' : (isHost ? 'Player 2' : 'You')}</span>
+                        </div>
+                    </div>
+                    <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
+                        ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for player 2 to join...' : 'Start Puzzle Game'}
+                    </button>
+                </div>
             </div>
         `;
         
@@ -399,51 +476,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Player IDs:', game.playerIds);
         
         gameLobbyScreen.style.display = 'flex';
-        
-        // Start countdown timer
-        const countdownElement = document.getElementById('lobbyCountdown');
-        if (countdownElement && window.lobbyCountdownInterval) {
-            clearInterval(window.lobbyCountdownInterval);
-        }
-        
-        const gameCreatedAt = new Date(game.createdAt);
-        const expiryTime = new Date(gameCreatedAt.getTime() + 5 * 60 * 1000); // 5 minutes
-        
-        window.lobbyCountdownInterval = setInterval(() => {
-            const now = new Date();
-            const timeLeft = expiryTime - now;
-            
-            if (timeLeft <= 0) {
-                clearInterval(window.lobbyCountdownInterval);
-                countdownElement.textContent = 'Expired';
-                countdownElement.style.color = '#ff6b6b';
-                
-                // Remove game and redirect to lobby
-                activeGames = activeGames.filter(g => g.id !== game.id);
-
-                updateGamesList();
-                
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-message';
-                errorMsg.textContent = 'Game expired. Returning to lobby.';
-                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
-                document.querySelector('.home-container').appendChild(errorMsg);
-                setTimeout(() => errorMsg.remove(), 3000);
-                
-                gameLobbyScreen.style.display = 'none';
-                if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                
-                return;
-            }
-            
-            const minutes = Math.floor(timeLeft / 60000);
-            const seconds = Math.floor((timeLeft % 60000) / 1000);
-            countdownElement.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeLeft < 60000) {
-                countdownElement.style.color = '#ff6b6b';
-            }
-        }, 1000);
         
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
@@ -460,18 +492,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         const socketInstance = initSocket();
                         if (socketInstance && currentGame) {
                             socketInstance.emit('leave-game', { gameId: currentGame.id });
-                            console.log('Host notified other players of leaving');
+                            console.log('Host notified server of leaving, game should be deleted');
                         }
-                        // Remove game from active games
+                        // Remove game from active games locally
                         activeGames = activeGames.filter(g => g.id !== game.id);
-        
+                        currentGame = null;
                         updateGamesList();
-                    }
-                    
-                    // Clear countdown interval when leaving
-                    if (window.lobbyCountdownInterval) {
-                        clearInterval(window.lobbyCountdownInterval);
-                        window.lobbyCountdownInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -524,23 +550,33 @@ document.addEventListener("DOMContentLoaded", () => {
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <h2>Puzzle Game Queue</h2>
-            <div class="game-lobby-info">
-                <div class="lobby-game-language">Language: ${game.language.toUpperCase()}</div>
-                <div class="lobby-countdown" id="lobbyCountdown">Expires in 5:00</div>
-                <div class="lobby-players">
-                    <div class="player-slot">
-                        <span class="player-avatar">👤</span>
-                        <span class="player-name">${isHost ? 'You (Host)' : 'Host'}</span>
-                    </div>
-                    <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
-                        <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
-                        <span class="player-name">${game.players < 2 ? 'Waiting for player...' : (isHost ? 'Player 2' : 'You')}</span>
-                    </div>
+            <div class="game-lobby-layout">
+                <div class="lobby-instructions">
+                    <h3>📋 How Player 2 Can Join</h3>
+                    <p><strong>Game Code:</strong> <span class="game-code">${game.id.replace('GAME-', '')}</span></p>
+                    <p>Share this code with your friend. They can join by:</p>
+                    <ol>
+                        <li>Going to the main menu</li>
+                        <li>Clicking "Join Multiplayer Game"</li>
+                        <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
+                    </ol>
+                    <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
                 </div>
-                <div class="lobby-status">Status: ${game.status}</div>
-                <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
-                    ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for players...' : 'Start Puzzle Game'}
-                </button>
+                <div class="game-lobby-info">
+                    <div class="lobby-players">
+                        <div class="player-slot">
+                            <span class="player-avatar">👤</span>
+                            <span class="player-name">${isHost ? 'Player 1 (You)' : 'Player 1 (Host)'}</span>
+                        </div>
+                        <div class="player-slot ${game.players < 2 ? 'empty' : ''}">
+                            <span class="player-avatar">${game.players < 2 ? '➕' : '👤'}</span>
+                            <span class="player-name">${game.players < 2 ? 'Waiting for player 2 to join...' : (isHost ? 'Player 2' : 'You')}</span>
+                        </div>
+                    </div>
+                    <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
+                        ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for player 2 to join...' : 'Start Puzzle Game'}
+                    </button>
+                </div>
             </div>
         `;
         
@@ -551,51 +587,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Is Host:', isHost);
         console.log('Players:', game.players);
         console.log('Player IDs:', game.playerIds);
-        
-        // Restart countdown timer
-        const countdownElement = document.getElementById('lobbyCountdown');
-        if (countdownElement && window.lobbyCountdownInterval) {
-            clearInterval(window.lobbyCountdownInterval);
-        }
-        
-        const gameCreatedAt = new Date(game.createdAt);
-        const expiryTime = new Date(gameCreatedAt.getTime() + 5 * 60 * 1000); // 5 minutes
-        
-        window.lobbyCountdownInterval = setInterval(() => {
-            const now = new Date();
-            const timeLeft = expiryTime - now;
-            
-            if (timeLeft <= 0) {
-                clearInterval(window.lobbyCountdownInterval);
-                countdownElement.textContent = 'Expired';
-                countdownElement.style.color = '#ff6b6b';
-                
-                // Remove game and redirect to lobby
-                activeGames = activeGames.filter(g => g.id !== game.id);
-
-                updateGamesList();
-                
-                const errorMsg = document.createElement('div');
-                errorMsg.className = 'error-message';
-                errorMsg.textContent = 'Game expired. Returning to lobby.';
-                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
-                document.querySelector('.home-container').appendChild(errorMsg);
-                setTimeout(() => errorMsg.remove(), 3000);
-                
-                gameLobbyScreen.style.display = 'none';
-                if (lobbyScreen) lobbyScreen.style.display = 'flex';
-                
-                return;
-            }
-            
-            const minutes = Math.floor(timeLeft / 60000);
-            const seconds = Math.floor((timeLeft % 60000) / 1000);
-            countdownElement.textContent = `Expires in ${minutes}:${seconds.toString().padStart(2, '0')}`;
-            
-            if (timeLeft < 60000) {
-                countdownElement.style.color = '#ff6b6b';
-            }
-        }, 1000);
         
         // Re-attach event listeners
         setTimeout(() => {
@@ -612,18 +603,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         const socketInstance = initSocket();
                         if (socketInstance && currentGame) {
                             socketInstance.emit('leave-game', { gameId: currentGame.id });
-                            console.log('Host notified other players of leaving');
+                            console.log('Host notified server of leaving, game should be deleted');
                         }
-                        // Remove game from active games
+                        // Remove game from active games locally
                         activeGames = activeGames.filter(g => g.id !== game.id);
-        
+                        currentGame = null;
                         updateGamesList();
-                    }
-                    
-                    // Clear countdown interval when leaving
-                    if (window.lobbyCountdownInterval) {
-                        clearInterval(window.lobbyCountdownInterval);
-                        window.lobbyCountdownInterval = null;
                     }
                     
                     gameLobbyScreen.style.display = 'none';
@@ -771,6 +756,51 @@ document.addEventListener("DOMContentLoaded", () => {
                     } else {
                         activeGames[gameIndex] = data.game;
                     }
+                    showGameLobby(currentGame);
+                }
+            });
+        }
+    }
+    
+    // Function to join a game by code
+    function joinGameByCode(gameCode) {
+        const fullGameId = 'GAME-' + gameCode;
+        const playerId = getPlayerId();
+        
+        console.log('=== JOIN GAME BY CODE ===');
+        console.log('Game Code:', gameCode);
+        console.log('Full Game ID:', fullGameId);
+        console.log('Joining Player ID:', playerId);
+        
+        const socketInstance = initSocket();
+        if (socketInstance) {
+            socketInstance.emit('join-game', {
+                gameId: fullGameId,
+                playerId: playerId
+            });
+            
+            // Listen for errors
+            socketInstance.once('error', (data) => {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = data.message || 'Game not found or expired';
+                errorMsg.style.cssText = 'color: #ff6b6b; background: rgba(255,0,0,0.1); padding: 8px; border-radius: 4px; margin-top: 8px; text-align: center;';
+                joinGameContainer.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            });
+            
+            // Listen for game-joined (initial game state when joining)
+            socketInstance.once('game-joined', (data) => {
+                console.log('Game joined confirmation in joinGameByCode:', data);
+                if (data.game) {
+                    currentGame = data.game;
+                    // Store my tiles for when we navigate to the game
+                    sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
+                    if (data.allPlayerTiles) {
+                        sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
+                    }
+                    // Hide join container and show game lobby
+                    if (joinGameContainer) joinGameContainer.style.display = 'none';
                     showGameLobby(currentGame);
                 }
             });
