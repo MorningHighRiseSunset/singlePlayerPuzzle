@@ -260,13 +260,13 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Passing notifications functionality
     const notificationMessages = [
-        "🎮 Click 'Create Game' to start - friends can join via 'Active Games'!",
-        "👥 Play English player vs player - invite a friend!",
-        "📧 Contact Maurice13stu@gmail.com for questions, business, feedback",
-        "🎯 Create a game and share the excitement with friends!",
-        "⏰ Games expire in 5 minutes - don't keep your friend waiting!",
-        "🎲 Challenge your friends to a word battle!",
-        "📱 Works on both PC and mobile - play anywhere!"
+        "Click 'Create Game' to start - friends can join via 'Active Games'!",
+        "Play English player vs player - invite a friend!",
+        "Contact Maurice13stu@gmail.com for questions, business, feedback",
+        "Create a game and share the excitement with friends!",
+        "Games expire in 5 minutes - don't keep your friend waiting!",
+        "Challenge your friends to a word battle!",
+        "Works on both PC and mobile - play anywhere!"
     ];
     
     function showPassingNotification() {
@@ -459,15 +459,13 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
-            <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-layout">
                 <div class="lobby-instructions">
-                    <h3>📋 How Player 2 Can Join</h3>
+                    <h3>How Player 2 Can Join</h3>
                     <p><strong>Game Code:</strong> <span class="game-code">${game.id.replace('GAME-', '')}</span></p>
                     <p>Share this code with your friend. They can join by:</p>
                     <ol>
-                        <li>Going to the main menu</li>
-                        <li>Clicking "Join Multiplayer Game"</li>
+                        <li>Clicking "Join Multiplayer Game" on the main menu</li>
                         <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
                     </ol>
                     <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
@@ -483,9 +481,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span class="player-name">${game.players < 2 ? 'Waiting for player 2 to join...' : (isHost ? 'Player 2' : 'You')}</span>
                         </div>
                     </div>
-                    <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
-                        ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for player 2 to join...' : 'Start Puzzle Game'}
-                    </button>
                 </div>
             </div>
         `;
@@ -503,7 +498,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
             const backToLobbyBtn = document.getElementById('backToLobbyBtn');
-            const startGameBtn = document.getElementById('startGameBtn');
             
             if (backToLobbyBtn) {
                 backToLobbyBtn.onclick = () => {
@@ -534,26 +528,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }, 200);
                 };
             }
-            
-            if (startGameBtn && !startGameBtn.disabled) {
-                startGameBtn.onclick = () => {
-                    // Track start game click
-                    if (window.va) {
-                        window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
-                    }
-                    
-                    const socketInstance = initSocket();
-                    
-                    if (socketInstance && currentGame) {
-                        // Broadcast game start to all players
-                        socketInstance.emit('start-game', { gameId: currentGame.id });
-                        console.log('Game start broadcasted via Socket.io');
-                    }
-                    
-                    // Navigate host to the game
-                    navigateToGame(game.language);
-                };
-            }
         }, 0);
     }
     
@@ -567,15 +541,13 @@ document.addEventListener("DOMContentLoaded", () => {
         
         gameLobbyScreen.innerHTML = `
             <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
-            <h2>Puzzle Game Queue</h2>
             <div class="game-lobby-layout">
                 <div class="lobby-instructions">
-                    <h3>📋 How Player 2 Can Join</h3>
+                    <h3>How Player 2 Can Join</h3>
                     <p><strong>Game Code:</strong> <span class="game-code">${game.id.replace('GAME-', '')}</span></p>
                     <p>Share this code with your friend. They can join by:</p>
                     <ol>
-                        <li>Going to the main menu</li>
-                        <li>Clicking "Join Multiplayer Game"</li>
+                        <li>Clicking "Join Multiplayer Game" on the main menu</li>
                         <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
                     </ol>
                     <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
@@ -591,9 +563,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <span class="player-name">${game.players < 2 ? 'Waiting for player 2 to join...' : (isHost ? 'Player 2' : 'You')}</span>
                         </div>
                     </div>
-                    <button class="start-game-btn" id="startGameBtn" ${!isHost || game.players < game.maxPlayers ? 'disabled' : ''}>
-                        ${!isHost ? 'Waiting for host to start...' : game.players < game.maxPlayers ? 'Waiting for player 2 to join...' : 'Start Puzzle Game'}
-                    </button>
                 </div>
             </div>
         `;
@@ -638,23 +607,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Hide mini board after showing menu
                         if (miniBoardContainer) miniBoardContainer.style.display = 'none';
                     }, 200);
-                };
-            }
-            
-            if (startGameBtn && !startGameBtn.disabled) {
-                startGameBtn.onclick = () => {
-                    if (window.va) {
-                        window.va('event', { name: 'start_game', data: { type: 'game_action', gameId: game.id, language: game.language } });
-                    }
-                    
-                    const socketInstance = initSocket();
-                    
-                    if (socketInstance && currentGame) {
-                        socketInstance.emit('start-game', { gameId: currentGame.id });
-                        console.log('Game start broadcasted via Socket.io');
-                    }
-                    
-                    navigateToGame(game.language);
                 };
             }
         }, 0);
