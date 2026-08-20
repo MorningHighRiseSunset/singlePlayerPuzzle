@@ -81,6 +81,57 @@ function createTileBag() {
     return tiles;
 }
 
+// Balance a player's rack to have a good mix of vowels and consonants
+function balanceRack(rack, tileBag) {
+    const vowels = ['A', 'E', 'I', 'O', 'U'];
+    const vowelCount = rack.filter(tile => vowels.includes(tile.letter)).length;
+
+    // Aim for 2-4 vowels in a 7-tile rack
+    while (vowelCount < 2 || vowelCount > 4) {
+        if (vowelCount < 2) {
+            // Need more vowels - remove a consonant and add a vowel
+            const consonantIndex = rack.findIndex(tile => !vowels.includes(tile.letter) && tile.letter !== '*');
+            if (consonantIndex !== -1) {
+                const removed = rack.splice(consonantIndex, 1)[0];
+                tileBag.push(removed);
+                
+                // Find a vowel in the bag
+                const vowelInBag = tileBag.findIndex(t => vowels.includes(t.letter));
+                if (vowelInBag !== -1) {
+                    rack.push(tileBag.splice(vowelInBag, 1)[0]);
+                } else {
+                    // No vowels left, put the consonant back
+                    rack.push(removed);
+                    break;
+                }
+            } else {
+                break;
+            }
+        } else if (vowelCount > 4) {
+            // Need fewer vowels - remove a vowel and add a consonant
+            const vowelIndex = rack.findIndex(tile => vowels.includes(tile.letter));
+            if (vowelIndex !== -1) {
+                const removed = rack.splice(vowelIndex, 1)[0];
+                tileBag.push(removed);
+                
+                // Find a consonant in the bag
+                const consonantInBag = tileBag.findIndex(t => !vowels.includes(t.letter) && t.letter !== '*');
+                if (consonantInBag !== -1) {
+                    rack.push(tileBag.splice(consonantInBag, 1)[0]);
+                } else {
+                    // No consonants left, put the vowel back
+                    rack.push(removed);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    
+    return rack;
+}
+
 // Load games from disk on startup
 function loadGames() {
     try {
@@ -153,8 +204,9 @@ io.on('connection', (socket) => {
             board: {} // Board state: {row_col: {letter, playerId}}
         };
         
-        // Give host their initial tiles
+        // Give host their initial tiles and balance the rack
         game.playerTiles[playerId] = game.tileBag.splice(0, 7);
+        game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
         
         games[gameId] = game;
         game.playerSockets[playerId] = socket.id;
@@ -202,8 +254,9 @@ io.on('connection', (socket) => {
         game.players += 1;
         game.playerIds.push(playerId);
         
-        // Give joining player their tiles from the server's bag
+        // Give joining player their tiles from the server's bag and balance the rack
         game.playerTiles[playerId] = game.tileBag.splice(0, 7);
+        game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
         game.playerSockets = game.playerSockets || {};
         game.playerSockets[playerId] = socket.id;
         socketToGame[socket.id] = gameId;
@@ -377,6 +430,9 @@ io.on('connection', (socket) => {
             game.playerTiles[playerId] = game.playerTiles[playerId] || [];
             game.playerTiles[playerId].push(...newTiles);
             console.log('Drew', newTiles.length, 'new tiles for player', playerId, ':', newTiles.map(t => t.letter).join(','));
+            
+            // Balance the rack after drawing new tiles
+            game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
         }
 
         const playerIds = game.playerIds || [];
