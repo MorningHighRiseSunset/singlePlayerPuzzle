@@ -458,7 +458,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         gameLobbyScreen.innerHTML = `
-            <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <div class="game-lobby-layout">
                 <div class="lobby-instructions">
                     <h3>How Player 2 Can Join</h3>
@@ -469,6 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
                     </ol>
                     <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
+                    <p class="leave-note">Game expires in 5 minutes if no one joins</p>
                 </div>
                 <div class="game-lobby-info">
                     <div class="lobby-players">
@@ -497,37 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Add event listeners with setTimeout to ensure DOM is updated
         setTimeout(() => {
-            const backToLobbyBtn = document.getElementById('backToLobbyBtn');
-            
-            if (backToLobbyBtn) {
-                backToLobbyBtn.onclick = () => {
-                    const currentPlayerId = getPlayerId();
-                    const isHost = game.hostId === currentPlayerId;
-                    
-                    // If host is leaving, notify other players and close the game
-                    if (isHost) {
-                        const socketInstance = initSocket();
-                        if (socketInstance && currentGame) {
-                            socketInstance.emit('leave-game', { gameId: currentGame.id });
-                            console.log('Host notified server of leaving, game should be deleted');
-                        }
-                        // Remove game from active games locally
-                        activeGames = activeGames.filter(g => g.id !== game.id);
-                        currentGame = null;
-                        updateGamesList();
-                    }
-                    
-                    gameLobbyScreen.style.display = 'none';
-                    // Show mini board again when returning to menu
-                    const miniBoardContainer = document.querySelector('.mini-board-container');
-                    if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
-                    setTimeout(() => {
-                        if (mainMenu) mainMenu.style.display = 'flex';
-                        // Hide mini board after showing menu
-                        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                    }, 200);
-                };
-            }
+            // No back button needed - game auto-expires or starts when player joins
         }, 0);
     }
     
@@ -540,7 +510,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const isHost = game.hostId === currentPlayerId;
         
         gameLobbyScreen.innerHTML = `
-            <button class="back-btn" id="backToLobbyBtn">← Back to Lobby</button>
             <div class="game-lobby-layout">
                 <div class="lobby-instructions">
                     <h3>How Player 2 Can Join</h3>
@@ -551,6 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <li>Entering this code: <strong>${game.id.replace('GAME-', '')}</strong></li>
                     </ol>
                     <p class="instruction-note">The game will start automatically when Player 2 joins!</p>
+                    <p class="leave-note">Game expires in 5 minutes if no one joins</p>
                 </div>
                 <div class="game-lobby-info">
                     <div class="lobby-players">
@@ -577,38 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Re-attach event listeners
         setTimeout(() => {
-            const backToLobbyBtn = document.getElementById('backToLobbyBtn');
-            const startGameBtn = document.getElementById('startGameBtn');
-            
-            if (backToLobbyBtn) {
-                backToLobbyBtn.onclick = () => {
-                    const currentPlayerId = getPlayerId();
-                    const isHost = game.hostId === currentPlayerId;
-                    
-                    // If host is leaving, notify other players and close the game
-                    if (isHost) {
-                        const socketInstance = initSocket();
-                        if (socketInstance && currentGame) {
-                            socketInstance.emit('leave-game', { gameId: currentGame.id });
-                            console.log('Host notified server of leaving, game should be deleted');
-                        }
-                        // Remove game from active games locally
-                        activeGames = activeGames.filter(g => g.id !== game.id);
-                        currentGame = null;
-                        updateGamesList();
-                    }
-                    
-                    gameLobbyScreen.style.display = 'none';
-                    // Show mini board again when returning to menu
-                    const miniBoardContainer = document.querySelector('.mini-board-container');
-                    if (miniBoardContainer) miniBoardContainer.style.display = 'flex';
-                    setTimeout(() => {
-                        if (mainMenu) mainMenu.style.display = 'flex';
-                        // Hide mini board after showing menu
-                        if (miniBoardContainer) miniBoardContainer.style.display = 'none';
-                    }, 200);
-                };
-            }
+            // No back button needed - game auto-expires or starts when player joins
         }, 0);
     }
     

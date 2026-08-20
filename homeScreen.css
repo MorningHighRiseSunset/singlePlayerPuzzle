@@ -31,7 +31,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 400px; /* Match mini board width */
+    max-width: 700px; /* Wide enough for board */
     margin: 24px auto; /* Reduced margin */
     position: relative;
     width: 100%;
@@ -781,6 +781,13 @@ body {
     margin-top: 8px;
 }
 
+.leave-note {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    font-style: italic;
+}
+
 .game-lobby-info {
     width: 100%;
     max-width: 400px;
@@ -1008,7 +1015,7 @@ body {
 /* Laptop-specific optimizations */
 @media (min-width: 769px) and (max-width: 1366px) {
     .home-container {
-        max-width: 400px; /* Slightly smaller for laptop screens */
+        max-width: 700px; /* Match main container width */
         padding: 28px 20px 24px 20px;
     }
     .mini-scrabble-board {
