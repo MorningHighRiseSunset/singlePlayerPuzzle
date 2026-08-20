@@ -17,11 +17,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const backToMenuBtn = document.getElementById('backToMenuBtn');
     const backToMenuFromLobbyBtn = document.getElementById('backToMenuFromLobbyBtn');
     const createGameBtn = document.getElementById('createGameBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeHelpModal = document.getElementById('closeHelpModal');
     
     // Hide main menu initially, show after animation
     if (mainMenu) mainMenu.style.display = 'none';
     if (languageScreen) languageScreen.style.display = 'none';
     if (lobbyScreen) lobbyScreen.style.display = 'none';
+    if (helpModal) helpModal.style.display = 'none';
     
     // Socket.io for real-time multiplayer
     let socket = null;
@@ -224,18 +228,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
+    // Help button handler
+    if (helpBtn) {
+        helpBtn.addEventListener('click', () => {
+            if (helpModal) {
+                helpModal.style.display = 'flex';
+            }
+        });
+    }
+    
+    // Close help modal handler
+    if (closeHelpModal) {
+        closeHelpModal.addEventListener('click', () => {
+            if (helpModal) {
+                helpModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Close help modal when clicking outside
+    if (helpModal) {
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+        });
+    }
+    
     // Store active games in localStorage for cross-tab persistence
     let activeGames = [];
     let currentPlayerId = null;
-    
-    // Generate or get player ID
-    function getPlayerId() {
-        if (!currentPlayerId) {
-            currentPlayerId = generatePlayerId();
-            console.log('Generated new player ID (no storage):', currentPlayerId);
-        }
-        return currentPlayerId;
-    }
     
     // Generate player ID (stored in sessionStorage for tab uniqueness)
     function getPlayerId() {

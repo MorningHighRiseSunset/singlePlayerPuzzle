@@ -137,6 +137,7 @@
       <!-- Multiplayer Lobby Screen (Hidden by default) -->
       <div class="lobby-content" id="lobbyScreen" style="display: none;">
         <button class="back-btn" id="backToMenuFromLobbyBtn">← Back</button>
+        <button class="help-btn" id="helpBtn">❓ Help</button>
         <h2>Multiplayer Lobby</h2>
         <div class="create-game-container">
           <button class="create-game-btn" id="createGameBtn">🎮 Create Game</button>
@@ -145,6 +146,35 @@
           <h3>Active Games</h3>
           <div class="games-list" id="gamesList">
             <p class="no-games-message">No active games available</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Help Popup Modal -->
+      <div class="help-modal" id="helpModal" style="display: none;">
+        <div class="help-modal-content">
+          <button class="help-modal-close" id="closeHelpModal">&times;</button>
+          <h2>🎮 How to Play Multiplayer</h2>
+          <div class="help-section">
+            <h3>👥 Invite a Friend</h3>
+            <p>Play English player vs player and invite a friend to join your game!</p>
+          </div>
+          <div class="help-section">
+            <h3>🎯 Getting Started</h3>
+            <p>Click <strong>"Create Game"</strong> to start a new game session. Your friend can then join through the <strong>"Active Games"</strong> list.</p>
+          </div>
+          <div class="help-section">
+            <h3>📧 Contact & Feedback</h3>
+            <p>For questions, business inquiries, or feedback, contact:</p>
+            <a href="mailto:Maurice13stu@gmail.com" class="contact-email">Maurice13stu@gmail.com</a>
+          </div>
+          <div class="help-section">
+            <h3>💡 Tips</h3>
+            <ul>
+              <li>Games expire after 5 minutes</li>
+              <li>Both players need to be online to play</li>
+              <li>The host starts the game when both players are ready</li>
+            </ul>
           </div>
         </div>
       </div>
