@@ -139,9 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         currentGame = data.game;
                         // Store my tiles for when we navigate to the game
                         sessionStorage.setItem('myTiles', JSON.stringify(data.myTiles));
-                    if (data.allPlayerTiles) {
-                        sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
-                    }
                         if (data.allPlayerTiles) {
                             sessionStorage.setItem('allPlayerTiles', JSON.stringify(data.allPlayerTiles));
                         }
@@ -499,6 +496,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             // No back button needed - game auto-expires or starts when player joins
         }, 0);
+        
+        // If game is full (2 players), navigate to game automatically
+        if (game.players >= 2) {
+            console.log('Game is full, navigating to game...');
+            setTimeout(() => {
+                navigateToGame(game.language || 'english');
+            }, 500);
+        }
     }
     
     // Function to update game lobby UI dynamically
@@ -549,6 +554,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             // No back button needed - game auto-expires or starts when player joins
         }, 0);
+        
+        // If game is full (2 players), navigate to game automatically
+        if (game.players >= 2) {
+            console.log('Game is full, navigating to game...');
+            setTimeout(() => {
+                navigateToGame(game.language || 'english');
+            }, 500);
+        }
     }
     
     // Function to navigate to the appropriate game page
@@ -709,6 +722,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Hide join container and show game lobby
                     if (joinGameContainer) joinGameContainer.style.display = 'none';
                     showGameLobby(currentGame);
+                    
+                    // If game is full (2 players), navigate to game automatically
+                    if (currentGame.players >= 2) {
+                        console.log('Game is full after joining, navigating to game...');
+                        setTimeout(() => {
+                            navigateToGame(currentGame.language || 'english');
+                        }, 500);
+                    }
                 }
             });
         }
