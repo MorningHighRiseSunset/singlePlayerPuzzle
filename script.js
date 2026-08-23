@@ -6408,10 +6408,16 @@ formedWords.forEach((wordInfo) => {
 	}
 
     validateWord() {
-        if (this.placedTiles.length === 0) return false;
+        if (this.placedTiles.length === 0) {
+            this.validationMessage = "No tiles placed. Please place tiles on the board.";
+            return false;
+        }
 
         // Check if tiles are properly connected (same row/col, no gaps)
-        if (!this.areTilesConnected()) return false;
+        if (!this.areTilesConnected()) {
+            this.validationMessage = "Tiles must be placed in a straight line (same row or column) without gaps.";
+            return false;
+        }
 
         // --- NEW: Ensure at least one placed tile is adjacent to or touching an existing tile (except first move) ---
         if (!this.isFirstMove) {
@@ -6435,6 +6441,7 @@ formedWords.forEach((wordInfo) => {
                 });
             });
             if (!touchesExisting) {
+                this.validationMessage = "Words must connect to existing tiles on the board.";
                 console.log("Placed tiles are not connected to any existing word.");
                 return false;
             }
@@ -6449,21 +6456,29 @@ formedWords.forEach((wordInfo) => {
 
         // If no valid words are formed, return false
         if (formedWords.length === 0) {
+            this.validationMessage = "No valid words formed. Words must be at least 2 letters long.";
             console.log("No valid words formed");
             return false;
         }
 
-        // Validate each word
+        // Validate each word and collect invalid words
         let allWordsValid = true;
+        let invalidWords = [];
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             if (!this.dictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
+                invalidWords.push(wordInfo.word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
             }
         });
+
+        if (!allWordsValid) {
+            this.validationMessage = `Invalid word(s): ${invalidWords.join(", ")}. These words are not in the dictionary.`;
+            return false;
+        }
 
         // First move must use center square
         if (this.isFirstMove) {
@@ -6472,11 +6487,13 @@ formedWords.forEach((wordInfo) => {
                 (tile) => tile.row === 7 && tile.col === 7,
             );
             if (!centerUsed) {
+                this.validationMessage = "First move must use the center square (star symbol).";
                 console.log("First move must use center square");
                 return false;
             }
         }
 
+        this.validationMessage = "Valid word!";
         return allWordsValid;
     }
 
@@ -7685,15 +7702,15 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
 				// The player can now use the dedicated "Return Tiles" button to undo the move.
-				const toastMsg = 'Invalid word! Please try again.';
-				const speakMsg = 'Invalid word. Please try again.';
-				try { 
+				const toastMsg = this.validationMessage || 'Invalid word! Please try again.';
+				const speakMsg = this.validationMessage || 'Invalid word. Please try again.';
+				try {
 					if (typeof this.showAnimatedToast === 'function') {
 						this.showAnimatedToast(toastMsg, 'error');
 					} else if (this.showToast) {
 						this.showToast(toastMsg);
 					}
-				} catch(e) { 
+				} catch(e) {
 					console.warn('Toast display failed:', e);
 				}
 
@@ -7743,14 +7760,48 @@ calculateScore() {
 			}));
 			// compute total if score not provided
 			entry.score = typeof score === 'number' ? score : entry.words.reduce((s, w) => s + (w.score || 0), 0);
+
+			// Fetch definitions for each word (async, non-blocking)
+			this.fetchDefinitionsForEntry(entry);
 		} else {
 			// legacy string entry
 			entry.word = words;
 			entry.score = typeof score === 'number' ? score : 0;
+
+			// Fetch definition for single word if it's not a special action
+			if (words !== "SKIP" && words !== "EXCHANGE" && words !== "QUIT") {
+				this.fetchDefinitionsForEntry(entry);
+			}
 		}
 
 		this.moveHistory.push(entry);
 		this.updateMoveHistory();
+	}
+
+	async fetchDefinitionsForEntry(entry) {
+		try {
+			if (entry.words && Array.isArray(entry.words)) {
+				// Fetch definitions for each word in the array
+				for (const wordEntry of entry.words) {
+					if (wordEntry.word && wordEntry.word !== "BINGO BONUS") {
+						const definition = await this.getWordDefinition(wordEntry.word);
+						if (definition) {
+							wordEntry.definition = definition;
+						}
+					}
+				}
+			} else if (entry.word && entry.word !== "SKIP" && entry.word !== "EXCHANGE" && entry.word !== "QUIT") {
+				// Fetch definition for single word
+				const definition = await this.getWordDefinition(entry.word);
+				if (definition) {
+					entry.definition = definition;
+				}
+			}
+			// Update move history after definitions are fetched
+			this.updateMoveHistory();
+		} catch (error) {
+			console.warn('Failed to fetch definitions for move history:', error);
+		}
 	}
 
 	formatWordForHistory(word, premiumInfo) {
@@ -7774,7 +7825,7 @@ calculateScore() {
 		const mobileHistoryDisplay = document.getElementById("move-history");
 		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
 		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
-		
+
 		// Premium square legend
 		const legendHtml = `
 			<div class="premium-legend">
@@ -7795,7 +7846,7 @@ calculateScore() {
 				</div>
 			</div>
 		`;
-		
+
 		const historyContent = "<h3>Move History</h3>" + legendHtml +
 			this.moveHistory
 			.slice(-50)
@@ -7808,12 +7859,25 @@ calculateScore() {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
 						const formattedWord = this.formatWordForHistory(w.word, w.premiumInfo);
-						
+
 						if (typeof w.score === 'number') return `${formattedWord} (${w.score})`;
 						return formattedWord;
 					});
 					const formatted = parts.join(" & ");
-					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
+
+					// Add definitions if available
+					let definitionsHtml = '';
+					if (move.words.some(w => w.definition)) {
+						definitionsHtml = '<div class="move-definitions">';
+						move.words.forEach(w => {
+							if (w.definition && w.word !== "BINGO BONUS") {
+								definitionsHtml += this.formatDefinitionForHistory(w.word, w.definition);
+							}
+						});
+						definitionsHtml += '</div>';
+					}
+
+					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points${definitionsHtml}</div>`;
 				}
 
 				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
@@ -7830,7 +7894,16 @@ calculateScore() {
 				// Fallback: single word string
 				if (move.word) {
 					const formattedWord = this.formatWordForHistory(move.word, []);
-					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points</div>`;
+
+					// Add definition if available
+					let definitionsHtml = '';
+					if (move.definition) {
+						definitionsHtml = '<div class="move-definitions">';
+						definitionsHtml += this.formatDefinitionForHistory(move.word, move.definition);
+						definitionsHtml += '</div>';
+					}
+
+					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points${definitionsHtml}</div>`;
 				}
 
 				// Unknown format
@@ -7855,6 +7928,28 @@ calculateScore() {
 		if (desktopDrawerHistoryDisplay) {
 			desktopDrawerHistoryDisplay.innerHTML = historyContent;
 		}
+	}
+
+	formatDefinitionForHistory(word, definition) {
+		if (!definition || !Array.isArray(definition)) return '';
+
+		const defsHtml = definition.map(meaning => {
+			const partOfSpeech = meaning.partOfSpeech || '';
+			const definitionsList = (meaning.definitions || []).slice(0, 2).map(d => `<li>${d}</li>`).join('');
+			return `
+				<div class="word-definition">
+					<span class="part-of-speech">${partOfSpeech}</span>
+					<ul>${definitionsList}</ul>
+				</div>
+			`;
+		}).join('');
+
+		return `
+			<div class="definition-entry">
+				<strong>${word}:</strong>
+				${defsHtml}
+			</div>
+		`;
 	}
 
 	updateGameState() {
