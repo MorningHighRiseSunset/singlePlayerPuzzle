@@ -3007,10 +3007,15 @@ class ScrabbleGame {
 		const cleanWord = word.split("(")[0].trim();
 
 		try {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
 			// Fetch from the dictionary API
 			const response = await fetch(
 				`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord.toLowerCase()}`,
+				{ signal: controller.signal }
 			);
+			clearTimeout(timeoutId);
 
 			// Handle API errors
 			if (!response.ok) {
@@ -3032,7 +3037,11 @@ class ScrabbleGame {
 
 			return null;
 		} catch (error) {
-			console.error(`Error fetching definition for ${word}:`, error);
+			if (error.name === 'AbortError') {
+				console.warn(`Dictionary API timeout for ${cleanWord}`);
+			} else {
+				console.error(`Error fetching definition for ${word}:`, error);
+			}
 			return null;
 		}
 	}
