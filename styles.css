@@ -255,7 +255,7 @@ body {
   padding: 10px; /* Reduced from 20px */
   padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
   background: linear-gradient(145deg, var(--light), #f0f0f0);
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
   min-height: 100vh;
   min-height: 100dvh; /* iOS safe viewport */
   box-sizing: border-box;

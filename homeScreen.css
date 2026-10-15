@@ -3,7 +3,7 @@
 body {
     background: #0047AB;
     color: #fff;
-    font-family: Arial, sans-serif;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -282,6 +282,7 @@ body {
     gap: 12px;
     width: 100%;
     margin-top: 24px;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
 }
 
 /* Mode Buttons Container and Styling */
@@ -562,6 +563,7 @@ body {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
 }
 
 .multiplayer-lang-btn:hover, .multiplayer-lang-btn:focus {
@@ -937,6 +939,7 @@ body {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
 }
 
 .lang-btn:hover, .lang-btn:focus {
