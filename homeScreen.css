@@ -3,7 +3,7 @@
 body {
     background: #0047AB;
     color: #fff;
-    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -282,7 +282,13 @@ body {
     gap: 12px;
     width: 100%;
     margin-top: 24px;
-    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
+}
+
+/* Force emoji rendering for language buttons */
+.language-buttons-container .lang-btn::before,
+.language-buttons-container .lang-btn::first-letter {
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 /* Mode Buttons Container and Styling */
@@ -939,7 +945,7 @@ body {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif;
+    font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
 }
 
 .lang-btn:hover, .lang-btn:focus {

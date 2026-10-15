@@ -1,10 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Set chess theme for white background
     document.documentElement.setAttribute('data-theme', 'chess');
-    
+
+    // Force UTF-8 encoding for emoji support
+    document.charset = 'UTF-8';
+
     // Play puzzle animation on load
     playPuzzleAnimation('PUZZLE');
-    
+
     // Multiplayer is English only
     const selectedMultiplayerLanguage = 'english';
     
@@ -730,15 +733,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // Language button tracking with Vercel Analytics
     const langButtons = document.querySelectorAll('.lang-btn');
     langButtons.forEach(button => {
+        // Force emoji font rendering for flags
+        button.style.fontFamily = '"Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif';
+
         button.addEventListener('click', (e) => {
             const language = button.getAttribute('data-language');
             const href = button.getAttribute('data-href');
-            
+
             // Track language button click event using Vercel Analytics
             if (window.va) {
                 window.va('event', { name: 'Singleplayer: ' + language, data: { type: 'language_selection' } });
             }
-            
+
             // Navigate to the game page
             if (href) {
                 window.location.href = href;
