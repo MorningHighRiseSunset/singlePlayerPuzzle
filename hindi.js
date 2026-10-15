@@ -5896,12 +5896,14 @@ formedWords.forEach((wordInfo) => {
             return false;
         }
 
-        // Validate each word
+        // Validate each word and collect invalid words
         let allWordsValid = true;
+        this._invalidWords = []; // Store invalid words for error message
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             if (!this.dictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
+                this._invalidWords.push(word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
@@ -7183,14 +7185,28 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				// Show an animated toast for invalid words
-				try { 
-					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
-					} else if (this.showToast) {
-						this.showToast(TRANSLATIONS.invalidWord);
+				// Show an animated toast for invalid words with specific error message
+				const invalidWords = this._invalidWords || [];
+				let toastMsg;
+
+				if (invalidWords.length > 0) {
+					const wordList = invalidWords.join(', ');
+					if (invalidWords.length === 1) {
+						toastMsg = `"${wordList}" शब्दकोश में नहीं है।`;
+					} else {
+						toastMsg = `"${wordList}" शब्द शब्दकोश में नहीं हैं।`;
 					}
-				} catch(e) { 
+				} else {
+					toastMsg = TRANSLATIONS.invalidWord;
+				}
+
+				try {
+					if (typeof this.showAnimatedToast === 'function') {
+						this.showAnimatedToast(toastMsg, 'error');
+					} else if (this.showToast) {
+						this.showToast(toastMsg);
+					}
+				} catch(e) {
 					console.warn('Toast display failed:', e);
 				}
 				this.resetPlacedTiles();

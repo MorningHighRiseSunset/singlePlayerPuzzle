@@ -5873,13 +5873,15 @@ formedWords.forEach((wordInfo) => {
                 .toLowerCase();
         };
 
-        // Validate each word
+        // Validate each word and collect invalid words with reasons
         let allWordsValid = true;
+        this._invalidWords = []; // Store invalid words for error message
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             const normalizedWord = normalizeSpanish(word);
             if (!this.dictionary.has(word) && !this.dictionary.has(normalizedWord)) {
                 console.log(`Invalid word: ${word} (normalized: ${normalizedWord})`);
+                this._invalidWords.push(word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
@@ -7155,16 +7157,31 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				// Show an animated toast for invalid words
-				const toastMsg = TRANSLATIONS.invalidWord;
-				const speakMsg = 'Palabra no válida. Por favor intenta de nuevo.';
-				try { 
+				// Show an animated toast for invalid words with specific error message
+				const invalidWords = this._invalidWords || [];
+				let toastMsg, speakMsg;
+
+				if (invalidWords.length > 0) {
+					const wordList = invalidWords.join(', ');
+					if (invalidWords.length === 1) {
+						toastMsg = `"${wordList}" no está en el diccionario español.`;
+						speakMsg = `La palabra ${wordList} no está en el diccionario. Por favor intenta de nuevo.`;
+					} else {
+						toastMsg = `Las palabras "${wordList}" no están en el diccionario español.`;
+						speakMsg = `Las palabras ${wordList} no están en el diccionario. Por favor intenta de nuevo.`;
+					}
+				} else {
+					toastMsg = TRANSLATIONS.invalidWord;
+					speakMsg = 'Palabra no válida. Por favor intenta de nuevo.';
+				}
+
+				try {
 					if (typeof this.showAnimatedToast === 'function') {
 						this.showAnimatedToast(toastMsg, 'error');
 					} else if (this.showToast) {
 						this.showToast(toastMsg);
 					}
-				} catch(e) { 
+				} catch(e) {
 					console.warn('Toast display failed:', e);
 				}
 

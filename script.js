@@ -6472,12 +6472,12 @@ formedWords.forEach((wordInfo) => {
 
         // Validate each word and collect invalid words
         let allWordsValid = true;
-        let invalidWords = [];
+        this._invalidWords = []; // Store invalid words for error message
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             if (!this.dictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
-                invalidWords.push(wordInfo.word);
+                this._invalidWords.push(wordInfo.word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
@@ -6485,7 +6485,12 @@ formedWords.forEach((wordInfo) => {
         });
 
         if (!allWordsValid) {
-            this.validationMessage = `Invalid word(s): ${invalidWords.join(", ")}. These words are not in the dictionary.`;
+            const invalidWords = this._invalidWords;
+            if (invalidWords.length === 1) {
+                this.validationMessage = `"${invalidWords[0]}" is not in the English dictionary.`;
+            } else {
+                this.validationMessage = `"${invalidWords.join(", ")}" are not in the English dictionary.`;
+            }
             return false;
         }
 
