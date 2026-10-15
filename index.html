@@ -8,11 +8,6 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <link rel="stylesheet" href="homeScreen.css">
     <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
-    <style>
-      .lang-btn {
-        font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;
-      }
-    </style>
   </head>
   <body>
     <div class="home-container">
@@ -145,11 +140,21 @@
       <!-- Language Selection Screen (Hidden by default) -->
       <div class="language-buttons-container" id="languageScreen" style="display: none;">
         <button class="back-btn" id="backToMenuBtn">← Back</button>
-        <button class="lang-btn" data-language="english" data-href="game.html" style="font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;">🇺🇸 English</button>
-        <button class="lang-btn" data-language="french" data-href="french.html" style="font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;">🇫🇷 French</button>
-        <button class="lang-btn" data-language="hindi" data-href="hindi.html" style="font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;">🇮🇳 Hindi</button>
-        <button class="lang-btn" data-language="mandarin" data-href="mandarin.html" style="font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;">🇨🇳 Mandarin</button>
-        <button class="lang-btn" data-language="spanish" data-href="spanish.html" style="font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif !important;">🇪🇸 Spanish</button>
+        <button class="lang-btn" data-language="english" data-href="game.html">
+          <img src="https://flagcdn.com/w40/us.png" alt="English" class="flag-image"> English
+        </button>
+        <button class="lang-btn" data-language="french" data-href="french.html">
+          <img src="https://flagcdn.com/w40/fr.png" alt="French" class="flag-image"> French
+        </button>
+        <button class="lang-btn" data-language="hindi" data-href="hindi.html">
+          <img src="https://flagcdn.com/w40/in.png" alt="Hindi" class="flag-image"> Hindi
+        </button>
+        <button class="lang-btn" data-language="mandarin" data-href="mandarin.html">
+          <img src="https://flagcdn.com/w40/cn.png" alt="Mandarin" class="flag-image"> Mandarin
+        </button>
+        <button class="lang-btn" data-language="spanish" data-href="spanish.html">
+          <img src="https://flagcdn.com/w40/es.png" alt="Spanish" class="flag-image"> Spanish
+        </button>
       </div>
 
       <!-- Multiplayer Lobby Screen (Hidden by default) -->
