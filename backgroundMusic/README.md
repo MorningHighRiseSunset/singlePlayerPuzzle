@@ -1,29 +1,42 @@
 # Background Music
 
-## Adding More Songs
+## Adding Pensive Music Tracks
 
-To add more instrumental songs to the background music playlist:
+To add pensive/thinking music tracks to help players concentrate:
 
-1. **Add your audio files** to the `backgroundMusic/` folder
+1. **Download royalty-free pensive music** from these sources:
+   - **Pixabay Music**: https://pixabay.com/music/search/pensive/ (Free, no attribution required)
+   - **Freesound**: https://freesound.org/ (Free, requires account)
+   - **Incompetech**: https://incompetech.com/music/royalty-free/ (Free with attribution)
+   - **Zapsplat**: https://www.zapsplat.com/ (Free with account)
+   - **Open Game Art**: https://opengameart.org/ (Free, game-focused)
+
+   Search for: "ambient", "pensive", "thinking", "calm", "concentration", "puzzle", "meditative"
+
+2. **Add your audio files** to the `backgroundMusic/` folder
    - Supported formats: `.mp3`, `.m4a`, `.wav`, `.ogg`
    - Recommended: Instrumental/ambient music that loops well
+   - Keep file sizes under 5MB for faster loading
 
-2. **Update the playlist** in each game's JavaScript file:
-   - `script.js` (English)
+3. **Update the playlist** in the game's JavaScript file:
+   - `script.js` (English) - around line 10457
    - `french.js`
    - `hindi.js`
    - `mandarin.js`
    - `spanish.js`
 
-3. **Find the `musicPlaylist` array** (around line 10345 in script.js) and add your songs:
+4. **Find the `musicPlaylist` array** and uncomment/add your songs:
 
 ```javascript
 const musicPlaylist = [
-    'backgroundMusic/Background Audio.m4a',
-    'backgroundMusic/your-song-1.mp3',
-    'backgroundMusic/your-song-2.mp3',
-    'backgroundMusic/your-song-3.mp3',
-    // Add more songs as needed
+    // 'backgroundMusic/Background Audio.m4a' // Commented out - replacing with pensive music tracks
+
+    // Pensive/Thinking Music Tracks:
+    'backgroundMusic/pensive-track-1.mp3',
+    'backgroundMusic/pensive-track-2.mp3',
+    'backgroundMusic/pensive-track-3.mp3',
+    'backgroundMusic/pensive-track-4.mp3',
+    'backgroundMusic/pensive-track-5.mp3',
 ];
 ```
 
@@ -33,15 +46,17 @@ const musicPlaylist = [
 - Click "🎵 Music Off" in the burger menu to turn it ON
 - Songs play in random order (shuffled playlist)
 - When a song ends, the next random song automatically plays
-- Volume is set to 30% (adjustable in the code)
+- Volume is set to 30% (adjustable in the code at line 10455)
 
-## Current Songs
+## Current Setup
 
-- Background Audio.m4a
+- The original "Background Audio.m4a" has been commented out
+- Ready for you to add pensive music tracks to the playlist
 
 ## Tips
 
-- Use royalty-free or licensed music
-- Keep file sizes reasonable for web loading
+- Use royalty-free or licensed music to avoid copyright issues
+- Instrumental music without lyrics works best for concentration
+- Ambient, calm, and meditative tracks are ideal for puzzle games
 - Test songs for good loop points if using looped tracks
-- Instrumental music works best for gameplay
+- Keep file sizes reasonable for web loading

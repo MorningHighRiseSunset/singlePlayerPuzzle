@@ -9664,11 +9664,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		
 		// Music playlist - add more songs to this array
 		const musicPlaylist = [
-			'backgroundMusic/Background Audio.m4a'
-			// Add more instrumental songs here:
-			// 'backgroundMusic/song2.mp3',
-			// 'backgroundMusic/song3.mp3',
-			// etc.
+			// 'backgroundMusic/Background Audio.m4a' // Commented out - replacing with pensive music tracks
+
+			// Pensive/Thinking Music Tracks (add your downloaded files to backgroundMusic/ folder):
+			// 'backgroundMusic/pensive-track-1.mp3',
+			// 'backgroundMusic/pensive-track-2.mp3',
+			// 'backgroundMusic/pensive-track-3.mp3',
+			// 'backgroundMusic/pensive-track-4.mp3',
+			// 'backgroundMusic/pensive-track-5.mp3',
 		];
 		
 		let currentTrackIndex = 0;
