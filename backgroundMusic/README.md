@@ -1,15 +1,23 @@
 # Background Music
 
-## Adding Pensive Music Tracks
+## Current Tracks
 
-To add pensive/thinking music tracks to help players concentrate:
+The game includes 4 pensive/ambient music tracks (all CC0/Public Domain, no attribution required):
+
+1. **Background Audio.m4a** - Original track
+2. **Contemplation.mp3** - Ambient track by Joth (OpenGameArt)
+3. **CathedralForest.ogg** - Seamless ambient loop by congusbongus (OpenGameArt)
+4. **DeepDive.mp3** - Ambient chillout track by iamoneabe (OpenGameArt)
+
+## Adding More Tracks
+
+To add more pensive/thinking music tracks:
 
 1. **Download royalty-free pensive music** from these sources:
+   - **Open Game Art**: https://opengameart.org/ (Free, CC0/Public Domain available)
    - **Pixabay Music**: https://pixabay.com/music/search/pensive/ (Free, no attribution required)
    - **Freesound**: https://freesound.org/ (Free, requires account)
    - **Incompetech**: https://incompetech.com/music/royalty-free/ (Free with attribution)
-   - **Zapsplat**: https://www.zapsplat.com/ (Free with account)
-   - **Open Game Art**: https://opengameart.org/ (Free, game-focused)
 
    Search for: "ambient", "pensive", "thinking", "calm", "concentration", "puzzle", "meditative"
 
@@ -31,12 +39,10 @@ To add pensive/thinking music tracks to help players concentrate:
 ```javascript
 const musicPlaylist = [
     'backgroundMusic/Background Audio.m4a',
-    // Add more pensive/thinking music tracks here:
-    'backgroundMusic/pensive-track-1.mp3',
-    'backgroundMusic/pensive-track-2.mp3',
-    'backgroundMusic/pensive-track-3.mp3',
-    'backgroundMusic/pensive-track-4.mp3',
-    'backgroundMusic/pensive-track-5.mp3',
+    'backgroundMusic/Contemplation.mp3',
+    'backgroundMusic/CathedralForest.ogg',
+    'backgroundMusic/DeepDive.mp3',
+    'backgroundMusic/your-new-track.mp3',
 ];
 ```
 
@@ -45,15 +51,10 @@ const musicPlaylist = [
 - Music starts **OFF** by default
 - Click "🎵 Music Off" in the burger menu to turn it ON
 - **Two playback modes**:
-  - **Shuffle All (🔀)**: Plays all tracks in random order, advancing to the next track when one ends
+  - **🔀 Shuffle All**: Plays all tracks in random order, advancing to the next track when one ends
   - **Single Track**: Select a specific track to loop continuously
 - Track selector dropdown appears in the menu (both mobile and desktop drawers)
 - Volume is set to 30% (adjustable in the code)
-
-## Current Setup
-
-- "Background Audio.m4a" is currently enabled as the default track
-- Ready for you to add more pensive music tracks to the playlist
 - Track selector automatically populates with all tracks in the playlist
 
 ## Tips

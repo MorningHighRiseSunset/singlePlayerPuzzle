@@ -9665,12 +9665,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		// Music playlist - add more songs to this array
 		const musicPlaylist = [
 			'backgroundMusic/Background Audio.m4a',
-			// Add more pensive/thinking music tracks here:
-			// 'backgroundMusic/pensive-track-1.mp3',
-			// 'backgroundMusic/pensive-track-2.mp3',
-			// 'backgroundMusic/pensive-track-3.mp3',
-			// 'backgroundMusic/pensive-track-4.mp3',
-			// 'backgroundMusic/pensive-track-5.mp3',
+			'backgroundMusic/Contemplation.mp3',
+			'backgroundMusic/CathedralForest.ogg',
+			'backgroundMusic/DeepDive.mp3',
 		];
 
 		let currentTrackIndex = 0;
