@@ -19,19 +19,19 @@ To add pensive/thinking music tracks to help players concentrate:
    - Keep file sizes under 5MB for faster loading
 
 3. **Update the playlist** in the game's JavaScript file:
-   - `script.js` (English) - around line 10457
+   - `script.js` (English) - around line 10458
    - `french.js`
    - `hindi.js`
    - `mandarin.js`
    - `spanish.js`
+   - `game-multiplayer-logic.js`
 
-4. **Find the `musicPlaylist` array** and uncomment/add your songs:
+4. **Find the `musicPlaylist` array** and add your songs:
 
 ```javascript
 const musicPlaylist = [
-    // 'backgroundMusic/Background Audio.m4a' // Commented out - replacing with pensive music tracks
-
-    // Pensive/Thinking Music Tracks:
+    'backgroundMusic/Background Audio.m4a',
+    // Add more pensive/thinking music tracks here:
     'backgroundMusic/pensive-track-1.mp3',
     'backgroundMusic/pensive-track-2.mp3',
     'backgroundMusic/pensive-track-3.mp3',
@@ -44,14 +44,17 @@ const musicPlaylist = [
 
 - Music starts **OFF** by default
 - Click "🎵 Music Off" in the burger menu to turn it ON
-- Songs play in random order (shuffled playlist)
-- When a song ends, the next random song automatically plays
-- Volume is set to 30% (adjustable in the code at line 10455)
+- **Two playback modes**:
+  - **Shuffle All (🔀)**: Plays all tracks in random order, advancing to the next track when one ends
+  - **Single Track**: Select a specific track to loop continuously
+- Track selector dropdown appears in the menu (both mobile and desktop drawers)
+- Volume is set to 30% (adjustable in the code)
 
 ## Current Setup
 
-- The original "Background Audio.m4a" has been commented out
-- Ready for you to add pensive music tracks to the playlist
+- "Background Audio.m4a" is currently enabled as the default track
+- Ready for you to add more pensive music tracks to the playlist
+- Track selector automatically populates with all tracks in the playlist
 
 ## Tips
 
@@ -60,3 +63,4 @@ const musicPlaylist = [
 - Ambient, calm, and meditative tracks are ideal for puzzle games
 - Test songs for good loop points if using looped tracks
 - Keep file sizes reasonable for web loading
+- Use the shuffle mode for variety, or select a single track if you have a favorite

@@ -10404,22 +10404,23 @@ document.addEventListener("DOMContentLoaded", () => {
 	if (backgroundMusic) {
 		// Set volume to 30% (adjustable)
 		backgroundMusic.volume = 0.3;
-		
+
 		// Music playlist - add more songs to this array
 		const musicPlaylist = [
-			// 'backgroundMusic/Background Audio.m4a' // Commented out - replacing with pensive music tracks
-
-			// Pensive/Thinking Music Tracks (add your downloaded files to backgroundMusic/ folder):
+			'backgroundMusic/Background Audio.m4a',
+			// Add more pensive/thinking music tracks here:
 			// 'backgroundMusic/pensive-track-1.mp3',
 			// 'backgroundMusic/pensive-track-2.mp3',
 			// 'backgroundMusic/pensive-track-3.mp3',
 			// 'backgroundMusic/pensive-track-4.mp3',
 			// 'backgroundMusic/pensive-track-5.mp3',
 		];
-		
+
 		let currentTrackIndex = 0;
 		let isMusicPlaying = false; // Start with music OFF
-		
+		let playMode = 'shuffle'; // 'shuffle' or 'single'
+		let shuffledPlaylist = [];
+
 		// Shuffle array for random playback
 		const shuffleArray = (array) => {
 			for (let i = array.length - 1; i > 0; i--) {
@@ -10428,28 +10429,98 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 			return array;
 		};
-		
+
 		// Get shuffled playlist
-		let shuffledPlaylist = shuffleArray([...musicPlaylist]);
-		
+		const reshufflePlaylist = () => {
+			shuffledPlaylist = shuffleArray([...musicPlaylist]);
+			currentTrackIndex = 0;
+		};
+
+		reshufflePlaylist();
+
+		// Populate track selector dropdowns
+		const populateTrackSelectors = () => {
+			const selectors = [
+				document.getElementById('music-track-select'),
+				document.getElementById('music-track-select-desktop-drawer')
+			];
+
+			selectors.forEach(select => {
+				if (!select) return;
+
+				// Clear existing options except the first one
+				while (select.options.length > 1) {
+					select.remove(1);
+				}
+
+				// Add individual track options
+				musicPlaylist.forEach((track, index) => {
+					const trackName = track.split('/').pop().replace(/\.[^/.]+$/, '');
+					const option = document.createElement('option');
+					option.value = index.toString();
+					option.textContent = `Track ${index + 1}: ${trackName}`;
+					select.appendChild(option);
+				});
+
+				// Handle selection change
+				select.addEventListener('change', (e) => {
+					const value = e.target.value;
+					if (value === 'shuffle') {
+						playMode = 'shuffle';
+						reshufflePlaylist();
+						if (isMusicPlaying) {
+							backgroundMusic.src = shuffledPlaylist[0];
+							backgroundMusic.play().catch(err => console.log('Track play failed:', err));
+						} else {
+							backgroundMusic.src = shuffledPlaylist[0];
+						}
+					} else {
+						playMode = 'single';
+						const trackIndex = parseInt(value);
+						currentTrackIndex = trackIndex;
+						if (isMusicPlaying) {
+							backgroundMusic.src = musicPlaylist[trackIndex];
+							backgroundMusic.play().catch(err => console.log('Track play failed:', err));
+						} else {
+							backgroundMusic.src = musicPlaylist[trackIndex];
+						}
+					}
+
+					// Sync the other selector
+					const otherSelect = selectors.find(s => s !== select);
+					if (otherSelect) {
+						otherSelect.value = value;
+					}
+				});
+			});
+		};
+
+		populateTrackSelectors();
+
 		// Play next track when current one ends
 		backgroundMusic.addEventListener('ended', () => {
-			if (isMusicPlaying && musicPlaylist.length > 1) {
+			if (!isMusicPlaying) return;
+
+			if (playMode === 'shuffle' && musicPlaylist.length > 1) {
 				currentTrackIndex = (currentTrackIndex + 1) % shuffledPlaylist.length;
 				backgroundMusic.src = shuffledPlaylist[currentTrackIndex];
 				backgroundMusic.play().catch(e => console.log('Next track play failed:', e));
+			} else if (playMode === 'single') {
+				// Loop the single selected track
+				backgroundMusic.currentTime = 0;
+				backgroundMusic.play().catch(e => console.log('Track replay failed:', e));
 			}
 		});
-		
+
 		// Set initial track
 		if (shuffledPlaylist.length > 0) {
 			backgroundMusic.src = shuffledPlaylist[0];
 		}
-		
+
 		// Toggle background music
 		const toggleMusicBtn = document.getElementById('toggle-music');
 		const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
-		
+
 		const toggleMusic = () => {
 			if (backgroundMusic) {
 				if (isMusicPlaying) {
@@ -10465,7 +10536,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				}
 			}
 		};
-		
+
 		if (toggleMusicBtn) {
 			toggleMusicBtn.textContent = '🎵 Music Off'; // Initial state
 			toggleMusicBtn.addEventListener('click', toggleMusic);

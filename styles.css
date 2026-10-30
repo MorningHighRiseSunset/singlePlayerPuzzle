@@ -836,6 +836,46 @@ button.cooldown:focus-visible,
   outline: 2px solid #999;
 }
 
+/* --- Music Track Selector --- */
+.music-track-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.music-track-selector label {
+  color: #fff;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.music-track-selector select {
+  background: var(--button-bg);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9em;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.music-track-selector select:hover {
+  background: var(--button-hover);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.music-track-selector select:focus {
+  outline: 2px solid var(--accent);
+}
+
+.music-track-selector select option {
+  background: var(--button-bg);
+  color: #fff;
+}
+
 /* --- Exchange Portal --- */
 .exchange-area {
   margin-top: 20px;
