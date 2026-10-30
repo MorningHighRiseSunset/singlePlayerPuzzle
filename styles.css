@@ -1181,7 +1181,7 @@ button.cooldown:focus-visible,
 /* Add to your CSS file or <style> block */
 .ai-blunder-notification {
     position: fixed;
-    top: 120px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%) scale(0.8);
     min-width: 240px;
@@ -1239,7 +1239,7 @@ button.cooldown:focus-visible,
 /* Mobile responsive for AI notification */
 @media (max-width: 768px) {
     .ai-blunder-notification {
-        top: 100px;
+        bottom: 80px;
         font-size: 1em;
         padding: 14px 28px 14px 20px;
         min-width: 200px;
