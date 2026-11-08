@@ -9731,42 +9731,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		let currentTrackIndex = 0;
 		let isMusicPlaying = false; // Start with music OFF
-		let shuffledPlaylist = [];
-
-		// Shuffle array for random playback
-		const shuffleArray = (array) => {
-			for (let i = array.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[array[i], array[j]] = [array[j], array[i]];
-			}
-			return array;
-		};
-
-		// Get shuffled playlist
-		const reshufflePlaylist = () => {
-			shuffledPlaylist = shuffleArray([...musicPlaylist]);
-			currentTrackIndex = 0;
-		};
-
-		reshufflePlaylist();
 
 		// Play next track when current one ends
 		backgroundMusic.addEventListener('ended', () => {
 			if (!isMusicPlaying) return;
 
-			// Move to next track in shuffled playlist
-			currentTrackIndex++;
-			// If we've played all tracks, reshuffle and start over
-			if (currentTrackIndex >= shuffledPlaylist.length) {
-				reshufflePlaylist();
-			}
-			backgroundMusic.src = shuffledPlaylist[currentTrackIndex];
+			// Move to next track, loop back to start after last track
+			currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.length;
+			backgroundMusic.src = musicPlaylist[currentTrackIndex];
 			backgroundMusic.play().catch(e => console.log('Next track play failed:', e));
 		});
 
 		// Set initial track
-		if (shuffledPlaylist.length > 0) {
-			backgroundMusic.src = shuffledPlaylist[0];
+		if (musicPlaylist.length > 0) {
+			backgroundMusic.src = musicPlaylist[0];
 		}
 
 		// Toggle background music
