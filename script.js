@@ -76,6 +76,18 @@ class Trie {
     }
 }
 
+// NWL2023 lines look like: "FLINT a hard gray rock [n FLINTS]"
+function parseNwlDictionary(text) {
+    return new Set(
+        text.split("\n")
+            .map(line => {
+                const match = line.trim().match(/^([A-Z]+)/);
+                return match ? match[1].toLowerCase() : null;
+            })
+            .filter(Boolean)
+    );
+}
+
 class ScrabbleGame {
 	constructor() {
 		this.board = Array(15)
@@ -483,6 +495,7 @@ class ScrabbleGame {
 	if (this.showAIDebug) console.log("AI thinking...");
 
 		this.blockHintBox();
+		this.ghostAIMove = null; // Clear ghost move at start of AI turn
 
 		let thinkingMessage = document.createElement("div");
 		thinkingMessage.className = "ai-thinking-message";
@@ -2986,10 +2999,15 @@ class ScrabbleGame {
 		const cleanWord = word.split("(")[0].trim();
 
 		try {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
 			// Fetch from the dictionary API
 			const response = await fetch(
 				`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanWord.toLowerCase()}`,
+				{ signal: controller.signal }
 			);
+			clearTimeout(timeoutId);
 
 			// Handle API errors
 			if (!response.ok) {
@@ -3011,7 +3029,11 @@ class ScrabbleGame {
 
 			return null;
 		} catch (error) {
-			console.error(`Error fetching definition for ${word}:`, error);
+			if (error.name === 'AbortError') {
+				console.warn(`Dictionary API timeout for ${cleanWord}`);
+			} else {
+				console.error(`Error fetching definition for ${word}:`, error);
+			}
 			return null;
 		}
 	}
@@ -5676,13 +5698,15 @@ formedWords.forEach((wordInfo) => {
 
 	async init() {
 		await this.loadDictionary();
+		this.buildDictionaryTrie();
 		this.createBoard();
 		this.fillRacks();
 		this.setupTapPlacement();
 		this.setupEventListeners();
 		this.updateGameState();
+	}
 
-		// --- Build the Trie for pro-level AI word generation ---
+	buildDictionaryTrie() {
 		this.trie = new Trie();
 		for (const word of this.dictionary) {
 			this.trie.insert(word.toUpperCase());
@@ -5813,22 +5837,18 @@ formedWords.forEach((wordInfo) => {
 	async loadDictionary() {
 		try {
 			this.dictionary = new Set();
-			
-			// Use CSW21 (Collins Scrabble Words 2021) - most comprehensive international dictionary
-			// Contains ~279,000 words including more plural forms than SOWPODS
-			let response = await fetch("https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/British/CSW21.txt");
-			let text = await response.text();
-			// CSW21 format: one word per line, mixed case
-			// CSW21 format: "WORD definition [part-of-speech -S]" - extract just the word
-			this.dictionary = new Set(
-				text.split("\n")
-					.map(line => {
-						const match = line.match(/^([A-Z]+)/);
-						return match ? match[1].toLowerCase() : null;
-					})
-					.filter(Boolean)
+
+			// Use NWL2023 - Official North American tournament dictionary (latest)
+			const response = await fetch('https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/words/North-American/NWL2023.txt');
+			const text = await response.text();
+			this.dictionary = parseNwlDictionary(text);
+
+			const sampleWords = ["aa", "flint", "za", "qi", "jo"];
+			const foundSamples = sampleWords.filter(word => this.dictionary.has(word));
+			console.log(
+				`📚 NWL2023 loaded: ${this.dictionary.size.toLocaleString()} words` +
+				` (${foundSamples.length}/${sampleWords.length} spot-checks: ${foundSamples.join(", ")})`
 			);
-			console.log("📚 Dictionary loaded successfully. Total word count:", this.dictionary.size);
 
 		} catch (error) {
 			console.error("Error loading dictionary:", error);
@@ -5881,6 +5901,10 @@ formedWords.forEach((wordInfo) => {
 
 	renderRack() {
 		const rack = document.getElementById("tile-rack");
+		if (!rack) {
+			console.error("Tile rack element not found");
+			return;
+		}
 		rack.innerHTML = "";
 
 		this.playerRack.forEach((tile, index) => {
@@ -6393,10 +6417,16 @@ formedWords.forEach((wordInfo) => {
 	}
 
     validateWord() {
-        if (this.placedTiles.length === 0) return false;
+        if (this.placedTiles.length === 0) {
+            this.validationMessage = "No tiles placed. Please place tiles on the board.";
+            return false;
+        }
 
         // Check if tiles are properly connected (same row/col, no gaps)
-        if (!this.areTilesConnected()) return false;
+        if (!this.areTilesConnected()) {
+            this.validationMessage = "Tiles must be placed in a straight line (same row or column) without gaps.";
+            return false;
+        }
 
         // --- NEW: Ensure at least one placed tile is adjacent to or touching an existing tile (except first move) ---
         if (!this.isFirstMove) {
@@ -6420,6 +6450,7 @@ formedWords.forEach((wordInfo) => {
                 });
             });
             if (!touchesExisting) {
+                this.validationMessage = "Words must connect to existing tiles on the board.";
                 console.log("Placed tiles are not connected to any existing word.");
                 return false;
             }
@@ -6434,21 +6465,34 @@ formedWords.forEach((wordInfo) => {
 
         // If no valid words are formed, return false
         if (formedWords.length === 0) {
+            this.validationMessage = "No valid words formed. Words must be at least 2 letters long.";
             console.log("No valid words formed");
             return false;
         }
 
-        // Validate each word
+        // Validate each word and collect invalid words
         let allWordsValid = true;
+        this._invalidWords = []; // Store invalid words for error message
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             if (!this.dictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
+                this._invalidWords.push(wordInfo.word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
             }
         });
+
+        if (!allWordsValid) {
+            const invalidWords = this._invalidWords;
+            if (invalidWords.length === 1) {
+                this.validationMessage = `"${invalidWords[0]}" is not in the English dictionary.`;
+            } else {
+                this.validationMessage = `"${invalidWords.join(", ")}" are not in the English dictionary.`;
+            }
+            return false;
+        }
 
         // First move must use center square
         if (this.isFirstMove) {
@@ -6457,11 +6501,13 @@ formedWords.forEach((wordInfo) => {
                 (tile) => tile.row === 7 && tile.col === 7,
             );
             if (!centerUsed) {
+                this.validationMessage = "First move must use the center square (star symbol).";
                 console.log("First move must use center square");
                 return false;
             }
         }
 
+        this.validationMessage = "Valid word!";
         return allWordsValid;
     }
 
@@ -7670,15 +7716,15 @@ calculateScore() {
 			} else {
 				// Show an animated toast for invalid words, but leave tiles on the board.
 				// The player can now use the dedicated "Return Tiles" button to undo the move.
-				const toastMsg = 'Invalid word! Please try again.';
-				const speakMsg = 'Invalid word. Please try again.';
-				try { 
+				const toastMsg = this.validationMessage || 'Invalid word! Please try again.';
+				const speakMsg = this.validationMessage || 'Invalid word. Please try again.';
+				try {
 					if (typeof this.showAnimatedToast === 'function') {
 						this.showAnimatedToast(toastMsg, 'error');
 					} else if (this.showToast) {
 						this.showToast(toastMsg);
 					}
-				} catch(e) { 
+				} catch(e) {
 					console.warn('Toast display failed:', e);
 				}
 
@@ -7728,14 +7774,48 @@ calculateScore() {
 			}));
 			// compute total if score not provided
 			entry.score = typeof score === 'number' ? score : entry.words.reduce((s, w) => s + (w.score || 0), 0);
+
+			// Fetch definitions for each word (async, non-blocking)
+			this.fetchDefinitionsForEntry(entry);
 		} else {
 			// legacy string entry
 			entry.word = words;
 			entry.score = typeof score === 'number' ? score : 0;
+
+			// Fetch definition for single word if it's not a special action
+			if (words !== "SKIP" && words !== "EXCHANGE" && words !== "QUIT") {
+				this.fetchDefinitionsForEntry(entry);
+			}
 		}
 
 		this.moveHistory.push(entry);
 		this.updateMoveHistory();
+	}
+
+	async fetchDefinitionsForEntry(entry) {
+		try {
+			if (entry.words && Array.isArray(entry.words)) {
+				// Fetch definitions for each word in the array
+				for (const wordEntry of entry.words) {
+					if (wordEntry.word && wordEntry.word !== "BINGO BONUS") {
+						const definition = await this.getWordDefinition(wordEntry.word);
+						if (definition) {
+							wordEntry.definition = definition;
+						}
+					}
+				}
+			} else if (entry.word && entry.word !== "SKIP" && entry.word !== "EXCHANGE" && entry.word !== "QUIT") {
+				// Fetch definition for single word
+				const definition = await this.getWordDefinition(entry.word);
+				if (definition) {
+					entry.definition = definition;
+				}
+			}
+			// Update move history after definitions are fetched
+			this.updateMoveHistory();
+		} catch (error) {
+			console.warn('Failed to fetch definitions for move history:', error);
+		}
 	}
 
 	formatWordForHistory(word, premiumInfo) {
@@ -7759,7 +7839,7 @@ calculateScore() {
 		const mobileHistoryDisplay = document.getElementById("move-history");
 		const desktopHistoryDisplay = document.getElementById("move-history-desktop");
 		const desktopDrawerHistoryDisplay = document.getElementById("move-history-desktop-drawer");
-		
+
 		// Premium square legend
 		const legendHtml = `
 			<div class="premium-legend">
@@ -7780,7 +7860,7 @@ calculateScore() {
 				</div>
 			</div>
 		`;
-		
+
 		const historyContent = "<h3>Move History</h3>" + legendHtml +
 			this.moveHistory
 			.slice(-50)
@@ -7793,12 +7873,25 @@ calculateScore() {
 							return `<span style="color:#4CAF50;font-weight:bold;">BINGO BONUS (50)</span>`;
 						}
 						const formattedWord = this.formatWordForHistory(w.word, w.premiumInfo);
-						
+
 						if (typeof w.score === 'number') return `${formattedWord} (${w.score})`;
 						return formattedWord;
 					});
 					const formatted = parts.join(" & ");
-					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points</div>`;
+
+					// Add definitions if available
+					let definitionsHtml = '';
+					if (move.words.some(w => w.definition)) {
+						definitionsHtml = '<div class="move-definitions">';
+						move.words.forEach(w => {
+							if (w.definition && w.word !== "BINGO BONUS") {
+								definitionsHtml += this.formatDefinitionForHistory(w.word, w.definition);
+							}
+						});
+						definitionsHtml += '</div>';
+					}
+
+					return `<div class="move">${move.player}: ${formatted} for total of ${move.score} points${definitionsHtml}</div>`;
 				}
 
 				// Legacy single-word string entries (SKIP, EXCHANGE, QUIT or regular word)
@@ -7815,7 +7908,16 @@ calculateScore() {
 				// Fallback: single word string
 				if (move.word) {
 					const formattedWord = this.formatWordForHistory(move.word, []);
-					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points</div>`;
+
+					// Add definition if available
+					let definitionsHtml = '';
+					if (move.definition) {
+						definitionsHtml = '<div class="move-definitions">';
+						definitionsHtml += this.formatDefinitionForHistory(move.word, move.definition);
+						definitionsHtml += '</div>';
+					}
+
+					return `<div class="move">${move.player}: ${formattedWord} for ${move.score} points${definitionsHtml}</div>`;
 				}
 
 				// Unknown format
@@ -7840,6 +7942,28 @@ calculateScore() {
 		if (desktopDrawerHistoryDisplay) {
 			desktopDrawerHistoryDisplay.innerHTML = historyContent;
 		}
+	}
+
+	formatDefinitionForHistory(word, definition) {
+		if (!definition || !Array.isArray(definition)) return '';
+
+		const defsHtml = definition.map(meaning => {
+			const partOfSpeech = meaning.partOfSpeech || '';
+			const definitionsList = (meaning.definitions || []).slice(0, 2).map(d => `<li>${d}</li>`).join('');
+			return `
+				<div class="word-definition">
+					<span class="part-of-speech">${partOfSpeech}</span>
+					<ul>${definitionsList}</ul>
+				</div>
+			`;
+		}).join('');
+
+		return `
+			<div class="definition-entry">
+				<strong>${word}:</strong>
+				${defsHtml}
+			</div>
+		`;
 	}
 
 	updateGameState() {
@@ -8035,10 +8159,12 @@ calculateScore() {
 			winOverlay.classList.add("active");
 			messageBox.classList.add("celebrate");
 			if (!isDraw) {
-				if (typeof this.showBingoBonusEffect === 'function') {
-					try { this.showBingoBonusEffect(); } catch (e) { console.warn('showBingoBonusEffect failed', e); }
-				} else {
-					try { this.createConfettiEffect(); } catch (e) { console.warn('createConfettiEffect failed', e); }
+				// Special confetti effect for winning the game
+				try {
+					this.createWinConfetti();
+				} catch (e) {
+					console.warn('Win confetti failed, falling back to standard', e);
+					try { this.createConfettiEffect({ variant: 'gold' }); } catch (e2) { console.warn('Fallback confetti failed', e2); }
 				}
 			}
 		});
@@ -8048,28 +8174,57 @@ calculateScore() {
 		// options.variant: 'standard' | 'silver' | 'gold' - tune intensity/colours
 		options = options || {};
 		const variant = options.variant || 'standard';
-		// Just run ONE confetti effect - no staggering or multiple animations
-		// Use DOM confetti as it's the most reliable
-		const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
-		const isSamsung = /SM-|Samsung|GT-|SAMSUNG/i.test(ua);
 
 		try {
-			// Use DOM confetti for all cases (simplest and most reliable)
-			if (typeof this.createDOMConfetti === 'function') {
-				const baseCount = Math.max(60, Math.min(220, Math.floor(window.innerWidth / 6)));
-				const count = variant === 'gold' ? Math.min(420, Math.floor(baseCount * 1.6)) : variant === 'silver' ? Math.min(320, Math.floor(baseCount * 1.25)) : baseCount;
-				this.createDOMConfetti({ count, variant });
+			// Use canvas-confetti library for professional confetti effects
+			if (typeof confetti !== 'undefined') {
+				const duration = variant === 'gold' ? 3000 : variant === 'silver' ? 2500 : 2000;
+				const particleCount = variant === 'gold' ? 150 : variant === 'silver' ? 100 : 80;
+				
+				// Different colors based on variant
+				const colors = variant === 'gold' 
+					? ['#FFD700', '#FFC107', '#FFAB40', '#FF4081', '#7C4DFF']
+					: variant === 'silver'
+					? ['#C0C0C0', '#90A4AE', '#448AFF', '#FFAB40', '#00E676']
+					: ['#FFD700', '#FF4081', '#00E676', '#448AFF', '#FFAB40', '#8E44AD', '#FF5722'];
+
+				// Launch confetti from both sides
+				confetti({
+					particleCount: particleCount,
+					spread: 70,
+					origin: { x: 0, y: 0.8 },
+					colors: colors,
+					disableForReducedMotion: true,
+					zIndex: 100000
+				});
+
+				confetti({
+					particleCount: particleCount,
+					spread: 70,
+					origin: { x: 1, y: 0.8 },
+					colors: colors,
+					disableForReducedMotion: true,
+					zIndex: 100000
+				});
+
+				// For gold variant, add extra burst from center
+				if (variant === 'gold') {
+					setTimeout(() => {
+						confetti({
+							particleCount: 80,
+							spread: 100,
+							origin: { x: 0.5, y: 0.5 },
+							colors: colors,
+							disableForReducedMotion: true,
+							zIndex: 100000
+						});
+					}, 200);
+				}
+
 				return;
 			}
 
-			// Fallback: try emoji confetti if DOM not available
-			if (typeof this.createEmojiConfetti === 'function') {
-				const defaultEmojis = variant === 'gold' ? ['🏆','🎖️','🌟','🎉','🎊','✨'] : variant === 'silver' ? ['🎉','🎊','✨','🥳','🎈'] : ['🎉','🎊','✨','🥳','🎈','😊'];
-				this.createEmojiConfetti({ emojis: defaultEmojis, variant });
-				return;
-			}
-
-			// Ultimate fallback: white flash overlay
+			// Fallback: white flash overlay if confetti library not available
 			const overlay = document.createElement('div');
 			overlay.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99999;background:rgba(255,255,255,0.85);opacity:0;transition:opacity .18s ease-out';
 			document.body.appendChild(overlay);
@@ -8078,6 +8233,85 @@ calculateScore() {
 			setTimeout(() => overlay.remove(), 520);
 
 		} catch (e) { console.warn('createConfettiEffect failed', e); }
+	}
+
+	// Special confetti effect for winning the game - more spectacular than bingo
+	createWinConfetti() {
+		try {
+			if (typeof confetti !== 'undefined') {
+				const colors = ['#FFD700', '#FF4081', '#00E676', '#448AFF', '#FFAB40', '#8E44AD', '#FF5722', '#7C4DFF'];
+				
+				// Multiple bursts from different angles
+				const duration = 5000;
+				const end = Date.now() + duration;
+
+				// First burst - from bottom center
+				confetti({
+					particleCount: 100,
+					spread: 80,
+					origin: { x: 0.5, y: 1 },
+					colors: colors,
+					zIndex: 100000
+				});
+
+				// Second burst - from left
+				setTimeout(() => {
+					confetti({
+						particleCount: 80,
+						spread: 60,
+						origin: { x: 0, y: 0.6 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 200);
+
+				// Third burst - from right
+				setTimeout(() => {
+					confetti({
+						particleCount: 80,
+						spread: 60,
+						origin: { x: 1, y: 0.6 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 400);
+
+				// Continuous smaller bursts
+				const interval = setInterval(() => {
+					const timeLeft = end - Date.now();
+					if (timeLeft <= 0) {
+						return clearInterval(interval);
+					}
+
+					const particleCount = 50 * (timeLeft / duration);
+					confetti({
+						particleCount: Math.max(10, particleCount),
+						spread: 55,
+						origin: { x: Math.random(), y: Math.random() * 0.5 + 0.5 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 300);
+
+				// Final grand burst
+				setTimeout(() => {
+					confetti({
+						particleCount: 150,
+						spread: 120,
+						origin: { x: 0.5, y: 0.5 },
+						colors: colors,
+						zIndex: 100000
+					});
+				}, 1500);
+
+				return;
+			}
+
+			// Fallback to standard confetti
+			this.createConfettiEffect({ variant: 'gold' });
+		} catch (e) {
+			console.warn('createWinConfetti failed', e);
+		}
 	}
 
 	// Canvas-based confetti: lightweight particle simulation drawn into a single canvas.
@@ -10213,6 +10447,68 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// Initialize move history display with legend
 	game.updateMoveHistory();
+
+	// Initialize background music
+	const backgroundMusic = document.getElementById('backgroundMusic');
+	if (backgroundMusic) {
+		// Set volume to 30% (adjustable)
+		backgroundMusic.volume = 0.3;
+
+		// Music playlist - add more songs to this array
+		const musicPlaylist = [
+			'backgroundMusic/Background Audio.m4a',
+			'backgroundMusic/Contemplation.mp3',
+			'backgroundMusic/CathedralForest.ogg',
+			'backgroundMusic/DeepDive.mp3',
+		];
+
+		let currentTrackIndex = 0;
+		let isMusicPlaying = false; // Start with music OFF
+
+		// Play next track when current one ends
+		backgroundMusic.addEventListener('ended', () => {
+			if (!isMusicPlaying) return;
+
+			// Move to next track, loop back to start after last track
+			currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.length;
+			backgroundMusic.src = musicPlaylist[currentTrackIndex];
+			backgroundMusic.play().catch(e => console.log('Next track play failed:', e));
+		});
+
+		// Set initial track
+		if (musicPlaylist.length > 0) {
+			backgroundMusic.src = musicPlaylist[0];
+		}
+
+		// Toggle background music
+		const toggleMusicBtn = document.getElementById('toggle-music');
+		const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
+
+		const toggleMusic = () => {
+			if (backgroundMusic) {
+				if (isMusicPlaying) {
+					backgroundMusic.pause();
+					isMusicPlaying = false;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music Off';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music Off';
+				} else {
+					backgroundMusic.play().catch(e => console.log('Music play failed:', e));
+					isMusicPlaying = true;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music On';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music On';
+				}
+			}
+		};
+
+		if (toggleMusicBtn) {
+			toggleMusicBtn.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtn.addEventListener('click', toggleMusic);
+		}
+		if (toggleMusicBtnDesktop) {
+			toggleMusicBtnDesktop.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtnDesktop.addEventListener('click', toggleMusic);
+		}
+	}
 
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
 	const primeSpeech = () => {

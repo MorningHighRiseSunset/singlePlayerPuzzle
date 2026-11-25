@@ -1,0 +1,543 @@
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const server = http.createServer(app);
+
+// CORS configuration - allow Vercel frontend and local development
+const allowedOrigins = [
+    'https://single-player-puzzle.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+];
+
+// Add from environment variable if configured
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+const io = socketIo(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+
+// Serve static files
+app.use(express.static(path.join(__dirname)));
+
+// Game state storage
+const games = {};
+const GAMES_FILE = path.join(__dirname, 'games.json');
+const socketToPlayer = {}; // Map socket.id to playerId
+const socketToGame = {}; // Map socket.id to gameId
+
+function emitToGamePlayers(game, event, payload, exceptSocketId = null) {
+    if (!game) return;
+    const sent = new Set();
+    const sockets = game.playerSockets || {};
+    for (const sid of Object.values(sockets)) {
+        if (sid && sid !== exceptSocketId && !sent.has(sid)) {
+            io.to(sid).emit(event, payload);
+            sent.add(sid);
+        }
+    }
+    if (game.id) {
+        if (exceptSocketId) {
+            io.to(game.id).except(exceptSocketId).emit(event, payload);
+        } else {
+            io.to(game.id).emit(event, payload);
+        }
+    }
+}
+
+// Tile bag management
+function createTileBag() {
+    const tiles = [];
+    const distribution = {
+        'A': 9, 'B': 2, 'C': 2, 'D': 4, 'E': 12, 'F': 2, 'G': 3, 'H': 2, 'I': 9,
+        'J': 1, 'K': 1, 'L': 4, 'M': 2, 'N': 6, 'O': 8, 'P': 2, 'Q': 1, 'R': 6,
+        'S': 4, 'T': 6, 'U': 4, 'V': 2, 'W': 2, 'X': 1, 'Y': 2, 'Z': 1, '*': 2
+    };
+    
+    for (const [letter, count] of Object.entries(distribution)) {
+        for (let i = 0; i < count; i++) {
+            tiles.push({ letter, isBlank: letter === '*' });
+        }
+    }
+    
+    // Shuffle the bag
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    
+    return tiles;
+}
+
+// Balance a player's rack to have a good mix of vowels and consonants
+function balanceRack(rack, tileBag) {
+    const vowels = ['A', 'E', 'I', 'O', 'U'];
+    const vowelCount = rack.filter(tile => vowels.includes(tile.letter)).length;
+
+    // Aim for 2-4 vowels in a 7-tile rack
+    while (vowelCount < 2 || vowelCount > 4) {
+        if (vowelCount < 2) {
+            // Need more vowels - remove a consonant and add a vowel
+            const consonantIndex = rack.findIndex(tile => !vowels.includes(tile.letter) && tile.letter !== '*');
+            if (consonantIndex !== -1) {
+                const removed = rack.splice(consonantIndex, 1)[0];
+                tileBag.push(removed);
+                
+                // Find a vowel in the bag
+                const vowelInBag = tileBag.findIndex(t => vowels.includes(t.letter));
+                if (vowelInBag !== -1) {
+                    rack.push(tileBag.splice(vowelInBag, 1)[0]);
+                } else {
+                    // No vowels left, put the consonant back
+                    rack.push(removed);
+                    break;
+                }
+            } else {
+                break;
+            }
+        } else if (vowelCount > 4) {
+            // Need fewer vowels - remove a vowel and add a consonant
+            const vowelIndex = rack.findIndex(tile => vowels.includes(tile.letter));
+            if (vowelIndex !== -1) {
+                const removed = rack.splice(vowelIndex, 1)[0];
+                tileBag.push(removed);
+                
+                // Find a consonant in the bag
+                const consonantInBag = tileBag.findIndex(t => !vowels.includes(t.letter) && t.letter !== '*');
+                if (consonantInBag !== -1) {
+                    rack.push(tileBag.splice(consonantInBag, 1)[0]);
+                } else {
+                    // No consonants left, put the vowel back
+                    rack.push(removed);
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    
+    return rack;
+}
+
+// Load games from disk on startup
+function loadGames() {
+    try {
+        if (fs.existsSync(GAMES_FILE)) {
+            const data = fs.readFileSync(GAMES_FILE, 'utf8');
+            const loadedGames = JSON.parse(data);
+            Object.assign(games, loadedGames);
+            console.log('Loaded games from disk:', Object.keys(games).length);
+        }
+    } catch (e) {
+        console.log('Error loading games from disk:', e);
+    }
+}
+
+// Save games to disk
+function saveGames() {
+    try {
+        fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
+    } catch (e) {
+        console.log('Error saving games to disk:', e);
+    }
+}
+
+// Load games on startup
+loadGames();
+
+// Game expiration check - run every 30 seconds
+setInterval(() => {
+    const now = new Date();
+    const fiveMinutes = 5 * 60 * 1000;
+    
+    for (const gameId in games) {
+        const game = games[gameId];
+        const gameAge = now - new Date(game.createdAt);
+        
+        // Remove games older than 5 minutes with only 1 player
+        if (gameAge > fiveMinutes && game.players < 2) {
+            console.log('Game expired and removed:', gameId);
+            delete games[gameId];
+            saveGames();
+            io.emit('game-list-updated', Object.values(games));
+        }
+    }
+}, 30000);
+
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    // Create a new game
+    socket.on('create-game', (data) => {
+        const playerId = data.playerId;
+        socketToPlayer[socket.id] = playerId;
+        
+        const gameId = generateGameId();
+        const game = {
+            id: gameId,
+            name: 'Puzzle Game',
+            players: 1,
+            maxPlayers: 2,
+            status: 'waiting',
+            language: data.language || 'english',
+            createdAt: new Date(),
+            hostId: playerId,
+            playerIds: [playerId],
+            hostSocketId: socket.id,
+            tileBag: createTileBag(),
+            playerTiles: {}, // Map playerId to their tiles
+            playerSockets: {},
+            currentPlayerId: playerId,
+            board: {} // Board state: {row_col: {letter, playerId}}
+        };
+        
+        // Give host their initial tiles and balance the rack
+        game.playerTiles[playerId] = game.tileBag.splice(0, 7);
+        game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
+        
+        games[gameId] = game;
+        game.playerSockets[playerId] = socket.id;
+        socketToGame[socket.id] = gameId;
+        socket.join(gameId);
+        
+        console.log('Game created:', gameId, 'by:', playerId);
+        console.log('Host tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
+        console.log('Remaining tiles in bag:', game.tileBag.length);
+        console.log('All player tiles:', JSON.stringify(game.playerTiles, null, 2));
+        
+        // Save to disk
+        saveGames();
+        
+        // Send game to client with their tiles
+        socket.emit('game-created', {
+            ...game,
+            myTiles: game.playerTiles[playerId],
+            allPlayerTiles: game.playerTiles // Include all players' tiles for comparison
+        });
+        
+        // Broadcast to lobby
+        io.emit('game-list-updated', Object.values(games));
+    });
+
+    // Join an existing game
+    socket.on('join-game', (data) => {
+        const { gameId, playerId } = data;
+        const game = games[gameId];
+        
+        if (!game) {
+            socket.emit('error', { message: 'Game not found or expired' });
+            return;
+        }
+        
+        if (game.players >= game.maxPlayers) {
+            socket.emit('error', { message: 'Game is full' });
+            return;
+        }
+        
+        // Map socket to player
+        socketToPlayer[socket.id] = playerId;
+        
+        // Add player to game
+        game.players += 1;
+        game.playerIds.push(playerId);
+        
+        // Give joining player their tiles from the server's bag and balance the rack
+        game.playerTiles[playerId] = game.tileBag.splice(0, 7);
+        game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
+        game.playerSockets = game.playerSockets || {};
+        game.playerSockets[playerId] = socket.id;
+        socketToGame[socket.id] = gameId;
+        socket.join(gameId);
+        
+        console.log('Player joined:', playerId, 'to game:', gameId);
+        console.log('Player tiles:', game.playerTiles[playerId].map(t => t.letter).join(','));
+        console.log('Remaining tiles in bag:', game.tileBag.length);
+        console.log('All player tiles:', JSON.stringify(game.playerTiles, null, 2));
+        
+        // Save to disk
+        saveGames();
+        
+        // Send current game state to the joining player with their tiles
+        socket.emit('game-joined', {
+            game: game,
+            myTiles: game.playerTiles[playerId],
+            allPlayerTiles: game.playerTiles // Include all players' tiles for comparison
+        });
+        
+        // Notify all players in the game (including the joiner)
+        io.to(gameId).emit('player-joined', {
+            playerId: playerId,
+            players: game.players,
+            playerIds: game.playerIds,
+            hostId: game.hostId
+        });
+        
+        // Update game list
+        io.emit('game-list-updated', Object.values(games));
+        
+        // If game is now full, automatically start it
+        if (game.players === game.maxPlayers) {
+            game.status = 'playing';
+            saveGames();
+            io.to(gameId).emit('game-started', { language: game.language });
+        }
+    });
+
+    // Start the game
+    socket.on('start-game', (data) => {
+        const { gameId } = data;
+        const game = games[gameId];
+        const playerId = socketToPlayer[socket.id];
+        
+        if (!game) return;
+        
+        if (game.hostId !== playerId) {
+            socket.emit('error', { message: 'Only host can start the game' });
+            return;
+        }
+        
+        game.status = 'playing';
+        
+        console.log('Game started:', gameId);
+        
+        // Save to disk
+        saveGames();
+        
+        // Notify all players
+        io.to(gameId).emit('game-started', { language: game.language });
+    });
+
+    // Player leaves
+    socket.on('leave-game', (data) => {
+        const { gameId } = data;
+        const game = games[gameId];
+        const playerId = socketToPlayer[socket.id];
+        
+        if (game) {
+            socket.leave(gameId);
+            
+            // Notify others if host left
+            if (game.hostId === playerId) {
+                io.to(gameId).emit('host-left');
+                delete games[gameId];
+            } else {
+                // Remove player
+                game.players -= 1;
+                game.playerIds = game.playerIds.filter(id => id !== playerId);
+                io.to(gameId).emit('player-left', { players: game.players, playerIds: game.playerIds });
+            }
+            
+            // Save to disk
+            saveGames();
+            
+            io.emit('game-list-updated', Object.values(games));
+        }
+    });
+
+    // Get game list
+    socket.on('get-games', () => {
+        socket.emit('game-list', Object.values(games));
+    });
+
+    // Join game room for gameplay
+    socket.on('join-game-room', async (data) => {
+        const { gameId, playerId } = data;
+        const game = games[gameId];
+        
+        if (!game) {
+            console.warn('join-game-room failed; game not found:', gameId);
+            socket.emit('error', { message: 'Game not found' });
+            return;
+        }
+
+        socketToPlayer[socket.id] = playerId;
+        socketToGame[socket.id] = gameId;
+        game.playerSockets = game.playerSockets || {};
+        game.playerSockets[playerId] = socket.id;
+        await socket.join(gameId);
+
+        socket.emit('game-state', {
+            gameId: game.id,
+            players: game.players,
+            hostId: game.hostId,
+            status: game.status,
+            currentPlayerId: game.currentPlayerId || game.hostId,
+            myTiles: game.playerTiles[playerId] || [],
+            allPlayerTiles: game.playerTiles,
+            remainingTiles: game.tileBag.length,
+            board: game.board
+        });
+
+        socket.to(gameId).emit('player-reconnected', { playerId });
+
+        console.log('Player joined game room:', gameId, 'as:', playerId, 'host is:', game.hostId);
+        console.log('Room sockets:', game.playerSockets);
+        console.log('Sending tiles:', game.playerTiles[playerId]?.map(t => t.letter).join(',') || 'none');
+        console.log('Sending board state with', Object.keys(game.board).length, 'tiles');
+    });
+
+    // Player makes a move
+    socket.on('player-move', (data, ack) => {
+        const { gameId, move } = data || {};
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (!game || !move) {
+            console.warn('player-move ignored; game or move missing', { gameId, playerId, hasGame: !!game });
+            if (typeof ack === 'function') ack({ ok: false, reason: 'game-or-move-missing' });
+            return;
+        }
+
+        console.log('Player move:', playerId, 'in game:', gameId, 'placements:', move.placements?.length);
+
+        // Remove used tiles from player's rack
+        if (move.placements && game.playerTiles[playerId]) {
+            const tilesUsed = move.placements.length;
+            game.playerTiles[playerId] = game.playerTiles[playerId].slice(tilesUsed);
+            console.log('Removed', tilesUsed, 'tiles from player rack, remaining:', game.playerTiles[playerId].length);
+        }
+
+        if (move.placements) {
+            move.placements.forEach(placement => {
+                const { row, col, letter, isBlank } = placement;
+                const cellKey = `${row}_${col}`;
+                game.board[cellKey] = {
+                    letter: letter,
+                    isBlank: isBlank,
+                    playerId: playerId,
+                    timestamp: Date.now()
+                };
+            });
+        }
+
+        // Draw new tiles to refill player's rack to 7
+        const tilesNeeded = 7 - (game.playerTiles[playerId]?.length || 0);
+        if (tilesNeeded > 0 && game.tileBag.length > 0) {
+            const newTiles = game.tileBag.splice(0, tilesNeeded);
+            game.playerTiles[playerId] = game.playerTiles[playerId] || [];
+            game.playerTiles[playerId].push(...newTiles);
+            console.log('Drew', newTiles.length, 'new tiles for player', playerId, ':', newTiles.map(t => t.letter).join(','));
+            
+            // Balance the rack after drawing new tiles
+            game.playerTiles[playerId] = balanceRack(game.playerTiles[playerId], game.tileBag);
+        }
+
+        const playerIds = game.playerIds || [];
+        const opponentId = playerIds.find(id => id && id !== playerId) || playerIds[0];
+        game.currentPlayerId = opponentId || playerId;
+        game.playerSockets = game.playerSockets || {};
+        game.playerSockets[playerId] = socket.id;
+
+        const payload = {
+            playerId,
+            move,
+            board: game.board,
+            currentPlayerId: game.currentPlayerId
+        };
+
+        emitToGamePlayers(game, 'opponent-move', payload, socket.id);
+        emitToGamePlayers(game, 'turn-change', { currentPlayerId: game.currentPlayerId });
+        emitToGamePlayers(game, 'board-state', { board: game.board });
+        
+        // Send updated tiles to the player who made the move
+        socket.emit('tiles-drawn', {
+            tiles: game.playerTiles[playerId] || [],
+            remaining: game.tileBag.length
+        });
+
+        saveGames();
+        if (typeof ack === 'function') ack({ ok: true, board: game.board, currentPlayerId: game.currentPlayerId });
+    });
+
+    socket.on('tile-preview', (data) => {
+        const { gameId, placement } = data || {};
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        if (!game || !placement) return;
+        emitToGamePlayers(game, 'tile-preview', { playerId, placement }, socket.id);
+    });
+
+    socket.on('tile-preview-clear', (data) => {
+        const { gameId } = data || {};
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        if (!game) return;
+        emitToGamePlayers(game, 'tile-preview-clear', { playerId }, socket.id);
+    });
+
+    // Player updates tile count
+    socket.on('update-tiles', (data) => {
+        const { gameId, tileCount } = data;
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (game) {
+            // Broadcast tile count to opponent
+            socket.to(gameId).emit('opponent-tiles', {
+                playerId: playerId,
+                tileCount: tileCount
+            });
+        }
+    });
+
+    // Player draws new tiles from the bag
+    socket.on('draw-tiles', (data) => {
+        const { gameId, count } = data;
+        const playerId = socketToPlayer[socket.id];
+        const game = games[gameId];
+        
+        if (game) {
+            // Draw tiles from server's bag
+            const newTiles = game.tileBag.splice(0, count);
+            game.playerTiles[playerId] = newTiles;
+            
+            console.log('Player drew', count, 'tiles:', newTiles.map(t => t.letter).join(','));
+            
+            socket.emit('tiles-drawn', {
+                tiles: newTiles,
+                remaining: game.tileBag.length
+            });
+            
+            saveGames();
+        }
+    });
+
+    socket.on('disconnect', () => {
+        const playerId = socketToPlayer[socket.id];
+        const gameId = socketToGame[socket.id];
+        console.log('Client disconnected:', socket.id, 'player:', playerId, 'game:', gameId);
+
+        if (gameId && games[gameId] && games[gameId].playerSockets) {
+            const mapped = games[gameId].playerSockets[playerId];
+            if (mapped === socket.id) {
+                delete games[gameId].playerSockets[playerId];
+            }
+        }
+
+        delete socketToPlayer[socket.id];
+        delete socketToGame[socket.id];
+        // Do not delete the game here — navigating from lobby to the board
+        // disconnects the lobby socket and used to wipe the match mid-play.
+    });
+});
+
+function generateGameId() {
+    return 'GAME-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});

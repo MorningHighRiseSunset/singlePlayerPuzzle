@@ -1,26 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- DO NOT MODIFY: Google tag (gtag.js) analytics snippet -->
-    <!-- Google tag (gtag.js) - DISABLED -->
-    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFT3E5F6HX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag('js', new Date());
-      gtag('config', 'G-VFT3E5F6HX');
-    </script> -->
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Puzzle Home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <link rel="stylesheet" href="homeScreen.css">
+    <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   </head>
   <body>
     <div class="home-container">
-      <h1 style="margin-bottom: 14px; letter-spacing: 0.08em; font-size: 1.8em;">PUZZLE</h1>
       <div class="mini-board-container">
         <div class="mini-scrabble-board">
           <!-- 9x9 Mini Board, center cell has fleur-de-lis -->
@@ -129,19 +119,64 @@
           </div>
         </div>
       </div>
-      <div class="language-buttons-container">
-        <button class="lang-btn" data-language="english" data-href="game.html">🇺🇸 English</button>
-        <button class="lang-btn" data-language="french" data-href="french.html">🇫🇷 French</button>
-        <button class="lang-btn" data-language="hindi" data-href="hindi.html">🇮🇳 Hindi</button>
-        <button class="lang-btn" data-language="mandarin" data-href="mandarin.html">🇨🇳 Mandarin</button>
-        <button class="lang-btn" data-language="spanish" data-href="spanish.html">🇪🇸 Spanish</button>
+      <!-- Main Menu Buttons -->
+      <div class="mode-buttons-container" id="mainMenu" style="display: none;">
+        <button class="mode-btn" id="singlePlayerBtn">👤 Single Player</button>
+        <button class="mode-btn" id="createMultiplayerBtn">🎮 Create Multiplayer Game</button>
+        <button class="mode-btn" id="joinMultiplayerBtn">� Join Multiplayer Game</button>
       </div>
+      
+      <!-- Join Multiplayer Game Input (Hidden by default) -->
+      <div class="join-game-container" id="joinGameContainer" style="display: none;">
+        <button class="back-btn" id="backToMenuFromJoinBtn">← Back</button>
+        <h2>Join Multiplayer Game</h2>
+        <div class="join-game-input-wrapper">
+          <p>Enter the game code your friend shared with you:</p>
+          <input type="text" id="gameCodeInput" class="game-code-input" placeholder="Enter game code (e.g., ABC123)" maxlength="9">
+          <button class="join-game-submit-btn" id="joinGameSubmitBtn">🔗 Join Game</button>
+        </div>
+      </div>
+
+      <!-- Language Selection Screen (Hidden by default) -->
+      <div class="language-buttons-container" id="languageScreen" style="display: none;">
+        <button class="back-btn" id="backToMenuBtn">← Back</button>
+        <button class="lang-btn" data-language="english" data-href="game.html">
+          <img src="https://flagcdn.com/w40/us.png" alt="English" class="flag-image"> English
+        </button>
+        <button class="lang-btn" data-language="french" data-href="french.html">
+          <img src="https://flagcdn.com/w40/fr.png" alt="French" class="flag-image"> French
+        </button>
+        <button class="lang-btn" data-language="hindi" data-href="hindi.html">
+          <img src="https://flagcdn.com/w40/in.png" alt="Hindi" class="flag-image"> Hindi
+        </button>
+        <button class="lang-btn" data-language="mandarin" data-href="mandarin.html">
+          <img src="https://flagcdn.com/w40/cn.png" alt="Mandarin" class="flag-image"> Mandarin
+        </button>
+        <button class="lang-btn" data-language="spanish" data-href="spanish.html">
+          <img src="https://flagcdn.com/w40/es.png" alt="Spanish" class="flag-image"> Spanish
+        </button>
+      </div>
+
+      <!-- Multiplayer Lobby Screen (Hidden by default) -->
+      <div class="lobby-content" id="lobbyScreen" style="display: none;">
+        <button class="back-btn" id="backToMenuFromLobbyBtn">← Back</button>
+        <h2>Multiplayer Lobby</h2>
+        <div class="create-game-container">
+          <button class="create-game-btn" id="createGameBtn">🎮 Create Game</button>
+        </div>
+        <div class="active-games-container">
+          <h3>Active Games</h3>
+          <div class="games-list" id="gamesList">
+            <p class="no-games-message">No active games available</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Passing Notifications Container -->
+      <div id="passing-notifications" class="passing-notifications"></div>
     </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="runtime-config.js"></script>
     <script src="homeScreen.js"></script>
-    <!-- Vercel Analytics -->
-    <script>
-      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
   </body>
 </html>

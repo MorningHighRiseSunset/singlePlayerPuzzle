@@ -19,25 +19,52 @@ function getDeepLBaseUrl(key) {
 }
 
 async function fetchDictionaryDefinition(word, langCode) {
-  const response = await fetch(
-    `https://api.dictionaryapi.dev/api/v2/entries/${langCode}/${encodeURIComponent(word.toLowerCase())}`,
-  );
-  if (!response.ok) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+  try {
+    const response = await fetch(
+      `https://api.dictionaryapi.dev/api/v2/entries/${langCode}/${encodeURIComponent(word.toLowerCase())}`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`Dictionary API returned ${response.status} for ${word} (${langCode})`);
+      // Fallback to English if language-specific API fails
+      if (langCode !== 'en') {
+        console.log(`Falling back to English definition for ${word}`);
+        return await fetchDictionaryDefinition(word, 'en');
+      }
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data?.[0]?.meanings?.length) {
+      return null;
+    }
+
+    return data[0].meanings.map((meaning) => ({
+      partOfSpeech: meaning.partOfSpeech || "definition",
+      definitions: meaning.definitions
+        .slice(0, 2)
+        .map((entry) => entry.definition)
+        .filter(Boolean),
+    }));
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn(`Dictionary API timeout for ${word} (${langCode})`);
+      // Fallback to English on timeout
+      if (langCode !== 'en') {
+        console.log(`Falling back to English definition for ${word} after timeout`);
+        return await fetchDictionaryDefinition(word, 'en');
+      }
+    } else {
+      console.error(`Dictionary API error for ${word}:`, error);
+    }
     return null;
   }
-
-  const data = await response.json();
-  if (!data?.[0]?.meanings?.length) {
-    return null;
-  }
-
-  return data[0].meanings.map((meaning) => ({
-    partOfSpeech: meaning.partOfSpeech || "definition",
-    definitions: meaning.definitions
-      .slice(0, 2)
-      .map((entry) => entry.definition)
-      .filter(Boolean),
-  }));
 }
 
 async function translateWithDeepL(texts, targetLang, authKey) {

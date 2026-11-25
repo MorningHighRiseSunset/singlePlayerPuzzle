@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     <title>Puzzle Game</title>
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -411,8 +414,14 @@
         }
       }
     </style>
+    <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   </head>
   <body>
+    <!-- Background Music -->
+    <audio id="backgroundMusic">
+      <source src="backgroundMusic/Background Audio.m4a" type="audio/mp4">
+    </audio>
+    
     <!-- Mobile Drawer (Burger menu content) -->
     <div id="mobile-drawer" class="mobile-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
@@ -462,6 +471,7 @@
             <!-- Submit/Return Tiles removed from burger menu drawer -->
             <button id="shuffle-rack" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn" data-i18n="skip-turn">Skip Turn</button>
+            <button id="toggle-music" data-i18n="toggle-music">🎵 Toggle Music</button>
             <button id="quit-game" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
           <!-- How to Play instructions INSIDE the burger menu drawer -->
@@ -551,6 +561,7 @@
             <!-- Submit removed from desktop burger menu drawer -->
             <button id="shuffle-rack-desktop-drawer" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn-desktop-drawer" data-i18n="skip-turn">Skip Turn</button>
+            <button id="toggle-music-desktop-drawer" data-i18n="toggle-music">🎵 Toggle Music</button>
             <button id="quit-game-desktop-drawer" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
@@ -833,6 +844,7 @@
     </script>
     <script src="translations.js"></script>
     <script src="tile_rack_checker.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

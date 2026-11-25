@@ -253,9 +253,11 @@
 body {
   margin: 0;
   padding: 10px; /* Reduced from 20px */
+  padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
   background: linear-gradient(145deg, var(--light), #f0f0f0);
-  font-family: Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh; /* iOS safe viewport */
   box-sizing: border-box;
   /* Better touch support */
   -webkit-touch-callout: none;
@@ -321,7 +323,9 @@ body {
   object-fit: contain !important;
 }
 
-#move-history {
+#move-history,
+#move-history-desktop,
+#move-history-desktop-drawer {
   background: #f5f5f5;
   border-radius: 4px; /* Reduced from 5px */
   padding: 8px; /* Reduced from 10px */
@@ -329,6 +333,26 @@ body {
   max-height: 250px; /* Reduced from 300px */
   overflow-y: auto;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05); /* Reduced shadow */
+}
+
+.move {
+  padding: 6px 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+  font-size: 0.9em;
+  line-height: 1.3;
+}
+
+/* Player moves - white background */
+.move.player-move {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+}
+
+/* Opponent moves - light blue background */
+.move.opponent-move {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
 }
 
 /* --- Mobile Notices --- */
@@ -459,6 +483,52 @@ body {
   max-width: 550px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
   margin: 6px auto 6px auto;
+}
+
+/* Opponent Rack (multiplayer) - same styling as AI rack */
+.opponent-rack {
+  display: flex;
+  background: var(--button-bg);
+  padding: 8px;
+  border-radius: 8px;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  max-width: 550px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  margin: 6px auto 6px auto;
+}
+
+/* Turn Indicator for Multiplayer */
+.turn-indicator {
+  display: none;
+  background: var(--button-bg);
+  color: white;
+  padding: 0 16px;
+  font-size: 1.0em;
+  font-weight: bold;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border: none;
+  cursor: default;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.turn-indicator.your-turn,
+.turn-indicator.opponent-turn {
+  background: var(--button-bg);
+  color: white;
+  animation: none;
+}
+
+/* Tile count display for opponent */
+.tile-count {
+  color: white;
+  font-size: 0.9em;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
 }
 
 /* Desktop AI rack styles */
@@ -635,6 +705,19 @@ body {
 
 .tile.dragging { opacity: 0.6; z-index: 1000; }
 
+.tile-placed {
+  animation: tilePlace 0.5s ease-out;
+}
+
+@keyframes tilePlace {
+  0% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .points {
   position: absolute;
   top: 2px; right: 3px;
@@ -751,6 +834,46 @@ button.cooldown:hover,
 button.cooldown:focus-visible,
 #play-word-mobile.cooldown:focus-visible, .play-word-mobile.cooldown:focus-visible {
   outline: 2px solid #999;
+}
+
+/* --- Music Track Selector --- */
+.music-track-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.music-track-selector label {
+  color: #fff;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.music-track-selector select {
+  background: var(--button-bg);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9em;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.music-track-selector select:hover {
+  background: var(--button-hover);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.music-track-selector select:focus {
+  outline: 2px solid var(--accent);
+}
+
+.music-track-selector select option {
+  background: var(--button-bg);
+  color: #fff;
 }
 
 /* --- Exchange Portal --- */
@@ -971,6 +1094,9 @@ button.cooldown:focus-visible,
   width: 85vw;
   max-width: 350px;
   height: 100vh;
+  height: 100dvh; /* iOS safe viewport */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
   background: #fff;
   box-shadow: 2px 0 24px rgba(0,0,0,0.18);
   z-index: 3002;
@@ -1055,7 +1181,7 @@ button.cooldown:focus-visible,
 /* Add to your CSS file or <style> block */
 .ai-blunder-notification {
     position: fixed;
-    top: 40px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%) scale(0.8);
     min-width: 240px;
@@ -1108,6 +1234,16 @@ button.cooldown:focus-visible,
     opacity: 0;
     transform: translateX(-50%) scale(0.8);
     transition: opacity 0.4s, transform 0.4s;
+}
+
+/* Mobile responsive for AI notification */
+@media (max-width: 768px) {
+    .ai-blunder-notification {
+        bottom: 80px;
+        font-size: 1em;
+        padding: 14px 28px 14px 20px;
+        min-width: 200px;
+    }
 }
 
 @keyframes notif-bounce-in {

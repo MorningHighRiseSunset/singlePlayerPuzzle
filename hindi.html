@@ -345,8 +345,14 @@
         }
       }
     </style>
+    <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   </head>
   <body>
+    <!-- Background Music -->
+    <audio id="backgroundMusic">
+      <source src="backgroundMusic/Background Audio.m4a" type="audio/mp4">
+    </audio>
+    
     <!-- Mobile Drawer (Burger menu content) -->
     <div id="mobile-drawer" class="mobile-drawer">
       <button class="drawer-close" aria-label="Close menu">&times;</button>
@@ -385,6 +391,7 @@
             <button id="play-word" data-i18n="submit">Submit</button>
             <button id="shuffle-rack" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn" data-i18n="skip-turn">Skip Turn</button>
+            <button id="toggle-music" data-i18n="toggle-music">🎵 Toggle Music</button>
             <button id="quit-game" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
           <!-- How to Play instructions INSIDE the burger menu drawer -->
@@ -464,6 +471,7 @@
             <button id="play-word-desktop-drawer" data-i18n="submit">Submit</button>
             <button id="shuffle-rack-desktop-drawer" data-i18n="shuffle-rack">Shuffle Rack</button>
             <button id="skip-turn-desktop-drawer" data-i18n="skip-turn">Skip Turn</button>
+            <button id="toggle-music-desktop-drawer" data-i18n="toggle-music">🎵 Toggle Music</button>
             <button id="quit-game-desktop-drawer" class="quit-button" data-i18n="quit-game">Quit / End Game</button>
           </nav>
           <!-- How to Play instructions INSIDE the desktop burger menu drawer -->
@@ -696,6 +704,7 @@
     </script>
     <script src="translations.js"></script>
     <script src="word-definitions.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="hindi.js"></script>
   </body>
 </html>

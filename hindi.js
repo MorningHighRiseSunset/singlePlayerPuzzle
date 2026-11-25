@@ -5896,12 +5896,14 @@ formedWords.forEach((wordInfo) => {
             return false;
         }
 
-        // Validate each word
+        // Validate each word and collect invalid words
         let allWordsValid = true;
+        this._invalidWords = []; // Store invalid words for error message
         formedWords.forEach((wordInfo) => {
             const word = wordInfo.word.toLowerCase();
             if (!this.dictionary.has(word)) {
                 console.log(`Invalid word: ${word}`);
+                this._invalidWords.push(word);
                 allWordsValid = false;
             } else {
                 console.log(`Valid word found: ${word}`);
@@ -7183,14 +7185,28 @@ calculateScore() {
 					await this.aiTurn();
 				}
 			} else {
-				// Show an animated toast for invalid words
-				try { 
-					if (typeof this.showAnimatedToast === 'function') {
-						this.showAnimatedToast(TRANSLATIONS.invalidWord, 'error');
-					} else if (this.showToast) {
-						this.showToast(TRANSLATIONS.invalidWord);
+				// Show an animated toast for invalid words with specific error message
+				const invalidWords = this._invalidWords || [];
+				let toastMsg;
+
+				if (invalidWords.length > 0) {
+					const wordList = invalidWords.join(', ');
+					if (invalidWords.length === 1) {
+						toastMsg = `"${wordList}" शब्दकोश में नहीं है।`;
+					} else {
+						toastMsg = `"${wordList}" शब्द शब्दकोश में नहीं हैं।`;
 					}
-				} catch(e) { 
+				} else {
+					toastMsg = TRANSLATIONS.invalidWord;
+				}
+
+				try {
+					if (typeof this.showAnimatedToast === 'function') {
+						this.showAnimatedToast(toastMsg, 'error');
+					} else if (this.showToast) {
+						this.showToast(toastMsg);
+					}
+				} catch(e) {
 					console.warn('Toast display failed:', e);
 				}
 				this.resetPlacedTiles();
@@ -9639,6 +9655,68 @@ function preventScrolling(e) {
 document.addEventListener("DOMContentLoaded", () => {
     const game = new ScrabbleGame();
     window.game = game; // <-- Add this line
+
+	// Initialize background music
+	const backgroundMusic = document.getElementById('backgroundMusic');
+	if (backgroundMusic) {
+		// Set volume to 30% (adjustable)
+		backgroundMusic.volume = 0.3;
+
+		// Music playlist - add more songs to this array
+		const musicPlaylist = [
+			'backgroundMusic/Background Audio.m4a',
+			'backgroundMusic/Contemplation.mp3',
+			'backgroundMusic/CathedralForest.ogg',
+			'backgroundMusic/DeepDive.mp3',
+		];
+
+		let currentTrackIndex = 0;
+		let isMusicPlaying = false; // Start with music OFF
+
+		// Play next track when current one ends
+		backgroundMusic.addEventListener('ended', () => {
+			if (!isMusicPlaying) return;
+
+			// Move to next track, loop back to start after last track
+			currentTrackIndex = (currentTrackIndex + 1) % musicPlaylist.length;
+			backgroundMusic.src = musicPlaylist[currentTrackIndex];
+			backgroundMusic.play().catch(e => console.log('Next track play failed:', e));
+		});
+
+		// Set initial track
+		if (musicPlaylist.length > 0) {
+			backgroundMusic.src = musicPlaylist[0];
+		}
+
+		// Toggle background music
+		const toggleMusicBtn = document.getElementById('toggle-music');
+		const toggleMusicBtnDesktop = document.getElementById('toggle-music-desktop-drawer');
+
+		const toggleMusic = () => {
+			if (backgroundMusic) {
+				if (isMusicPlaying) {
+					backgroundMusic.pause();
+					isMusicPlaying = false;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music Off';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music Off';
+				} else {
+					backgroundMusic.play().catch(e => console.log('Music play failed:', e));
+					isMusicPlaying = true;
+					if (toggleMusicBtn) toggleMusicBtn.textContent = '🎵 Music On';
+					if (toggleMusicBtnDesktop) toggleMusicBtnDesktop.textContent = '🎵 Music On';
+				}
+			}
+		};
+
+		if (toggleMusicBtn) {
+			toggleMusicBtn.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtn.addEventListener('click', toggleMusic);
+		}
+		if (toggleMusicBtnDesktop) {
+			toggleMusicBtnDesktop.textContent = '🎵 Music Off'; // Initial state
+			toggleMusicBtnDesktop.addEventListener('click', toggleMusic);
+		}
+	}
 
 	// Prime speech synthesis on first user interaction so later async announcements are allowed
 	const primeSpeech = () => {
